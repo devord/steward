@@ -2,9 +2,11 @@ import { Form, redirect, useNavigation } from "react-router"
 
 import type { Route } from "./+types/setup"
 import { Wordmark } from "../components/logo.tsx"
+import { Button } from "~/components/ui/button"
 import { dataRepoExists, resolveDataRepo } from "../lib/dashboard.server.ts"
 import { env } from "../lib/env.server.ts"
 import { generateFromTemplate } from "../lib/github.server.ts"
+import { useT } from "../lib/i18n.tsx"
 import { requireAuth } from "../lib/session.server.ts"
 
 export function meta(_args: Route.MetaArgs) {
@@ -41,8 +43,24 @@ export async function action({ request }: Route.ActionArgs) {
   return redirect("/")
 }
 
+/**
+ * A translated sentence with its `{branch}` slot rendered as a mono
+ * <code> element — the locale controls the words around the branch name.
+ */
+function BranchLine({ text, branch }: { text: string; branch: string }) {
+  const [before = "", after = ""] = text.split("{branch}")
+  return (
+    <>
+      {before}
+      <code className="font-mono">{branch}</code>
+      {after}
+    </>
+  )
+}
+
 export default function Setup({ loaderData }: Route.ComponentProps) {
   const { login, dataRepo } = loaderData
+  const t = useT()
   const navigation = useNavigation()
   const creating = navigation.state !== "idle"
 
@@ -50,34 +68,28 @@ export default function Setup({ loaderData }: Route.ComponentProps) {
     <main className="mx-auto max-w-2xl px-6 py-16 leading-relaxed">
       <Wordmark className="text-sm" />
       <h1 className="mt-10 font-mono text-2xl font-bold text-foreground">
-        Create your dashboard repo
+        {t("setup.title")}
       </h1>
       <p className="mt-4">
-        Hi <span className="font-mono">{login}</span> — Bulletin keeps
-        everything it knows about you in one private GitHub repo:
+        {t("setup.hi1")} <span className="font-mono">{login}</span>{" "}
+        {t("setup.hi2")}
       </p>
       <p className="mt-4 rounded-md border border-border-dim bg-bg1 px-4 py-3 font-mono text-sm">
         {dataRepo}
       </p>
       <ul className="mt-4 list-inside list-disc text-sm text-ink-dim">
         <li>
-          <code className="font-mono">main</code> holds config — which routines
-          run, and the grid layout
+          <BranchLine text={t("setup.bulletMain")} branch="main" />
         </li>
         <li>
-          an <code className="font-mono">artifacts</code> branch holds what they
-          publish
+          <BranchLine text={t("setup.bulletArtifacts")} branch="artifacts" />
         </li>
-        <li>private: only you (and collaborators you invite) can read it</li>
+        <li>{t("setup.bulletPrivate")}</li>
       </ul>
       <Form method="post" className="mt-8">
-        <button
-          type="submit"
-          disabled={creating}
-          className="rounded-md bg-orange px-4 py-2 font-mono text-sm font-bold text-bg hover:bg-orange-deep disabled:opacity-50"
-        >
-          {creating ? "creating…" : "Create repo"}
-        </button>
+        <Button type="submit" disabled={creating}>
+          {creating ? t("setup.creating") : t("setup.create")}
+        </Button>
       </Form>
     </main>
   )

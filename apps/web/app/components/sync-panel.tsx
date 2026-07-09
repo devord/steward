@@ -21,6 +21,7 @@ import {
 } from "~/components/ui/dialog"
 import { Label } from "~/components/ui/label"
 import { type DiffLine, diffLines } from "../lib/diff.ts"
+import { useT } from "../lib/i18n.tsx"
 import type { BaseShas, Draft } from "../lib/draft.ts"
 
 interface FileChange {
@@ -64,6 +65,7 @@ export function SyncPanel({
   onDiscard: () => void
   onRebase: (fresh: BaseShas) => void
 }) {
+  const t = useT()
   const fetcher = useFetcher<SyncResult>()
   const [asPr, setAsPr] = useState(false)
 
@@ -157,16 +159,13 @@ export function SyncPanel({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col">
         <DialogHeader>
-          <DialogTitle>Sync changes</DialogTitle>
-          <DialogDescription>
-            Persist the draft to your data repo — it only exists in this browser
-            until then.
-          </DialogDescription>
+          <DialogTitle>{t("sync.title")}</DialogTitle>
+          <DialogDescription>{t("sync.description")}</DialogDescription>
         </DialogHeader>
 
         {synced && fetcher.data?.prUrl ? (
           <Alert>
-            <AlertTitle>Pull request opened</AlertTitle>
+            <AlertTitle>{t("sync.prOpened")}</AlertTitle>
             <AlertDescription>
               <a
                 href={fetcher.data.prUrl}
@@ -180,19 +179,19 @@ export function SyncPanel({
           </Alert>
         ) : changes.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            The draft matches what's on <code className="font-mono">main</code>—
-            nothing to sync.
+            {t("sync.nothing1")} <code className="font-mono">main</code>{" "}
+            {t("sync.nothing2")}
           </p>
         ) : (
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
             {conflicts.length > 0 && (
               <Alert variant="destructive">
-                <AlertTitle>Base moved</AlertTitle>
+                <AlertTitle>{t("sync.baseMoved")}</AlertTitle>
                 <AlertDescription>
                   <p>
-                    {conflicts.join(" and ")} changed in the repo since this
-                    draft was made. Re-apply the draft onto the fresh base and
-                    re-review the diff.
+                    {t("sync.baseMovedBody", {
+                      files: conflicts.join(t("sync.and")),
+                    })}
                   </p>
                   <Button
                     variant="outline"
@@ -200,7 +199,7 @@ export function SyncPanel({
                     className="mt-2"
                     onClick={() => onRebase(serverShas)}
                   >
-                    Re-apply on fresh base
+                    {t("sync.reapply")}
                   </Button>
                 </AlertDescription>
               </Alert>
@@ -243,16 +242,20 @@ export function SyncPanel({
                 checked={asPr}
                 onCheckedChange={(checked) => setAsPr(checked === true)}
               />
-              open a PR instead
+              {t("sync.asPr")}
             </Label>
             <Button variant="ghost" onClick={onDiscard} disabled={busy}>
-              Discard draft
+              {t("sync.discard")}
             </Button>
             <Button
               onClick={submit}
               disabled={busy || changes.length === 0 || conflicts.length > 0}
             >
-              {busy ? "syncing…" : asPr ? "Open PR" : "Commit to main"}
+              {busy
+                ? t("sync.syncing")
+                : asPr
+                  ? t("sync.openPr")
+                  : t("sync.commit")}
             </Button>
           </DialogFooter>
         )}

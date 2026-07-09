@@ -1,0 +1,157 @@
+import { describe, expect, it } from "vitest"
+
+import {
+  coercePrefs,
+  DEFAULT_APPEARANCE,
+  DEFAULT_THEME,
+  resolveTheme,
+  themeArtifactHtml,
+  themeEntries,
+  themeFamilies,
+  themes,
+  themeStylesheet,
+} from "./theme.ts"
+
+describe("coercePrefs", () => {
+  it("accepts a valid preference", () => {
+    expect(
+      coercePrefs({
+        mode: "light",
+        lightTheme: "catppuccin-latte",
+        darkTheme: "tokyo-night",
+      }),
+    ).toEqual({
+      mode: "light",
+      lightTheme: "catppuccin-latte",
+      darkTheme: "tokyo-night",
+    })
+  })
+
+  it("falls back to defaults on garbage", () => {
+    expect(coercePrefs(null)).toEqual(DEFAULT_APPEARANCE)
+    expect(
+      coercePrefs({ mode: "neon", lightTheme: 3, darkTheme: "nope" }),
+    ).toEqual(DEFAULT_APPEARANCE)
+  })
+
+  it("rejects a theme placed in the wrong-mode slot", () => {
+    const prefs = coercePrefs({
+      mode: "system",
+      lightTheme: "tokyo-night", // dark theme in the light slot
+      darkTheme: "gruvbox-light", // light theme in the dark slot
+    })
+    expect(prefs).toEqual(DEFAULT_APPEARANCE)
+  })
+})
+
+describe("resolveTheme", () => {
+  const prefs = coercePrefs({
+    mode: "system",
+    lightTheme: "rose-pine-dawn",
+    darkTheme: "rose-pine",
+  })
+  it("follows the OS under system mode", () => {
+    expect(resolveTheme(prefs, true)).toBe("rose-pine")
+    expect(resolveTheme(prefs, false)).toBe("rose-pine-dawn")
+  })
+  it("pins to the slot when a mode is chosen", () => {
+    expect(resolveTheme({ ...prefs, mode: "dark" }, false)).toBe("rose-pine")
+    expect(resolveTheme({ ...prefs, mode: "light" }, true)).toBe(
+      "rose-pine-dawn",
+    )
+  })
+})
+
+describe("registry integrity", () => {
+  it("themeNames lists every registered theme exactly once", () => {
+    expect([...themeEntries.map(([name]) => name)].sort()).toEqual(
+      Object.keys(themes).sort(),
+    )
+  })
+
+  it("family members exist and carry the right mode", () => {
+    for (const family of themeFamilies) {
+      expect(themes[family.light].mode).toBe("light")
+      expect(themes[family.dark].mode).toBe("dark")
+    }
+  })
+
+  it("the stylesheet has the default on :root plus one block per theme", () => {
+    const css = themeStylesheet()
+    expect(css).toContain(`:root{`)
+    for (const [name] of themeEntries) {
+      expect(css).toContain(`[data-theme="${name}"]`)
+    }
+    // The default block carries the canonical gruvbox page background.
+    expect(css.split("\n")[0]).toContain("--palette-bg:#1d2021")
+  })
+})
+
+describe("themeArtifactHtml", () => {
+  const doc = "<html><head></head><body>hi</body></html>"
+
+  it("leaves the default theme's artifacts untouched", () => {
+    expect(themeArtifactHtml(doc, DEFAULT_THEME)).toBe(doc)
+  })
+
+  it("appends the --color-* overrides for any other theme", () => {
+    const themed = themeArtifactHtml(doc, "catppuccin-mocha")
+    expect(themed.startsWith(doc)).toBe(true)
+    expect(themed).toContain("--color-bg:#181825 !important")
+    // The artifact contract's historical `orange` slot carries the accent.
+    expect(themed).toContain("--color-orange:#cba6f7 !important")
+    expect(themed).toContain("color-scheme:dark")
+  })
+
+  it("flips color-scheme for light themes", () => {
+    expect(themeArtifactHtml(doc, "gruvbox-light")).toContain(
+      "color-scheme:light",
+    )
+  })
+})
+
+// --- WCAG contrast discipline (PRODUCT.md accessibility section) -----------
+
+function luminance(hex: string): number {
+  const n = Number.parseInt(hex.slice(1), 16)
+  const channel = (value: number) => {
+    const c = value / 255
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  }
+  return (
+    0.2126 * channel((n >> 16) & 0xff) +
+    0.7152 * channel((n >> 8) & 0xff) +
+    0.0722 * channel(n & 0xff)
+  )
+}
+
+function contrast(a: string, b: string): number {
+  const la = luminance(a)
+  const lb = luminance(b)
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+}
+
+describe("every theme clears the contrast floors", () => {
+  for (const [name, theme] of themeEntries) {
+    const { tokens: t } = theme
+    it(`${name}: body ink ≥ 4.5:1 on every surface`, () => {
+      for (const surface of [t.bg, t.bg1, t.bg2]) {
+        expect(contrast(t.ink, surface)).toBeGreaterThanOrEqual(4.5)
+      }
+    })
+    it(`${name}: secondary ink ≥ 4.5:1 on page and cards`, () => {
+      expect(contrast(t.inkDim, t.bg)).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(t.inkDim, t.bg1)).toBeGreaterThanOrEqual(4.5)
+    })
+    it(`${name}: metadata ink ≥ 3:1 on page and cards`, () => {
+      expect(contrast(t.inkFaint, t.bg)).toBeGreaterThanOrEqual(3)
+      expect(contrast(t.inkFaint, t.bg1)).toBeGreaterThanOrEqual(3)
+    })
+    it(`${name}: primary button text ≥ 4.4:1, focus ring ≥ 3:1`, () => {
+      // 4.4, not 4.5: Catppuccin Latte's mauve caps at ≈4.48:1 against any
+      // palette-true text tone — accepted residual, see ADR-0009.
+      expect(contrast(t.bg, t.accent)).toBeGreaterThanOrEqual(4.4)
+      expect(contrast(t.accentDeep, t.bg)).toBeGreaterThanOrEqual(3)
+    })
+  }
+})

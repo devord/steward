@@ -1,13 +1,24 @@
-/** "ran 2h ago"-style compact relative time. Safe on server and client. */
-export function formatAgo(iso: string, now: number): string {
+/** Compact relative time, split for the translation layer to phrase. */
+export interface AgoParts {
+  unit: "now" | "minutes" | "hours" | "days"
+  n: number
+}
+
+export function agoParts(iso: string, now: number): AgoParts {
   const delta = Math.max(0, now - Date.parse(iso))
   const minutes = Math.floor(delta / 60_000)
-  if (minutes < 1) return "just now"
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 1) return { unit: "now", n: 0 }
+  if (minutes < 60) return { unit: "minutes", n: minutes }
   const hours = Math.floor(minutes / 60)
-  if (hours < 48) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
+  if (hours < 48) return { unit: "hours", n: hours }
+  return { unit: "days", n: Math.floor(hours / 24) }
+}
+
+/** "ran 2h ago"-style compact relative time. Safe on server and client. */
+export function formatAgo(iso: string, now: number): string {
+  const { unit, n } = agoParts(iso, now)
+  if (unit === "now") return "just now"
+  return `${n}${unit === "minutes" ? "m" : unit === "hours" ? "h" : "d"} ago`
 }
 
 /**
