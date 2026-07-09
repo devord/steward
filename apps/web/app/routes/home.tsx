@@ -7,6 +7,7 @@ import { LayoutGrid, Plus, Settings } from "lucide-react"
 
 import type { Route } from "./+types/home"
 import { AddRoutineDialog } from "../components/add-routine-dialog.tsx"
+import { AppHeader } from "../components/app-header.tsx"
 import { Wordmark } from "../components/logo.tsx"
 import { SyncPanel } from "../components/sync-panel.tsx"
 import { WidgetCard } from "../components/widget-card.tsx"
@@ -109,6 +110,13 @@ function Dashboard({
   const routinesBySlug = new Map(routines.routines.map((r) => [r.slug, r]))
   const placed = new Set(dashboard.widgets.map((w) => w.routine))
   const unplaced = routines.routines.filter((r) => !placed.has(r.slug))
+  // Below the 4-column breakpoint widgets stack in source order, so render
+  // them in visual (row, col) order — the phone/tablet stack then reads
+  // top-left to bottom-right like the full board.
+  const orderedWidgets = [...dashboard.widgets].sort(
+    (a, b) =>
+      a.position.row - b.position.row || a.position.col - b.position.col,
+  )
 
   const addRoutine = useCallback(
     (routine: Routine, size: WidgetSize) => {
@@ -207,8 +215,8 @@ function Dashboard({
   }, [clear, revalidator])
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-16">
-      <header className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-b py-2.5">
+    <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
+      <AppHeader>
         <Wordmark className="text-sm" />
         <a
           href={`https://github.com/${view.dataRepo}`}
@@ -220,37 +228,33 @@ function Dashboard({
         </a>
         <div className="ml-auto flex items-center gap-1">
           {draft && (
-            <Button
-              size="sm"
+            <HeaderAction
               variant="outline"
-              className="mr-2 gap-2 font-mono text-xs"
+              className="gap-2 font-mono text-xs sm:mr-2"
+              label={t("header.unsynced")}
+              icon={
+                <span aria-hidden className="size-1.5 rounded-full bg-yellow" />
+              }
               onClick={() => setSyncing(true)}
-            >
-              <span aria-hidden className="size-1.5 rounded-full bg-yellow" />
-              {t("header.unsynced")}
-            </Button>
+            />
           )}
-          <Button
-            size="sm"
+          <HeaderAction
             variant="ghost"
             className="text-ink-dim hover:text-foreground"
+            label={t("header.addRoutine")}
+            icon={<Plus />}
             onClick={() => setAdding(true)}
-          >
-            <Plus data-icon="inline-start" />
-            {t("header.addRoutine")}
-          </Button>
-          <Button
-            size="sm"
+          />
+          <HeaderAction
             variant={editing ? "secondary" : "ghost"}
             className={
               editing ? undefined : "text-ink-dim hover:text-foreground"
             }
             aria-pressed={editing}
+            label={editing ? t("header.done") : t("header.editLayout")}
+            icon={<LayoutGrid />}
             onClick={() => setEditing((value) => !value)}
-          >
-            <LayoutGrid data-icon="inline-start" />
-            {editing ? t("header.done") : t("header.editLayout")}
-          </Button>
+          />
           <Link
             to="/settings"
             aria-label={t("header.settings")}
@@ -263,7 +267,9 @@ function Dashboard({
             <Settings className="size-3.5" />
           </Link>
           <Separator orientation="vertical" className="mx-2 h-4!" />
-          <span className="font-mono text-xs text-ink-faint">{login}</span>
+          <span className="hidden font-mono text-xs text-ink-faint md:inline">
+            {login}
+          </span>
           <Form method="post" action="/auth/logout">
             <Button
               size="sm"
@@ -275,7 +281,7 @@ function Dashboard({
             </Button>
           </Form>
         </div>
-      </header>
+      </AppHeader>
 
       {dashboard.widgets.length === 0 ? (
         <EmptyDashboard onAdd={() => setAdding(true)} />
@@ -284,7 +290,7 @@ function Dashboard({
           className="dash-grid"
           style={cssVars({ "--row-h": `${dashboard.grid.rowHeight}px` })}
         >
-          {dashboard.widgets.flatMap((widget) => {
+          {orderedWidgets.flatMap((widget) => {
             const routine = routinesBySlug.get(widget.routine)
             if (!routine) return []
             return [
@@ -351,10 +357,36 @@ function Dashboard({
   )
 }
 
+/**
+ * A header button that collapses to its icon on phones: the label goes
+ * sr-only and the button squares off, so the action row holds one line
+ * on a 360px viewport. The label is still the accessible name.
+ */
+function HeaderAction({
+  icon,
+  label,
+  className,
+  ...props
+}: React.ComponentProps<typeof Button> & {
+  icon: React.ReactNode
+  label: string
+}) {
+  return (
+    <Button
+      size="sm"
+      className={cn("max-sm:aspect-square max-sm:px-0", className)}
+      {...props}
+    >
+      {icon}
+      <span className="max-sm:sr-only">{label}</span>
+    </Button>
+  )
+}
+
 function Landing() {
   const t = useT()
   return (
-    <main className="landing-bg grid min-h-dvh place-items-center px-6">
+    <main className="landing-bg grid min-h-dvh place-items-center px-4 sm:px-6">
       <div className="w-full max-w-md pb-16">
         <h1>
           <Wordmark className="text-4xl" />
@@ -363,11 +395,6 @@ function Landing() {
           {t("landing.tagline")}
         </p>
         <p className="mt-2 text-sm text-muted-foreground">{t("landing.sub")}</p>
-        <p className="mt-7 font-mono text-xs text-ink-faint">
-          cron <span className="text-ink-dim">▸</span> skill{" "}
-          <span className="text-ink-dim">▸</span> git push{" "}
-          <span className="text-ink-dim">▸</span> widget
-        </p>
         <a
           href="/auth/login"
           className={cn(buttonVariants({ size: "lg" }), "mt-7")}

@@ -3,6 +3,7 @@ import { data, Link, useFetcher } from "react-router"
 import { Check } from "lucide-react"
 
 import type { Route } from "./+types/settings"
+import { AppHeader } from "../components/app-header.tsx"
 import {
   AppearanceSettings,
   handleRadioKeydown,
@@ -49,8 +50,8 @@ export default function Settings(_props: Route.ComponentProps) {
   const t = useT()
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pb-16">
-      <header className="mb-8 flex items-center gap-2 border-b py-2.5">
+    <div className="mx-auto max-w-2xl px-4 pb-16 sm:px-6">
+      <AppHeader className="mb-8 gap-x-2">
         <Link
           to="/"
           className="rounded-md transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -66,11 +67,11 @@ export default function Settings(_props: Route.ComponentProps) {
         </h1>
         <Link
           to="/"
-          className="ml-auto font-mono text-xs text-ink-faint transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="ml-auto py-1 font-mono text-xs text-ink-faint transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           ← {t("settings.back")}
         </Link>
-      </header>
+      </AppHeader>
 
       <main className="flex flex-col gap-10">
         <section aria-labelledby="settings-appearance">

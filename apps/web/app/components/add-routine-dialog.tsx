@@ -134,13 +134,16 @@ export function AddRoutineDialog({
         onOpenChange(next)
       }}
     >
-      <DialogContent className="max-w-lg">
+      {/* `sm:max-w-lg` (not `max-w-lg`) keeps the base mobile width cap;
+          the height cap + scrollable middle keep the wizard usable on
+          small phones with the keyboard open. */}
+      <DialogContent className="flex max-h-[85svh] flex-col sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("dialog.title")}</DialogTitle>
           <DialogDescription>{t("dialog.description")}</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4">
+        <div className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto">
           <div className="grid gap-2">
             <Label>{t("dialog.skill")}</Label>
             {catalog.skills.length === 0 ? (
@@ -177,7 +180,7 @@ export function AddRoutineDialog({
 
           {skill && (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label htmlFor="routine-name">{t("dialog.name")}</Label>
                   <Input
@@ -210,7 +213,7 @@ export function AddRoutineDialog({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>{t("dialog.size")}</Label>
                   <div className="flex items-center gap-1.5">

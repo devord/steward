@@ -111,7 +111,7 @@ export function WidgetCard({
         </div>
       )}
       {editing ? (
-        <footer className="flex items-center gap-1 border-t bg-bg2 px-1.5 py-1">
+        <footer className="flex flex-wrap items-center gap-1 border-t bg-bg2 px-1.5 py-1">
           <Button
             variant="ghost"
             size="icon-xs"
