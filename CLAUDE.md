@@ -1,58 +1,48 @@
 # Bulletin
 
-A dashboard of living widgets. Each widget renders an HTML artifact kept
-fresh by a scheduled Claude Code routine. Two-repo model: this shared repo
-holds the product; each user has a private `bulletin-data-<login>` repo
-(config on `main`, artifacts on the `artifacts` branch at
-`w/<slug>/index.html`).
+Dashboard of living widgets: each renders an HTML artifact kept fresh by a
+scheduled Claude Code routine. Two repos: this one (product, shared) + one
+private `bulletin-data-<login>` per user (config on `main`, artifacts on
+`artifacts` branch at `w/<slug>/index.html`).
 
-**Read before designing or changing behavior:**
+Read before changing behavior:
 
-- [`CONTEXT.md`](./CONTEXT.md) — domain glossary (routine, widget, artifact,
-  data repo, catalog, draft, sync). Use these terms exactly.
-- [`docs/adr/`](./docs/adr/) — the architecture decisions. Don't re-litigate
-  them silently; propose a new ADR to change one.
-- [`docs/widget-standard.md`](./docs/widget-standard.md) — the artifact
-  contract every routine must produce against.
-- [`docs/roadmap.md`](./docs/roadmap.md) — milestone status and what's next.
+- `CONTEXT.md` — domain glossary. Use its terms exactly.
+- `docs/adr/` — architecture decisions. Change via new ADR, never silently.
+- `docs/widget-standard.md` — artifact contract.
+- `docs/roadmap.md` — milestone status.
 
 ## Layout
 
-- `apps/web` — React Router v8 app (framework mode, SSR). GitHub OAuth,
-  reads config/artifacts via the GitHub API, renders widgets in sandboxed
-  `srcdoc` iframes. Tailwind 4; utilities come from the gruvbox `@theme`
-  block in `app/app.css` (ADR-0007).
-- `packages/schema` — zod schemas for `data/routines.yaml`,
-  `data/dashboard.yaml`, and the skills catalog. Buildless: exports TS
-  source, consumed by the app's bundler and by `tsx` scripts.
-- `.claude/skills` — agent skills, including the `run-routine`,
-  `widget-artifact`, and `publish-widget` contracts (M4).
+- `apps/web` — React Router v8, SSR. GitHub OAuth; config/artifacts via
+  GitHub API; widgets in sandboxed `srcdoc` iframes. Tailwind 4 utilities
+  generated from the gruvbox `@theme` in `app/app.css` (ADR-0007).
+- `packages/schema` — zod schemas (routines / dashboard / catalog).
+  Buildless, exports TS source.
+- `.claude/skills` — agent skills incl. `run-routine` / `widget-artifact` /
+  `publish-widget` contracts (M4).
 
-## Toolchain
+## Commands
 
-**Vite+** (`vp` CLI) with **pnpm**. From the repo root:
+Vite+ (`vp`) + pnpm, from repo root:
 
 ```bash
-pnpm install
-pnpm check        # vp check: oxlint + oxfmt + typecheck in one pass
-pnpm test         # turbo run test (vitest per package)
-pnpm build        # turbo run build
-pnpm typecheck    # turbo run typecheck (includes react-router typegen)
-pnpm dev          # apps/web dev server
+pnpm install && pnpm exec lefthook install  # once; ignoreScripts blocks auto-setup
+pnpm check                                  # oxlint + oxfmt + typecheck
+pnpm test / build / typecheck / dev
 ```
 
-After cloning: `pnpm exec lefthook install` (install scripts are blocked by
-`ignoreScripts` in pnpm-workspace.yaml).
+## Rules
 
-## Conventions
+- Never hand-fix style — `vp check --fix`. Config lives in root
+  `vite.config.ts`.
+- Artifacts: self-contained responsive HTML, no external requests, gruvbox
+  tokens (same set as `apps/web/app/app.css`).
+- Touched skills → regenerate `catalog/skills.json` (`pnpm gen:catalog`,
+  lands M1). Never hand-edit it.
+- `.claude/skills/react-router` is vendored — don't edit, format-exempt.
 
-- Formatting/linting live in the root `vite.config.ts` (oxfmt: no semis,
-  double quotes, trailing commas; oxlint: no type assertions in production
-  code). Never hand-fix style — run `vp check --fix`.
-- Widget artifacts follow `docs/widget-standard.md`: self-contained
-  responsive HTML, no external requests, gruvbox tokens (same set as
-  `apps/web/app/app.css`).
-- After touching skills, regenerate `catalog/skills.json`
-  (`pnpm gen:catalog`, lands in M1). Never hand-edit the catalog.
-- The `.claude/skills/react-router` skill docs are vendored from the
-  upstream template — excluded from formatting, don't edit them.
+## Plan Mode
+
+- Plans extremely concise; sacrifice grammar for concision.
+- End each plan with unresolved questions to answer, if any.
