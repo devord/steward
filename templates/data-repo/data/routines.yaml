@@ -1,0 +1,12 @@
+# Bulletin routines — the source of truth for what runs and when.
+# Each routine: a skill from the shared repo's catalog, a cron schedule,
+# and optional multiline `instructions` passed to the skill by the
+# run-routine dispatcher. Edit via the Bulletin app or by hand.
+routines:
+  - slug: daily-plan
+    name: Daily Plan
+    skill: daily-plan
+    schedule: "0 8 * * *"
+    instructions: |
+      Replace me: which projects matter, what to ignore, tone.
+    enabled: false

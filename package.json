@@ -6,15 +6,20 @@
     "check": "vp check",
     "test": "turbo run test",
     "build": "turbo run build",
-    "typecheck": "turbo run typecheck",
-    "dev": "pnpm --filter @bulletin/web dev"
+    "typecheck": "turbo run typecheck && tsc -p scripts",
+    "dev": "pnpm --filter @bulletin/web dev",
+    "gen:catalog": "node scripts/gen-catalog.ts",
+    "routines:sync": "node scripts/routines-sync.ts"
   },
   "devDependencies": {
+    "@bulletin/schema": "workspace:*",
     "@types/node": "catalog:",
     "lefthook": "^1.13.0",
     "turbo": "^2.10.4",
     "typescript": "^7.0.2",
-    "vite-plus": "^0.2.4"
+    "vite-plus": "^0.2.4",
+    "yaml": "catalog:",
+    "zod": "catalog:"
   },
   "engines": {
     "node": ">=24"
