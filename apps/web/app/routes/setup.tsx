@@ -1,6 +1,7 @@
 import { Form, redirect, useNavigation } from "react-router"
 
 import type { Route } from "./+types/setup"
+import { Wordmark } from "../components/logo.tsx"
 import { dataRepoExists, resolveDataRepo } from "../lib/dashboard.server.ts"
 import { env } from "../lib/env.server.ts"
 import { generateFromTemplate } from "../lib/github.server.ts"
@@ -47,7 +48,8 @@ export default function Setup({ loaderData }: Route.ComponentProps) {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-16 leading-relaxed">
-      <h1 className="font-mono text-2xl font-bold tracking-widest text-orange">
+      <Wordmark className="text-sm" />
+      <h1 className="mt-10 font-mono text-2xl font-bold text-foreground">
         Create your dashboard repo
       </h1>
       <p className="mt-4">

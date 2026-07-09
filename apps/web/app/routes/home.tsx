@@ -7,6 +7,7 @@ import { LayoutGrid, Plus } from "lucide-react"
 
 import type { Route } from "./+types/home"
 import { AddRoutineDialog } from "../components/add-routine-dialog.tsx"
+import { Wordmark } from "../components/logo.tsx"
 import { SyncPanel } from "../components/sync-panel.tsx"
 import { WidgetCard } from "../components/widget-card.tsx"
 import { Button, buttonVariants } from "~/components/ui/button"
@@ -23,19 +24,33 @@ import { GitHubError } from "../lib/github.server.ts"
 import { collides, findFreeSlot } from "../lib/placement.ts"
 import { getAuth } from "../lib/session.server.ts"
 
-export function meta(_args: Route.MetaArgs) {
+export function meta({ loaderData }: Route.MetaArgs) {
+  const description = "A dashboard of living widgets, kept fresh by routines."
   return [
     { title: "Bulletin" },
-    {
-      name: "description",
-      content: "A dashboard of living widgets, kept fresh by routines.",
-    },
+    { name: "description", content: description },
+    { property: "og:title", content: "Bulletin" },
+    { property: "og:description", content: description },
+    { property: "og:type", content: "website" },
+    { property: "og:site_name", content: "Bulletin" },
+    // Scrapers need an absolute image URL; when the loader errored there is
+    // no origin to build one from, so omit the image rather than emit a
+    // relative URL scrapers would resolve against their own domain.
+    ...(loaderData
+      ? [
+          { property: "og:image", content: `${loaderData.origin}/og.png` },
+          { property: "og:image:width", content: "1200" },
+          { property: "og:image:height", content: "630" },
+          { name: "twitter:card", content: "summary_large_image" },
+        ]
+      : []),
   ]
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+  const origin = new URL(request.url).origin
   const auth = await getAuth(request)
-  if (!auth) return { kind: "anonymous" as const }
+  if (!auth) return { kind: "anonymous" as const, origin }
 
   const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
   if (!(await dataRepoExists(auth.token, dataRepo))) throw redirect("/setup")
@@ -57,6 +72,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
   return {
     kind: "dashboard" as const,
+    origin,
     login: auth.login,
     now: Date.now(),
     view,
@@ -319,22 +335,6 @@ function Dashboard({
         />
       )}
     </div>
-  )
-}
-
-function Wordmark({ className }: { className?: string }) {
-  return (
-    <span
-      className={cn(
-        "font-mono font-semibold tracking-tight text-primary select-none",
-        className,
-      )}
-    >
-      bulletin
-      <span aria-hidden className="text-primary/60">
-        ▮
-      </span>
-    </span>
   )
 }
 

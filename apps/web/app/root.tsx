@@ -10,6 +10,13 @@ import {
 import type { Route } from "./+types/root"
 import "./app.css"
 
+export const links: Route.LinksFunction = () => [
+  // SVG first for modern browsers; .ico carries 16/32/48 fallbacks.
+  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  { rel: "icon", href: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+]
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">

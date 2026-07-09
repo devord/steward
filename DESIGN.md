@@ -46,6 +46,22 @@ added, removed).
 - Rule of thumb: if git or the schema would care about the string, it's
   mono. Body 13–14px; metadata 10–12px mono; no display sizes in chrome.
 
+## Mark
+
+The logo is a mini dashboard grid on a gruvbox tile: two quiet widgets
+(`border`) and one tall orange block — the wordmark's trailing cursor
+(`bulletin▮`) placed as the last widget on the board. One drawing, three
+mirrors that must stay geometrically in sync:
+
+- `apps/web/app/components/logo.tsx` — `Logo` (mark) and `Wordmark`
+  (mark + mono name lockup, scales with font size) for in-app use.
+- `apps/web/public/favicon.svg` (+ `favicon.ico` 16/32/48,
+  `apple-touch-icon.png`) — static favicons, linked from `root.tsx`.
+- `apps/web/public/og.png` — 1200×630 social card; OG/Twitter meta lives
+  in the home route's `meta`.
+
+The wordmark text is `foreground` ink; the mark carries the orange.
+
 ## Layout
 
 - Dashboard grid: 4 columns desktop / 2 tablet / 1 phone, 150px row unit,
