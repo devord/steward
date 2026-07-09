@@ -1,0 +1,148 @@
+<!doctype html>
+<!-- Sample bulletin artifact (docs/widget-standard.md). Hand-authored to
+     prove the render path in M2: push to the data repo's artifacts branch
+     as w/daily-plan/index.html. Also the reference the widget-artifact
+     skill's output should look like. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="widget-generated-at" content="2026-07-09T08:00:00Z" />
+    <title>Daily Plan</title>
+    <style>
+      /* Gruvbox dark hard — identical to the @theme block in
+         apps/web/app/app.css (ADR-0007). Do not invent colors. */
+      :root {
+        color-scheme: dark;
+        --color-bg: #1d2021;
+        --color-bg1: #282828;
+        --color-bg2: #32302f;
+        --color-bg3: #3c3836;
+        --color-border: #504945;
+        --color-border-dim: #3c3836;
+        --color-ink: #ebdbb2;
+        --color-ink-dim: #a89984;
+        --color-ink-faint: #928374;
+        --color-orange: #fe8019;
+        --color-orange-deep: #d65d0e;
+        --color-yellow: #fabd2f;
+        --color-green: #b8bb26;
+        --color-aqua: #8ec07c;
+        --color-blue: #83a598;
+        --color-purple: #d3869b;
+        --color-red: #fb4934;
+        --font-sans: system-ui, sans-serif;
+        --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        padding: 10px 12px 6px;
+        gap: 8px;
+        background: var(--color-bg1);
+        color: var(--color-ink);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        line-height: 1.4;
+        overflow: hidden;
+      }
+      h2 {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        margin-bottom: 4px;
+      }
+      ol,
+      ul {
+        list-style: none;
+        padding: 0;
+        display: grid;
+        gap: 3px;
+      }
+      .prio li::before {
+        content: "▸ ";
+        color: var(--color-orange);
+      }
+      .blocks li,
+      .carry li {
+        color: var(--color-ink-dim);
+      }
+      .blocks time {
+        font-family: var(--font-mono);
+        color: var(--color-aqua);
+        margin-right: 6px;
+      }
+      .carry li::before {
+        content: "↻ ";
+        color: var(--color-yellow);
+      }
+      footer {
+        margin-top: auto;
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--color-ink-faint);
+      }
+      /* Progressive disclosure per grid size (widget standard §2):
+         1×1 shows the KPI essence; wider/taller adds detail. */
+      .blocks,
+      .carry {
+        display: none;
+      }
+      @media (min-width: 341px) {
+        .blocks {
+          display: grid;
+        }
+      }
+      @media (min-width: 341px) and (min-height: 161px) {
+        .carry {
+          display: grid;
+        }
+      }
+      @media (max-height: 160px) {
+        .prio li:nth-child(n + 2) {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="prio">
+      <h2>Top priorities</h2>
+      <ol>
+        <li>Ship the M2 dashboard render path</li>
+        <li>Review the schema PR</li>
+        <li>Write the routines-sync plan</li>
+      </ol>
+    </section>
+    <section class="blocks">
+      <h2>Blocks</h2>
+      <ul>
+        <li><time>10:00</time>Team standup</li>
+        <li><time>14:00</time>Focus: bulletin M2</li>
+      </ul>
+    </section>
+    <section class="carry">
+      <h2>Carried over</h2>
+      <ul>
+        <li>Reply to the ADR-0005 thread</li>
+      </ul>
+    </section>
+    <footer>
+      <span>daily-plan</span>
+      <span>2026-07-09 08:00Z</span>
+    </footer>
+  </body>
+</html>
