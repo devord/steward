@@ -1,0 +1,29 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Single source of truth for versions shared across workspace packages.
+# Reference from package.json as `"<name>": "catalog:"`.
+catalog:
+  "@types/node": ^24.3.1
+  # Types only — the `vp test` runner substitutes its own bundled vitest at
+  # runtime; this copy just makes `import ... from "vitest"` typecheck.
+  vitest: ^4.0.0
+  yaml: ^2.8.0
+  zod: ^4.4.0
+
+# Supply-chain hardening (mirrors devtools' pnpm-workspace.yaml):
+# - `ignoreScripts: true` blocks lifecycle scripts from transitive deps on
+#   install. Run `pnpm exec lefthook install` once after cloning.
+# - `minimumReleaseAge: 1440` refuses packages published in the last 24h
+#   (mitigates compromise-then-publish attacks). Trusted ecosystem scopes
+#   we follow closely are exempt.
+ignoreScripts: true
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - "@oxc-project/*"
+  - "@voidzero-dev/*"
+  - oxfmt
+  - oxlint
+  - vite-plus
+  - vitest

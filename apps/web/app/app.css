@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* Bulletin theme — gruvbox dark hard. This @theme block is the single source
+   of truth for the palette: Tailwind generates utilities from it (bg-bg1,
+   text-ink-dim, border-border-dim, …) for app chrome, and the widget-artifact
+   skill inlines the same values as plain CSS custom properties for artifacts
+   (which cannot use Tailwind: self-contained HTML, no build step). */
+@theme {
+  --color-*: initial;
+  --color-bg: #1d2021;
+  --color-bg1: #282828;
+  --color-bg2: #32302f;
+  --color-bg3: #3c3836;
+  --color-border: #504945;
+  --color-border-dim: #3c3836;
+  --color-ink: #ebdbb2;
+  --color-ink-dim: #a89984;
+  --color-ink-faint: #928374;
+  --color-orange: #fe8019;
+  --color-orange-deep: #d65d0e;
+  --color-yellow: #fabd2f;
+  --color-green: #b8bb26;
+  --color-aqua: #8ec07c;
+  --color-blue: #83a598;
+  --color-purple: #d3869b;
+  --color-red: #fb4934;
+
+  --font-sans: system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@layer base {
+  html,
+  body {
+    @apply bg-bg text-ink font-sans;
+  }
+
+  ::selection {
+    @apply bg-orange-deep text-bg;
+  }
+}
