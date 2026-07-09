@@ -6,6 +6,7 @@ import {
   createBranch,
   createPullRequest,
   getFile,
+  GitHubError,
   putFile,
 } from "../lib/github.server.ts"
 import { requireAuth } from "../lib/session.server.ts"
@@ -72,12 +73,26 @@ export async function action({ request }: { request: Request }) {
   // Sequential: two files → two commits; parallel PUTs to one branch race
   // on the head and GitHub rejects the loser.
   for (const change of changes) {
-    await putFile(auth.token, dataRepo, change.path, {
-      content: change.yaml,
-      message: `config: update ${change.kind} via bulletin`,
-      branch,
-      sha: currentShas.get(change.kind),
-    })
+    try {
+      await putFile(auth.token, dataRepo, change.path, {
+        content: change.yaml,
+        message: `config: update ${change.kind} via bulletin`,
+        branch,
+        sha: currentShas.get(change.kind),
+      })
+    } catch (error) {
+      // The PUT checks the expected sha atomically; the pre-check above
+      // reads through the contents API, which can lag a just-made commit.
+      // Translate GitHub's own conflict into the same 409 the pre-check
+      // produces instead of surfacing a 500.
+      if (error instanceof GitHubError && error.status === 409) {
+        return data(
+          { ok: false as const, conflicts: [change.kind] },
+          { status: 409 },
+        )
+      }
+      throw error
+    }
   }
 
   if (payload.intent === "pr") {
