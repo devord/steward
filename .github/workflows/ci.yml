@@ -6,7 +6,8 @@ on:
   pull_request:
 
 jobs:
-  ci:
+  quality:
+    name: Quality Checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

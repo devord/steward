@@ -9,3 +9,4 @@ coverage
 .env
 .env.local
 *.local.json
+.humanlayer/tasks/form-factory-task-monitoring-and-artifact-management-web-app
