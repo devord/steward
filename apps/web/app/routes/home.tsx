@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react"
-import { data, Form, redirect, useRevalidator } from "react-router"
+import { data, Form, Link, redirect, useRevalidator } from "react-router"
 
 import type { Routine, WidgetSize } from "@bulletin/schema"
 import { GRID_MAX_COLS } from "@bulletin/schema"
-import { LayoutGrid, Plus } from "lucide-react"
+import { LayoutGrid, Plus, Settings } from "lucide-react"
 
 import type { Route } from "./+types/home"
 import { AddRoutineDialog } from "../components/add-routine-dialog.tsx"
@@ -14,6 +14,7 @@ import { Button, buttonVariants } from "~/components/ui/button"
 import { Separator } from "~/components/ui/separator"
 import { cn } from "~/lib/utils"
 import { cssVars } from "../lib/css.ts"
+import { useT } from "../lib/i18n.tsx"
 import {
   dataRepoExists,
   loadDashboard,
@@ -90,6 +91,7 @@ function Dashboard({
   data: Extract<Route.ComponentProps["loaderData"], { kind: "dashboard" }>
 }) {
   const { login, now, view } = data
+  const t = useT()
   const revalidator = useRevalidator()
 
   const { draft, update, clear, rebase } = useDraft(view.dataRepo, {
@@ -225,7 +227,7 @@ function Dashboard({
               onClick={() => setSyncing(true)}
             >
               <span aria-hidden className="size-1.5 rounded-full bg-yellow" />
-              unsynced changes
+              {t("header.unsynced")}
             </Button>
           )}
           <Button
@@ -235,7 +237,7 @@ function Dashboard({
             onClick={() => setAdding(true)}
           >
             <Plus data-icon="inline-start" />
-            add routine
+            {t("header.addRoutine")}
           </Button>
           <Button
             size="sm"
@@ -247,8 +249,19 @@ function Dashboard({
             onClick={() => setEditing((value) => !value)}
           >
             <LayoutGrid data-icon="inline-start" />
-            {editing ? "done" : "edit layout"}
+            {editing ? t("header.done") : t("header.editLayout")}
           </Button>
+          <Link
+            to="/settings"
+            aria-label={t("header.settings")}
+            title={t("header.settings")}
+            className={cn(
+              buttonVariants({ size: "icon-sm", variant: "ghost" }),
+              "text-ink-dim hover:text-foreground",
+            )}
+          >
+            <Settings className="size-3.5" />
+          </Link>
           <Separator orientation="vertical" className="mx-2 h-4!" />
           <span className="font-mono text-xs text-ink-faint">{login}</span>
           <Form method="post" action="/auth/logout">
@@ -258,7 +271,7 @@ function Dashboard({
               type="submit"
               className="text-ink-faint hover:text-foreground"
             >
-              sign out
+              {t("header.signOut")}
             </Button>
           </Form>
         </div>
@@ -294,7 +307,7 @@ function Dashboard({
       {unplaced.length > 0 && editing && (
         <section className="mt-6">
           <h2 className="mb-2 font-mono text-xs text-ink-faint">
-            not on the grid
+            {t("offgrid.title")}
           </h2>
           <div className="flex flex-wrap gap-2">
             {unplaced.map((routine) => (
@@ -339,6 +352,7 @@ function Dashboard({
 }
 
 function Landing() {
+  const t = useT()
   return (
     <main className="landing-bg grid min-h-dvh place-items-center px-6">
       <div className="w-full max-w-md pb-16">
@@ -346,12 +360,9 @@ function Landing() {
           <Wordmark className="text-4xl" />
         </h1>
         <p className="mt-6 text-[15px] leading-relaxed text-balance">
-          A dashboard of living widgets — each one an HTML report that a
-          scheduled routine regenerates.
+          {t("landing.tagline")}
         </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Reports that update themselves.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("landing.sub")}</p>
         <p className="mt-7 font-mono text-xs text-ink-faint">
           cron <span className="text-ink-dim">▸</span> skill{" "}
           <span className="text-ink-dim">▸</span> git push{" "}
@@ -361,11 +372,10 @@ function Landing() {
           href="/auth/login"
           className={cn(buttonVariants({ size: "lg" }), "mt-7")}
         >
-          Sign in with GitHub
+          {t("landing.signIn")}
         </a>
         <p className="mt-4 text-xs leading-relaxed text-ink-faint">
-          Everything lives in a private GitHub repo you own — the app stores
-          nothing.
+          {t("landing.privacy")}
         </p>
       </div>
     </main>
@@ -373,15 +383,16 @@ function Landing() {
 }
 
 function EmptyDashboard({ onAdd }: { onAdd: () => void }) {
+  const t = useT()
   return (
     <main className="flex flex-col items-center gap-1.5 rounded-lg border border-dashed py-24 text-center">
-      <p className="font-mono text-xs text-ink-faint">the grid is empty</p>
+      <p className="font-mono text-xs text-ink-faint">{t("empty.fact")}</p>
       <p className="max-w-sm text-sm text-muted-foreground">
-        A routine runs a skill on a schedule and publishes one widget here.
+        {t("empty.hint")}
       </p>
       <Button className="mt-3" onClick={onAdd}>
         <Plus data-icon="inline-start" />
-        Add your first routine
+        {t("empty.cta")}
       </Button>
     </main>
   )

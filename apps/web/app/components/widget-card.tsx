@@ -1,3 +1,5 @@
+import { useMemo } from "react"
+
 import type { Routine, Widget, WidgetSize } from "@bulletin/schema"
 import { GRID_MAX_COLS, GRID_MAX_ROWS } from "@bulletin/schema"
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, X } from "lucide-react"
@@ -13,7 +15,10 @@ import {
 } from "~/components/ui/select"
 import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
-import { cronIntervalMs, formatAgo } from "../lib/time.ts"
+import { useT } from "../lib/i18n.tsx"
+import { themeArtifactHtml } from "../lib/theme.ts"
+import { agoParts, cronIntervalMs } from "../lib/time.ts"
+import { useResolvedTheme } from "../lib/use-appearance.ts"
 
 export interface WidgetCardProps {
   widget: Widget
@@ -31,6 +36,11 @@ export interface WidgetCardProps {
  * One grid cell: the routine's artifact in a sandboxed srcdoc iframe
  * (scripts allowed, no same-origin, no network — ADR-0002), a freshness
  * footer, and a placeholder when nothing was ever published.
+ *
+ * Artifacts are authored in gruvbox; a non-default theme is injected as a
+ * `--color-*` override appended to the document (ADR-0009). The server
+ * renders the default, so a switched theme reloads each iframe once right
+ * after hydration — local srcdoc, no network, imperceptible.
  */
 export function WidgetCard({
   widget,
@@ -42,8 +52,13 @@ export function WidgetCard({
   onResize,
   onRemove,
 }: WidgetCardProps) {
+  const t = useT()
+  const theme = useResolvedTheme()
   const { position, size } = widget
-  const html = artifact?.html ?? null
+  const html = useMemo(
+    () => (artifact?.html ? themeArtifactHtml(artifact.html, theme) : null),
+    [artifact?.html, theme],
+  )
   const lastRunAt = artifact?.lastRunAt ?? null
   const interval = cronIntervalMs(routine.schedule)
   // Overdue by more than one full interval → the schedule missed a run.
@@ -51,6 +66,13 @@ export function WidgetCard({
     lastRunAt != null &&
     interval != null &&
     now - Date.parse(lastRunAt) > 2 * interval
+
+  const ago = lastRunAt ? agoParts(lastRunAt, now) : null
+  const ranLabel = ago
+    ? ago.unit === "now"
+      ? t("widget.ran", { ago: t("time.now") })
+      : t("widget.ran", { ago: t(`time.${ago.unit}`, { n: ago.n }) })
+    : t("widget.never")
 
   return (
     <article
@@ -76,14 +98,14 @@ export function WidgetCard({
           <span className="font-mono text-xs text-ink-dim">{routine.slug}</span>
           <span className="text-xs text-ink-faint">
             {artifact?.unreachable ? (
-              "github unreachable — retries on next refresh"
+              t("widget.unreachable")
             ) : routine.enabled ? (
               <>
-                waiting for its first run —{" "}
+                {t("widget.waiting")}{" "}
                 <span className="font-mono">{routine.schedule}</span>
               </>
             ) : (
-              "routine disabled"
+              t("widget.disabled")
             )}
           </span>
         </div>
@@ -93,7 +115,7 @@ export function WidgetCard({
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="move left"
+            aria-label={t("widget.moveLeft")}
             onClick={() => onMove?.(-1, 0)}
           >
             <ArrowLeft />
@@ -101,7 +123,7 @@ export function WidgetCard({
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="move right"
+            aria-label={t("widget.moveRight")}
             onClick={() => onMove?.(1, 0)}
           >
             <ArrowRight />
@@ -109,7 +131,7 @@ export function WidgetCard({
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="move up"
+            aria-label={t("widget.moveUp")}
             onClick={() => onMove?.(0, -1)}
           >
             <ArrowUp />
@@ -117,21 +139,21 @@ export function WidgetCard({
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="move down"
+            aria-label={t("widget.moveDown")}
             onClick={() => onMove?.(0, 1)}
           >
             <ArrowDown />
           </Button>
           <span className="ml-auto flex items-center gap-1">
             <SizeSelect
-              label="columns"
+              label={t("widget.columns")}
               max={GRID_MAX_COLS}
               value={size.cols}
               onChange={(cols) => onResize?.({ ...size, cols })}
             />
             <span className="text-xs text-ink-faint">×</span>
             <SizeSelect
-              label="rows"
+              label={t("widget.rows")}
               max={GRID_MAX_ROWS}
               value={size.rows}
               onChange={(rows) => onResize?.({ ...size, rows })}
@@ -139,7 +161,7 @@ export function WidgetCard({
             <Button
               variant="ghost"
               size="icon-xs"
-              aria-label={`remove ${routine.name} from grid`}
+              aria-label={t("widget.remove", { name: routine.name })}
               className="text-destructive"
               onClick={() => onRemove?.()}
             >
@@ -155,12 +177,12 @@ export function WidgetCard({
               <Badge
                 variant="secondary"
                 className="h-[15px] bg-yellow/15 px-1 font-mono text-[10px] text-yellow"
-                title="overdue relative to its schedule"
+                title={t("widget.staleTitle")}
               >
-                stale
+                {t("widget.stale")}
               </Badge>
             )}
-            {lastRunAt ? `ran ${formatAgo(lastRunAt, now)}` : "never ran"}
+            {ranLabel}
           </span>
         </footer>
       )}

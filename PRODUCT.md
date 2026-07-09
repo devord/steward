@@ -52,8 +52,12 @@ words, no decoration that doesn't inform.
 
 ## Accessibility & Inclusion
 
-WCAG 2.1 AA. Dark-only UI, so contrast discipline matters: body text ≥4.5:1
-against bg/bg1 (gruvbox ink on bg passes; ink-faint is for de-emphasized
-metadata only, never body copy). Full keyboard operability for editing and
-sync (Base UI primitives carry focus/ARIA). Respect prefers-reduced-motion;
-staleness never encoded by color alone (badge carries text).
+WCAG 2.1 AA across every theme, enforced in code: theme.test.ts holds each
+palette to body text ≥4.5:1 on bg/bg1/bg2, secondary ink ≥4.5:1, metadata
+ink ≥3:1, and readable primary buttons — where an upstream palette misses,
+the role is repointed within its own ramp (ADR-0009; ink-faint remains for
+de-emphasized metadata only, never body copy). Full keyboard operability
+for editing, sync, and the settings pickers (Base UI primitives and real
+radiogroups carry focus/ARIA). Respect prefers-reduced-motion; staleness
+never encoded by color alone (badge carries text). Chrome is localized
+(en, pt-BR) with the locale reflected in `<html lang>`.

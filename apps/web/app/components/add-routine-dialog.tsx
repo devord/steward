@@ -27,14 +27,15 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { Textarea } from "~/components/ui/textarea"
+import { useT } from "../lib/i18n.tsx"
 
 const SCHEDULE_PRESETS = [
-  { value: "0 * * * *", label: "hourly" },
-  { value: "0 */4 * * *", label: "every 4 hours" },
-  { value: "0 8 * * *", label: "daily at 8:00" },
-  { value: "0 9 * * 1-5", label: "weekdays at 9:00" },
-  { value: "0 9 * * 1", label: "weekly, Monday 9:00" },
-]
+  { value: "0 * * * *", label: "dialog.presetHourly" },
+  { value: "0 */4 * * *", label: "dialog.presetEvery4h" },
+  { value: "0 8 * * *", label: "dialog.presetDaily8" },
+  { value: "0 9 * * 1-5", label: "dialog.presetWeekdays9" },
+  { value: "0 9 * * 1", label: "dialog.presetWeeklyMon9" },
+] as const
 
 function kebab(text: string): string {
   return text
@@ -61,6 +62,7 @@ export function AddRoutineDialog({
   existingSlugs: string[]
   onAdd: (routine: Routine, size: WidgetSize) => void
 }) {
+  const t = useT()
   const [skillId, setSkillId] = useState<string | null>(null)
   const [name, setName] = useState("")
   const [slugEdited, setSlugEdited] = useState(false)
@@ -134,20 +136,18 @@ export function AddRoutineDialog({
     >
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add a routine</DialogTitle>
-          <DialogDescription>
-            A skill from the catalog, run on a schedule, rendering one widget.
-          </DialogDescription>
+          <DialogTitle>{t("dialog.title")}</DialogTitle>
+          <DialogDescription>{t("dialog.description")}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label>Skill</Label>
+            <Label>{t("dialog.skill")}</Label>
             {catalog.skills.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                The catalog is empty — no skill has published a{" "}
-                <code className="font-mono text-xs">widget:</code> block yet.
-                Add one to a skill in the shared repo and run{" "}
+                {t("dialog.catalogEmpty1")}{" "}
+                <code className="font-mono text-xs">widget:</code>{" "}
+                {t("dialog.catalogEmpty2")}{" "}
                 <code className="font-mono text-xs">pnpm gen:catalog</code>.
               </p>
             ) : (
@@ -179,7 +179,7 @@ export function AddRoutineDialog({
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-2">
-                  <Label htmlFor="routine-name">Name</Label>
+                  <Label htmlFor="routine-name">{t("dialog.name")}</Label>
                   <Input
                     id="routine-name"
                     value={name}
@@ -187,11 +187,11 @@ export function AddRoutineDialog({
                       setName(event.target.value)
                       if (!slugEdited) setSlug(kebab(event.target.value))
                     }}
-                    placeholder="Daily Plan"
+                    placeholder={t("dialog.namePlaceholder")}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="routine-slug">Slug</Label>
+                  <Label htmlFor="routine-slug">{t("dialog.slug")}</Label>
                   <Input
                     id="routine-slug"
                     value={slug}
@@ -204,7 +204,7 @@ export function AddRoutineDialog({
                   />
                   {slugTaken && (
                     <p className="text-xs text-destructive">
-                      already used by another routine
+                      {t("dialog.slugTaken")}
                     </p>
                   )}
                 </div>
@@ -212,10 +212,10 @@ export function AddRoutineDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-2">
-                  <Label>Widget size</Label>
+                  <Label>{t("dialog.size")}</Label>
                   <div className="flex items-center gap-1.5">
                     <SizeSelect
-                      label="columns"
+                      label={t("widget.columns")}
                       max={GRID_MAX_COLS}
                       value={size?.cols ?? 1}
                       onChange={(cols) =>
@@ -227,7 +227,7 @@ export function AddRoutineDialog({
                     />
                     <span className="text-xs text-ink-faint">×</span>
                     <SizeSelect
-                      label="rows"
+                      label={t("widget.rows")}
                       max={GRID_MAX_ROWS}
                       value={size?.rows ?? 1}
                       onChange={(rows) =>
@@ -240,7 +240,7 @@ export function AddRoutineDialog({
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label>Schedule</Label>
+                  <Label>{t("dialog.schedule")}</Label>
                   <Select
                     value={schedule ?? undefined}
                     onValueChange={(next) => {
@@ -252,16 +252,18 @@ export function AddRoutineDialog({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={skill.widget.schedule}>
-                        suggested — {skill.widget.schedule}
+                        {t("dialog.suggested", { cron: skill.widget.schedule })}
                       </SelectItem>
                       {SCHEDULE_PRESETS.filter(
                         (preset) => preset.value !== skill.widget.schedule,
                       ).map((preset) => (
                         <SelectItem key={preset.value} value={preset.value}>
-                          {preset.label}
+                          {t(preset.label)}
                         </SelectItem>
                       ))}
-                      <SelectItem value="custom">custom cron…</SelectItem>
+                      <SelectItem value="custom">
+                        {t("dialog.customCron")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   {schedule === "custom" && (
@@ -270,7 +272,7 @@ export function AddRoutineDialog({
                       onChange={(event) => setCustomCron(event.target.value)}
                       placeholder="0 8 * * *"
                       className="font-mono"
-                      aria-label="custom cron expression"
+                      aria-label={t("dialog.customCronLabel")}
                     />
                   )}
                 </div>
@@ -278,16 +280,16 @@ export function AddRoutineDialog({
 
               <div className="grid gap-2">
                 <Label htmlFor="routine-instructions">
-                  Instructions{" "}
+                  {t("dialog.instructions")}{" "}
                   <span className="font-normal text-muted-foreground">
-                    (optional — passed to the skill on every run)
+                    {t("dialog.instructionsHint")}
                   </span>
                 </Label>
                 <Textarea
                   id="routine-instructions"
                   value={instructions}
                   onChange={(event) => setInstructions(event.target.value)}
-                  placeholder="Which projects matter, what to ignore, tone…"
+                  placeholder={t("dialog.instructionsPlaceholder")}
                   rows={3}
                 />
               </div>
@@ -297,10 +299,10 @@ export function AddRoutineDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("dialog.cancel")}
           </Button>
           <Button disabled={!canSubmit} onClick={submit}>
-            Add to draft
+            {t("dialog.add")}
           </Button>
         </DialogFooter>
       </DialogContent>

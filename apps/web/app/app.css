@@ -5,33 +5,116 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Bulletin theme — gruvbox dark hard. This @theme block is the single source
-   of truth for the palette: Tailwind generates utilities from it (bg-bg1,
-   text-ink-dim, border-border-dim, …) for app chrome, and the widget-artifact
-   skill inlines the same values as plain CSS custom properties for artifacts
-   (which cannot use Tailwind: self-contained HTML, no build step). */
+/* Bulletin palette — multi-theme (ADR-0009). The registry in
+   apps/web/app/lib/theme.ts is the single source of truth for every hex:
+   root.tsx serves it as an inline stylesheet that defines the
+   `--palette-*` custom properties on `:root` (gruvbox dark hard, the
+   canonical default) and one `[data-theme]` block per theme. This file
+   only aliases those runtime vars — Tailwind palette utilities here,
+   shadcn semantic tokens below — so no color may exist that isn't in the
+   registry. Artifacts keep authoring against gruvbox (the widget-artifact
+   skill inlines it); the dashboard injects the active theme into their
+   iframes at render time. */
 @theme {
   --color-*: initial;
-  --color-bg: #1d2021;
-  --color-bg1: #282828;
-  --color-bg2: #32302f;
-  --color-bg3: #3c3836;
-  --color-border: #504945;
-  --color-border-dim: #3c3836;
-  --color-ink: #ebdbb2;
-  --color-ink-dim: #a89984;
-  --color-ink-faint: #928374;
-  --color-orange: #fe8019;
-  --color-orange-deep: #d65d0e;
-  --color-yellow: #fabd2f;
-  --color-green: #b8bb26;
-  --color-aqua: #8ec07c;
-  --color-blue: #83a598;
-  --color-purple: #d3869b;
-  --color-red: #fb4934;
-
   --font-sans: system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@theme inline {
+  --color-bg: var(--palette-bg);
+  --color-bg1: var(--palette-bg1);
+  --color-bg2: var(--palette-bg2);
+  --color-bg3: var(--palette-bg3);
+  --color-border-dim: var(--palette-border-dim);
+  --color-ink: var(--palette-ink);
+  --color-ink-dim: var(--palette-ink-dim);
+  --color-ink-faint: var(--palette-ink-faint);
+  --color-yellow: var(--palette-yellow);
+  --color-green: var(--palette-green);
+  --color-aqua: var(--palette-aqua);
+  --color-blue: var(--palette-blue);
+  --color-purple: var(--palette-purple);
+  --color-red: var(--palette-red);
+
+  --font-heading: var(--font-sans);
+  --font-sans: "Geist Variable", sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* shadcn semantic tokens, aliased onto the runtime palette (ADR-0008). One
+   mapping serves every theme — the `[data-theme]` blocks swap the palette
+   underneath it. Never introduce a literal color at this layer. */
+:root {
+  --background: var(--palette-bg);
+  --foreground: var(--palette-ink);
+  --card: var(--palette-bg1);
+  --card-foreground: var(--palette-ink);
+  --popover: var(--palette-bg1);
+  --popover-foreground: var(--palette-ink);
+  --primary: var(--palette-accent);
+  --primary-foreground: var(--palette-bg);
+  --secondary: var(--palette-bg3);
+  --secondary-foreground: var(--palette-ink);
+  --muted: var(--palette-bg2);
+  --muted-foreground: var(--palette-ink-dim);
+  --accent: var(--palette-bg3);
+  --accent-foreground: var(--palette-ink);
+  --destructive: var(--palette-red);
+  --border: var(--palette-border);
+  --input: var(--palette-border);
+  --ring: var(--palette-accent-deep);
+  --chart-1: var(--palette-accent);
+  --chart-2: var(--palette-yellow);
+  --chart-3: var(--palette-green);
+  --chart-4: var(--palette-aqua);
+  --chart-5: var(--palette-blue);
+  --radius: 0.5rem;
+  --sidebar: var(--palette-bg1);
+  --sidebar-foreground: var(--palette-ink);
+  --sidebar-primary: var(--palette-accent);
+  --sidebar-primary-foreground: var(--palette-bg);
+  --sidebar-accent: var(--palette-bg3);
+  --sidebar-accent-foreground: var(--palette-ink);
+  --sidebar-border: var(--palette-border-dim);
+  --sidebar-ring: var(--palette-accent-deep);
 }
 
 @layer base {
@@ -45,7 +128,8 @@
   }
 
   ::selection {
-    @apply bg-orange-deep text-bg;
+    background-color: var(--palette-accent-deep);
+    color: var(--palette-bg);
   }
 }
 
@@ -98,87 +182,4 @@
       grid-row: var(--row, auto) / span var(--rows, 1);
     }
   }
-}
-
-@theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: "Geist Variable", sans-serif;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
-  --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-}
-
-/* shadcn semantic tokens, mapped onto the gruvbox palette above. The app is
-   dark-only, so there is no .dark block — these are the theme. Every value
-   here MUST be one of the @theme palette values; never introduce a new
-   color at this layer. */
-:root {
-  color-scheme: dark;
-  --background: #1d2021; /* bg */
-  --foreground: #ebdbb2; /* ink */
-  --card: #282828; /* bg1 */
-  --card-foreground: #ebdbb2; /* ink */
-  --popover: #282828; /* bg1 */
-  --popover-foreground: #ebdbb2; /* ink */
-  --primary: #fe8019; /* orange */
-  --primary-foreground: #1d2021; /* bg */
-  --secondary: #3c3836; /* bg3 */
-  --secondary-foreground: #ebdbb2; /* ink */
-  --muted: #32302f; /* bg2 */
-  --muted-foreground: #a89984; /* ink-dim */
-  --accent: #3c3836; /* bg3 */
-  --accent-foreground: #ebdbb2; /* ink */
-  --destructive: #fb4934; /* red */
-  --border: #504945; /* border */
-  --input: #504945; /* border */
-  --ring: #d65d0e; /* orange-deep */
-  --chart-1: #fe8019; /* orange */
-  --chart-2: #fabd2f; /* yellow */
-  --chart-3: #b8bb26; /* green */
-  --chart-4: #8ec07c; /* aqua */
-  --chart-5: #83a598; /* blue */
-  --radius: 0.5rem;
-  --sidebar: #282828; /* bg1 */
-  --sidebar-foreground: #ebdbb2; /* ink */
-  --sidebar-primary: #fe8019; /* orange */
-  --sidebar-primary-foreground: #1d2021; /* bg */
-  --sidebar-accent: #3c3836; /* bg3 */
-  --sidebar-accent-foreground: #ebdbb2; /* ink */
-  --sidebar-border: #3c3836; /* border-dim */
-  --sidebar-ring: #d65d0e; /* orange-deep */
 }
