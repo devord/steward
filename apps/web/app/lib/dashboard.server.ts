@@ -9,13 +9,21 @@ import {
 } from "@bulletin/schema"
 
 import { env } from "./env.server.ts"
-import { getFile, getLastCommitDate, repoExists } from "./github.server.ts"
+import {
+  getFile,
+  getLastCommitDate,
+  GitHubError,
+  repoExists,
+} from "./github.server.ts"
 
 export interface ArtifactInfo {
   /** null → never published: render the placeholder card (ADR-0002). */
   html: string | null
   /** ISO date of the last publish commit, the "ran Xh ago" footer. */
   lastRunAt: string | null
+  /** GitHub couldn't serve this artifact right now (5xx) — the widget
+      renders an "unreachable" state instead of failing the whole board. */
+  unreachable?: boolean
 }
 
 export interface DashboardView {
@@ -70,11 +78,18 @@ export async function loadDashboard(
   await Promise.all(
     routines.routines.map(async ({ slug }) => {
       const path = `w/${slug}/index.html`
-      const [artifact, lastRunAt] = await Promise.all([
-        getFile(token, dataRepo, path, "artifacts"),
-        getLastCommitDate(token, dataRepo, path, "artifacts"),
-      ])
-      artifacts[slug] = { html: artifact?.text ?? null, lastRunAt }
+      try {
+        const [artifact, lastRunAt] = await Promise.all([
+          getFile(token, dataRepo, path, "artifacts"),
+          getLastCommitDate(token, dataRepo, path, "artifacts"),
+        ])
+        artifacts[slug] = { html: artifact?.text ?? null, lastRunAt }
+      } catch (error) {
+        // One widget's artifact failing (GitHub 5xx flap) must not take
+        // down the whole board — degrade that cell, keep the rest.
+        if (!(error instanceof GitHubError)) throw error
+        artifacts[slug] = { html: null, lastRunAt: null, unreachable: true }
+      }
     }),
   )
 

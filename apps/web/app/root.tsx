@@ -43,7 +43,11 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     details =
       error.status === 404
         ? "The requested page could not be found."
-        : error.statusText || details
+        : // Loaders throw data("<human message>", { status }) for expected
+          // failures (e.g. GitHub outage) — surface that over statusText.
+          (typeof error.data === "string" && error.data) ||
+          error.statusText ||
+          details
   } else if (import.meta.env.DEV && error && error instanceof Error) {
     details = error.message
     stack = error.stack
