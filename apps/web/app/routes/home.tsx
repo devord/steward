@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react"
-import { Form, redirect, useRevalidator } from "react-router"
+import { data, Form, redirect, useRevalidator } from "react-router"
 
 import type { Routine, WidgetSize } from "@bulletin/schema"
 import { GRID_MAX_COLS } from "@bulletin/schema"
@@ -19,6 +19,7 @@ import {
   resolveDataRepo,
 } from "../lib/dashboard.server.ts"
 import { type BaseShas, useDraft } from "../lib/draft.ts"
+import { GitHubError } from "../lib/github.server.ts"
 import { collides, findFreeSlot } from "../lib/placement.ts"
 import { getAuth } from "../lib/session.server.ts"
 
@@ -39,7 +40,21 @@ export async function loader({ request }: Route.LoaderArgs) {
   const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
   if (!(await dataRepoExists(auth.token, dataRepo))) throw redirect("/setup")
 
-  const view = await loadDashboard(auth.token, dataRepo)
+  let view
+  try {
+    view = await loadDashboard(auth.token, dataRepo)
+  } catch (error) {
+    // Config couldn't load at all (GitHub outage): a clear message beats
+    // an anonymous error page. Artifact-level failures degrade per-widget
+    // inside loadDashboard and never reach here.
+    if (error instanceof GitHubError) {
+      throw data(
+        "GitHub's API is having trouble right now, so your config couldn't load. The dashboard will be back on the next refresh once GitHub recovers.",
+        { status: 503 },
+      )
+    }
+    throw error
+  }
   return {
     kind: "dashboard" as const,
     login: auth.login,

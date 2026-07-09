@@ -75,7 +75,9 @@ export function WidgetCard({
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 p-3 text-center">
           <span className="font-mono text-xs text-ink-dim">{routine.slug}</span>
           <span className="text-xs text-ink-faint">
-            {routine.enabled ? (
+            {artifact?.unreachable ? (
+              "github unreachable — retries on next refresh"
+            ) : routine.enabled ? (
               <>
                 waiting for its first run —{" "}
                 <span className="font-mono">{routine.schedule}</span>

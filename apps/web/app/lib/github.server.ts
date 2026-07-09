@@ -17,19 +17,29 @@ export class GitHubError extends Error {
   }
 }
 
-function gh(token: string, path: string, init?: RequestInit) {
-  return fetch(`${API}${path}`, {
-    // A hung GitHub call would otherwise block the loader indefinitely.
-    signal: AbortSignal.timeout(15_000),
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...init?.headers,
-    },
-  })
+async function gh(token: string, path: string, init?: RequestInit) {
+  // GitHub's API intermittently answers 5xx during incidents. Retrying
+  // GETs (idempotent) up to twice usually rides it out; writes are never
+  // retried — the caller may have partially succeeded.
+  const method = init?.method ?? "GET"
+  const attempts = method === "GET" ? 3 : 1
+  let res: Response
+  for (let attempt = 1; ; attempt++) {
+    res = await fetch(`${API}${path}`, {
+      // A hung GitHub call would otherwise block the loader indefinitely.
+      signal: AbortSignal.timeout(15_000),
+      ...init,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        ...init?.headers,
+      },
+    })
+    if (res.status < 500 || attempt >= attempts) return res
+    await new Promise((resolve) => setTimeout(resolve, 250 * attempt))
+  }
 }
 
 /** Encode a repo-relative path for the contents API, keeping `/` separators. */
