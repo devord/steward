@@ -82,7 +82,19 @@ The wordmark text is `foreground` ink; the mark carries the orange.
 
 - Dashboard grid: 4 columns desktop / 2 tablet / 1 phone, 150px row unit,
   12px gap (`.dash-grid` in app.css; placement via CSS custom properties).
-- Chrome density: compact — the header is one slim row; panels use `gap-4`.
+  Below 4 columns, widgets render in visual (row, col) order so the stack
+  reads like the full board.
+- Chrome density: compact — the header is one slim row (`app-header`
+  shell, shared by every route); panels use `gap-4`.
+- Page gutters: `px-4 sm:px-6` on every route container; `body` carries
+  safe-area insets (`viewport-fit=cover`).
+- Touch: the vendored button/select primitives carry `pointer-coarse:`
+  size floors (roughly one Tailwind step up), so coarse pointers get
+  usable targets while fine pointers keep the compact density. Header
+  actions collapse to icons below `sm` (label goes `sr-only`).
+- Dialogs: never override the base `max-w-*` (it is the phone edge
+  margin) — widen with `sm:max-w-*`; tall content gets
+  `max-h-[85svh]` + a scrollable middle.
 - Radius: `--radius: 0.5rem`; cards `rounded-lg`, small controls tighter.
 
 ## Components
@@ -91,7 +103,8 @@ shadcn/ui vendored in `apps/web/app/components/ui/` (Base UI primitives,
 `base-nova` style, cva variants). Domain components in
 `apps/web/app/components/`: `widget-card` (artifact iframe + freshness
 footer + edit controls), `add-routine-dialog`, `sync-panel` (YAML diff),
-`appearance-settings` (mode + theme pickers), `logo` (mark + wordmark).
+`appearance-settings` (mode + theme pickers), `logo` (mark + wordmark),
+`app-header` (the shared header row).
 Add new primitives with `pnpm dlx shadcn@latest add <name>`.
 
 ## Motion

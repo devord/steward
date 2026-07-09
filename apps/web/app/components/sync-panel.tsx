@@ -157,7 +157,9 @@ export function SyncPanel({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col">
+      {/* `sm:max-w-2xl` (not `max-w-2xl`) keeps the base mobile width cap;
+          svh so iOS browser chrome doesn't push the footer off screen. */}
+      <DialogContent className="flex max-h-[85svh] flex-col sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("sync.title")}</DialogTitle>
           <DialogDescription>{t("sync.description")}</DialogDescription>

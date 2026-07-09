@@ -127,6 +127,13 @@
     @apply bg-background text-foreground font-sans;
   }
 
+  /* Notched phones in landscape: keep page gutters clear of the safe
+     area (viewport-fit=cover is set in root.tsx). */
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
   ::selection {
     background-color: var(--palette-accent-deep);
     color: var(--palette-bg);

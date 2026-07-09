@@ -65,7 +65,7 @@ export default function Setup({ loaderData }: Route.ComponentProps) {
   const creating = navigation.state !== "idle"
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16 leading-relaxed">
+    <main className="mx-auto max-w-2xl px-4 py-16 leading-relaxed sm:px-6">
       <Wordmark className="text-sm" />
       <h1 className="mt-10 font-mono text-2xl font-bold text-foreground">
         {t("setup.title")}
@@ -74,7 +74,7 @@ export default function Setup({ loaderData }: Route.ComponentProps) {
         {t("setup.hi1")} <span className="font-mono">{login}</span>{" "}
         {t("setup.hi2")}
       </p>
-      <p className="mt-4 rounded-md border border-border-dim bg-bg1 px-4 py-3 font-mono text-sm">
+      <p className="mt-4 rounded-md border border-border-dim bg-bg1 px-4 py-3 font-mono text-sm break-all">
         {dataRepo}
       </p>
       <ul className="mt-4 list-inside list-disc text-sm text-ink-dim">
