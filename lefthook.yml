@@ -1,0 +1,23 @@
+pre-commit:
+  # Run fmt before lint sequentially — both write to the same staged files,
+  # so parallel execution causes a write/write race and flaky output.
+  parallel: false
+  commands:
+    fmt:
+      glob: "*.{js,ts,tsx,json,md,sh}"
+      run: pnpm exec vp fmt --write {staged_files}
+      stage_fixed: true
+    lint:
+      glob: "*.{js,ts,tsx}"
+      run: pnpm exec vp lint --fix --max-warnings=0 {staged_files}
+      stage_fixed: true
+
+pre-push:
+  parallel: true
+  commands:
+    fmt:
+      glob: "*.{js,ts,tsx,json,md,sh}"
+      run: pnpm exec vp fmt --check {push_files}
+    lint:
+      glob: "*.{js,ts,tsx}"
+      run: pnpm exec vp lint --max-warnings=0 {push_files}

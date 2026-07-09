@@ -1,0 +1,11 @@
+.DS_Store
+node_modules
+dist
+build
+.turbo
+.react-router
+.vercel
+coverage
+.env
+.env.local
+*.local.json
