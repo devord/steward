@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
 
 /* Bulletin theme — gruvbox dark hard. This @theme block is the single source
    of truth for the palette: Tailwind generates utilities from it (bg-bg1,
@@ -30,12 +35,150 @@
 }
 
 @layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
   html,
   body {
-    @apply bg-bg text-ink font-sans;
+    @apply bg-background text-foreground font-sans;
   }
 
   ::selection {
     @apply bg-orange-deep text-bg;
   }
+}
+
+/* Landing only: a faint dot grid hinting at the widget grid. Sits on bg,
+   never behind body copy blocks. */
+@layer components {
+  .landing-bg {
+    background-image: radial-gradient(
+      color-mix(in oklab, var(--color-ink) 7%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 24px 24px;
+  }
+}
+
+/* Dashboard grid (docs/widget-standard.md): 4 columns on desktop, 2 on
+   tablet, 1 on phone; fixed row unit; 12px gap. Widgets carry placement as
+   CSS custom properties (--col/--row/--cols/--rows, plus --cols-md — the
+   span pre-clamped to 2 for the tablet grid); explicit col/row placement
+   only applies on the full 4-column grid. */
+@layer components {
+  .dash-grid {
+    display: grid;
+    gap: 12px;
+    grid-auto-rows: var(--row-h, 150px);
+    grid-auto-flow: dense;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .widget-cell {
+    grid-column: 1 / -1;
+    grid-row: auto / span var(--rows, 1);
+  }
+
+  @media (min-width: 700px) {
+    .dash-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .widget-cell {
+      grid-column: auto / span var(--cols-md, 1);
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .dash-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .widget-cell {
+      grid-column: var(--col, auto) / span var(--cols, 1);
+      grid-row: var(--row, auto) / span var(--rows, 1);
+    }
+  }
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: "Geist Variable", sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* shadcn semantic tokens, mapped onto the gruvbox palette above. The app is
+   dark-only, so there is no .dark block — these are the theme. Every value
+   here MUST be one of the @theme palette values; never introduce a new
+   color at this layer. */
+:root {
+  color-scheme: dark;
+  --background: #1d2021; /* bg */
+  --foreground: #ebdbb2; /* ink */
+  --card: #282828; /* bg1 */
+  --card-foreground: #ebdbb2; /* ink */
+  --popover: #282828; /* bg1 */
+  --popover-foreground: #ebdbb2; /* ink */
+  --primary: #fe8019; /* orange */
+  --primary-foreground: #1d2021; /* bg */
+  --secondary: #3c3836; /* bg3 */
+  --secondary-foreground: #ebdbb2; /* ink */
+  --muted: #32302f; /* bg2 */
+  --muted-foreground: #a89984; /* ink-dim */
+  --accent: #3c3836; /* bg3 */
+  --accent-foreground: #ebdbb2; /* ink */
+  --destructive: #fb4934; /* red */
+  --border: #504945; /* border */
+  --input: #504945; /* border */
+  --ring: #d65d0e; /* orange-deep */
+  --chart-1: #fe8019; /* orange */
+  --chart-2: #fabd2f; /* yellow */
+  --chart-3: #b8bb26; /* green */
+  --chart-4: #8ec07c; /* aqua */
+  --chart-5: #83a598; /* blue */
+  --radius: 0.5rem;
+  --sidebar: #282828; /* bg1 */
+  --sidebar-foreground: #ebdbb2; /* ink */
+  --sidebar-primary: #fe8019; /* orange */
+  --sidebar-primary-foreground: #1d2021; /* bg */
+  --sidebar-accent: #3c3836; /* bg3 */
+  --sidebar-accent-foreground: #ebdbb2; /* ink */
+  --sidebar-border: #3c3836; /* border-dim */
+  --sidebar-ring: #d65d0e; /* orange-deep */
 }

@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { slugSchema } from "./routine"
+import { slugSchema } from "./routine.ts"
 
 export const GRID_MAX_COLS = 4
 export const GRID_MAX_ROWS = 4

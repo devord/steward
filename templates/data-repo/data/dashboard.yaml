@@ -1,0 +1,10 @@
+# Bulletin dashboard layout — which widgets show where.
+# Grid: 4 columns on desktop, ~150px row unit (docs/widget-standard.md).
+# Each widget references a routine slug from routines.yaml.
+grid:
+  columns: 4
+  rowHeight: 150
+widgets:
+  - routine: daily-plan
+    position: { col: 1, row: 1 }
+    size: { cols: 2, rows: 2 }

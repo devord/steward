@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { dashboardFileSchema } from "./dashboard"
-import { routinesFileSchema } from "./routine"
+import { dashboardFileSchema } from "./dashboard.ts"
+import { routinesFileSchema } from "./routine.ts"
 
 describe("routinesFileSchema", () => {
   it("parses a valid routines file and applies defaults", () => {
