@@ -18,10 +18,13 @@ export function parseDashboardFile(text: string): DashboardFile {
  * round-trip an invalid file into the data repo. Output is deterministic —
  * the sync diff (ADR-0003) depends on serialization being stable.
  */
+/** No line wrapping: folded long strings would make output width-dependent. */
+const STRINGIFY_OPTIONS = { lineWidth: 0 }
+
 export function serializeRoutinesFile(file: RoutinesFile): string {
-  return stringify(routinesFileSchema.parse(file))
+  return stringify(routinesFileSchema.parse(file), STRINGIFY_OPTIONS)
 }
 
 export function serializeDashboardFile(file: DashboardFile): string {
-  return stringify(dashboardFileSchema.parse(file))
+  return stringify(dashboardFileSchema.parse(file), STRINGIFY_OPTIONS)
 }

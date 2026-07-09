@@ -28,7 +28,9 @@ For each watched repo, via `gh` (preferred) or the GitHub API:
    older than 3 days.
 2. Issues opened since the last run (previous artifact's generated-at time,
    else the last 24h).
-3. Latest default-branch CI status (`gh run list --limit 1`).
+3. Latest default-branch CI status — filter explicitly, or the latest run
+   may come from a feature branch:
+   `gh run list --branch "$(gh repo view <repo> --json defaultBranchRef -q .defaultBranchRef.name)" --limit 1`.
 
 ## Compose
 

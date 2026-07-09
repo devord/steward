@@ -19,14 +19,22 @@ export class GitHubError extends Error {
 
 function gh(token: string, path: string, init?: RequestInit) {
   return fetch(`${API}${path}`, {
+    // A hung GitHub call would otherwise block the loader indefinitely.
+    signal: AbortSignal.timeout(15_000),
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
       ...init?.headers,
     },
   })
+}
+
+/** Encode a repo-relative path for the contents API, keeping `/` separators. */
+function encodePath(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/")
 }
 
 async function ghJson<T>(
@@ -73,12 +81,24 @@ export async function getFile(
   ref?: string,
 ): Promise<RepoFile | null> {
   const query = ref ? `?ref=${encodeURIComponent(ref)}` : ""
-  const res = await gh(token, `/repos/${repo}/contents/${path}${query}`)
+  const res = await gh(
+    token,
+    `/repos/${repo}/contents/${encodePath(path)}${query}`,
+  )
   if (res.status === 404) return null
   if (!res.ok) {
     throw new GitHubError(res.status, `${repo}/${path} → ${res.status}`)
   }
-  const { content, sha } = contentsSchema.parse(await res.json())
+  // Directories come back as arrays; >1MB files with empty content. Fail as
+  // a GitHubError like every other path here, not a bare ZodError.
+  const parsed = contentsSchema.safeParse(await res.json())
+  if (!parsed.success) {
+    throw new GitHubError(
+      422,
+      `${repo}/${path} is not a regular file readable via the contents API (directory or >1MB?)`,
+    )
+  }
+  const { content, sha } = parsed.data
   return { text: Buffer.from(content, "base64").toString("utf8"), sha }
 }
 
@@ -148,7 +168,7 @@ export async function putFile(
 ): Promise<{ contentSha: string }> {
   const result = await ghJson(
     token,
-    `/repos/${repo}/contents/${path}`,
+    `/repos/${repo}/contents/${encodePath(path)}`,
     putResultSchema,
     {
       method: "PUT",

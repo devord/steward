@@ -37,7 +37,18 @@ const PATHS = {
 export async function action({ request }: { request: Request }) {
   const auth = await requireAuth(request)
   const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
-  const payload = payloadSchema.parse(await request.json())
+
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    throw data({ error: "invalid JSON" }, { status: 400 })
+  }
+  const parsed = payloadSchema.safeParse(body)
+  if (!parsed.success) {
+    throw data({ error: "invalid payload" }, { status: 400 })
+  }
+  const payload = parsed.data
 
   const changes = (["routines", "dashboard"] as const).flatMap((kind) => {
     const change = payload[kind]

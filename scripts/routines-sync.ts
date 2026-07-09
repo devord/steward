@@ -34,7 +34,16 @@ if (!existsSync(file)) {
   process.exit(1)
 }
 
-const { routines } = parseRoutinesFile(readFileSync(file, "utf8"))
+let routines: Routine[]
+try {
+  routines = parseRoutinesFile(readFileSync(file, "utf8")).routines
+} catch (error) {
+  console.error(
+    `routines-sync: ${file} is not a valid routines file:\n` +
+      `  ${error instanceof Error ? error.message : String(error)}`,
+  )
+  process.exit(1)
+}
 
 /** The stable pointer prompt — created once, never edited (ADR-0005). */
 function pointerPrompt(routine: Routine): string {
@@ -100,4 +109,13 @@ const instructions = [
 ].join("\n")
 
 console.log("Applying via `claude -p`…\n")
-execFileSync("claude", ["-p", instructions], { stdio: "inherit" })
+try {
+  execFileSync("claude", ["-p", instructions], { stdio: "inherit" })
+} catch {
+  console.error(
+    "routines-sync: `claude -p` failed. Is the Claude Code CLI installed" +
+      " and authenticated? The plan above can be applied by hand via" +
+      " /schedule.",
+  )
+  process.exit(1)
+}

@@ -3,6 +3,7 @@ import {
   type DashboardFile,
   type RoutinesFile,
   catalogFileSchema,
+  dashboardFileSchema,
   parseDashboardFile,
   parseRoutinesFile,
 } from "@bulletin/schema"
@@ -59,7 +60,8 @@ export async function loadDashboard(
     : { routines: [] }
   const dashboard = dashboardRaw
     ? parseDashboardFile(dashboardRaw.text)
-    : { grid: { columns: 4, rowHeight: 150 }, widgets: [] }
+    : // Schema defaults fill grid.columns/rowHeight — one source of truth.
+      dashboardFileSchema.parse({ grid: {}, widgets: [] })
   const catalog = catalogRaw
     ? catalogFileSchema.parse(JSON.parse(catalogRaw.text))
     : { skills: [] }
