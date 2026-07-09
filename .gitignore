@@ -14,3 +14,4 @@ coverage
 # Personal impeccable skill copy (installed by npx impeccable update)
 .claude/skills/impeccable/
 design-shots/
+.env*
