@@ -145,7 +145,10 @@ export function AddRoutineDialog({
             <Label>Skill</Label>
             {catalog.skills.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                The catalog is empty — no routine-capable skills published.
+                The catalog is empty — no skill has published a{" "}
+                <code className="font-mono text-xs">widget:</code> block yet.
+                Add one to a skill in the shared repo and run{" "}
+                <code className="font-mono text-xs">pnpm gen:catalog</code>.
               </p>
             ) : (
               <div className="grid gap-1.5">

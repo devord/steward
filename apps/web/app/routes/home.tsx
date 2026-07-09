@@ -9,8 +9,9 @@ import type { Route } from "./+types/home"
 import { AddRoutineDialog } from "../components/add-routine-dialog.tsx"
 import { SyncPanel } from "../components/sync-panel.tsx"
 import { WidgetCard } from "../components/widget-card.tsx"
-import { Badge } from "~/components/ui/badge"
-import { Button } from "~/components/ui/button"
+import { Button, buttonVariants } from "~/components/ui/button"
+import { Separator } from "~/components/ui/separator"
+import { cn } from "~/lib/utils"
 import { cssVars } from "../lib/css.ts"
 import {
   dataRepoExists,
@@ -174,46 +175,58 @@ function Dashboard({
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16">
-      <header className="flex flex-wrap items-center gap-3 py-4">
-        <h1 className="font-mono text-lg font-bold tracking-widest text-primary">
-          Bulletin
-        </h1>
-        <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
-          <Plus data-icon="inline-start" />
-          Add routine
-        </Button>
-        <Button
-          size="sm"
-          variant={editing ? "secondary" : "ghost"}
-          aria-pressed={editing}
-          onClick={() => setEditing((value) => !value)}
+      <header className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-b py-2.5">
+        <Wordmark className="text-sm" />
+        <a
+          href={`https://github.com/${view.dataRepo}`}
+          target="_blank"
+          rel="noreferrer"
+          className="hidden font-mono text-xs text-ink-faint transition-colors hover:text-foreground md:inline"
         >
-          <LayoutGrid data-icon="inline-start" />
-          {editing ? "Done editing" : "Edit layout"}
-        </Button>
-        {draft && (
-          <Button size="sm" onClick={() => setSyncing(true)}>
-            <Badge
-              variant="secondary"
-              className="mr-1 h-4 bg-bg/20 px-1 text-[10px]"
+          {view.dataRepo}
+        </a>
+        <div className="ml-auto flex items-center gap-1">
+          {draft && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="mr-2 gap-2 font-mono text-xs"
+              onClick={() => setSyncing(true)}
             >
-              draft
-            </Badge>
-            Unsynced changes
-          </Button>
-        )}
-        <div className="ml-auto flex items-center gap-3 text-sm text-muted-foreground">
-          <a
-            href={`https://github.com/${view.dataRepo}`}
-            target="_blank"
-            rel="noreferrer"
-            className="font-mono text-xs hover:text-foreground"
+              <span aria-hidden className="size-1.5 rounded-full bg-yellow" />
+              unsynced changes
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-ink-dim hover:text-foreground"
+            onClick={() => setAdding(true)}
           >
-            {view.dataRepo}
-          </a>
-          <span className="font-mono text-xs">{login}</span>
+            <Plus data-icon="inline-start" />
+            add routine
+          </Button>
+          <Button
+            size="sm"
+            variant={editing ? "secondary" : "ghost"}
+            className={
+              editing ? undefined : "text-ink-dim hover:text-foreground"
+            }
+            aria-pressed={editing}
+            onClick={() => setEditing((value) => !value)}
+          >
+            <LayoutGrid data-icon="inline-start" />
+            {editing ? "done" : "edit layout"}
+          </Button>
+          <Separator orientation="vertical" className="mx-2 h-4!" />
+          <span className="font-mono text-xs text-ink-faint">{login}</span>
           <Form method="post" action="/auth/logout">
-            <Button size="sm" variant="ghost" type="submit">
+            <Button
+              size="sm"
+              variant="ghost"
+              type="submit"
+              className="text-ink-faint hover:text-foreground"
+            >
               sign out
             </Button>
           </Form>
@@ -249,8 +262,8 @@ function Dashboard({
 
       {unplaced.length > 0 && editing && (
         <section className="mt-6">
-          <h2 className="mb-2 font-mono text-xs tracking-widest text-ink-faint uppercase">
-            Not on the grid
+          <h2 className="mb-2 font-mono text-xs text-ink-faint">
+            not on the grid
           </h2>
           <div className="flex flex-wrap gap-2">
             {unplaced.map((routine) => (
@@ -294,34 +307,64 @@ function Dashboard({
   )
 }
 
+function Wordmark({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "font-mono font-semibold tracking-tight text-primary select-none",
+        className,
+      )}
+    >
+      bulletin
+      <span aria-hidden className="text-primary/60">
+        ▮
+      </span>
+    </span>
+  )
+}
+
 function Landing() {
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16 leading-relaxed">
-      <h1 className="font-mono text-3xl font-bold tracking-widest text-primary">
-        Bulletin
-      </h1>
-      <p className="mt-4">
-        A dashboard of living widgets, each kept fresh by a scheduled routine.
-      </p>
-      <p className="mt-2 text-muted-foreground">
-        Your config and artifacts live in a private GitHub repo of your own —
-        the app stores nothing.
-      </p>
-      <a
-        href="/auth/login"
-        className="mt-8 inline-block rounded-lg bg-primary px-4 py-2 font-mono text-sm font-bold text-primary-foreground hover:bg-primary/80"
-      >
-        Sign in with GitHub
-      </a>
+    <main className="landing-bg grid min-h-dvh place-items-center px-6">
+      <div className="w-full max-w-md pb-16">
+        <h1>
+          <Wordmark className="text-4xl" />
+        </h1>
+        <p className="mt-6 text-[15px] leading-relaxed text-balance">
+          A dashboard of living widgets — each one an HTML report that a
+          scheduled routine regenerates.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Reports that update themselves.
+        </p>
+        <p className="mt-7 font-mono text-xs text-ink-faint">
+          cron <span className="text-ink-dim">▸</span> skill{" "}
+          <span className="text-ink-dim">▸</span> git push{" "}
+          <span className="text-ink-dim">▸</span> widget
+        </p>
+        <a
+          href="/auth/login"
+          className={cn(buttonVariants({ size: "lg" }), "mt-7")}
+        >
+          Sign in with GitHub
+        </a>
+        <p className="mt-4 text-xs leading-relaxed text-ink-faint">
+          Everything lives in a private GitHub repo you own — the app stores
+          nothing.
+        </p>
+      </div>
     </main>
   )
 }
 
 function EmptyDashboard({ onAdd }: { onAdd: () => void }) {
   return (
-    <main className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-24 text-center">
-      <p className="text-muted-foreground">No widgets on the grid yet.</p>
-      <Button onClick={onAdd}>
+    <main className="flex flex-col items-center gap-1.5 rounded-lg border border-dashed py-24 text-center">
+      <p className="font-mono text-xs text-ink-faint">the grid is empty</p>
+      <p className="max-w-sm text-sm text-muted-foreground">
+        A routine runs a skill on a schedule and publishes one widget here.
+      </p>
+      <Button className="mt-3" onClick={onAdd}>
         <Plus data-icon="inline-start" />
         Add your first routine
       </Button>

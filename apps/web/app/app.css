@@ -49,6 +49,18 @@
   }
 }
 
+/* Landing only: a faint dot grid hinting at the widget grid. Sits on bg,
+   never behind body copy blocks. */
+@layer components {
+  .landing-bg {
+    background-image: radial-gradient(
+      color-mix(in oklab, var(--color-ink) 7%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 24px 24px;
+  }
+}
+
 /* Dashboard grid (docs/widget-standard.md): 4 columns on desktop, 2 on
    tablet, 1 on phone; fixed row unit; 12px gap. Widgets carry placement as
    CSS custom properties (--col/--row/--cols/--rows, plus --cols-md — the

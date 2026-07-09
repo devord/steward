@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 import { useFetcher } from "react-router"
 
-import { serializeDashboardFile, serializeRoutinesFile } from "@bulletin/schema"
+import {
+  parseDashboardFile,
+  parseRoutinesFile,
+  serializeDashboardFile,
+  serializeRoutinesFile,
+} from "@bulletin/schema"
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { Button } from "~/components/ui/button"
@@ -63,24 +68,53 @@ export function SyncPanel({
   const [asPr, setAsPr] = useState(false)
 
   const changes = useMemo<FileChange[]>(() => {
+    // A file is "changed" only when its content differs from the base
+    // after normalizing the base through the same parse→serialize cycle.
+    // Otherwise a hand-written base (comments, quoting) shows a phantom
+    // formatting-only diff for a file the draft never touched — and would
+    // produce a pointless commit.
+    function untouched(
+      baseText: string | null,
+      draftYaml: string,
+      normalize: (text: string) => string,
+    ): boolean {
+      if (baseText == null) return false
+      try {
+        return normalize(baseText) === draftYaml
+      } catch {
+        return false // unparseable base: let the diff surface it
+      }
+    }
+
     const routinesYaml = serializeRoutinesFile(draft.routines)
     const dashboardYaml = serializeDashboardFile(draft.dashboard)
-    const all: FileChange[] = [
-      {
+    const all: FileChange[] = []
+    if (
+      !untouched(baseFiles.routines, routinesYaml, (text) =>
+        serializeRoutinesFile(parseRoutinesFile(text)),
+      )
+    ) {
+      all.push({
         kind: "routines",
         path: "data/routines.yaml",
         yaml: routinesYaml,
         baseSha: draft.baseShas.routines,
         diff: diffLines(baseFiles.routines ?? "", routinesYaml),
-      },
-      {
+      })
+    }
+    if (
+      !untouched(baseFiles.dashboard, dashboardYaml, (text) =>
+        serializeDashboardFile(parseDashboardFile(text)),
+      )
+    ) {
+      all.push({
         kind: "dashboard",
         path: "data/dashboard.yaml",
         yaml: dashboardYaml,
         baseSha: draft.baseShas.dashboard,
         diff: diffLines(baseFiles.dashboard ?? "", dashboardYaml),
-      },
-    ]
+      })
+    }
     return all.filter((change) =>
       change.diff.some((line) => line.kind !== "same"),
     )
@@ -204,12 +238,12 @@ export function SyncPanel({
 
         {!synced && (
           <DialogFooter className="flex-col gap-3 sm:flex-row sm:items-center">
-            <Label className="flex items-center gap-2 text-sm font-normal text-muted-foreground sm:mr-auto">
+            <Label className="flex shrink-0 items-center gap-2 text-sm font-normal whitespace-nowrap text-muted-foreground sm:mr-auto">
               <Checkbox
                 checked={asPr}
                 onCheckedChange={(checked) => setAsPr(checked === true)}
               />
-              open a pull request instead of committing
+              open a PR instead
             </Label>
             <Button variant="ghost" onClick={onDiscard} disabled={busy}>
               Discard draft

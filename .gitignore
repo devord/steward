@@ -10,3 +10,7 @@ coverage
 .env.local
 *.local.json
 .humanlayer/tasks/
+
+# Personal impeccable skill copy (installed by npx impeccable update)
+.claude/skills/impeccable/
+design-shots/

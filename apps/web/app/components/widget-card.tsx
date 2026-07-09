@@ -72,12 +72,17 @@ export function WidgetCard({
           className="min-h-0 w-full flex-1 border-0"
         />
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 p-3 text-center">
-          <span className="text-sm text-muted-foreground">{routine.name}</span>
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 p-3 text-center">
+          <span className="font-mono text-xs text-ink-dim">{routine.slug}</span>
           <span className="text-xs text-ink-faint">
-            {routine.enabled
-              ? `no artifact yet — runs on ${routine.schedule}`
-              : "routine disabled"}
+            {routine.enabled ? (
+              <>
+                waiting for its first run —{" "}
+                <span className="font-mono">{routine.schedule}</span>
+              </>
+            ) : (
+              "routine disabled"
+            )}
           </span>
         </div>
       )}
@@ -141,13 +146,13 @@ export function WidgetCard({
           </span>
         </footer>
       ) : (
-        <footer className="flex items-center justify-between gap-2 border-t px-2 py-1 font-mono text-xs text-ink-faint">
-          <span className="truncate">{routine.name}</span>
-          <span className="flex shrink-0 items-center gap-1.5">
+        <footer className="flex items-center justify-between gap-2 border-t border-border-dim px-2 py-[3px] text-[11px]">
+          <span className="truncate text-ink-dim">{routine.name}</span>
+          <span className="flex shrink-0 items-center gap-1.5 font-mono text-ink-faint">
             {stale && (
               <Badge
                 variant="secondary"
-                className="h-4 bg-yellow/15 px-1 text-[10px] text-yellow"
+                className="h-[15px] bg-yellow/15 px-1 font-mono text-[10px] text-yellow"
                 title="overdue relative to its schedule"
               >
                 stale
