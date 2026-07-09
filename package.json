@@ -1,5 +1,5 @@
 {
-  "name": "bulletin-monorepo",
+  "name": "bulletin",
   "private": true,
   "type": "module",
   "scripts": {
