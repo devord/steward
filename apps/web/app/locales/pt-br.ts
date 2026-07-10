@@ -111,6 +111,16 @@ export const ptBR: Messages = {
   "widget.staleTitle": "atrasado em relação ao agendamento",
   "widget.ran": "rodou {ago}",
   "widget.never": "nunca rodou",
+  "widget.manual": "manual",
+  "widget.manualTitle": "roda sob demanda — sem agendamento",
+  "widget.update": "atualizar {name} agora",
+  "widget.updateShort": "atualizar",
+  "widget.updateRequested": "execução solicitada — atualize em um minuto",
+  "widget.updateNoTrigger":
+    "sem gatilho de API para esta rotina — configure com pnpm routines:sync",
+  "widget.updateFailed": "a solicitação falhou — tente de novo",
+  "widget.copyCommand": "copiar o comando de terminal que roda {name}",
+  "widget.copied": "comando copiado — rode em um terminal",
   "widget.unreachable": "github inacessível — tenta de novo no próximo refresh",
   "widget.waiting": "esperando a primeira execução —",
   "widget.disabled": "rotina desativada",
@@ -132,12 +142,15 @@ export const ptBR: Messages = {
 
   "dialog.title": "Adicionar uma rotina",
   "dialog.description":
-    "Uma skill do catálogo, executada num agendamento, renderizando um widget.",
+    "Descreva o que o widget mostra; uma rotina o mantém fresco num agendamento ou sob demanda.",
+  "dialog.prompt": "O que este widget deve mostrar?",
+  "dialog.promptPlaceholder":
+    "PRs abertos nos nossos repos, agrupados por revisor…",
   "dialog.skill": "Skill",
-  "dialog.catalogEmpty1":
-    "O catálogo está vazio — nenhuma skill publicou um bloco",
-  "dialog.catalogEmpty2":
-    "ainda. Adicione um a uma skill no repo compartilhado e rode",
+  "dialog.skillHint":
+    "(opcional — escolher uma preenche tamanho e agendamento)",
+  "dialog.sourcePrivate": "privada",
+  "dialog.sourceTeam": "time",
   "dialog.name": "Nome",
   "dialog.namePlaceholder": "Plano do Dia",
   "dialog.slug": "Slug",
@@ -152,12 +165,16 @@ export const ptBR: Messages = {
   "dialog.presetDaily8": "diário às 8:00",
   "dialog.presetWeekdays9": "dias úteis às 9:00",
   "dialog.presetWeeklyMon9": "semanal, segunda às 9:00",
-  "dialog.instructions": "Instruções",
-  "dialog.instructionsHint": "(opcional — passadas à skill em toda execução)",
-  "dialog.instructionsPlaceholder":
-    "Quais projetos importam, o que ignorar, tom…",
+  "dialog.manual": "manual — roda sob demanda",
+  "dialog.host": "Roda em",
+  "dialog.hostCloud": "nuvem — uma rotina Claude",
+  "dialog.hostLocal": "local — sua máquina",
+  "dialog.hostLocalHint":
+    "rotinas locais rodam da sua máquina: agendadas via pnpm routines:sync, manuais com pnpm routine <slug>",
+  "dialog.manualCloudHint":
+    "rotinas manuais na nuvem disparam pelo botão de atualizar do widget via gatilho de API — pnpm routines:sync configura",
   "dialog.runnerHint":
-    "o agendamento roda na conta Claude de {login} — depois do commit, rode pnpm routines:sync contra o repo do time",
+    "o recurso na nuvem roda na conta Claude de {login} — depois do commit, rode pnpm routines:sync contra o repo do time",
   "dialog.cancel": "Cancelar",
   "dialog.add": "Adicionar ao rascunho",
 
