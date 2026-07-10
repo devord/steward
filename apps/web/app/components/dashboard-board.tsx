@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react"
 import { Await, useFetcher, useNavigate, useRevalidator } from "react-router"
 
-import type { Routine, WidgetSize } from "@bulletin/schema"
+import type { DashboardFile, Routine, WidgetSize } from "@bulletin/schema"
 import { dashboardPath, GRID_MAX_COLS } from "@bulletin/schema"
 import { Plus } from "lucide-react"
 
@@ -19,6 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select"
 import { cn } from "~/lib/utils"
 import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import { cssVars } from "../lib/css.ts"
@@ -64,6 +71,10 @@ export function DashboardBoard({
   })
   const routines = draft?.routines ?? view.routines
   const dashboard = draft?.dashboard ?? view.dashboard
+  // The board's own grid resolution and canvas — drive placement bounds, the
+  // rendered column count, and the container width (all one decision).
+  const columns = dashboard.grid.columns
+  const wide = dashboard.grid.width === "wide"
 
   const [editing, setEditing] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -87,7 +98,11 @@ export function DashboardBoard({
         current.routines.routines.push(routine)
         current.dashboard.widgets.push({
           routine: routine.slug,
-          position: findFreeSlot(current.dashboard.widgets, size),
+          position: findFreeSlot(
+            current.dashboard.widgets,
+            size,
+            current.dashboard.grid.columns,
+          ),
           size,
         })
         return current
@@ -99,10 +114,17 @@ export function DashboardBoard({
   const placeRoutine = useCallback(
     (slug: string) => {
       update((current) => {
-        const size = { cols: 2, rows: 1 }
+        const size = {
+          cols: Math.min(2, current.dashboard.grid.columns),
+          rows: 1,
+        }
         current.dashboard.widgets.push({
           routine: slug,
-          position: findFreeSlot(current.dashboard.widgets, size),
+          position: findFreeSlot(
+            current.dashboard.widgets,
+            size,
+            current.dashboard.grid.columns,
+          ),
           size,
         })
         return current
@@ -118,7 +140,7 @@ export function DashboardBoard({
         if (!widget) return current
         const col = Math.min(
           Math.max(1, widget.position.col + dCol),
-          GRID_MAX_COLS - widget.size.cols + 1,
+          current.dashboard.grid.columns - widget.size.cols + 1,
         )
         const row = Math.max(1, widget.position.row + dRow)
         const candidate = { col, row, ...widget.size }
@@ -151,7 +173,10 @@ export function DashboardBoard({
       update((current) => {
         const widget = current.dashboard.widgets.find((w) => w.routine === slug)
         if (!widget) return current
-        const col = Math.min(widget.position.col, GRID_MAX_COLS - size.cols + 1)
+        const col = Math.min(
+          widget.position.col,
+          current.dashboard.grid.columns - size.cols + 1,
+        )
         const candidate = { col, row: widget.position.row, ...size }
         if (!collides(current.dashboard.widgets, candidate, slug)) {
           widget.size = size
@@ -175,8 +200,26 @@ export function DashboardBoard({
     [update],
   )
 
+  const setGrid = useCallback(
+    (patch: Partial<typeof dashboard.grid>) => {
+      update((current) => {
+        current.dashboard.grid = { ...current.dashboard.grid, ...patch }
+        return current
+      })
+    },
+    [update],
+  )
+
+  // Never let a column count strand a placed widget: the floor is the
+  // rightmost occupied column across the board.
+  const minColumns = dashboard.widgets.reduce(
+    (max, w) => Math.max(max, w.position.col + w.size.cols - 1),
+    1,
+  )
+
   const { drag, gridRef, startDrag, cancel } = useGridDrag({
     widgets: dashboard.widgets,
+    columns,
     rowHeight: dashboard.grid.rowHeight,
     onCommit: placeWidget,
   })
@@ -208,7 +251,15 @@ export function DashboardBoard({
   )
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
+    <div
+      className={cn(
+        "mx-auto px-4 pb-16 sm:px-6",
+        // Canvas cap: `wide` fills a large monitor (still bounded so the
+        // board stays composed, not stretched edge-to-edge); `fixed` keeps
+        // the comfortable centered reading width.
+        wide ? "max-w-[1800px]" : "max-w-7xl",
+      )}
+    >
       <DashboardHeader
         dataRepo={view.dataRepo}
         scope={view.scope}
@@ -226,9 +277,11 @@ export function DashboardBoard({
       />
 
       {editing && (
-        <p className="-mt-2 mb-3 hidden font-mono text-[11px] text-ink-faint min-[1100px]:block">
-          drag to move · corner to resize · del to remove
-        </p>
+        <GridSettings
+          grid={dashboard.grid}
+          minColumns={minColumns}
+          onChange={setGrid}
+        />
       )}
 
       {dashboard.widgets.length === 0 ? (
@@ -248,7 +301,10 @@ export function DashboardBoard({
           <main
             ref={gridRef}
             className="dash-grid"
-            style={cssVars({ "--row-h": `${dashboard.grid.rowHeight}px` })}
+            style={cssVars({
+              "--grid-cols": columns,
+              "--row-h": `${dashboard.grid.rowHeight}px`,
+            })}
           >
             {/* The frame is already placed; only the artifact bodies stream. Each
               cell holds its slot with a skeleton until its artifact lands. */}
@@ -272,6 +328,7 @@ export function DashboardBoard({
                           routine={routine}
                           artifact={resolved[widget.routine]}
                           now={now}
+                          columns={columns}
                           editing={editing}
                           drag={drag?.slug === widget.routine ? drag : null}
                           onDragStart={(kind, event) =>
@@ -335,6 +392,7 @@ export function DashboardBoard({
         open={adding}
         onOpenChange={setAdding}
         catalog={view.catalog}
+        columns={columns}
         existingSlugs={routines.routines.map((r) => r.slug)}
         onAdd={addRoutine}
         runner={view.scope === "team" ? login : undefined}
@@ -442,6 +500,112 @@ function DeleteDashboardDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** Row-unit presets surfaced as density; the schema field is free-form px,
+    so a value off-preset still shows as its own `{n}px` option. */
+const DENSITY_PRESETS = [
+  { value: 120, label: "grid.densityCompact" },
+  { value: 150, label: "grid.densityCozy" },
+  { value: 190, label: "grid.densityRoomy" },
+] as const
+
+/**
+ * Edit-mode board controls: columns, canvas width, and row density — the
+ * three knobs that were frozen (columns/width) or schema-only (rowHeight).
+ * Compact and mono to sit quietly above the grid; the keyboard hint rides
+ * the same row on desktop where drag/resize apply.
+ */
+function GridSettings({
+  grid,
+  minColumns,
+  onChange,
+}: {
+  grid: DashboardFile["grid"]
+  minColumns: number
+  onChange: (patch: Partial<DashboardFile["grid"]>) => void
+}) {
+  const t = useT()
+  const columnOptions = Array.from(
+    { length: GRID_MAX_COLS },
+    (_, i) => i + 1,
+  ).filter((n) => n >= minColumns)
+  const densityKnown = DENSITY_PRESETS.some((d) => d.value === grid.rowHeight)
+
+  return (
+    <div className="-mt-2 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] text-ink-faint">
+      <label className="flex items-center gap-1.5">
+        {t("grid.columnsLabel")}
+        <Select
+          value={String(grid.columns)}
+          onValueChange={(next) => {
+            const n = Number(next)
+            if (Number.isInteger(n)) onChange({ columns: n })
+          }}
+        >
+          <SelectTrigger size="sm" className="h-7 gap-1 font-mono text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {columnOptions.map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {n}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </label>
+
+      <label className="flex items-center gap-1.5">
+        {t("grid.width")}
+        <Select
+          value={grid.width}
+          onValueChange={(next) => {
+            if (next === "fixed" || next === "wide") onChange({ width: next })
+          }}
+        >
+          <SelectTrigger size="sm" className="h-7 gap-1 font-mono text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="fixed">{t("grid.widthFixed")}</SelectItem>
+            <SelectItem value="wide">{t("grid.widthWide")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </label>
+
+      <label className="flex items-center gap-1.5">
+        {t("grid.density")}
+        <Select
+          value={String(grid.rowHeight)}
+          onValueChange={(next) => {
+            const n = Number(next)
+            if (Number.isInteger(n)) onChange({ rowHeight: n })
+          }}
+        >
+          <SelectTrigger size="sm" className="h-7 gap-1 font-mono text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DENSITY_PRESETS.map((d) => (
+              <SelectItem key={d.value} value={String(d.value)}>
+                {t(d.label)}
+              </SelectItem>
+            ))}
+            {!densityKnown && (
+              <SelectItem value={String(grid.rowHeight)}>
+                {grid.rowHeight}px
+              </SelectItem>
+            )}
+          </SelectContent>
+        </Select>
+      </label>
+
+      <span className="ml-auto hidden text-ink-faint min-[1100px]:inline">
+        {t("grid.hint")}
+      </span>
+    </div>
   )
 }
 

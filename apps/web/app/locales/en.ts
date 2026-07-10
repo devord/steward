@@ -42,6 +42,23 @@ export const en = {
 
   "offgrid.title": "not on the grid",
 
+  "grid.columnsLabel": "columns",
+  "grid.width": "width",
+  "grid.widthFixed": "fixed",
+  "grid.widthWide": "wide",
+  "grid.density": "density",
+  "grid.densityCompact": "compact",
+  "grid.densityCozy": "cozy",
+  "grid.densityRoomy": "roomy",
+  "grid.hint": "drag to move · corner to resize · del to remove",
+
+  "size.small": "small",
+  "size.medium": "medium",
+  "size.wide": "wide",
+  "size.tall": "tall",
+  "size.hero": "hero",
+  "size.custom": "custom",
+
   "switcher.label": "dashboard",
   "switcher.personal": "personal",
   "switcher.team": "team",

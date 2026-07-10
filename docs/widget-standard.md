@@ -7,10 +7,13 @@ relies on it when rendering. Grid bounds are encoded in
 
 ## The grid (dashboard side)
 
-- CSS grid: **4 columns** on desktop, 2 on tablet, 1 on phone.
-- Fixed row unit **≈ 150 px**, **12 px** gap.
-- A widget declares `size: { cols: 1..4, rows: 1..4 }` and a
-  `position: { col, row }` in `data/dashboard.yaml`.
+- CSS grid: the board's own **`grid.columns`** on desktop (default **4**,
+  up to **6**), 2 on tablet, 1 on phone.
+- Row unit **≈ 150 px** by default (`grid.rowHeight`, adjustable as board
+  density), **12 px** gap. Canvas width is `grid.width` — `fixed` (centered)
+  or `wide` (fills a large monitor).
+- A widget declares `size: { cols: 1..columns, rows: 1..6 }` and a
+  `position: { col, row }` in `data/dashboards/<slug>.yaml`.
 - The widget body is an iframe:
   `<iframe srcdoc={artifactHtml} sandbox="allow-scripts">` — scripts allowed,
   **no** `allow-same-origin`, and the sandbox has no network.

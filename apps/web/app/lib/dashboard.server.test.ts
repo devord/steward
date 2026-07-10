@@ -92,7 +92,11 @@ describe("loadDashboard", () => {
     const view = await loadDashboard("token", MAIN_BOARD)
 
     expect(view.routines.routines).toEqual([])
-    expect(view.dashboard.grid).toEqual({ columns: 4, rowHeight: 150 })
+    expect(view.dashboard.grid).toEqual({
+      columns: 4,
+      rowHeight: 150,
+      width: "fixed",
+    })
     expect(view.dashboard.widgets).toEqual([])
     expect(view.catalog.skills).toEqual([])
     expect(view.baseShas).toEqual({ routines: null, dashboard: null })

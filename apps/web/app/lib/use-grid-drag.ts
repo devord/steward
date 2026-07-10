@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { Widget } from "@bulletin/schema"
-import { GRID_MAX_COLS, GRID_MAX_ROWS } from "@bulletin/schema"
+import { GRID_MAX_ROWS } from "@bulletin/schema"
 
 import { collides, type Rect } from "./placement.ts"
 
@@ -33,17 +33,19 @@ function clamp(value: number, min: number, max: number) {
 /**
  * Where `origin` snaps to after a drag of `dCol`/`dRow` whole cells.
  * Move keeps size and clamps position; resize keeps position and clamps
- * size (rows are position-unbounded in the schema, sizes are not).
+ * size (rows are position-unbounded in the schema, sizes are not). Column
+ * bounds come from the board's own `columns`, not a global ceiling.
  */
 export function dragCandidate(
   kind: DragKind,
   origin: Rect,
   dCol: number,
   dRow: number,
+  columns: number,
 ): Rect {
   if (kind === "move") {
     return {
-      col: clamp(origin.col + dCol, 1, GRID_MAX_COLS - origin.cols + 1),
+      col: clamp(origin.col + dCol, 1, columns - origin.cols + 1),
       row: Math.max(1, origin.row + dRow),
       cols: origin.cols,
       rows: origin.rows,
@@ -52,7 +54,7 @@ export function dragCandidate(
   return {
     col: origin.col,
     row: origin.row,
-    cols: clamp(origin.cols + dCol, 1, GRID_MAX_COLS - origin.col + 1),
+    cols: clamp(origin.cols + dCol, 1, columns - origin.col + 1),
     rows: clamp(origin.rows + dRow, 1, GRID_MAX_ROWS),
   }
 }
@@ -61,15 +63,17 @@ export function dragCandidate(
  * Pointer-driven move/resize on the desktop dashboard grid. The dragged
  * card floats with the pointer while a ghost cell previews the snap
  * target; the draft is written once, on drop. Cell math mirrors the
- * .dash-grid geometry (4 columns, 12px gap, fixed row unit), so this only
- * activates on the ≥1100px grid where explicit placement applies.
+ * .dash-grid geometry (the board's `columns`, 12px gap, fixed row unit), so
+ * this only activates on the ≥1100px grid where explicit placement applies.
  */
 export function useGridDrag({
   widgets,
+  columns,
   rowHeight,
   onCommit,
 }: {
   widgets: Widget[]
+  columns: number
   rowHeight: number
   onCommit: (slug: string, rect: Rect) => void
 }) {
@@ -87,7 +91,7 @@ export function useGridDrag({
   const startDrag = useCallback(
     (slug: string, kind: DragKind, event: React.PointerEvent) => {
       if (event.button !== 0 || cleanupRef.current) return
-      // Explicit col/row placement only exists on the 4-column grid.
+      // Explicit col/row placement only exists on the full ≥1100px grid.
       if (!window.matchMedia("(min-width: 1100px)").matches) return
       const grid = gridRef.current
       const widget = widgetsRef.current.find((w) => w.routine === slug)
@@ -96,8 +100,8 @@ export function useGridDrag({
       event.preventDefault()
       const origin: Rect = { ...widget.position, ...widget.size }
       const cellWidth =
-        (grid.getBoundingClientRect().width - GRID_GAP * (GRID_MAX_COLS - 1)) /
-        GRID_MAX_COLS
+        (grid.getBoundingClientRect().width - GRID_GAP * (columns - 1)) /
+        columns
       const colStep = cellWidth + GRID_GAP
       const rowStep = rowHeight + GRID_GAP
       const startX = event.clientX
@@ -123,6 +127,7 @@ export function useGridDrag({
           origin,
           Math.round(dx / colStep),
           Math.round(dy / rowStep),
+          columns,
         )
         latest = {
           slug,
@@ -188,7 +193,7 @@ export function useGridDrag({
       window.addEventListener("keydown", onKey)
       cleanupRef.current = cleanup
     },
-    [rowHeight],
+    [columns, rowHeight],
   )
 
   return { drag, gridRef, startDrag, cancel }

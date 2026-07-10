@@ -1,12 +1,14 @@
 # Bulletin dashboard layout — which widgets show where. One file per
 # dashboard in data/dashboards/; the filename is the dashboard's slug
 # (`main` is the default board the app opens).
-# Grid: 4 columns on desktop, ~150px row unit (docs/widget-standard.md).
-# Each widget references a routine slug from routines.yaml.
+# Grid: `columns` on desktop (up to 6), ~`rowHeight`px row unit, `width`
+# fixed|wide canvas (docs/widget-standard.md). Each widget references a
+# routine slug from routines.yaml.
 name: Main
 grid:
   columns: 4
   rowHeight: 150
+  width: fixed
 widgets:
   - routine: daily-plan
     position: { col: 1, row: 1 }

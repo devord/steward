@@ -30,6 +30,7 @@ function GridHarness({ initial }: { initial: Widget[] }) {
 
   const { drag, gridRef, startDrag } = useGridDrag({
     widgets,
+    columns: 4,
     rowHeight: 150,
     onCommit: placeWidget,
   })
@@ -47,6 +48,7 @@ function GridHarness({ initial }: { initial: Widget[] }) {
           routine={routine(widget.routine)}
           artifact={undefined}
           now={Date.now()}
+          columns={4}
           editing
           drag={drag?.slug === widget.routine ? drag : null}
           onDragStart={(kind, event) => startDrag(widget.routine, kind, event)}
