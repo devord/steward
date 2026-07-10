@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
-import {
-  Form,
-  Link,
-  useFetcher,
-  useNavigate,
-  useRevalidator,
-} from "react-router"
+import { Form, useFetcher, useNavigate, useRevalidator } from "react-router"
 
 import type { Routine, WidgetSize } from "@bulletin/schema"
 import { dashboardPath, GRID_MAX_COLS } from "@bulletin/schema"
@@ -26,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog"
+import { Link } from "~/components/ui/link"
 import { Separator } from "~/components/ui/separator"
 import { cn } from "~/lib/utils"
 import { DEFAULT_DASHBOARD } from "../lib/board.ts"

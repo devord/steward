@@ -1,4 +1,4 @@
-import { data, Link, useFetcher } from "react-router"
+import { data, useFetcher } from "react-router"
 
 import { ArrowLeft, Check } from "lucide-react"
 
@@ -18,6 +18,7 @@ import {
 } from "../lib/i18n.tsx"
 import { getLocale, localeCookie } from "../lib/locale.server.ts"
 import { buttonVariants } from "~/components/ui/button"
+import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
 
 export function loader({ request }: Route.LoaderArgs) {
