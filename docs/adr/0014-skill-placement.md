@@ -52,5 +52,7 @@ No `source:` field, no custom loader.
   contribute their project skills), and the plugins repo's `bulletin`
   plugin **mirrors the contract skills** so the app's copy-command
   one-liner works without a bulletin checkout. The bulletin repo stays the
-  source of truth; the mirror is a copy — drift is a watch item, not a
-  mechanism.
+  source of truth — a contract change must ship atomically with the app
+  and the widget standard, and dry runs must execute the local tree's
+  version — so the mirror is a copy: update here first, then re-mirror
+  (drift is a roadmap watch item, not a mechanism).
