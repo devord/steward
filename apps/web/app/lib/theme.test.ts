@@ -97,6 +97,8 @@ describe("frameArtifactHtml", () => {
     // footer is standalone-only, so the embedded frame suppresses it.
     expect(framed).toContain("footer{display:none !important}")
     expect(framed).not.toContain("--color-")
+    // A null override must not stringify into the srcdoc as visible "null".
+    expect(framed).not.toContain("null")
   })
 
   it("appends the --color-* overrides for any other theme", () => {
