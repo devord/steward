@@ -1,0 +1,544 @@
+import { useCallback, useEffect, useState } from "react"
+import {
+  Form,
+  Link,
+  useFetcher,
+  useNavigate,
+  useRevalidator,
+} from "react-router"
+
+import type { Routine, WidgetSize } from "@bulletin/schema"
+import { dashboardPath, GRID_MAX_COLS } from "@bulletin/schema"
+import { LayoutGrid, Plus, Settings, Trash2 } from "lucide-react"
+
+import { AddRoutineDialog } from "./add-routine-dialog.tsx"
+import { AppHeader } from "./app-header.tsx"
+import { DashboardSwitcher } from "./dashboard-switcher.tsx"
+import { Wordmark } from "./logo.tsx"
+import { SyncPanel } from "./sync-panel.tsx"
+import { WidgetCard } from "./widget-card.tsx"
+import { Button, buttonVariants } from "~/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog"
+import { Separator } from "~/components/ui/separator"
+import { cn } from "~/lib/utils"
+import { DEFAULT_DASHBOARD } from "../lib/board.ts"
+import { cssVars } from "../lib/css.ts"
+import type { DashboardView } from "../lib/dashboard.server.ts"
+import { type BaseShas, useDraft } from "../lib/draft.ts"
+import { useT } from "../lib/i18n.tsx"
+import { collides, findFreeSlot, type Rect } from "../lib/placement.ts"
+import { useGridDrag } from "../lib/use-grid-drag.ts"
+
+/**
+ * One board — personal or team (ADR-0010) — extracted from the home route
+ * so every board route renders the identical grid, draft, and sync flow.
+ * Which repo and layout file it edits is entirely decided by `view`.
+ */
+export function DashboardBoard({
+  view,
+  login,
+  now,
+  personalDashboards,
+  teamDashboards,
+}: {
+  view: DashboardView
+  login: string
+  now: number
+  personalDashboards: string[]
+  /** null → no team repo configured or no access (switcher hides the group). */
+  teamDashboards: string[] | null
+}) {
+  const t = useT()
+  const revalidator = useRevalidator()
+
+  // One draft per board: two dashboards in the same repo are separate edit
+  // surfaces even though they share routines.yaml (ADR-0003/0010).
+  const boardKey = `${view.dataRepo}:${view.dashboardSlug}`
+  const { draft, update, clear, rebase } = useDraft(boardKey, {
+    routines: view.routines,
+    dashboard: view.dashboard,
+    baseShas: view.baseShas,
+  })
+  const routines = draft?.routines ?? view.routines
+  const dashboard = draft?.dashboard ?? view.dashboard
+
+  const [editing, setEditing] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const routinesBySlug = new Map(routines.routines.map((r) => [r.slug, r]))
+  const placed = new Set(dashboard.widgets.map((w) => w.routine))
+  const unplaced = routines.routines.filter((r) => !placed.has(r.slug))
+  // Below the 4-column breakpoint widgets stack in source order, so render
+  // them in visual (row, col) order — the phone/tablet stack then reads
+  // top-left to bottom-right like the full board.
+  const orderedWidgets = [...dashboard.widgets].sort(
+    (a, b) =>
+      a.position.row - b.position.row || a.position.col - b.position.col,
+  )
+
+  const addRoutine = useCallback(
+    (routine: Routine, size: WidgetSize) => {
+      update((current) => {
+        current.routines.routines.push(routine)
+        current.dashboard.widgets.push({
+          routine: routine.slug,
+          position: findFreeSlot(current.dashboard.widgets, size),
+          size,
+        })
+        return current
+      })
+    },
+    [update],
+  )
+
+  const placeRoutine = useCallback(
+    (slug: string) => {
+      update((current) => {
+        const size = { cols: 2, rows: 1 }
+        current.dashboard.widgets.push({
+          routine: slug,
+          position: findFreeSlot(current.dashboard.widgets, size),
+          size,
+        })
+        return current
+      })
+    },
+    [update],
+  )
+
+  const moveWidget = useCallback(
+    (slug: string, dCol: number, dRow: number) => {
+      update((current) => {
+        const widget = current.dashboard.widgets.find((w) => w.routine === slug)
+        if (!widget) return current
+        const col = Math.min(
+          Math.max(1, widget.position.col + dCol),
+          GRID_MAX_COLS - widget.size.cols + 1,
+        )
+        const row = Math.max(1, widget.position.row + dRow)
+        const candidate = { col, row, ...widget.size }
+        // Moving onto another widget is a no-op — predictable beats clever.
+        if (!collides(current.dashboard.widgets, candidate, slug)) {
+          widget.position = { col, row }
+        }
+        return current
+      })
+    },
+    [update],
+  )
+
+  const placeWidget = useCallback(
+    (slug: string, rect: Rect) => {
+      update((current) => {
+        const widget = current.dashboard.widgets.find((w) => w.routine === slug)
+        if (widget) {
+          widget.position = { col: rect.col, row: rect.row }
+          widget.size = { cols: rect.cols, rows: rect.rows }
+        }
+        return current
+      })
+    },
+    [update],
+  )
+
+  const resizeWidget = useCallback(
+    (slug: string, size: WidgetSize) => {
+      update((current) => {
+        const widget = current.dashboard.widgets.find((w) => w.routine === slug)
+        if (!widget) return current
+        const col = Math.min(widget.position.col, GRID_MAX_COLS - size.cols + 1)
+        const candidate = { col, row: widget.position.row, ...size }
+        if (!collides(current.dashboard.widgets, candidate, slug)) {
+          widget.size = size
+          widget.position = { ...widget.position, col }
+        }
+        return current
+      })
+    },
+    [update],
+  )
+
+  const removeWidget = useCallback(
+    (slug: string) => {
+      update((current) => {
+        current.dashboard.widgets = current.dashboard.widgets.filter(
+          (w) => w.routine !== slug,
+        )
+        return current
+      })
+    },
+    [update],
+  )
+
+  const { drag, gridRef, startDrag, cancel } = useGridDrag({
+    widgets: dashboard.widgets,
+    rowHeight: dashboard.grid.rowHeight,
+    onCommit: placeWidget,
+  })
+
+  // Leaving edit mode mid-drag must not leave a floating card behind.
+  useEffect(() => {
+    if (!editing) cancel()
+  }, [editing, cancel])
+
+  const handleRebase = useCallback(
+    (fresh: BaseShas) => {
+      rebase(fresh)
+      // Pull the fresh base files so the diff re-renders against them.
+      void revalidator.revalidate()
+    },
+    [rebase, revalidator],
+  )
+
+  const handleSynced = useCallback(() => {
+    clear()
+    setSyncing(false)
+    void revalidator.revalidate()
+  }, [clear, revalidator])
+
+  // The personal default board is the one board that must always exist —
+  // it's what `/` renders.
+  const deletable = !(
+    view.scope === "personal" && view.dashboardSlug === DEFAULT_DASHBOARD
+  )
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
+      <AppHeader className="gap-x-2">
+        <Wordmark className="text-sm" />
+        <span
+          aria-hidden
+          className="hidden font-mono text-xs text-ink-faint md:inline"
+        >
+          ·
+        </span>
+        <a
+          href={`https://github.com/${view.dataRepo}`}
+          target="_blank"
+          rel="noreferrer"
+          className="hidden font-mono text-xs text-ink-faint transition-colors hover:text-foreground md:inline"
+        >
+          {view.dataRepo}
+        </a>
+        <span
+          aria-hidden
+          className="hidden font-mono text-xs text-ink-faint md:inline"
+        >
+          ·
+        </span>
+        <DashboardSwitcher
+          scope={view.scope}
+          dashboardSlug={view.dashboardSlug}
+          personalDashboards={personalDashboards}
+          teamDashboards={teamDashboards}
+        />
+
+        {/* Two clusters, one divider: board actions | account. Spacing is
+            tighter within a cluster (gap-1) than between them (gap-3), so
+            the grouping reads without extra ornament. */}
+        <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            {draft && (
+              <HeaderAction
+                variant="outline"
+                className="gap-2 font-mono text-xs"
+                label={t("header.unsynced")}
+                icon={
+                  <span
+                    aria-hidden
+                    className="size-1.5 rounded-full bg-yellow"
+                  />
+                }
+                onClick={() => setSyncing(true)}
+              />
+            )}
+            <HeaderAction
+              variant="ghost"
+              className="text-ink-dim hover:text-foreground"
+              label={t("header.addRoutine")}
+              icon={<Plus />}
+              onClick={() => setAdding(true)}
+            />
+            <HeaderAction
+              variant={editing ? "secondary" : "ghost"}
+              className={
+                editing ? undefined : "text-ink-dim hover:text-foreground"
+              }
+              aria-pressed={editing}
+              label={editing ? t("header.done") : t("header.editLayout")}
+              icon={<LayoutGrid />}
+              onClick={() => setEditing((value) => !value)}
+            />
+            {editing && deletable && (
+              <HeaderAction
+                variant="ghost"
+                className="text-ink-dim hover:text-red"
+                label={t("board.deleteDashboard")}
+                icon={<Trash2 />}
+                onClick={() => setDeleting(true)}
+              />
+            )}
+          </div>
+
+          <Separator orientation="vertical" className="h-4! self-center!" />
+
+          <div className="flex items-center gap-1">
+            <Link
+              to="/settings"
+              aria-label={t("header.settings")}
+              title={t("header.settings")}
+              className={cn(
+                buttonVariants({ size: "icon-sm", variant: "ghost" }),
+                "text-ink-dim hover:text-foreground",
+              )}
+            >
+              <Settings className="size-3.5" />
+            </Link>
+            <span className="hidden px-1 font-mono text-xs text-ink-faint md:inline">
+              {login}
+            </span>
+            <Form method="post" action="/auth/logout">
+              <Button
+                size="sm"
+                variant="ghost"
+                type="submit"
+                className="text-ink-faint hover:text-foreground"
+              >
+                {t("header.signOut")}
+              </Button>
+            </Form>
+          </div>
+        </div>
+      </AppHeader>
+
+      {editing && (
+        <p className="-mt-2 mb-3 hidden font-mono text-[11px] text-ink-faint min-[1100px]:block">
+          drag to move · corner to resize · del to remove
+        </p>
+      )}
+
+      {dashboard.widgets.length === 0 ? (
+        <EmptyDashboard onAdd={() => setAdding(true)} />
+      ) : (
+        <main
+          ref={gridRef}
+          className="dash-grid"
+          style={cssVars({ "--row-h": `${dashboard.grid.rowHeight}px` })}
+        >
+          {orderedWidgets.flatMap((widget) => {
+            const routine = routinesBySlug.get(widget.routine)
+            if (!routine) return []
+            return [
+              <WidgetCard
+                key={widget.routine}
+                widget={widget}
+                routine={routine}
+                artifact={view.artifacts[widget.routine]}
+                now={now}
+                editing={editing}
+                drag={drag?.slug === widget.routine ? drag : null}
+                onDragStart={(kind, event) =>
+                  startDrag(widget.routine, kind, event)
+                }
+                onMove={(dCol, dRow) => moveWidget(widget.routine, dCol, dRow)}
+                onResize={(size) => resizeWidget(widget.routine, size)}
+                onRemove={() => removeWidget(widget.routine)}
+              />,
+            ]
+          })}
+          {drag && (
+            <div
+              aria-hidden
+              className={cn(
+                "pointer-events-none z-10 rounded-lg border border-dashed",
+                drag.valid
+                  ? "border-orange-deep bg-orange/5"
+                  : "border-red/70 bg-red/10",
+              )}
+              style={{
+                gridColumn: `${drag.candidate.col} / span ${drag.candidate.cols}`,
+                gridRow: `${drag.candidate.row} / span ${drag.candidate.rows}`,
+              }}
+            />
+          )}
+        </main>
+      )}
+
+      {unplaced.length > 0 && editing && (
+        <section className="mt-6">
+          <h2 className="mb-2 font-mono text-xs text-ink-faint">
+            {t("offgrid.title")}
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {unplaced.map((routine) => (
+              <Button
+                key={routine.slug}
+                size="sm"
+                variant="outline"
+                onClick={() => placeRoutine(routine.slug)}
+              >
+                <Plus data-icon="inline-start" />
+                {routine.name}
+              </Button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <AddRoutineDialog
+        open={adding}
+        onOpenChange={setAdding}
+        catalog={view.catalog}
+        existingSlugs={routines.routines.map((r) => r.slug)}
+        onAdd={addRoutine}
+        runner={view.scope === "team" ? login : undefined}
+      />
+      {draft && (
+        <SyncPanel
+          open={syncing}
+          onOpenChange={setSyncing}
+          scope={view.scope}
+          dashboardSlug={view.dashboardSlug}
+          draft={draft}
+          baseFiles={view.baseFiles}
+          serverShas={view.baseShas}
+          onSynced={handleSynced}
+          onDiscard={() => {
+            clear()
+            setSyncing(false)
+          }}
+          onRebase={handleRebase}
+        />
+      )}
+      {deletable && (
+        <DeleteDashboardDialog
+          open={deleting}
+          onOpenChange={setDeleting}
+          view={view}
+          onDeleted={clear}
+        />
+      )}
+    </div>
+  )
+}
+
+interface DeleteResult {
+  ok: boolean
+  error?: string
+}
+
+function DeleteDashboardDialog({
+  open,
+  onOpenChange,
+  view,
+  onDeleted,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  view: DashboardView
+  onDeleted: () => void
+}) {
+  const t = useT()
+  const navigate = useNavigate()
+  const fetcher = useFetcher<DeleteResult>()
+  const busy = fetcher.state !== "idle"
+
+  const deleted = fetcher.data?.ok === true
+  useEffect(() => {
+    if (!deleted) return
+    onDeleted()
+    void navigate(view.scope === "team" ? "/team" : "/")
+  }, [deleted, onDeleted, navigate, view.scope])
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("board.deleteTitle")}</DialogTitle>
+          <DialogDescription>
+            {t("board.deleteBody", {
+              path: dashboardPath(view.dashboardSlug),
+              repo: view.dataRepo,
+            })}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            {t("dialog.cancel")}
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={busy}
+            onClick={() => {
+              void fetcher.submit(
+                JSON.stringify({
+                  intent: "delete",
+                  scope: view.scope,
+                  slug: view.dashboardSlug,
+                }),
+                {
+                  method: "post",
+                  action: "/dashboards",
+                  encType: "application/json",
+                },
+              )
+            }}
+          >
+            {busy ? t("board.deleting") : t("board.deleteConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * A header button that collapses to its icon on phones: the label goes
+ * sr-only and the button squares off, so the action row holds one line
+ * on a 360px viewport. The label is still the accessible name.
+ */
+function HeaderAction({
+  icon,
+  label,
+  className,
+  ...props
+}: React.ComponentProps<typeof Button> & {
+  icon: React.ReactNode
+  label: string
+}) {
+  return (
+    <Button
+      size="sm"
+      className={cn("max-sm:aspect-square max-sm:px-0", className)}
+      {...props}
+    >
+      {icon}
+      <span className="max-sm:sr-only">{label}</span>
+    </Button>
+  )
+}
+
+function EmptyDashboard({ onAdd }: { onAdd: () => void }) {
+  const t = useT()
+  return (
+    <main className="flex flex-col items-center gap-1.5 rounded-lg border border-dashed py-24 text-center">
+      <p className="font-mono text-xs text-ink-faint">{t("empty.fact")}</p>
+      <p className="max-w-sm text-sm text-muted-foreground">
+        {t("empty.hint")}
+      </p>
+      <Button className="mt-3" onClick={onAdd}>
+        <Plus data-icon="inline-start" />
+        {t("empty.cta")}
+      </Button>
+    </main>
+  )
+}

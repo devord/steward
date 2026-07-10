@@ -1,12 +1,15 @@
 # bulletin-data
 
 Your private [Bulletin](https://github.com/Form-Factory/bulletin) data repo,
-created from the template by the app's first-run wizard. Everything Bulletin
-knows about you lives here — the app itself stores nothing (ADR-0001).
+created from the template by the app's first-run wizard — or, for a team,
+the shared team data repo everyone with access can see (ADR-0010).
+Everything Bulletin knows about this dashboard's owner lives here — the app
+itself stores nothing (ADR-0001).
 
 - `main` holds config: [`data/routines.yaml`](./data/routines.yaml) (what
-  runs, on what schedule) and [`data/dashboard.yaml`](./data/dashboard.yaml)
-  (the grid layout).
+  runs, on what schedule) and one grid layout per dashboard under
+  [`data/dashboards/`](./data/dashboards/) (`main.yaml` is the default
+  board; add a file to add a dashboard).
 - The orphan `artifacts` branch holds published widget artifacts at
   `w/<slug>/index.html` — written by routines via the `publish-widget`
   skill, never by hand (except once, to prove the render path).

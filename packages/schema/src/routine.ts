@@ -18,6 +18,12 @@ export const routineSchema = z.object({
    * versioned and never require touching the cloud resource.
    */
   instructions: z.string().optional(),
+  /**
+   * GitHub login of the account whose Claude schedule owns this routine.
+   * Meaningful in a team repo, where routines:sync only enacts entries whose
+   * runner matches the syncing user; personal pools leave it unset.
+   */
+  runner: z.string().min(1).optional(),
   enabled: z.boolean().default(true),
 })
 

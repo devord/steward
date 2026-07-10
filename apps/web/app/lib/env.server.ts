@@ -11,6 +11,12 @@ const envSchema = z.object({
   /** `owner/name` of the data-repo template. */
   BULLETIN_DATA_REPO_TEMPLATE: z.string().regex(/^[^/]+\/[^/]+$/),
   BULLETIN_DATA_REPO_PREFIX: z.string().default("bulletin-data-"),
+  /** `owner/name` of the org-owned team data repo (ADR-0010). Optional —
+      unset means the deployment has no team dashboards. */
+  BULLETIN_TEAM_REPO: z
+    .string()
+    .regex(/^[^/]+\/[^/]+$/)
+    .optional(),
 })
 
 export type Env = z.infer<typeof envSchema>

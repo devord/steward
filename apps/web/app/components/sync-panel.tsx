@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useFetcher } from "react-router"
 
 import {
+  dashboardPath,
   parseDashboardFile,
   parseRoutinesFile,
   serializeDashboardFile,
@@ -47,6 +48,8 @@ interface SyncResult {
 export function SyncPanel({
   open,
   onOpenChange,
+  scope,
+  dashboardSlug,
   draft,
   baseFiles,
   serverShas,
@@ -56,6 +59,9 @@ export function SyncPanel({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Which repo and layout file the sync targets (ADR-0010). */
+  scope: "personal" | "team"
+  dashboardSlug: string
   draft: Draft
   baseFiles: { routines: string | null; dashboard: string | null }
   /** SHAs the server currently sees — differs from draft.baseShas when the
@@ -111,7 +117,7 @@ export function SyncPanel({
     ) {
       all.push({
         kind: "dashboard",
-        path: "data/dashboard.yaml",
+        path: dashboardPath(dashboardSlug),
         yaml: dashboardYaml,
         baseSha: draft.baseShas.dashboard,
         diff: diffLines(baseFiles.dashboard ?? "", dashboardYaml),
@@ -120,7 +126,7 @@ export function SyncPanel({
     return all.filter((change) =>
       change.diff.some((line) => line.kind !== "same"),
     )
-  }, [draft, baseFiles])
+  }, [draft, baseFiles, dashboardSlug])
 
   const staleKinds = useMemo(() => {
     const kinds: string[] = []
@@ -144,7 +150,11 @@ export function SyncPanel({
   }, [committed, onSynced])
 
   function submit() {
-    const payload: Record<string, unknown> = { intent: asPr ? "pr" : "commit" }
+    const payload: Record<string, unknown> = {
+      intent: asPr ? "pr" : "commit",
+      scope,
+      dashboardSlug,
+    }
     for (const change of changes) {
       payload[change.kind] = { yaml: change.yaml, baseSha: change.baseSha }
     }

@@ -8,7 +8,7 @@ export function parseRoutinesFile(text: string): RoutinesFile {
   return routinesFileSchema.parse(parse(text))
 }
 
-/** Parse + validate data/dashboard.yaml. Throws ZodError/YAMLParseError. */
+/** Parse + validate data/dashboards/<slug>.yaml. Throws ZodError/YAMLParseError. */
 export function parseDashboardFile(text: string): DashboardFile {
   return dashboardFileSchema.parse(parse(text))
 }

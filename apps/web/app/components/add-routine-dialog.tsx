@@ -37,7 +37,7 @@ const SCHEDULE_PRESETS = [
   { value: "0 9 * * 1", label: "dialog.presetWeeklyMon9" },
 ] as const
 
-function kebab(text: string): string {
+export function kebab(text: string): string {
   return text
     .toLowerCase()
     .replaceAll(/[^a-z0-9]+/g, "-")
@@ -55,12 +55,16 @@ export function AddRoutineDialog({
   catalog,
   existingSlugs,
   onAdd,
+  runner,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   catalog: CatalogFile
   existingSlugs: string[]
   onAdd: (routine: Routine, size: WidgetSize) => void
+  /** Set on team boards: the login whose Claude account owns the schedule
+      (ADR-0010). Stamped on the routine and surfaced as a hint. */
+  runner?: string
 }) {
   const t = useT()
   const [skillId, setSkillId] = useState<string | null>(null)
@@ -119,6 +123,7 @@ export function AddRoutineDialog({
         schedule: effectiveSchedule.trim(),
         enabled: true,
         ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
+        ...(runner ? { runner } : {}),
       },
       size,
     )
@@ -296,6 +301,12 @@ export function AddRoutineDialog({
                   rows={3}
                 />
               </div>
+
+              {runner && (
+                <p className="text-xs text-muted-foreground">
+                  {t("dialog.runnerHint", { login: runner })}
+                </p>
+              )}
             </>
           )}
         </div>
