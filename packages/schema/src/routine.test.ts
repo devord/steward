@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest"
 
 import { dashboardFileSchema, dashboardPath } from "./dashboard.ts"
-import { routinesFileSchema } from "./routine.ts"
+import {
+  isManual,
+  routineHost,
+  routinesFileSchema,
+  triggerPath,
+} from "./routine.ts"
 
 describe("routinesFileSchema", () => {
   it("parses a valid routines file and applies defaults", () => {
@@ -45,6 +50,54 @@ describe("routinesFileSchema", () => {
       ],
     })
     expect(result.success).toBe(false)
+  })
+
+  it("accepts a prompt-only manual routine (ADR-0013/0016)", () => {
+    const parsed = routinesFileSchema.parse({
+      routines: [
+        {
+          slug: "retro-notes",
+          name: "Retro Notes",
+          instructions: "Summarize this week's retro action items.",
+        },
+      ],
+    })
+    const routine = parsed.routines[0]
+    expect(routine?.skill).toBeUndefined()
+    expect(routine && isManual(routine)).toBe(true)
+    expect(routine && routineHost(routine)).toBe("cloud")
+  })
+
+  it("keeps an explicit local host (ADR-0012)", () => {
+    const parsed = routinesFileSchema.parse({
+      routines: [
+        {
+          slug: "time-tracking",
+          name: "Time Tracking",
+          skill: "time-track",
+          host: "local",
+        },
+      ],
+    })
+    const routine = parsed.routines[0]
+    expect(routine && routineHost(routine)).toBe("local")
+  })
+
+  it("rejects a routine with neither skill nor instructions", () => {
+    const result = routinesFileSchema.safeParse({
+      routines: [{ slug: "empty", name: "Empty", schedule: "0 8 * * *" }],
+    })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe("triggerPath", () => {
+  it("maps a slug to its trigger token file", () => {
+    expect(triggerPath("repo-pulse")).toBe("data/triggers/repo-pulse.json")
+  })
+
+  it("rejects a slug that would escape the triggers dir", () => {
+    expect(() => triggerPath("../secrets")).toThrow()
   })
 })
 
