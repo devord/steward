@@ -150,6 +150,28 @@
     );
     background-size: 24px 24px;
   }
+
+  /* The mark's orange block is the wordmark's trailing caret; on the landing
+     it blinks like a terminal cursor — the one signature motion, "the board,
+     still being written." Hard on/off (steps) reads as a caret, not a fade. */
+  @keyframes logo-cursor-blink {
+    0%,
+    45% {
+      opacity: 1;
+    }
+    55%,
+    100% {
+      opacity: 0.28;
+    }
+  }
+  .logo-cursor {
+    animation: logo-cursor-blink 1.15s steps(1, end) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .logo-cursor {
+      animation: none;
+    }
+  }
 }
 
 /* Dashboard grid (docs/widget-standard.md): 4 columns on desktop, 2 on
