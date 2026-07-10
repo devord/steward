@@ -21,6 +21,9 @@ export interface WidgetCardProps {
   routine: Routine
   artifact: ArtifactInfo | undefined
   now: number
+  /** The board's column count — bounds keyboard resize (defaults to the
+      grid ceiling for standalone renders like tests). */
+  columns?: number
   /** Edit mode: drag to move, corner handle to resize, × to remove. */
   editing?: boolean
   /** This card's active drag, if it is the one being dragged. */
@@ -47,6 +50,7 @@ export function WidgetCard({
   routine,
   artifact,
   now,
+  columns = GRID_MAX_COLS,
   editing = false,
   drag = null,
   onDragStart,
@@ -86,7 +90,7 @@ export function WidgetCard({
     const step = (dCol: number, dRow: number) => {
       if (event.shiftKey) {
         onResize?.({
-          cols: Math.min(GRID_MAX_COLS, Math.max(1, size.cols + dCol)),
+          cols: Math.min(columns, Math.max(1, size.cols + dCol)),
           rows: Math.min(GRID_MAX_ROWS, Math.max(1, size.rows + dRow)),
         })
       } else {

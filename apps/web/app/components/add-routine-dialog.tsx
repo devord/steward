@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import type {
   CatalogFile,
@@ -6,7 +6,13 @@ import type {
   Routine,
   WidgetSize,
 } from "@bulletin/schema"
-import { GRID_MAX_COLS, GRID_MAX_ROWS, slugSchema } from "@bulletin/schema"
+import {
+  GRID_MAX_ROWS,
+  slugSchema,
+  WIDGET_SIZE_PRESETS,
+} from "@bulletin/schema"
+
+import { cn } from "~/lib/utils"
 
 import { Button } from "~/components/ui/button"
 import {
@@ -53,6 +59,7 @@ export function AddRoutineDialog({
   open,
   onOpenChange,
   catalog,
+  columns,
   existingSlugs,
   onAdd,
   runner,
@@ -60,6 +67,9 @@ export function AddRoutineDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   catalog: CatalogFile
+  /** The board's column count — clamps presets and the column stepper so a
+      widget can't be authored wider than the board. */
+  columns: number
   existingSlugs: string[]
   onAdd: (routine: Routine, size: WidgetSize) => void
   /** Set on team boards: the login whose Claude account owns the schedule
@@ -72,6 +82,7 @@ export function AddRoutineDialog({
   const [slugEdited, setSlugEdited] = useState(false)
   const [slug, setSlug] = useState("")
   const [size, setSize] = useState<WidgetSize | null>(null)
+  const [customSize, setCustomSize] = useState(false)
   const [schedule, setSchedule] = useState<string | null>(null)
   const [customCron, setCustomCron] = useState("")
   const [instructions, setInstructions] = useState("")
@@ -81,20 +92,35 @@ export function AddRoutineDialog({
     [catalog, skillId],
   )
 
+  // A widget can never be wider than the board it's being added to: an
+  // over-wide size reaches findFreeSlot, whose column scan is empty and
+  // loops forever. Re-clamp if the board narrows while the dialog is open.
+  useEffect(() => {
+    setSize((current) =>
+      current && current.cols > columns
+        ? { ...current, cols: columns }
+        : current,
+    )
+  }, [columns])
+
   function reset() {
     setSkillId(null)
     setName("")
     setSlugEdited(false)
     setSlug("")
     setSize(null)
+    setCustomSize(false)
     setSchedule(null)
     setCustomCron("")
     setInstructions("")
   }
 
   function pickSkill(next: CatalogSkill) {
+    const { cols, rows } = next.widget.sizes.default
     setSkillId(next.id)
-    setSize(next.widget.sizes.default)
+    // Clamp the catalog default to this board's width — a skill authored for
+    // a 4-wide default must not seed a 4-wide widget onto a 2-column board.
+    setSize({ cols: Math.min(cols, columns), rows })
     setSchedule(next.widget.schedule)
     if (!name) {
       setName(next.name)
@@ -222,13 +248,57 @@ export function AddRoutineDialog({
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 sm:items-start">
-                <div className="grid gap-2">
-                  <Label>{t("dialog.size")}</Label>
+              <div className="grid gap-2">
+                <Label>{t("dialog.size")}</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {WIDGET_SIZE_PRESETS.map((preset) => {
+                    const cols = Math.min(preset.cols, columns)
+                    const active =
+                      !customSize &&
+                      size?.cols === cols &&
+                      size?.rows === preset.rows
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => {
+                          setCustomSize(false)
+                          setSize({ cols, rows: preset.rows })
+                        }}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-colors hover:bg-muted",
+                          active
+                            ? "border-primary bg-muted"
+                            : "border-border text-ink-dim",
+                        )}
+                      >
+                        {t(`size.${preset.id}`)}
+                        <span className="font-mono text-[10px] text-ink-faint tabular-nums">
+                          {cols}×{preset.rows}
+                        </span>
+                      </button>
+                    )
+                  })}
+                  <button
+                    type="button"
+                    aria-pressed={customSize}
+                    onClick={() => setCustomSize(true)}
+                    className={cn(
+                      "rounded-lg border px-2.5 py-1 text-xs transition-colors hover:bg-muted",
+                      customSize
+                        ? "border-primary bg-muted"
+                        : "border-border text-ink-dim",
+                    )}
+                  >
+                    {t("size.custom")}
+                  </button>
+                </div>
+                {customSize && (
                   <div className="flex items-center gap-1.5">
                     <SizeSelect
                       label={t("widget.columns")}
-                      max={GRID_MAX_COLS}
+                      max={columns}
                       value={size?.cols ?? 1}
                       onChange={(cols) =>
                         setSize((current) => ({
@@ -250,44 +320,45 @@ export function AddRoutineDialog({
                       }
                     />
                   </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label>{t("dialog.schedule")}</Label>
-                  <Select
-                    value={schedule ?? undefined}
-                    onValueChange={(next) => {
-                      if (typeof next === "string") setSchedule(next)
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={skill.widget.schedule}>
-                        {t("dialog.suggested", { cron: skill.widget.schedule })}
+                )}
+              </div>
+
+              <div className="grid gap-2">
+                <Label>{t("dialog.schedule")}</Label>
+                <Select
+                  value={schedule ?? undefined}
+                  onValueChange={(next) => {
+                    if (typeof next === "string") setSchedule(next)
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={skill.widget.schedule}>
+                      {t("dialog.suggested", { cron: skill.widget.schedule })}
+                    </SelectItem>
+                    {SCHEDULE_PRESETS.filter(
+                      (preset) => preset.value !== skill.widget.schedule,
+                    ).map((preset) => (
+                      <SelectItem key={preset.value} value={preset.value}>
+                        {t(preset.label)}
                       </SelectItem>
-                      {SCHEDULE_PRESETS.filter(
-                        (preset) => preset.value !== skill.widget.schedule,
-                      ).map((preset) => (
-                        <SelectItem key={preset.value} value={preset.value}>
-                          {t(preset.label)}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="custom">
-                        {t("dialog.customCron")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {schedule === "custom" && (
-                    <Input
-                      value={customCron}
-                      onChange={(event) => setCustomCron(event.target.value)}
-                      placeholder="0 8 * * *"
-                      className="font-mono"
-                      aria-label={t("dialog.customCronLabel")}
-                    />
-                  )}
-                </div>
+                    ))}
+                    <SelectItem value="custom">
+                      {t("dialog.customCron")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {schedule === "custom" && (
+                  <Input
+                    value={customCron}
+                    onChange={(event) => setCustomCron(event.target.value)}
+                    placeholder="0 8 * * *"
+                    className="font-mono"
+                    aria-label={t("dialog.customCronLabel")}
+                  />
+                )}
               </div>
 
               <div className="grid gap-2">

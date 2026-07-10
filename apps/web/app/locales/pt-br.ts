@@ -43,6 +43,24 @@ export const ptBR: Messages = {
 
   "offgrid.title": "fora da grade",
 
+  "grid.columnsLabel": "colunas",
+  "grid.width": "largura",
+  "grid.widthFixed": "fixa",
+  "grid.widthWide": "ampla",
+  "grid.density": "densidade",
+  "grid.densityCompact": "compacta",
+  "grid.densityCozy": "confortável",
+  "grid.densityRoomy": "espaçosa",
+  "grid.hint":
+    "arraste para mover · canto para redimensionar · del para remover",
+
+  "size.small": "pequeno",
+  "size.medium": "médio",
+  "size.wide": "largo",
+  "size.tall": "alto",
+  "size.hero": "destaque",
+  "size.custom": "personalizado",
+
   "switcher.label": "painel",
   "switcher.personal": "pessoal",
   "switcher.team": "time",
