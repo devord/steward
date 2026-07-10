@@ -19,8 +19,11 @@ Read when relevant:
 - `docs/widget-standard.md` — the artifact contract, for authoring or
   rendering widgets.
 - `docs/roadmap.md` — milestone status.
-- Skills: after editing one, regenerate the catalog (`pnpm gen:catalog`,
-  lands M1). `.claude/skills/react-router` is vendored — don't edit.
+- Skills: only the contract skills live here (`run-routine`,
+  `widget-artifact`, `publish-widget`); content skills belong in the plugins
+  repo or a data repo (ADR-0014), discovered live via their `widget:`
+  frontmatter (ADR-0015). `.claude/skills/react-router` is vendored — don't
+  edit.
 
 ## Plan Mode
 
