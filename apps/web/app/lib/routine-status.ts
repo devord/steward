@@ -87,8 +87,15 @@ export function setupCommands(routine: Routine): {
 } {
   const local = routineHost(routine) === "local"
   return {
+    // Runs from the bulletin checkout (ADR-0014), which has no data/ dir, so
+    // --file must point at the data-repo checkout's routines.yaml. The web app
+    // knows the data repo's slug but not where it's cloned locally, so the
+    // path is a placeholder the user fills in.
     // Manual local routines have nothing to enact — you just run them.
-    enact: local && isManual(routine) ? null : "pnpm routines:sync --apply",
+    enact:
+      local && isManual(routine)
+        ? null
+        : "pnpm routines:sync --apply --file <path-to-data-repo>/data/routines.yaml",
     runOnce: local ? `pnpm routine ${routine.slug}` : null,
   }
 }

@@ -128,7 +128,8 @@ describe("widgetStatus", () => {
 describe("setupCommands", () => {
   it("cloud routines enact via routines:sync, nothing to run locally", () => {
     expect(setupCommands(routine({ schedule: "0 8 * * *" }))).toEqual({
-      enact: "pnpm routines:sync --apply",
+      enact:
+        "pnpm routines:sync --apply --file <path-to-data-repo>/data/routines.yaml",
       runOnce: null,
     })
   })
@@ -137,7 +138,8 @@ describe("setupCommands", () => {
     expect(
       setupCommands(routine({ host: "local", schedule: "0 8 * * *" })),
     ).toEqual({
-      enact: "pnpm routines:sync --apply",
+      enact:
+        "pnpm routines:sync --apply --file <path-to-data-repo>/data/routines.yaml",
       runOnce: "pnpm routine r",
     })
   })
