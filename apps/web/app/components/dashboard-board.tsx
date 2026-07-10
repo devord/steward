@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react"
-import { useFetcher, useNavigate, useRevalidator } from "react-router"
+import { Suspense, useCallback, useEffect, useState } from "react"
+import { Await, useFetcher, useNavigate, useRevalidator } from "react-router"
 
 import type { Routine, WidgetSize } from "@bulletin/schema"
 import { dashboardPath, GRID_MAX_COLS } from "@bulletin/schema"
@@ -9,6 +9,7 @@ import { AddRoutineDialog } from "./add-routine-dialog.tsx"
 import { DashboardHeader } from "./dashboard-header.tsx"
 import { SyncPanel } from "./sync-panel.tsx"
 import { WidgetCard } from "./widget-card.tsx"
+import { WidgetSkeleton } from "./widget-skeleton.tsx"
 import { Button } from "~/components/ui/button"
 import {
   Dialog,
@@ -21,7 +22,7 @@ import {
 import { cn } from "~/lib/utils"
 import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import { cssVars } from "../lib/css.ts"
-import type { DashboardView } from "../lib/dashboard.server.ts"
+import type { ArtifactInfo, DashboardBase } from "../lib/dashboard.server.ts"
 import { type BaseShas, useDraft } from "../lib/draft.ts"
 import { useT } from "../lib/i18n.tsx"
 import { collides, findFreeSlot, type Rect } from "../lib/placement.ts"
@@ -34,12 +35,16 @@ import { useGridDrag } from "../lib/use-grid-drag.ts"
  */
 export function DashboardBoard({
   view,
+  artifacts,
   login,
   now,
   personalDashboards,
   teamDashboards,
 }: {
-  view: DashboardView
+  view: DashboardBase
+  /** Streams in after the structure (ADR-0002): each cell shows a skeleton
+      until its artifact resolves. Keyed by routine slug. */
+  artifacts: Promise<Record<string, ArtifactInfo>>
   login: string
   now: number
   personalDashboards: string[]
@@ -234,42 +239,60 @@ export function DashboardBoard({
           className="dash-grid"
           style={cssVars({ "--row-h": `${dashboard.grid.rowHeight}px` })}
         >
-          {orderedWidgets.flatMap((widget) => {
-            const routine = routinesBySlug.get(widget.routine)
-            if (!routine) return []
-            return [
-              <WidgetCard
-                key={widget.routine}
-                widget={widget}
-                routine={routine}
-                artifact={view.artifacts[widget.routine]}
-                now={now}
-                editing={editing}
-                drag={drag?.slug === widget.routine ? drag : null}
-                onDragStart={(kind, event) =>
-                  startDrag(widget.routine, kind, event)
-                }
-                onMove={(dCol, dRow) => moveWidget(widget.routine, dCol, dRow)}
-                onResize={(size) => resizeWidget(widget.routine, size)}
-                onRemove={() => removeWidget(widget.routine)}
-              />,
-            ]
-          })}
-          {drag && (
-            <div
-              aria-hidden
-              className={cn(
-                "pointer-events-none z-10 rounded-lg border border-dashed",
-                drag.valid
-                  ? "border-orange-deep bg-orange/5"
-                  : "border-red/70 bg-red/10",
+          {/* The frame is already placed; only the artifact bodies stream. Each
+              cell holds its slot with a skeleton until its artifact lands. */}
+          <Suspense
+            fallback={orderedWidgets.flatMap((widget) =>
+              routinesBySlug.has(widget.routine)
+                ? [<WidgetSkeleton key={widget.routine} widget={widget} />]
+                : [],
+            )}
+          >
+            <Await resolve={artifacts}>
+              {(resolved) => (
+                <>
+                  {orderedWidgets.flatMap((widget) => {
+                    const routine = routinesBySlug.get(widget.routine)
+                    if (!routine) return []
+                    return [
+                      <WidgetCard
+                        key={widget.routine}
+                        widget={widget}
+                        routine={routine}
+                        artifact={resolved[widget.routine]}
+                        now={now}
+                        editing={editing}
+                        drag={drag?.slug === widget.routine ? drag : null}
+                        onDragStart={(kind, event) =>
+                          startDrag(widget.routine, kind, event)
+                        }
+                        onMove={(dCol, dRow) =>
+                          moveWidget(widget.routine, dCol, dRow)
+                        }
+                        onResize={(size) => resizeWidget(widget.routine, size)}
+                        onRemove={() => removeWidget(widget.routine)}
+                      />,
+                    ]
+                  })}
+                  {drag && (
+                    <div
+                      aria-hidden
+                      className={cn(
+                        "pointer-events-none z-10 rounded-lg border border-dashed",
+                        drag.valid
+                          ? "border-orange-deep bg-orange/5"
+                          : "border-red/70 bg-red/10",
+                      )}
+                      style={{
+                        gridColumn: `${drag.candidate.col} / span ${drag.candidate.cols}`,
+                        gridRow: `${drag.candidate.row} / span ${drag.candidate.rows}`,
+                      }}
+                    />
+                  )}
+                </>
               )}
-              style={{
-                gridColumn: `${drag.candidate.col} / span ${drag.candidate.cols}`,
-                gridRow: `${drag.candidate.row} / span ${drag.candidate.rows}`,
-              }}
-            />
-          )}
+            </Await>
+          </Suspense>
         </main>
       )}
 
@@ -344,7 +367,7 @@ function DeleteDashboardDialog({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  view: DashboardView
+  view: DashboardBase
   onDeleted: () => void
 }) {
   const t = useT()
