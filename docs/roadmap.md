@@ -109,3 +109,7 @@ pinned value).
   expect surface changes (ADR-0016).
 - **Palette duplication** — `@theme` block vs the `widget-artifact` token
   snippet must stay identical (ADR-0007).
+- **Contract-skill mirror drift** — `.claude/skills/` here vs the copy in
+  the plugins repo's `bulletin` plugin (ADR-0014): update here first, then
+  re-mirror. Three rarely-changing files; add a CI diff check only if it
+  ever bites.
