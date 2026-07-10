@@ -80,12 +80,22 @@ export async function performSync(
       })
       newShas[change.kind] = contentSha
     } catch (error) {
-      // The PUT checks the expected SHA atomically; the pre-check reads
-      // through the contents API, which can lag a just-made commit. Translate
-      // GitHub's own conflict into the same shape the pre-check produces. A
-      // direct commit lands earlier files on main, so report them as committed
-      // for the client to fold into its base; a PR wrote only to the branch.
-      if (error instanceof GitHubError && error.status === 409) {
+      // A direct commit lands earlier files on main sequentially, so once any
+      // write has landed we must never drop those SHAs — otherwise the client
+      // retries against a stale base and the file it already committed
+      // false-conflicts. Report the partial commit for the failing file:
+      //  - 409: a genuine moved base (the PUT's atomic SHA check, or the
+      //    pre-check lagging a just-made commit) — the client re-applies.
+      //  - any other error after a partial write (5xx / network — the write
+      //    may or may not have landed): surface it as a conflict on the failed
+      //    file so the client folds what did commit and the retry's pre-check
+      //    settles the ambiguous one either way, instead of a bare 500 that
+      //    strands a half-committed draft.
+      // A PR only ever wrote to its branch, so main is untouched — nothing to
+      // report, and a mid-branch failure should surface as the error it is.
+      const isConflict = error instanceof GitHubError && error.status === 409
+      const landed = intent === "commit" && Object.keys(newShas).length > 0
+      if (isConflict || landed) {
         return {
           ok: false,
           conflicts: [change.kind],

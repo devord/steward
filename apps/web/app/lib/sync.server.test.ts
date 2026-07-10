@@ -129,4 +129,74 @@ describe("performSync", () => {
     // doesn't false-conflict on it.
     expect(conflict.committed.routines).toBeDefined()
   })
+
+  it("surfaces the committed file when a later PUT fails with a non-409 error", async () => {
+    seedRepo(REPO, {
+      "data/routines.yaml": ROUTINES,
+      "data/dashboards/main.yaml": DASHBOARD,
+    })
+    const r = await getFile("token", REPO, "data/routines.yaml", "main")
+    const d = await getFile("token", REPO, "data/dashboards/main.yaml", "main")
+    // The second file's PUT hits a 5xx after the first already landed on main.
+    server.use(
+      http.put(
+        "https://api.github.com/repos/:owner/:repo/contents/data/dashboards/main.yaml",
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    )
+
+    const outcome = await performSync("token", REPO, {
+      intent: "commit",
+      changes: [
+        {
+          kind: "routines",
+          path: "data/routines.yaml",
+          yaml: "routines: []\n",
+          baseSha: r?.sha ?? null,
+        },
+        {
+          kind: "dashboard",
+          path: "data/dashboards/main.yaml",
+          yaml: `${DASHBOARD}\n`,
+          baseSha: d?.sha ?? null,
+        },
+      ],
+    })
+
+    expect(outcome.ok).toBe(false)
+    const conflict = outcome as {
+      conflicts: string[]
+      committed: Record<string, string>
+    }
+    expect(conflict.conflicts).toEqual(["dashboard"])
+    // The routines write landed before the 500 — its SHA must not be lost, or
+    // the retry would false-conflict on a file the client already committed.
+    expect(conflict.committed.routines).toBeDefined()
+  })
+
+  it("rethrows when the very first PUT fails and nothing has landed", async () => {
+    seedRepo(REPO, { "data/routines.yaml": ROUTINES })
+    const r = await getFile("token", REPO, "data/routines.yaml", "main")
+    server.use(
+      http.put(
+        "https://api.github.com/repos/:owner/:repo/contents/data/routines.yaml",
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    )
+
+    // Nothing committed → a bare failure, not a spurious partial-commit report.
+    await expect(
+      performSync("token", REPO, {
+        intent: "commit",
+        changes: [
+          {
+            kind: "routines",
+            path: "data/routines.yaml",
+            yaml: "routines: []\n",
+            baseSha: r?.sha ?? null,
+          },
+        ],
+      }),
+    ).rejects.toThrow()
+  })
 })

@@ -57,7 +57,10 @@ export function widgetStatus(
   if (ctx.pendingFiredAt != null) {
     return { kind: "running", firedAt: ctx.pendingFiredAt }
   }
-  if (ctx.artifact?.html != null) {
+  // Truthy, not just non-null: widget-card renders the iframe on `html ? …`,
+  // so an empty-string body must fall through to the empty-state guidance here
+  // too (else the tile would claim "live" yet show setup instructions).
+  if (ctx.artifact?.html) {
     return {
       kind: "live",
       stale: isStale(routine, ctx.artifact.lastRunAt, ctx.now),
