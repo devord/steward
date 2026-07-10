@@ -70,6 +70,8 @@ export const ptBR: Messages = {
   "board.deleting": "excluindo…",
   "board.deleteConflict":
     "o painel acabou de mudar no repo — feche e tente de novo",
+  "board.widgetsLoading": "carregando widgets…",
+  "board.widgetsLoaded": "widgets carregados",
 
   "team.notConfigured":
     "Painéis de time não estão configurados — defina BULLETIN_TEAM_REPO no deploy.",

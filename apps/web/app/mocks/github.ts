@@ -18,10 +18,16 @@ interface MockFile {
 /** repo → `${ref}:${path}` → file */
 const repos = new Map<string, Map<string, MockFile>>()
 
+type Endpoint = "contents" | "commits"
+
 interface Failure {
   status: number
   /** Remaining failures; Infinity → fail every attempt. */
   times: number
+  /** Restrict the failure to one endpoint; undefined → either. */
+  endpoint?: Endpoint
+  /** Reject as a network error (fetch throws) rather than an HTTP status. */
+  network?: boolean
 }
 
 /** `${repo}:${path}` → injected failure for contents/commits requests. */
@@ -81,20 +87,46 @@ export function seedRepo(
   repos.set(repo, store)
 }
 
-/** Make the next `times` contents/commits requests for `path` fail. */
+/**
+ * Make the next `times` requests for `path` fail. `endpoint` restricts the
+ * failure to contents or commits (default: either); `network` rejects as a
+ * fetch-level network error instead of an HTTP status.
+ */
 export function failPath(
   repo: string,
   path: string,
-  { status = 500, times = Infinity } = {},
+  {
+    status = 500,
+    times = Infinity,
+    endpoint,
+    network,
+  }: {
+    status?: number
+    times?: number
+    endpoint?: Endpoint
+    network?: boolean
+  } = {},
 ) {
-  failures.set(`${repo}:${path}`, { status, times })
+  failures.set(`${repo}:${path}`, { status, times, endpoint, network })
 }
 
-function takeFailure(repo: string, path: string): Failure | null {
+function takeFailure(
+  repo: string,
+  path: string,
+  endpoint: Endpoint,
+): Failure | null {
   const failure = failures.get(`${repo}:${path}`)
   if (!failure || failure.times <= 0) return null
+  if (failure.endpoint && failure.endpoint !== endpoint) return null
   failure.times -= 1
   return failure
+}
+
+/** The response for an injected failure: a network error or an HTTP status. */
+function failureResponse(failure: Failure): Response {
+  return failure.network
+    ? HttpResponse.error()
+    : new HttpResponse(null, { status: failure.status })
 }
 
 export const githubHandlers = [
@@ -117,8 +149,8 @@ export const githubHandlers = [
       const path = decodeURIComponent(
         url.pathname.replace(`/repos/${repo}/contents/`, ""),
       )
-      const failure = takeFailure(repo, path)
-      if (failure) return new HttpResponse(null, { status: failure.status })
+      const failure = takeFailure(repo, path, "contents")
+      if (failure) return failureResponse(failure)
       const ref = url.searchParams.get("ref") ?? "main"
       const file = repos.get(repo)?.get(`${ref}:${path}`)
       if (!file) {
@@ -156,8 +188,8 @@ export const githubHandlers = [
       const repo = `${params.owner}/${params.repo}`
       const url = new URL(request.url)
       const path = url.searchParams.get("path") ?? ""
-      const failure = takeFailure(repo, path)
-      if (failure) return new HttpResponse(null, { status: failure.status })
+      const failure = takeFailure(repo, path, "commits")
+      if (failure) return failureResponse(failure)
       const ref = url.searchParams.get("sha") ?? "main"
       const file = repos.get(repo)?.get(`${ref}:${path}`)
       if (!file) return new HttpResponse(null, { status: 404 })

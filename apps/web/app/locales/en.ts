@@ -69,6 +69,8 @@ export const en = {
   "board.deleting": "deleting…",
   "board.deleteConflict":
     "the dashboard changed in the repo just now — close and retry",
+  "board.widgetsLoading": "loading widgets…",
+  "board.widgetsLoaded": "widgets loaded",
 
   "team.notConfigured":
     "Team dashboards aren't configured — set BULLETIN_TEAM_REPO on the deployment.",
