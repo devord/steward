@@ -11,6 +11,22 @@ export const en = {
   "landing.signIn": "Sign in with GitHub",
   "landing.privacy":
     "Everything lives in a private GitHub repo you own — the app stores nothing.",
+  "landing.deviceLink": "Sign in with a device code instead",
+
+  "device.title": "Sign in with a device code",
+  "device.intro":
+    "For preview builds and anywhere the GitHub redirect can't reach — you'll get a short code to enter on github.com.",
+  "device.start": "Get a code",
+  "device.starting": "Getting a code…",
+  "device.enterCode": "Enter this code on GitHub:",
+  "device.copy": "Copy code",
+  "device.copied": "Copied",
+  "device.openLink": "Open the GitHub device page",
+  "device.waiting": "Waiting for you to authorize on GitHub…",
+  "device.newCode": "Get a new code",
+  "device.expired": "That code expired before it was authorized.",
+  "device.denied": "Authorization was denied on GitHub.",
+  "device.error": "Something went wrong reaching GitHub. Try again.",
 
   "header.unsynced": "unsynced changes",
   "header.addRoutine": "add routine",

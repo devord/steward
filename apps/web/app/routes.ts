@@ -11,5 +11,6 @@ export default [
   route("dashboards", "routes/dashboards.ts"),
   route("auth/login", "routes/auth.login.ts"),
   route("auth/callback", "routes/auth.callback.ts"),
+  route("auth/device", "routes/auth.device.tsx"),
   route("auth/logout", "routes/auth.logout.ts"),
 ] satisfies RouteConfig
