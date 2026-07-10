@@ -45,3 +45,12 @@ No `source:` field, no custom loader.
   the plugins repo before invoking the skill.
 - A team routine's skill must live in plugins (or the team repo), never in
   a member's personal data repo — other runners couldn't read it there.
+- Local runs launch Claude in the _data repo_ (ADR-0017), where the
+  contract skills don't exist — verified: a session cwd'd there resolves
+  neither `run-routine` nor `publish-widget`. Two closures: the launcher
+  and the launchd agents pass `--add-dir <bulletin checkout>` (added dirs
+  contribute their project skills), and the plugins repo's `bulletin`
+  plugin **mirrors the contract skills** so the app's copy-command
+  one-liner works without a bulletin checkout. The bulletin repo stays the
+  source of truth; the mirror is a copy — drift is a watch item, not a
+  mechanism.
