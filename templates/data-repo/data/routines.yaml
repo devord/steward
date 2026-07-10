@@ -1,12 +1,30 @@
 # Bulletin routines — the source of truth for what runs and when.
-# Each routine: a skill from the shared repo's catalog, a cron schedule,
-# and optional multiline `instructions` passed to the skill by the
-# run-routine dispatcher. Edit via the Bulletin app or by hand.
+# Each routine has a slug, a name, and `instructions` (the prompt the
+# run-routine dispatcher executes). Optional fields:
+#   skill:    a routine skill by name — from this repo's .claude/skills/
+#             (private) or an installed plugin (shared); omit for a
+#             prompt-only routine (ADR-0013)
+#   schedule: 5-field cron; omit for a manual routine, updated from the
+#             widget's update button or `pnpm routine <slug>` (ADR-0016)
+#   host:     cloud (default) or local — local runs on your machine and is
+#             the only host that can read local data (ADR-0012)
+# Enact schedules and triggers with `pnpm routines:sync`. Edit via the
+# Bulletin app or by hand.
 routines:
   - slug: daily-plan
     name: Daily Plan
-    skill: daily-plan
+    skill: daily-plan # the private-skill example in .claude/skills/
     schedule: "0 8 * * *"
     instructions: |
       Replace me: which projects matter, what to ignore, tone.
+    enabled: false
+  - slug: meeting-prep
+    name: Meeting Prep
+    # Prompt-only, manual, local: no skill, no schedule — run it from a
+    # terminal (`pnpm routine meeting-prep`) right before you need it, and
+    # it can see anything on your machine.
+    host: local
+    instructions: |
+      Replace me: summarize today's calendar and the open threads that
+      matter for each meeting, as one compact widget.
     enabled: false

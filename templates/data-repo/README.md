@@ -7,9 +7,17 @@ Everything Bulletin knows about this dashboard's owner lives here — the app
 itself stores nothing (ADR-0001).
 
 - `main` holds config: [`data/routines.yaml`](./data/routines.yaml) (what
-  runs, on what schedule) and one grid layout per dashboard under
-  [`data/dashboards/`](./data/dashboards/) (`main.yaml` is the default
-  board; add a file to add a dashboard).
+  runs, on what schedule or on demand) and one grid layout per dashboard
+  under [`data/dashboards/`](./data/dashboards/) (`main.yaml` is the
+  default board; add a file to add a dashboard).
+- [`.claude/skills/`](./.claude/skills/) holds your **private routine
+  skills** (ADR-0014) — `daily-plan` ships as the worked example. A skill
+  with a `widget:` frontmatter block shows up in the app's add-routine
+  picker, badged "private" (ADR-0015); shared skills come from the team's
+  plugins repo instead.
+- `data/triggers/<slug>.json` holds the API-trigger token for a manual
+  cloud routine (ADR-0016) — trigger-only scoped, committed on purpose:
+  everyone who can read this repo is exactly the set entitled to trigger.
 - The orphan `artifacts` branch holds published widget artifacts at
   `w/<slug>/index.html` — written by routines via the `publish-widget`
   skill, never by hand (except once, to prove the render path).

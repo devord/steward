@@ -11,7 +11,7 @@ A routine's content logic doesn't have to be a skill. `skill:` in
   holds: whatever the content source, `run-routine` pipes the output
   through `widget-artifact` and `publish-widget`. A prompt is a degenerate
   skill; the artifact is valid either way.
-- A skill *mentioned inside* a prompt ("use the repo-pulse skill") resolves
+- A skill _mentioned inside_ a prompt ("use the repo-pulse skill") resolves
   through Claude Code's normal skill resolution — best-effort: a typo means
   Claude improvises instead of erroring. That's the trade freeform accepts,
   and the UI shouldn't pretend otherwise.
@@ -32,7 +32,7 @@ skill. The `routines.yaml` diff keeps the difference legible.
   friction v1 is trying to remove.
 - **Prompt-only everything** (drop `skill:`) — matches Claude Code's own
   routine UI, but loses hard-fail resolution, metadata-driven defaults,
-  and the team's "our project report looks like *this*" curation point.
+  and the team's "our project report looks like _this_" curation point.
 
 ## Consequences
 

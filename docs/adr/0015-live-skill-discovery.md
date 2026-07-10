@@ -32,5 +32,5 @@ defaults.
 - Picker sources are ordered and badged: private (data repo) → team
   (plugins). A few extra API calls per wizard open, amortized by ETags —
   within the rate-limit watch item of the roadmap.
-- Skills in *uninstalled* plugins are invisible to the picker; installing
+- Skills in _uninstalled_ plugins are invisible to the picker; installing
   the plugin is how a teammate opts into the team's routine skills.

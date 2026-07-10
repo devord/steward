@@ -5,7 +5,7 @@ couples every private or team-specific report to the product's history and
 visibility. The rule: **a skill lives in the narrowest repo that all its
 users can read.**
 
-- **Bulletin (shared product repo)** — *contract skills only*:
+- **Bulletin (shared product repo)** — _contract skills only_:
   `run-routine`, `widget-artifact`, `publish-widget`. They define the
   platform and version with the app and the widget standard. No content
   skills, ever. The seeds move out: `repo-pulse` → the plugins repo,
@@ -34,7 +34,7 @@ No `source:` field, no custom loader.
   releases.
 - **A coordination repo** (repo-coordination-template) — a fourth repo
   layer buying nothing ADR-0001's boundaries don't already give; the data
-  repo *is* the user's coordination point.
+  repo _is_ the user's coordination point.
 
 ## Consequences
 
