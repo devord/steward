@@ -511,7 +511,7 @@ const EMBED_FRAME_STYLE =
   "<style data-bulletin-embed>footer{display:none !important}</style>"
 
 export function frameArtifactHtml(html: string, name: ThemeName): string {
-  return html + EMBED_FRAME_STYLE + artifactThemeStyle(name)
+  return html + EMBED_FRAME_STYLE + (artifactThemeStyle(name) ?? "")
 }
 
 /**
