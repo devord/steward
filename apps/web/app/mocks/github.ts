@@ -181,6 +181,24 @@ export const githubHandlers = [
     },
   ),
 
+  // Recursive tree of the default branch — the shape listTreePaths reads.
+  // Derived from the seeded main-ref files, so discovery tests seed repos
+  // exactly like every other test.
+  http.get(
+    "https://api.github.com/repos/:owner/:repo/git/trees/HEAD",
+    ({ params, request }) => {
+      const repo = `${params.owner}/${params.repo}`
+      const store = repos.get(repo)
+      if (!store) return new HttpResponse(null, { status: 404 })
+      const tree = [...store.keys()].flatMap((key) =>
+        key.startsWith("main:")
+          ? [{ path: key.slice("main:".length), type: "blob" }]
+          : [],
+      )
+      return json(request, { tree, truncated: false })
+    },
+  ),
+
   // Commits list — only the shape getLastCommitDate reads.
   http.get(
     "https://api.github.com/repos/:owner/:repo/commits",

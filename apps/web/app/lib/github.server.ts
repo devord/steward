@@ -254,6 +254,32 @@ export async function listDirectory(
   return parsed.data
 }
 
+const treeSchema = z.object({
+  tree: z.array(z.object({ path: z.string(), type: z.string() })),
+})
+
+/**
+ * Every blob path in the repo's default branch, in one ETag-cached call —
+ * how skill discovery finds SKILL.md files across arbitrary layouts
+ * (`.claude/skills/` in data repos, `<plugin>/skills/` in the plugins
+ * marketplace) without walking directories (ADR-0015). Returns null for
+ * 404/409 (no repo, no access, empty repo) so discovery can degrade.
+ */
+export async function listTreePaths(
+  token: string,
+  repo: string,
+): Promise<string[] | null> {
+  const res = await gh(token, `/repos/${repo}/git/trees/HEAD?recursive=1`)
+  if (res.status === 404 || res.status === 409) return null
+  if (!res.ok) {
+    throw new GitHubError(res.status, `${repo} tree → ${res.status}`)
+  }
+  const parsed = treeSchema.parse(await res.json())
+  return parsed.tree
+    .filter((entry) => entry.type === "blob")
+    .map((entry) => entry.path)
+}
+
 /** Delete a file on a branch (dashboard deletion). */
 export async function deleteFile(
   token: string,

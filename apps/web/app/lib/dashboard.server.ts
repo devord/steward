@@ -1,8 +1,6 @@
 import {
-  type CatalogFile,
   type DashboardFile,
   type RoutinesFile,
-  catalogFileSchema,
   dashboardFileSchema,
   dashboardPath,
   DASHBOARDS_DIR,
@@ -13,6 +11,7 @@ import {
 import { data } from "react-router"
 
 import type { BoardScope } from "./board.ts"
+import type { DiscoveredSkill } from "./skills.ts"
 import { env } from "./env.server.ts"
 import {
   getFile,
@@ -21,6 +20,7 @@ import {
   listDirectory,
   repoExists,
 } from "./github.server.ts"
+import { discoverRoutineSkills } from "./skills.server.ts"
 
 export interface ArtifactInfo {
   /** null → never published: render the placeholder card (ADR-0002). */
@@ -46,7 +46,8 @@ export interface BoardRef {
 
 /**
  * Everything a board needs to render its chrome and grid *except* the widget
- * artifacts — routines, layout, catalog, sibling boards. Fast enough to await
+ * artifacts — routines, layout, discovered skills, sibling boards. Fast
+ * enough to await
  * on the request path (a handful of GitHub reads), so redirects and 404s stay
  * in the loader. The artifacts, many more round trips, stream in after
  * (loadArtifacts) so the frame paints without waiting on them.
@@ -59,7 +60,9 @@ export interface DashboardBase {
   dashboardName: string | null
   routines: RoutinesFile
   dashboard: DashboardFile
-  catalog: CatalogFile
+  /** Routine-capable skills for the add-routine picker, read live from the
+      board's data repo and the plugins repo (ADR-0015). */
+  skills: DiscoveredSkill[]
   /** Sibling dashboards in the same repo, for the switcher. */
   dashboards: string[]
   /** Base blob SHAs config was loaded at — drafts key off these (ADR-0003). */
@@ -105,22 +108,26 @@ export async function listDashboards(
 }
 
 /**
- * The board's structure (config from the data repo's main, catalog from the
- * shared repo, sibling boards) — everything but the artifacts. Route loaders
- * await this so redirect/404 decisions stay on the request path.
+ * The board's structure (config from the data repo's main, skills discovered
+ * live across source repos, sibling boards) — everything but the artifacts.
+ * Route loaders await this so redirect/404 decisions stay on the request path.
  */
 export async function loadDashboardStructure(
   token: string,
   ref: BoardRef,
 ): Promise<DashboardBase> {
-  const [routinesRaw, dashboardRaw, catalogRaw, dashboards] = await Promise.all(
-    [
-      getFile(token, ref.repo, "data/routines.yaml"),
-      getFile(token, ref.repo, dashboardPath(ref.dashboard)),
-      getFile(token, env().BULLETIN_SHARED_REPO, "catalog/skills.json"),
-      listDashboards(token, ref.repo),
-    ],
-  )
+  const plugins = env().BULLETIN_PLUGINS_REPO
+  const [routinesRaw, dashboardRaw, skills, dashboards] = await Promise.all([
+    getFile(token, ref.repo, "data/routines.yaml"),
+    getFile(token, ref.repo, dashboardPath(ref.dashboard)),
+    discoverRoutineSkills(token, [
+      // The board's own repo first — its skills shadow same-named shared
+      // ones. On a team board that repo is shared, hence the team badge.
+      { repo: ref.repo, source: ref.scope === "team" ? "team" : "private" },
+      ...(plugins ? [{ repo: plugins, source: "team" as const }] : []),
+    ]),
+    listDashboards(token, ref.repo),
+  ])
 
   const routines = routinesRaw
     ? parseRoutinesFile(routinesRaw.text)
@@ -129,9 +136,6 @@ export async function loadDashboardStructure(
     ? parseDashboardFile(dashboardRaw.text)
     : // Schema defaults fill grid.columns/rowHeight — one source of truth.
       dashboardFileSchema.parse({ grid: {}, widgets: [] })
-  const catalog = catalogRaw
-    ? catalogFileSchema.parse(JSON.parse(catalogRaw.text))
-    : { skills: [] }
 
   return {
     dataRepo: ref.repo,
@@ -140,7 +144,7 @@ export async function loadDashboardStructure(
     dashboardName: dashboard.name ?? null,
     routines,
     dashboard,
-    catalog,
+    skills,
     dashboards: dashboards ?? [ref.dashboard],
     baseShas: {
       routines: routinesRaw?.sha ?? null,

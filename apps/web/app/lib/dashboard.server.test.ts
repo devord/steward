@@ -5,7 +5,7 @@ import { loadDashboard } from "./dashboard.server.ts"
 import { GitHubError } from "./github.server.ts"
 
 const DATA_REPO = "daniel/bulletin-data-daniel"
-const SHARED_REPO = "form-factory/bulletin" // matches setup-node env
+const PLUGINS_REPO = "form-factory/plugins" // matches setup-node env
 const MAIN_BOARD = {
   scope: "personal",
   repo: DATA_REPO,
@@ -29,31 +29,46 @@ widgets:
     size: { cols: 2, rows: 2 }
 `
 
-const CATALOG_JSON = JSON.stringify({
-  skills: [
-    {
-      id: "daily-plan",
-      name: "daily plan",
-      description: "today's working plan",
-      widget: {
-        artifact: "today's priorities and blocks",
-        sizes: { default: { cols: 2, rows: 2 } },
-        schedule: "0 7 * * *",
-      },
-    },
-  ],
-})
+const DAILY_PLAN_SKILL_MD = `---
+name: daily-plan
+description: today's working plan
+widget:
+  artifact: today's priorities and blocks
+  sizes:
+    default: { cols: 2, rows: 2 }
+  schedule: "0 7 * * *"
+---
+
+# daily-plan
+`
+
+const REPO_PULSE_SKILL_MD = `---
+name: repo-pulse
+description: repository activity digest
+widget:
+  artifact: open PRs, new issues, CI status
+---
+
+# repo-pulse
+`
 
 function seedConfig() {
   seedRepo(DATA_REPO, {
     "data/routines.yaml": ROUTINES_YAML,
     "data/dashboards/main.yaml": DASHBOARD_YAML,
+    // A private skill, discovered live from the data repo (ADR-0015).
+    ".claude/skills/daily-plan/SKILL.md": DAILY_PLAN_SKILL_MD,
+    // No widget: block — must never reach the picker.
+    ".claude/skills/helper/SKILL.md": "---\ndescription: not a widget\n---\n",
   })
-  seedRepo(SHARED_REPO, { "catalog/skills.json": CATALOG_JSON })
+  // A shared skill in the plugins-marketplace layout (<plugin>/skills/).
+  seedRepo(PLUGINS_REPO, {
+    "bulletin/skills/repo-pulse/SKILL.md": REPO_PULSE_SKILL_MD,
+  })
 }
 
 describe("loadDashboard", () => {
-  it("assembles config, catalog, and artifacts in one view", async () => {
+  it("assembles config, discovered skills, and artifacts in one view", async () => {
     seedConfig()
     seedRepo(
       DATA_REPO,
@@ -73,7 +88,10 @@ describe("loadDashboard", () => {
       routine: "daily-plan",
       size: { cols: 2, rows: 2 },
     })
-    expect(view.catalog.skills[0]?.id).toBe("daily-plan")
+    expect(view.skills.map((skill) => [skill.id, skill.source])).toEqual([
+      ["daily-plan", "private"],
+      ["repo-pulse", "team"],
+    ])
     expect(view.artifacts["daily-plan"]).toEqual({
       html: "<h1>plan</h1>",
       lastRunAt: "2026-07-09T07:00:00Z",
@@ -86,8 +104,8 @@ describe("loadDashboard", () => {
   })
 
   it("falls back to empty defaults when the repo has no config yet", async () => {
+    // No plugins repo seeded either — discovery degrades to no entries.
     seedRepo(DATA_REPO, {})
-    seedRepo(SHARED_REPO, {})
 
     const view = await loadDashboard("token", MAIN_BOARD)
 
@@ -98,7 +116,7 @@ describe("loadDashboard", () => {
       width: "fixed",
     })
     expect(view.dashboard.widgets).toEqual([])
-    expect(view.catalog.skills).toEqual([])
+    expect(view.skills).toEqual([])
     expect(view.baseShas).toEqual({ routines: null, dashboard: null })
   })
 
@@ -197,7 +215,6 @@ describe("loadDashboard", () => {
   })
 
   it("throws GitHubError when the config itself cannot load", async () => {
-    seedRepo(SHARED_REPO, {})
     seedRepo(DATA_REPO, {})
     failPath(DATA_REPO, "data/routines.yaml", { status: 503 })
 
