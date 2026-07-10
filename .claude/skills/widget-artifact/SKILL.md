@@ -10,8 +10,10 @@ description: >-
 # widget-artifact
 
 The artifact is rendered inside `<iframe srcdoc sandbox="allow-scripts">`:
-scripts allowed, **no** same-origin, **no network**. Anything external
-simply breaks. The iframe is the widget body, so plain `@media` queries
+scripts allowed, **no** same-origin. **No network is the contract, not a
+browser guarantee** — the sandbox doesn't block fetches, but external
+resources are forbidden by hard requirement 1 and may break, hang, or leak
+at render time. The iframe is the widget body, so plain `@media` queries
 respond to the widget's grid size — no JS needed for responsiveness.
 
 ## Hard requirements
