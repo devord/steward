@@ -1,14 +1,16 @@
 /**
- * Fire a cloud routine's API trigger (ADR-0016). Research preview: the
- * endpoint and beta header are expected to change shape — pin the dated
- * header via ANTHROPIC_ROUTINES_BETA when it lands (roadmap watch item).
- * The bearer token is the routine's trigger-only token from the data repo,
- * never a server secret.
+ * Fire a cloud routine's API trigger (ADR-0016). Research preview —
+ * endpoint, version, and beta header verified against the web UI's
+ * example request on 2026-07-10; ANTHROPIC_ROUTINES_BETA overrides the
+ * pinned header when the surface changes. The bearer token is the
+ * routine's trigger-only token from the data repo, never a server secret.
  */
 const FIRE_API = "https://api.anthropic.com/v1/claude_code/routines"
 
+const API_VERSION = "2023-06-01"
+
 const BETA_HEADER =
-  process.env.ANTHROPIC_ROUTINES_BETA ?? "experimental-cc-routines"
+  process.env.ANTHROPIC_ROUTINES_BETA ?? "experimental-cc-routine-2026-04-01"
 
 export class RoutineFireError extends Error {
   constructor(
@@ -34,6 +36,7 @@ export async function fireRoutine(options: {
       signal: AbortSignal.timeout(15_000),
       headers: {
         Authorization: `Bearer ${options.token}`,
+        "anthropic-version": API_VERSION,
         "anthropic-beta": BETA_HEADER,
         "Content-Type": "application/json",
       },
