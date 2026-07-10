@@ -134,6 +134,9 @@ export function launchdPlist(options: {
   repo: string
   prompt: string
   cwd: string
+  /** Bulletin checkout added to the session so the contract skills
+      resolve — the data-repo cwd doesn't have them (ADR-0014). */
+  addDir: string
   logFile: string
   schedule: LaunchdSchedule
 }): string {
@@ -162,8 +165,9 @@ export function launchdPlist(options: {
 
   // The prompt sits inside single quotes in a zsh -c string; the slug and
   // repo it interpolates are schema-validated (kebab / owner-name), so no
-  // quoting surprises.
-  const command = `exec claude -p '${options.prompt}'`
+  // quoting surprises. The add-dir path is single-quoted for spaces; a
+  // path containing a single quote is not worth contorting for.
+  const command = `exec claude --add-dir '${options.addDir}' -p '${options.prompt}'`
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

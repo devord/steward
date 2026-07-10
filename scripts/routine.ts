@@ -78,9 +78,12 @@ const verb = dry ? "Dry-run" : "Run"
 const clause = teamMode ? ` in \`${repo}\`` : ""
 const prompt = `${verb} the bulletin routine \`${slug}\`${clause} — follow the run-routine skill.`
 
-console.log(`> claude "${prompt}"`)
+// The session's cwd is the data repo, where the contract skills don't
+// exist — --add-dir pulls them in from this bulletin checkout (verified:
+// added dirs contribute their project skills).
+console.log(`> claude --add-dir ${root} "${prompt}"`)
 console.log(`  (cwd: ${dataRepoDir})\n`)
-const result = spawnSync("claude", [prompt], {
+const result = spawnSync("claude", ["--add-dir", root, prompt], {
   stdio: "inherit",
   cwd: dataRepoDir,
 })

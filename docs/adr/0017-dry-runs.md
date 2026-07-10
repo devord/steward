@@ -25,11 +25,13 @@ pnpm routine <slug> --repo Form-Factory/bulletin-data-team
 It stays dumb on purpose: resolve the data-repo checkout (sibling
 directory by convention, env/flag override), compose the pointer prompt —
 with the dry clause when `--dry` — and exec **interactive** `claude` (not
-`-p`) in the right cwd, so interactive skills can ask their questions and
-dry runs land in front of your eyes. All real logic stays in the contract
-skills; the script is prompt assembly + cwd + exec. The app's
-"copy command" button copies the raw `claude "…"` one-liner, which works
-without a bulletin checkout.
+`-p`) in the data-repo cwd with `--add-dir <bulletin checkout>` (the cwd
+alone can't resolve the contract skills, ADR-0014), so interactive skills
+can ask their questions and dry runs land in front of your eyes. All real
+logic stays in the contract skills; the script is prompt assembly + cwd +
+exec. The app's "copy command" button copies the raw `claude "…"`
+one-liner, which works without a bulletin checkout once the `bulletin`
+plugin (which mirrors the contract skills, ADR-0014) is installed.
 
 ## Considered options
 

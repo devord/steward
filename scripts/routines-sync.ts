@@ -263,6 +263,7 @@ for (const routine of localScheduled) {
       repo: localRepo,
       prompt: pointerPrompt(routine),
       cwd: dataRepoDir,
+      addDir: path.resolve(import.meta.dirname, ".."),
       logFile: path.join(logsDir, `${routine.slug}.log`),
       schedule,
     }),
