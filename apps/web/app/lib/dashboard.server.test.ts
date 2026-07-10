@@ -96,7 +96,8 @@ describe("loadDashboard", () => {
       html: "<h1>plan</h1>",
       lastRunAt: "2026-07-09T07:00:00Z",
     })
-    expect(view.baseShas.routines).toBe("sha:main:data/routines.yaml")
+    // Content-derived SHA (like GitHub's) — keyed on ref+path+content.
+    expect(view.baseShas.routines).toMatch(/^sha:main:data\/routines\.yaml:/)
     expect(view.baseFiles.dashboard).toBe(DASHBOARD_YAML)
     expect(view.scope).toBe("personal")
     expect(view.dashboardSlug).toBe("main")
@@ -144,7 +145,7 @@ describe("loadDashboard", () => {
     })
     // The rest of the view is intact.
     expect(view.routines.routines).toHaveLength(1)
-    expect(view.baseShas.routines).toBe("sha:main:data/routines.yaml")
+    expect(view.baseShas.routines).toMatch(/^sha:main:data\/routines\.yaml:/)
   })
 
   it("keeps a fetched artifact even when its commit date fails to load", async () => {
@@ -212,6 +213,52 @@ describe("loadDashboard", () => {
 
     expect(view.artifacts["daily-plan"]?.html).toBe("<h1>plan</h1>")
     expect(view.artifacts["daily-plan"]?.unreachable).toBeUndefined()
+  })
+
+  it("reports hasTrigger true for a manual cloud routine with a trigger file", async () => {
+    seedRepo(DATA_REPO, {
+      "data/routines.yaml":
+        "routines:\n  - slug: mp\n    name: meeting prep\n    instructions: x\n",
+      "data/dashboards/main.yaml": DASHBOARD_YAML,
+      "data/triggers/mp.json": '{"routine":"rt_1","token":"tok"}',
+    })
+
+    const view = await loadDashboard("token", MAIN_BOARD)
+
+    expect(view.artifacts["mp"]).toEqual({
+      html: null,
+      lastRunAt: null,
+      hasTrigger: true,
+    })
+  })
+
+  it("reports hasTrigger false for a manual cloud routine with no trigger file", async () => {
+    seedRepo(DATA_REPO, {
+      "data/routines.yaml":
+        "routines:\n  - slug: mp\n    name: meeting prep\n    instructions: x\n",
+      "data/dashboards/main.yaml": DASHBOARD_YAML,
+    })
+
+    const view = await loadDashboard("token", MAIN_BOARD)
+
+    expect(view.artifacts["mp"]).toEqual({
+      html: null,
+      lastRunAt: null,
+      hasTrigger: false,
+    })
+  })
+
+  it("skips the trigger check for a local routine (hasTrigger absent)", async () => {
+    seedRepo(DATA_REPO, {
+      "data/routines.yaml":
+        "routines:\n  - slug: mp\n    name: meeting prep\n    host: local\n    instructions: x\n",
+      "data/dashboards/main.yaml": DASHBOARD_YAML,
+    })
+
+    const view = await loadDashboard("token", MAIN_BOARD)
+
+    expect(view.artifacts["mp"]).toEqual({ html: null, lastRunAt: null })
+    expect(view.artifacts["mp"]?.hasTrigger).toBeUndefined()
   })
 
   it("throws GitHubError when the config itself cannot load", async () => {

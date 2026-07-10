@@ -20,13 +20,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog"
+import type { Routine } from "@bulletin/schema"
+
 import { Label } from "~/components/ui/label"
 import { type DiffLine, diffLines } from "../lib/diff.ts"
 import { useT } from "../lib/i18n.tsx"
-import type { BaseShas, Draft } from "../lib/draft.ts"
+import {
+  type BaseShas,
+  type Draft,
+  type SyncKind,
+  staleKinds,
+} from "../lib/draft.ts"
+import { setupCommands } from "../lib/routine-status.ts"
+import { CopyableCommand } from "./widget-card.tsx"
 
 interface FileChange {
-  kind: "routines" | "dashboard"
+  kind: SyncKind
   path: string
   yaml: string
   baseSha: string | null
@@ -36,7 +45,11 @@ interface FileChange {
 interface SyncResult {
   ok: boolean
   prUrl?: string
-  conflicts?: string[]
+  conflicts?: SyncKind[]
+  /** New base SHAs a successful commit produced (ADR-0003). */
+  newShas?: Partial<Record<SyncKind, string>>
+  /** SHAs a partial (raced) commit did land, so a retry doesn't re-conflict. */
+  committed?: Partial<Record<SyncKind, string>>
 }
 
 /**
@@ -53,9 +66,12 @@ export function SyncPanel({
   draft,
   baseFiles,
   serverShas,
+  rebasing = false,
+  addedRoutines,
   onSynced,
   onDiscard,
   onRebase,
+  onConflictCommitted,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -67,9 +83,15 @@ export function SyncPanel({
   /** SHAs the server currently sees — differs from draft.baseShas when the
       repo moved under the draft. */
   serverShas: BaseShas
-  onSynced: () => void
+  /** True while a "keep my version" rebase revalidates the base. */
+  rebasing?: boolean
+  /** Routines this draft adds — committing them isn't enough to run them, so a
+      successful commit shows their enactment steps (ADR-0016). */
+  addedRoutines: Routine[]
+  onSynced: (newShas: Partial<Record<SyncKind, string>>) => void
   onDiscard: () => void
-  onRebase: (fresh: BaseShas) => void
+  onRebase: () => void
+  onConflictCommitted: (committed: Partial<Record<SyncKind, string>>) => void
 }) {
   const t = useT()
   const fetcher = useFetcher<SyncResult>()
@@ -128,15 +150,11 @@ export function SyncPanel({
     )
   }, [draft, baseFiles, dashboardSlug])
 
-  const staleKinds = useMemo(() => {
-    const kinds: string[] = []
-    if (draft.baseShas.routines !== serverShas.routines) kinds.push("routines")
-    if (draft.baseShas.dashboard !== serverShas.dashboard) {
-      kinds.push("dashboard")
-    }
-    return kinds
-  }, [draft.baseShas, serverShas])
-  const conflicts = fetcher.data?.conflicts ?? staleKinds
+  const stale = useMemo(
+    () => staleKinds(draft.baseShas, serverShas),
+    [draft.baseShas, serverShas],
+  )
+  const conflicts = fetcher.data?.conflicts ?? stale
 
   const busy = fetcher.state !== "idle"
   const synced = fetcher.data?.ok === true
@@ -145,9 +163,21 @@ export function SyncPanel({
   // the new base up.
   const committed = synced && !fetcher.data?.prUrl
 
+  // Committing new routines isn't enough to run them — hold the panel open on a
+  // next-steps pane (ADR-0016). Otherwise the commit is done: reconcile + close.
+  const showNextSteps = committed && addedRoutines.length > 0
   useEffect(() => {
-    if (committed) onSynced()
-  }, [committed, onSynced])
+    if (committed && addedRoutines.length === 0) {
+      onSynced(fetcher.data?.newShas ?? {})
+    }
+  }, [committed, addedRoutines.length, fetcher.data?.newShas, onSynced])
+
+  // A partial (raced) commit landed some files: fold their SHAs into the
+  // draft's base so a retry doesn't false-conflict on what already committed.
+  const raced = fetcher.data?.committed
+  useEffect(() => {
+    if (raced && Object.keys(raced).length > 0) onConflictCommitted(raced)
+  }, [raced, onConflictCommitted])
 
   function submit() {
     const payload: Record<string, unknown> = {
@@ -175,7 +205,12 @@ export function SyncPanel({
           <DialogDescription>{t("sync.description")}</DialogDescription>
         </DialogHeader>
 
-        {synced && fetcher.data?.prUrl ? (
+        {showNextSteps ? (
+          <NextSteps
+            addedRoutines={addedRoutines}
+            onDone={() => onSynced(fetcher.data?.newShas ?? {})}
+          />
+        ) : synced && fetcher.data?.prUrl ? (
           <Alert>
             <AlertTitle>{t("sync.prOpened")}</AlertTitle>
             <AlertDescription>
@@ -205,14 +240,24 @@ export function SyncPanel({
                       files: conflicts.join(t("sync.and")),
                     })}
                   </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => onRebase(serverShas)}
-                  >
-                    {t("sync.reapply")}
-                  </Button>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={rebasing}
+                      onClick={onRebase}
+                    >
+                      {rebasing ? t("sync.syncing") : t("sync.keepMine")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={rebasing}
+                      onClick={onDiscard}
+                    >
+                      {t("sync.takeServer")}
+                    </Button>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
@@ -273,5 +318,45 @@ export function SyncPanel({
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * Shown after a commit that added routines: the config is saved, but a routine
+ * only runs once it's enacted (ADR-0016). Surfaces the exact terminal commands
+ * — routines:sync to create the cloud routine / API trigger / launchd plist,
+ * plus a per-routine run line for local ones — then hands back to the board.
+ */
+function NextSteps({
+  addedRoutines,
+  onDone,
+}: {
+  addedRoutines: Routine[]
+  onDone: () => void
+}) {
+  const t = useT()
+  const enactCommand = addedRoutines
+    .map((routine) => setupCommands(routine).enact)
+    .find((command): command is string => command != null)
+  const runCommands = addedRoutines
+    .map((routine) => setupCommands(routine).runOnce)
+    .filter((command): command is string => command != null)
+
+  return (
+    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+      <Alert>
+        <AlertTitle>{t("sync.nextSteps")}</AlertTitle>
+        <AlertDescription className="space-y-2">
+          <p>{t("sync.nextStepsBody")}</p>
+          {enactCommand && <CopyableCommand command={enactCommand} />}
+          {runCommands.map((command) => (
+            <CopyableCommand key={command} command={command} />
+          ))}
+        </AlertDescription>
+      </Alert>
+      <DialogFooter>
+        <Button onClick={onDone}>{t("sync.done")}</Button>
+      </DialogFooter>
+    </div>
   )
 }

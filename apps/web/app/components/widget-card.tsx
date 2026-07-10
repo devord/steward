@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useFetcher } from "react-router"
 
 import type { Routine, Widget, WidgetSize } from "@bulletin/schema"
@@ -12,8 +12,13 @@ import type { BoardScope } from "../lib/board.ts"
 import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
+import {
+  setupCommands,
+  type WidgetStatus,
+  widgetStatus,
+} from "../lib/routine-status.ts"
 import { frameArtifactHtml } from "../lib/theme.ts"
-import { agoParts, cronIntervalMs } from "../lib/time.ts"
+import { agoParts } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
 import type { DragKind, GridDrag } from "../lib/use-grid-drag.ts"
 import type { RunResult } from "../routes/run.ts"
@@ -31,6 +36,17 @@ export interface WidgetCardProps {
       Standalone renders (tests) omit both and get no Update control. */
   scope?: BoardScope
   dataRepo?: string
+  /** The signed-in login — team boards note when a routine's runner differs. */
+  login?: string
+  /** Is the routine synced (on the server), not just added in the draft?
+      Drives the "in your draft — sync it" empty state. Defaults true for
+      standalone renders. */
+  committed?: boolean
+  /** When set, a run fired at this epoch hasn't published yet — the tile shows
+      a running indicator and the update button is disabled (ADR-0016). */
+  pendingFiredAt?: number | null
+  /** Called when the update button successfully fires a cloud run. */
+  onFired?: () => void
   /** Edit mode: drag to move, corner handle to resize, × to remove. */
   editing?: boolean
   /** This card's active drag, if it is the one being dragged. */
@@ -60,6 +76,10 @@ export function WidgetCard({
   columns = GRID_MAX_COLS,
   scope,
   dataRepo,
+  login,
+  committed = true,
+  pendingFiredAt = null,
+  onFired,
   editing = false,
   drag = null,
   onDragStart,
@@ -78,12 +98,15 @@ export function WidgetCard({
   const lastRunAt = artifact?.lastRunAt ?? null
   // Manual routines have no cadence to be stale against (ADR-0016).
   const manual = routine.schedule == null
-  const interval = routine.schedule ? cronIntervalMs(routine.schedule) : null
-  // Overdue by more than one full interval → the schedule missed a run.
-  const stale =
-    lastRunAt != null &&
-    interval != null &&
-    now - Date.parse(lastRunAt) > 2 * interval
+  const status = widgetStatus(routine, {
+    committed,
+    hasTrigger: artifact?.hasTrigger,
+    artifact,
+    pendingFiredAt,
+    now,
+  })
+  const stale = status.kind === "live" && status.stale
+  const running = status.kind === "running"
 
   const ago = lastRunAt ? agoParts(lastRunAt, now) : null
   const ranLabel = ago
@@ -175,25 +198,13 @@ export function WidgetCard({
             className="min-h-0 w-full flex-1 border-0"
           />
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 p-3 text-center">
-            <span className="font-mono text-xs text-ink-dim">
-              {routine.slug}
-            </span>
-            <span className="text-xs text-ink-faint">
-              {artifact?.unreachable ? (
-                t("widget.unreachable")
-              ) : routine.enabled ? (
-                <>
-                  {t("widget.waiting")}{" "}
-                  <span className="font-mono">
-                    {routine.schedule ?? t("widget.manual")}
-                  </span>
-                </>
-              ) : (
-                t("widget.disabled")
-              )}
-            </span>
-          </div>
+          <WidgetEmptyState
+            status={status}
+            routine={routine}
+            scope={scope}
+            login={login}
+            now={now}
+          />
         )}
         {editing ? (
           <footer className="relative z-20 flex items-center gap-1.5 border-t bg-bg2 py-0.5 pr-2 pl-1 text-[11px]">
@@ -222,20 +233,29 @@ export function WidgetCard({
           <footer className="flex items-center gap-2 border-t border-border-dim py-[3px] pr-1 pl-2 text-[11px]">
             <span className="truncate text-ink-dim">{routine.name}</span>
             <span className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-ink-faint">
-              {stale && (
-                <Badge
-                  variant="secondary"
-                  className="h-[15px] border-yellow/45 bg-yellow/10 px-1 font-mono text-[10px] text-ink"
-                  title={t("widget.staleTitle")}
-                >
-                  {t("widget.stale")}
-                </Badge>
-              )}
-              {ranLabel}
-              {manual && (
-                <span title={t("widget.manualTitle")}>
-                  · {t("widget.manual")}
+              {running ? (
+                <span className="flex items-center gap-1 text-orange">
+                  <RefreshCw className="size-3 animate-spin" />
+                  {t("widget.running")}
                 </span>
+              ) : (
+                <>
+                  {stale && (
+                    <Badge
+                      variant="secondary"
+                      className="h-[15px] border-yellow/45 bg-yellow/10 px-1 font-mono text-[10px] text-ink"
+                      title={t("widget.staleTitle")}
+                    >
+                      {t("widget.stale")}
+                    </Badge>
+                  )}
+                  {ranLabel}
+                  {manual && (
+                    <span title={t("widget.manualTitle")}>
+                      · {t("widget.manual")}
+                    </span>
+                  )}
+                </>
               )}
             </span>
             {scope != null && dataRepo != null && routine.enabled && (
@@ -243,6 +263,9 @@ export function WidgetCard({
                 routine={routine}
                 scope={scope}
                 dataRepo={dataRepo}
+                pending={pendingFiredAt != null}
+                onFired={onFired}
+                forceVisible={status.kind !== "live"}
               />
             )}
             {/* Peek at full size. Recedes until the card is hovered/focused
@@ -323,14 +346,30 @@ function UpdateAction({
   routine,
   scope,
   dataRepo,
+  pending = false,
+  forceVisible = false,
+  onFired,
 }: {
   routine: Routine
   scope: BoardScope
   dataRepo: string
+  /** A fired run hasn't published yet (persists across reloads) — the button
+      spins and can't re-fire until it clears (ADR-0016). */
+  pending?: boolean
+  /** Keep the button visible (not hover-only) — for tiles with no artifact,
+      a pending run, or a missing trigger, where it's the primary affordance. */
+  forceVisible?: boolean
+  onFired?: () => void
 }) {
   const t = useT()
   const fetcher = useFetcher<RunResult>()
   const [copied, setCopied] = useState(false)
+
+  // Tell the board a fire landed so it can start the pending/running state.
+  const fired = fetcher.data?.ok === true
+  useEffect(() => {
+    if (fired) onFired?.()
+  }, [fired, onFired])
 
   if (routineHost(routine) === "local") {
     // Works without a bulletin checkout — the raw pointer prompt (ADR-0005);
@@ -346,7 +385,10 @@ function UpdateAction({
         size="icon-xs"
         aria-label={label}
         title={label}
-        className={cn(FOOTER_ACTION, copied ? "opacity-100" : "opacity-0")}
+        className={cn(
+          FOOTER_ACTION,
+          copied || forceVisible ? "opacity-100" : "opacity-0",
+        )}
         onClick={() => {
           void navigator.clipboard.writeText(command)
           setCopied(true)
@@ -362,6 +404,7 @@ function UpdateAction({
   }
 
   const busy = fetcher.state !== "idle"
+  const spinning = busy || pending
   const result = fetcher.data
   const status =
     result == null
@@ -378,10 +421,12 @@ function UpdateAction({
       size="icon-xs"
       aria-label={label}
       title={label}
-      disabled={busy}
+      disabled={spinning}
       className={cn(
         FOOTER_ACTION,
-        busy || status != null ? "opacity-100" : "opacity-0",
+        spinning || status != null || forceVisible
+          ? "opacity-100"
+          : "opacity-0",
         result != null && !result.ok && "text-destructive",
       )}
       onClick={() => {
@@ -392,14 +437,136 @@ function UpdateAction({
         })
       }}
     >
-      {result?.ok ? (
+      {result?.ok && !pending ? (
         <Check />
       ) : (
-        <RefreshCw className={cn(busy && "animate-spin")} />
+        <RefreshCw className={cn(spinning && "animate-spin")} />
       )}
       <span role="status" className="sr-only">
         {status ?? ""}
       </span>
     </Button>
+  )
+}
+
+/** A copyable one-liner for setup steps — mono text plus a copy button. */
+export function CopyableCommand({ command }: { command: string }) {
+  const t = useT()
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      aria-label={t("widget.copyCmd")}
+      title={t("widget.copyCmd")}
+      className="flex items-center gap-1.5 rounded border border-border-dim bg-bg px-1.5 py-1 font-mono text-[10px] text-ink-dim transition-colors hover:border-orange hover:text-foreground"
+      onClick={() => {
+        void navigator.clipboard.writeText(command)
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 2500)
+      }}
+    >
+      {copied ? (
+        <Check className="size-3 shrink-0 text-green" />
+      ) : (
+        <Copy className="size-3 shrink-0" />
+      )}
+      <span className="truncate">{command}</span>
+    </button>
+  )
+}
+
+/**
+ * The placeholder for a widget with no artifact yet: instead of a dead cell,
+ * it says where the routine is in the activation chain and — host- and
+ * schedule-specific — exactly what to run to get its first artifact
+ * (ADR-0012/0013/0016). It resolves itself the moment a run publishes.
+ */
+function WidgetEmptyState({
+  status,
+  routine,
+  scope,
+  login,
+  now,
+}: {
+  status: WidgetStatus
+  routine: Routine
+  scope?: BoardScope
+  login?: string
+  now: number
+}) {
+  const t = useT()
+  const cmds = setupCommands(routine)
+  const local = routineHost(routine) === "local"
+  const manual = routine.schedule == null
+
+  let hint: React.ReactNode = null
+  let command: string | null = null
+  let note: string | null = null
+
+  switch (status.kind) {
+    case "unreachable":
+      hint = t("widget.unreachable")
+      break
+    case "disabled":
+      hint = t("widget.disabled")
+      break
+    case "draft":
+      hint = t("widget.draftHint")
+      break
+    case "running": {
+      const ago = agoParts(new Date(status.firedAt).toISOString(), now)
+      hint = t("widget.runningSince", {
+        ago:
+          ago.unit === "now"
+            ? t("time.now")
+            : t(`time.${ago.unit}`, { n: ago.n }),
+      })
+      break
+    }
+    case "ready-manual":
+      hint = t("widget.readyManual")
+      break
+    case "needs-trigger":
+      hint = t("widget.needsTriggerHint")
+      command = cmds.enact
+      break
+    default:
+      // awaiting-first-run
+      if (local && manual) {
+        hint = t("widget.awaitLocalManual")
+        command = cmds.runOnce
+      } else {
+        hint = t("widget.awaitEnact")
+        command = cmds.enact
+        if (routine.schedule) {
+          note = t("widget.firstRunSchedule", { cron: routine.schedule })
+        }
+      }
+  }
+
+  // Team boards: the cloud resource belongs to the runner, so name who must act.
+  const runnerNote =
+    scope === "team" &&
+    routine.runner != null &&
+    login != null &&
+    routine.runner !== login
+      ? t("widget.runnerNote", { runner: routine.runner })
+      : null
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 p-3 text-center">
+      {status.kind === "running" && (
+        <RefreshCw className="size-4 shrink-0 animate-spin text-orange" />
+      )}
+      <span className="font-mono text-xs text-ink-dim">{routine.slug}</span>
+      <span className="text-xs text-ink-faint">{hint}</span>
+      {note && (
+        <span className="font-mono text-[10px] text-ink-faint">{note}</span>
+      )}
+      {command && <CopyableCommand command={command} />}
+      {runnerNote && (
+        <span className="text-[10px] text-ink-faint">{runnerNote}</span>
+      )}
+    </div>
   )
 }

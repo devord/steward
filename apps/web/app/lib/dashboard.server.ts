@@ -4,8 +4,11 @@ import {
   dashboardFileSchema,
   dashboardPath,
   DASHBOARDS_DIR,
+  isManual,
   parseDashboardFile,
   parseRoutinesFile,
+  routineHost,
+  triggerPath,
 } from "@bulletin/schema"
 
 import { data } from "react-router"
@@ -30,6 +33,10 @@ export interface ArtifactInfo {
   /** GitHub couldn't serve this artifact right now (5xx) — the widget
       renders an "unreachable" state instead of failing the whole board. */
   unreachable?: boolean
+  /** For a manual cloud routine: whether its API trigger file exists, so the
+      tile can tell "press update" from "set the trigger up first" (ADR-0016).
+      undefined → not a manual cloud routine, or the check couldn't run. */
+  hasTrigger?: boolean
 }
 
 /**
@@ -118,8 +125,11 @@ export async function loadDashboardStructure(
 ): Promise<DashboardBase> {
   const plugins = env().BULLETIN_PLUGINS_REPO
   const [routinesRaw, dashboardRaw, skills, dashboards] = await Promise.all([
-    getFile(token, ref.repo, "data/routines.yaml"),
-    getFile(token, ref.repo, dashboardPath(ref.dashboard)),
+    // Pin the ref so the loader and /sync read the *same* ETag-cache entry:
+    // reading with no ref keys a separate entry that can hold a different SHA
+    // for the same file, which surfaced as a false "base moved" (ADR-0003).
+    getFile(token, ref.repo, "data/routines.yaml", "main"),
+    getFile(token, ref.repo, dashboardPath(ref.dashboard), "main"),
     discoverRoutineSkills(token, [
       // The board's own repo first — its skills shadow same-named shared
       // ones. On a team board that repo is shared, hence the team badge.
@@ -170,25 +180,45 @@ export async function loadArtifacts(
 ): Promise<Record<string, ArtifactInfo>> {
   const artifacts: Record<string, ArtifactInfo> = {}
   await Promise.all(
-    routines.routines.map(async ({ slug }) => {
+    routines.routines.map(async (routine) => {
+      const { slug } = routine
       const path = `w/${slug}/index.html`
+      // A manual cloud routine's update button fires an API trigger — the
+      // tile needs to know whether that trigger exists (ADR-0016) to tell
+      // "press update" from "set it up first". Only those routines carry one.
+      const wantsTrigger = routineHost(routine) === "cloud" && isManual(routine)
       // Body and freshness are fetched independently so a commits-API hiccup
       // never discards artifact HTML that loaded fine. And every per-widget
       // failure is isolated — HTTP 5xx, a network drop, an abort/timeout — so
       // one bad cell can't reject the batch and take the whole board down.
-      const [body, lastRun] = await Promise.allSettled([
+      const [body, lastRun, trigger] = await Promise.allSettled([
         getFile(token, ref.repo, path, "artifacts"),
         getLastCommitDate(token, ref.repo, path, "artifacts"),
+        wantsTrigger
+          ? getFile(token, ref.repo, triggerPath(slug), "main")
+          : Promise.resolve(null),
       ])
       // Only a failed *body* fetch means the artifact is unreachable; a
-      // missing commit date is just absent freshness, not a dead cell.
+      // missing commit date is just absent freshness, not a dead cell. A
+      // failed trigger check leaves hasTrigger undefined (never "missing").
+      const hasTrigger = wantsTrigger
+        ? trigger.status === "fulfilled"
+          ? trigger.value != null
+          : undefined
+        : undefined
       artifacts[slug] =
         body.status === "fulfilled"
           ? {
               html: body.value?.text ?? null,
               lastRunAt: lastRun.status === "fulfilled" ? lastRun.value : null,
+              ...(hasTrigger !== undefined ? { hasTrigger } : {}),
             }
-          : { html: null, lastRunAt: null, unreachable: true }
+          : {
+              html: null,
+              lastRunAt: null,
+              unreachable: true,
+              ...(hasTrigger !== undefined ? { hasTrigger } : {}),
+            }
     }),
   )
   return artifacts

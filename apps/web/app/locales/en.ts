@@ -41,6 +41,14 @@ export const en = {
   "empty.cta": "Add your first routine",
 
   "offgrid.title": "not on the grid",
+  "offgrid.hint":
+    "these routines live in this repo's shared routines.yaml but aren't on this board — place one, or delete it from the repo.",
+  "offgrid.delete": "delete {name} from the repo",
+
+  "routine.deleteTitle": "Delete {name}?",
+  "routine.deleteBody":
+    "Removes the routine from routines.yaml when you next sync. Routines are shared across every dashboard in this repo, so it disappears from all of them.",
+  "routine.deleteConfirm": "Delete routine",
 
   "grid.columnsLabel": "columns",
   "grid.width": "width",
@@ -119,8 +127,18 @@ export const en = {
   "widget.copyCommand": "copy the terminal command that runs {name}",
   "widget.copied": "command copied — run it from your bulletin checkout",
   "widget.unreachable": "github unreachable — retries on next refresh",
-  "widget.waiting": "waiting for its first run —",
   "widget.disabled": "routine disabled",
+  "widget.running": "running",
+  "widget.runningSince": "running — started {ago}",
+  "widget.draftHint": "in your draft — sync to commit it",
+  "widget.needsTriggerHint":
+    "needs an API trigger before update works — from your bulletin checkout:",
+  "widget.awaitEnact": "committed — enact it from your bulletin checkout:",
+  "widget.awaitLocalManual": "runs on your machine — run it when you need it:",
+  "widget.readyManual": "ready — press update to run it",
+  "widget.firstRunSchedule": "first run lands on its schedule ({cron})",
+  "widget.runnerNote": "{runner} must run this — the cloud resource is theirs",
+  "widget.copyCmd": "copy command",
   "widget.moveLeft": "move left",
   "widget.moveRight": "move right",
   "widget.moveUp": "move up",
@@ -181,9 +199,14 @@ export const en = {
   "sync.nothing2": "— nothing to sync.",
   "sync.baseMoved": "Base moved",
   "sync.baseMovedBody":
-    "{files} changed in the repo since this draft was made. Re-apply the draft onto the fresh base and re-review the diff.",
+    "{files} changed in the repo since this draft was made. Keep your version to overwrite the repo's copy, or take the server's and discard your draft.",
   "sync.and": " and ",
-  "sync.reapply": "Re-apply on fresh base",
+  "sync.keepMine": "Keep my version",
+  "sync.takeServer": "Take server version",
+  "sync.nextSteps": "Committed — next, enact your new routines",
+  "sync.nextStepsBody":
+    "Saved to the repo, but a routine only runs once it's enacted. From your bulletin checkout:",
+  "sync.done": "Done",
   "sync.asPr": "open a PR instead",
   "sync.discard": "Discard draft",
   "sync.commit": "Commit to main",
