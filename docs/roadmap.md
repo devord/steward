@@ -26,8 +26,9 @@ renders widgets in sandboxed `srcdoc` iframes; "ran Xh ago" footers from
 commit history; placeholder for never-published. Sample artifact at
 `docs/samples/daily-plan.html` — hand-push it per the template README to
 prove the render path.
-**Risk still open:** first Vercel deploy — `@vercel/react-router` still
-peers on RR 7; needs a real deploy with OAuth env vars to retire.
+**Risk retired 2026-07-09:** deployed to Vercel (project `bulletin`,
+production `READY` from `main`, OAuth env vars live); the RR7 peer concern
+didn't bite.
 
 ## M3 — Editing + sync ✅
 
@@ -51,19 +52,59 @@ Done: staleness badge (now − last run vs schedule interval, on the widget
 footer); drag-and-drop layout; multi-repo/org support via team dashboards
 (ADR-0010: org team data repo, `data/dashboards/<slug>.yaml` layouts,
 `/team/<slug>` routes, `runner:`-scoped `routines:sync`). Open backlog:
-"Run now", `bulletin apply` CLI (deferred until the Sync panel's download
-escape hatch proves annoying, ADR-0003), external/PIN-gated artifact
-sharing (second publish target), artifact version browsing (free from git
-history), `instructionsFile:` for long-form routine guidance, dashboard
-rename (today: delete + recreate), dashboard display names in the switcher
-(today: slugs).
+external/PIN-gated artifact sharing (second publish target), artifact
+version browsing (free from git history), `instructionsFile:` for
+long-form routine guidance, dashboard rename (today: delete + recreate),
+dashboard display names in the switcher (today: slugs). "Run now" and the
+`bulletin apply` CLI graduated into M6 (ADR-0016/0017).
+
+## M6 — Hosts, manual runs, prompt-first (planned)
+
+Implements ADR-0012…0017:
+
+- **Schema**: `host: cloud | local` (default cloud); `skill:` and
+  `schedule:` optional (prompt-only / manual-only routines).
+- **Hosts**: launchd half of `routines:sync` (plists per scheduled-local
+  routine, orphan cleanup); manual-local routines enact nothing.
+- **Prompt-first wizard**: textarea first, skill picker as accelerator.
+- **Dispatcher**: `run-routine` handles prompt-only routines (no `skill:` →
+  run `instructions` under the contract skills; bad `skill:` → hard fail);
+  `packages/schema` keeps the `widget:` block schema but drops the
+  catalog-file schema; stale "catalog/skills.json" comments and loader
+  fetches go with it.
+- **Template refresh**: `templates/data-repo` seeds gain the private-skill
+  example, a manual-local example routine, and a header that no longer
+  mentions the catalog.
+- **Live skill discovery**: delete `scripts/gen-catalog.ts`,
+  `catalog/skills.json`, the CI freshness check (and CLAUDE.md's
+  `gen:catalog` step); picker reads `widget:` frontmatter via contents API
+  from plugins + data repos, badged private/team.
+- **Skill eviction**: `repo-pulse` → plugins repo; `daily-plan` →
+  `templates/data-repo/.claude/skills/` as the private-skill example.
+- **Manual runs**: API trigger on runner-owned cloud routines, trigger
+  token committed to the data repo, server-side Update button authorized
+  by the clicker's repo read access; copy-command fallback; staleness
+  badge suppressed for manual routines.
+- **Dry runs + launcher**: dry clause in `run-routine`/`publish-widget`
+  (local tree in, local file out); `pnpm routine <slug> [--dry] [--repo]`.
+
+Facts to verify before/while building: claude.ai connectors under headless
+`claude -p` (launchd); plugins-repo install inside the cloud routine
+environment (else dispatcher clones it); the `/schedule` CLI surface
+`routines:sync` drives for creation without API triggers; whether a cloud
+routine can be created with **no schedule at all** (API-trigger-only) or
+only via the web UI — decides how much of the cloud-manual flow sync can
+automate.
 
 ## Watch items
 
 - **GitHub API rate limit** (5k/h authed) — batch loader fetches, ETags.
 - **Artifacts-branch growth** (~1 commit/run) — squash to depth 1 if it ever
   bites, at the cost of version browsing.
-- **Cloud routine limits** — daily run caps; local schedule / team runner
-  runs the same pointer prompt when they bind.
+- **Cloud routine limits** — daily run caps (API-fired runs count too);
+  local schedule / team runner runs the same pointer prompt when they bind.
+- **Routines fire API is research preview** — dated beta header
+  (`anthropic-beta: experimental-cc-routine-…`), token minting UI-only;
+  expect surface changes (ADR-0016).
 - **Palette duplication** — `@theme` block vs the `widget-artifact` token
   snippet must stay identical (ADR-0007).

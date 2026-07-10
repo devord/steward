@@ -1,5 +1,9 @@
 # The skills catalog is generated, never hand-maintained
 
+**Superseded by [ADR-0015](./0015-live-skill-discovery.md)** — the picker
+now reads `widget:` frontmatter live across source repos; no generated
+catalog, no CI freshness check. The `widget:` block itself survives.
+
 The add-routine wizard needs to know which skills can back a routine, what
 their artifact shows, which widget sizes they support, and a sensible default
 schedule. That metadata belongs next to the skill it describes, not in a
