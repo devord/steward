@@ -234,66 +234,80 @@ export function DashboardBoard({
       {dashboard.widgets.length === 0 ? (
         <EmptyDashboard onAdd={() => setAdding(true)} />
       ) : (
-        <main
-          ref={gridRef}
-          className="dash-grid"
-          style={cssVars({ "--row-h": `${dashboard.grid.rowHeight}px` })}
-        >
-          {/* The frame is already placed; only the artifact bodies stream. Each
-              cell holds its slot with a skeleton until its artifact lands. */}
-          <Suspense
-            fallback={orderedWidgets.flatMap((widget) =>
-              routinesBySlug.has(widget.routine)
-                ? [<WidgetSkeleton key={widget.routine} widget={widget} />]
-                : [],
-            )}
+        <>
+          {/* The skeleton cells are aria-hidden, so announce the artifact
+              stream once for assistive tech — a persistent live region whose
+              text flips from loading to loaded when the promise resolves. */}
+          <p role="status" aria-live="polite" className="sr-only">
+            <Suspense fallback={t("board.widgetsLoading")}>
+              <Await resolve={artifacts}>
+                {() => t("board.widgetsLoaded")}
+              </Await>
+            </Suspense>
+          </p>
+          <main
+            ref={gridRef}
+            className="dash-grid"
+            style={cssVars({ "--row-h": `${dashboard.grid.rowHeight}px` })}
           >
-            <Await resolve={artifacts}>
-              {(resolved) => (
-                <>
-                  {orderedWidgets.flatMap((widget) => {
-                    const routine = routinesBySlug.get(widget.routine)
-                    if (!routine) return []
-                    return [
-                      <WidgetCard
-                        key={widget.routine}
-                        widget={widget}
-                        routine={routine}
-                        artifact={resolved[widget.routine]}
-                        now={now}
-                        editing={editing}
-                        drag={drag?.slug === widget.routine ? drag : null}
-                        onDragStart={(kind, event) =>
-                          startDrag(widget.routine, kind, event)
-                        }
-                        onMove={(dCol, dRow) =>
-                          moveWidget(widget.routine, dCol, dRow)
-                        }
-                        onResize={(size) => resizeWidget(widget.routine, size)}
-                        onRemove={() => removeWidget(widget.routine)}
-                      />,
-                    ]
-                  })}
-                  {drag && (
-                    <div
-                      aria-hidden
-                      className={cn(
-                        "pointer-events-none z-10 rounded-lg border border-dashed",
-                        drag.valid
-                          ? "border-orange-deep bg-orange/5"
-                          : "border-red/70 bg-red/10",
-                      )}
-                      style={{
-                        gridColumn: `${drag.candidate.col} / span ${drag.candidate.cols}`,
-                        gridRow: `${drag.candidate.row} / span ${drag.candidate.rows}`,
-                      }}
-                    />
-                  )}
-                </>
+            {/* The frame is already placed; only the artifact bodies stream. Each
+              cell holds its slot with a skeleton until its artifact lands. */}
+            <Suspense
+              fallback={orderedWidgets.flatMap((widget) =>
+                routinesBySlug.has(widget.routine)
+                  ? [<WidgetSkeleton key={widget.routine} widget={widget} />]
+                  : [],
               )}
-            </Await>
-          </Suspense>
-        </main>
+            >
+              <Await resolve={artifacts}>
+                {(resolved) => (
+                  <>
+                    {orderedWidgets.flatMap((widget) => {
+                      const routine = routinesBySlug.get(widget.routine)
+                      if (!routine) return []
+                      return [
+                        <WidgetCard
+                          key={widget.routine}
+                          widget={widget}
+                          routine={routine}
+                          artifact={resolved[widget.routine]}
+                          now={now}
+                          editing={editing}
+                          drag={drag?.slug === widget.routine ? drag : null}
+                          onDragStart={(kind, event) =>
+                            startDrag(widget.routine, kind, event)
+                          }
+                          onMove={(dCol, dRow) =>
+                            moveWidget(widget.routine, dCol, dRow)
+                          }
+                          onResize={(size) =>
+                            resizeWidget(widget.routine, size)
+                          }
+                          onRemove={() => removeWidget(widget.routine)}
+                        />,
+                      ]
+                    })}
+                    {drag && (
+                      <div
+                        aria-hidden
+                        className={cn(
+                          "pointer-events-none z-10 rounded-lg border border-dashed",
+                          drag.valid
+                            ? "border-orange-deep bg-orange/5"
+                            : "border-red/70 bg-red/10",
+                        )}
+                        style={{
+                          gridColumn: `${drag.candidate.col} / span ${drag.candidate.cols}`,
+                          gridRow: `${drag.candidate.row} / span ${drag.candidate.rows}`,
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+              </Await>
+            </Suspense>
+          </main>
+        </>
       )}
 
       {unplaced.length > 0 && editing && (

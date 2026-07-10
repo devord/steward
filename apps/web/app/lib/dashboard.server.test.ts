@@ -125,6 +125,57 @@ describe("loadDashboard", () => {
     expect(view.baseShas.routines).toBe("sha:main:data/routines.yaml")
   })
 
+  it("keeps a fetched artifact even when its commit date fails to load", async () => {
+    seedConfig()
+    seedRepo(
+      DATA_REPO,
+      {
+        "w/daily-plan/index.html": {
+          text: "<h1>plan</h1>",
+          lastCommit: "2026-07-09T07:00:00Z",
+        },
+      },
+      "artifacts",
+    )
+    // Only the commits endpoint fails; the artifact body loads fine.
+    failPath(DATA_REPO, "w/daily-plan/index.html", {
+      status: 502,
+      endpoint: "commits",
+    })
+
+    const view = await loadDashboard("token", MAIN_BOARD)
+
+    // HTML is preserved; only the freshness is missing (not unreachable).
+    expect(view.artifacts["daily-plan"]).toEqual({
+      html: "<h1>plan</h1>",
+      lastRunAt: null,
+    })
+  })
+
+  it("degrades a widget without failing the board on a network error", async () => {
+    seedConfig()
+    seedRepo(
+      DATA_REPO,
+      { "w/daily-plan/index.html": "<h1>plan</h1>" },
+      "artifacts",
+    )
+    // A fetch-level network error is not a GitHubError — it must still be
+    // isolated to the cell rather than rejecting the whole batch.
+    failPath(DATA_REPO, "w/daily-plan/index.html", {
+      network: true,
+      endpoint: "contents",
+    })
+
+    const view = await loadDashboard("token", MAIN_BOARD)
+
+    expect(view.artifacts["daily-plan"]).toEqual({
+      html: null,
+      lastRunAt: null,
+      unreachable: true,
+    })
+    expect(view.routines.routines).toHaveLength(1)
+  })
+
   it("rides out a transient 5xx flap by retrying the GET", async () => {
     seedConfig()
     seedRepo(

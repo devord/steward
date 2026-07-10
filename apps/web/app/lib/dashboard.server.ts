@@ -168,16 +168,23 @@ export async function loadArtifacts(
   await Promise.all(
     routines.routines.map(async ({ slug }) => {
       const path = `w/${slug}/index.html`
-      try {
-        const [artifact, lastRunAt] = await Promise.all([
-          getFile(token, ref.repo, path, "artifacts"),
-          getLastCommitDate(token, ref.repo, path, "artifacts"),
-        ])
-        artifacts[slug] = { html: artifact?.text ?? null, lastRunAt }
-      } catch (error) {
-        if (!(error instanceof GitHubError)) throw error
-        artifacts[slug] = { html: null, lastRunAt: null, unreachable: true }
-      }
+      // Body and freshness are fetched independently so a commits-API hiccup
+      // never discards artifact HTML that loaded fine. And every per-widget
+      // failure is isolated — HTTP 5xx, a network drop, an abort/timeout — so
+      // one bad cell can't reject the batch and take the whole board down.
+      const [body, lastRun] = await Promise.allSettled([
+        getFile(token, ref.repo, path, "artifacts"),
+        getLastCommitDate(token, ref.repo, path, "artifacts"),
+      ])
+      // Only a failed *body* fetch means the artifact is unreachable; a
+      // missing commit date is just absent freshness, not a dead cell.
+      artifacts[slug] =
+        body.status === "fulfilled"
+          ? {
+              html: body.value?.text ?? null,
+              lastRunAt: lastRun.status === "fulfilled" ? lastRun.value : null,
+            }
+          : { html: null, lastRunAt: null, unreachable: true }
     }),
   )
   return artifacts
