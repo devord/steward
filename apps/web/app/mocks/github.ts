@@ -83,7 +83,26 @@ export const githubHandlers = [
       if (failure) return new HttpResponse(null, { status: failure.status })
       const ref = url.searchParams.get("ref") ?? "main"
       const file = repos.get(repo)?.get(`${ref}:${path}`)
-      if (!file) return new HttpResponse(null, { status: 404 })
+      if (!file) {
+        // Directory listing — the contents API answers with an array of
+        // entries when the path is a directory.
+        const prefix = `${ref}:${path}/`
+        const names = new Set<string>()
+        for (const key of repos.get(repo)?.keys() ?? []) {
+          if (key.startsWith(prefix)) {
+            const [head] = key.slice(prefix.length).split("/")
+            if (head) names.add(head)
+          }
+        }
+        if (names.size === 0) return new HttpResponse(null, { status: 404 })
+        return HttpResponse.json(
+          [...names].map((name) => ({
+            name,
+            type: repos.get(repo)?.has(`${prefix}${name}`) ? "file" : "dir",
+            sha: `sha:${ref}:${path}/${name}`,
+          })),
+        )
+      }
       return HttpResponse.json({
         content: Buffer.from(file.text, "utf8").toString("base64"),
         sha: `sha:${ref}:${path}`,

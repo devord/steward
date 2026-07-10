@@ -20,8 +20,18 @@ export const widgetSchema = z.object({
   size: widgetSizeSchema,
 })
 
-/** Shape of data/dashboard.yaml in a user's data repo. */
+/** Directory holding one layout file per dashboard in a data repo. */
+export const DASHBOARDS_DIR = "data/dashboards"
+
+/** Repo path of a dashboard's layout file; the slug is the filename. */
+export function dashboardPath(slug: string): string {
+  return `${DASHBOARDS_DIR}/${slugSchema.parse(slug)}.yaml`
+}
+
+/** Shape of data/dashboards/<slug>.yaml in a data repo. */
 export const dashboardFileSchema = z.object({
+  /** Display title; UI falls back to the slug when absent. */
+  name: z.string().min(1).optional(),
   grid: z.object({
     columns: z.number().int().min(1).max(GRID_MAX_COLS).default(4),
     rowHeight: z.number().int().positive().default(150),

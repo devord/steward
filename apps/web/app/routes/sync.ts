@@ -1,7 +1,8 @@
+import { dashboardPath, slugSchema } from "@bulletin/schema"
 import { data } from "react-router"
 import { z } from "zod"
 
-import { resolveDataRepo } from "../lib/dashboard.server.ts"
+import { resolveDataRepo, resolveTeamRepo } from "../lib/dashboard.server.ts"
 import {
   createBranch,
   createPullRequest,
@@ -25,18 +26,16 @@ const fileChangeSchema = z.object({
 
 const payloadSchema = z.object({
   intent: z.enum(["commit", "pr"]),
+  /** Which repo the sync targets; the server resolves the repo itself. */
+  scope: z.enum(["personal", "team"]),
+  /** Slug-validated so a crafted payload can't path-traverse the repo. */
+  dashboardSlug: slugSchema,
   routines: fileChangeSchema.optional(),
   dashboard: fileChangeSchema.optional(),
 })
 
-const PATHS = {
-  routines: "data/routines.yaml",
-  dashboard: "data/dashboard.yaml",
-} as const
-
 export async function action({ request }: { request: Request }) {
   const auth = await requireAuth(request)
-  const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
 
   let body: unknown
   try {
@@ -50,9 +49,22 @@ export async function action({ request }: { request: Request }) {
   }
   const payload = parsed.data
 
+  const dataRepo =
+    payload.scope === "team"
+      ? resolveTeamRepo()
+      : resolveDataRepo(auth.login, auth.dataRepo)
+  if (!dataRepo) {
+    throw data({ error: "team repo not configured" }, { status: 400 })
+  }
+
+  const paths = {
+    routines: "data/routines.yaml",
+    dashboard: dashboardPath(payload.dashboardSlug),
+  } as const
+
   const changes = (["routines", "dashboard"] as const).flatMap((kind) => {
     const change = payload[kind]
-    return change ? [{ kind, path: PATHS[kind], ...change }] : []
+    return change ? [{ kind, path: paths[kind], ...change }] : []
   })
   if (changes.length === 0) {
     throw data({ error: "empty sync" }, { status: 400 })

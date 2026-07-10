@@ -27,6 +27,46 @@ export const ptBR: Messages = {
 
   "offgrid.title": "fora da grade",
 
+  "switcher.label": "painel",
+  "switcher.personal": "pessoal",
+  "switcher.team": "time",
+  "switcher.new": "novo painel…",
+
+  "newDash.title": "Novo painel",
+  "newDash.description":
+    "Uma grade nomeada de widgets — o arquivo de layout vive no repo de dados que você escolher.",
+  "newDash.scope": "Onde",
+  "newDash.scopePersonal": "pessoal — seu repo de dados",
+  "newDash.scopeTeam": "time — o repo compartilhado do time",
+  "newDash.name": "Nome",
+  "newDash.namePlaceholder": "Ops do Time",
+  "newDash.slug": "Slug",
+  "newDash.slugTaken": "já usado por outro painel",
+  "newDash.create": "Criar painel",
+  "newDash.creating": "criando…",
+  "newDash.exists": "esse painel já existe no repo",
+
+  "board.deleteDashboard": "excluir painel",
+  "board.deleteTitle": "Excluir este painel?",
+  "board.deleteBody":
+    "Remove {path} de {repo}. As rotinas continuam rodando — só este layout some.",
+  "board.deleteConfirm": "Excluir",
+  "board.deleting": "excluindo…",
+
+  "team.notConfigured":
+    "Painéis de time não estão configurados — defina BULLETIN_TEAM_REPO no deploy.",
+  "team.missingTitle": "Criar o repo do time",
+  "team.missingBody":
+    "Painéis de time vivem em um repo de dados compartilhado:",
+  "team.missingCreate": "Criar repo do time",
+  "team.missingDenied":
+    "O GitHub não deixou esta conta criá-lo — peça a um admin da org para criar o repo a partir do template e recarregue.",
+  "team.emptyTitle": "Nenhum painel de time ainda",
+  "team.emptyBody":
+    "Crie o primeiro — todo mundo com acesso ao repo do time vai vê-lo.",
+  "team.emptyCta": "Novo painel de time",
+  "team.back": "voltar para o seu painel",
+
   "widget.stale": "atrasado",
   "widget.staleTitle": "atrasado em relação ao agendamento",
   "widget.ran": "rodou {ago}",
@@ -73,6 +113,8 @@ export const ptBR: Messages = {
   "dialog.instructionsHint": "(opcional — passadas à skill em toda execução)",
   "dialog.instructionsPlaceholder":
     "Quais projetos importam, o que ignorar, tom…",
+  "dialog.runnerHint":
+    "o agendamento roda na conta Claude de {login} — depois do commit, rode pnpm routines:sync contra o repo do time",
   "dialog.cancel": "Cancelar",
   "dialog.add": "Adicionar ao rascunho",
 

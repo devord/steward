@@ -3,6 +3,12 @@
  * routines (ADR-0005). The YAML is the source of truth; the cloud copy is a
  * projection holding nothing but a stable pointer prompt + cron.
  *
+ * Works for a personal data repo and for the shared team repo (ADR-0010):
+ * team runs are classified by the target repo differing from
+ * `<login>/bulletin-data-<login>`. In team mode only entries whose `runner`
+ * matches the signed-in login are enacted — each teammate owns the
+ * schedules for the routines they created — and prompts carry the repo.
+ *
  * Cloud routine state has no public read API — it's managed by Claude
  * Code's schedule tooling. So this script:
  *   - default: prints the desired state as a reconciliation plan
@@ -10,7 +16,8 @@
  *   - --apply: hands that plan to a headless `claude -p` run, which uses
  *     its schedule tooling to enact it.
  *
- * Usage: pnpm routines:sync [--file <path/to/routines.yaml>] [--apply]
+ * Usage: pnpm routines:sync [--file <path/to/routines.yaml>]
+ *                           [--repo <owner/repo>] [--apply]
  */
 import { execFileSync } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
@@ -45,26 +52,94 @@ try {
   process.exit(1)
 }
 
-/** The stable pointer prompt — created once, never edited (ADR-0005). */
+/** `owner/name` of the checkout's origin remote, or null. */
+function inferRepo(dir: string): string | null {
+  try {
+    const url = execFileSync(
+      "git",
+      ["-C", dir, "remote", "get-url", "origin"],
+      { encoding: "utf8" },
+    ).trim()
+    const match = /github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?$/.exec(url)
+    return match ? `${match[1]}/${match[2]}` : null
+  } catch {
+    return null
+  }
+}
+
+function ghLogin(): string | null {
+  try {
+    return execFileSync("gh", ["api", "user", "--jq", ".login"], {
+      encoding: "utf8",
+    }).trim()
+  } catch {
+    return null
+  }
+}
+
+const repoFlag = args.indexOf("--repo")
+const repo =
+  repoFlag !== -1 && args[repoFlag + 1]
+    ? args[repoFlag + 1]
+    : inferRepo(path.dirname(file))
+const login = ghLogin()
+
+// Team mode: the target repo is not the signed-in user's own data repo.
+// The naming convention mirrors the app's resolveDataRepo (ADR-0001).
+const teamMode =
+  repo != null && login != null && repo !== `${login}/bulletin-data-${login}`
+
+if (teamMode) {
+  console.log(`# team repo: ${repo} (runner: ${login})\n`)
+}
+
+/** The stable pointer prompt — created once, never edited (ADR-0005).
+    Team prompts carry the repo so the dispatcher targets it (ADR-0010). */
 function pointerPrompt(routine: Routine): string {
-  return `Run the bulletin routine \`${routine.slug}\` — follow the run-routine skill.`
+  return teamMode
+    ? `Run the bulletin routine \`${routine.slug}\` in \`${repo}\` — follow the run-routine skill.`
+    : `Run the bulletin routine \`${routine.slug}\` — follow the run-routine skill.`
 }
 
 /** Cloud routine name; the bulletin- prefix marks ownership for cleanup. */
 function cloudName(routine: Routine): string {
-  return `bulletin-${routine.slug}`
+  return teamMode ? `bulletin-team-${routine.slug}` : `bulletin-${routine.slug}`
 }
 
-const enabled = routines.filter((routine) => routine.enabled)
-const disabled = routines.filter((routine) => !routine.enabled)
+// In team mode each teammate syncs only the routines they run — otherwise
+// every sync would duplicate every schedule onto every account.
+let mine = routines
+if (teamMode) {
+  const skipped = routines.filter((routine) => routine.runner !== login)
+  mine = routines.filter((routine) => routine.runner === login)
+  for (const routine of skipped) {
+    console.warn(
+      routine.runner
+        ? `# skipping ${routine.slug} — runner is ${routine.runner}`
+        : `# skipping ${routine.slug} — no runner set (add "runner: <login>")`,
+    )
+  }
+  if (skipped.length > 0) console.warn("")
+}
+
+const enabled = mine.filter((routine) => routine.enabled)
+const disabled = mine.filter((routine) => !routine.enabled)
+
+const orphanRule = teamMode
+  ? `# Routines named bulletin-team-* whose prompt targets \`${repo}\` and are
+# not listed here are orphans and should be deleted. Never touch routines
+# whose prompt names a different repo, or has no repo clause.`
+  : `# Routines named bulletin-* whose prompt has NO "in \`<owner/repo>\`"
+# clause and are not listed here are orphans and should be deleted. Never
+# touch routines whose prompt names a repo — those belong to team syncs.`
 
 const plan = [
   "# Bulletin routines — desired cloud state",
   "#",
   "# One scheduled routine per enabled entry. The prompt is a stable",
   "# pointer; instructions/schedule edits in routines.yaml need no cloud",
-  "# change except the cron below. Routines named bulletin-* that are not",
-  "# listed here are orphans and should be deleted.",
+  "# change except the cron below.",
+  orphanRule,
   "",
   ...enabled.flatMap((routine) => [
     `routine: ${cloudName(routine)}`,
@@ -99,8 +174,8 @@ const instructions = [
   "   name, cron, and prompt.",
   "3. Fix the cron of any listed routine whose schedule drifted. Never",
   "   edit an existing routine's prompt.",
-  "4. Delete any routine named bulletin-* that is not in the list (this",
-  "   covers the disabled ones).",
+  "4. Delete orphans per the rule in the plan (this covers the disabled",
+  "   ones). Match on the prompt's repo clause, not just the name.",
   "5. Print a summary table: name, action taken (created/ok/re-scheduled/",
   "   deleted), cron.",
   "Touch nothing that is not named bulletin-*.",

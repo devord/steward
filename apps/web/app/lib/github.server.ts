@@ -143,6 +143,56 @@ export async function repoExists(token: string, repo: string) {
   return res.ok
 }
 
+const dirEntriesSchema = z.array(
+  z.object({ name: z.string(), type: z.string(), sha: z.string() }),
+)
+
+export type DirEntry = z.infer<typeof dirEntriesSchema>[number]
+
+/**
+ * List a directory via the contents API. Returns null for 404 (missing dir,
+ * ref, or repo the token can't see) so callers can degrade instead of crash.
+ */
+export async function listDirectory(
+  token: string,
+  repo: string,
+  path: string,
+  ref?: string,
+): Promise<DirEntry[] | null> {
+  const query = ref ? `?ref=${encodeURIComponent(ref)}` : ""
+  const res = await gh(
+    token,
+    `/repos/${repo}/contents/${encodePath(path)}${query}`,
+  )
+  if (res.status === 404) return null
+  if (!res.ok) {
+    throw new GitHubError(res.status, `${repo}/${path} → ${res.status}`)
+  }
+  const parsed = dirEntriesSchema.safeParse(await res.json())
+  if (!parsed.success) {
+    throw new GitHubError(422, `${repo}/${path} is not a directory`)
+  }
+  return parsed.data
+}
+
+/** Delete a file on a branch (dashboard deletion). */
+export async function deleteFile(
+  token: string,
+  repo: string,
+  path: string,
+  options: { message: string; sha: string; branch: string },
+): Promise<void> {
+  await ghJson(
+    token,
+    `/repos/${repo}/contents/${encodePath(path)}`,
+    z.unknown(),
+    {
+      method: "DELETE",
+      body: JSON.stringify(options),
+    },
+  )
+}
+
 /** First-run wizard: create the private data repo from the template. */
 export async function generateFromTemplate(
   token: string,

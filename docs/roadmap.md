@@ -48,11 +48,15 @@ the deployed app plus a data repo on a real account.
 ## M5 — Polish / v2 backlog
 
 Done: staleness badge (now − last run vs schedule interval, on the widget
-footer). Open backlog: "Run now", `bulletin apply` CLI (deferred until the
-Sync panel's download escape hatch proves annoying, ADR-0003),
-external/PIN-gated artifact sharing (second publish target), multi-repo/org
-support, artifact version browsing (free from git history),
-`instructionsFile:` for long-form routine guidance, drag-and-drop layout.
+footer); drag-and-drop layout; multi-repo/org support via team dashboards
+(ADR-0010: org team data repo, `data/dashboards/<slug>.yaml` layouts,
+`/team/<slug>` routes, `runner:`-scoped `routines:sync`). Open backlog:
+"Run now", `bulletin apply` CLI (deferred until the Sync panel's download
+escape hatch proves annoying, ADR-0003), external/PIN-gated artifact
+sharing (second publish target), artifact version browsing (free from git
+history), `instructionsFile:` for long-form routine guidance, dashboard
+rename (today: delete + recreate), dashboard display names in the switcher
+(today: slugs).
 
 ## Watch items
 

@@ -26,6 +26,45 @@ export const en = {
 
   "offgrid.title": "not on the grid",
 
+  "switcher.label": "dashboard",
+  "switcher.personal": "personal",
+  "switcher.team": "team",
+  "switcher.new": "new dashboard…",
+
+  "newDash.title": "New dashboard",
+  "newDash.description":
+    "A named grid of widgets — its layout file lives in the data repo you pick.",
+  "newDash.scope": "Where",
+  "newDash.scopePersonal": "personal — your data repo",
+  "newDash.scopeTeam": "team — the shared team repo",
+  "newDash.name": "Name",
+  "newDash.namePlaceholder": "Team Ops",
+  "newDash.slug": "Slug",
+  "newDash.slugTaken": "already used by another dashboard",
+  "newDash.create": "Create dashboard",
+  "newDash.creating": "creating…",
+  "newDash.exists": "that dashboard already exists in the repo",
+
+  "board.deleteDashboard": "delete dashboard",
+  "board.deleteTitle": "Delete this dashboard?",
+  "board.deleteBody":
+    "Removes {path} from {repo}. Routines keep running — only this layout goes away.",
+  "board.deleteConfirm": "Delete",
+  "board.deleting": "deleting…",
+
+  "team.notConfigured":
+    "Team dashboards aren't configured — set BULLETIN_TEAM_REPO on the deployment.",
+  "team.missingTitle": "Create the team repo",
+  "team.missingBody": "Team dashboards live in one shared data repo:",
+  "team.missingCreate": "Create team repo",
+  "team.missingDenied":
+    "GitHub wouldn't let this account create it — ask an org admin to create the repo from the template, then reload.",
+  "team.emptyTitle": "No team dashboards yet",
+  "team.emptyBody":
+    "Create the first one — everyone with access to the team repo will see it.",
+  "team.emptyCta": "New team dashboard",
+  "team.back": "back to your board",
+
   "widget.stale": "stale",
   "widget.staleTitle": "overdue relative to its schedule",
   "widget.ran": "ran {ago}",
@@ -71,6 +110,8 @@ export const en = {
   "dialog.instructionsHint": "(optional — passed to the skill on every run)",
   "dialog.instructionsPlaceholder":
     "Which projects matter, what to ignore, tone…",
+  "dialog.runnerHint":
+    "the schedule runs on {login}'s Claude account — after committing, run pnpm routines:sync against the team repo",
   "dialog.cancel": "Cancel",
   "dialog.add": "Add to draft",
 

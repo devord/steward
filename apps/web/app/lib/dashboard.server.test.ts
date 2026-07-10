@@ -6,6 +6,11 @@ import { GitHubError } from "./github.server.ts"
 
 const DATA_REPO = "daniel/bulletin-data-daniel"
 const SHARED_REPO = "form-factory/bulletin" // matches setup-node env
+const MAIN_BOARD = {
+  scope: "personal",
+  repo: DATA_REPO,
+  dashboard: "main",
+} as const
 
 const ROUTINES_YAML = `routines:
   - slug: daily-plan
@@ -42,7 +47,7 @@ const CATALOG_JSON = JSON.stringify({
 function seedConfig() {
   seedRepo(DATA_REPO, {
     "data/routines.yaml": ROUTINES_YAML,
-    "data/dashboard.yaml": DASHBOARD_YAML,
+    "data/dashboards/main.yaml": DASHBOARD_YAML,
   })
   seedRepo(SHARED_REPO, { "catalog/skills.json": CATALOG_JSON })
 }
@@ -61,7 +66,7 @@ describe("loadDashboard", () => {
       "artifacts",
     )
 
-    const view = await loadDashboard("token", DATA_REPO)
+    const view = await loadDashboard("token", MAIN_BOARD)
 
     expect(view.routines.routines).toHaveLength(1)
     expect(view.dashboard.widgets[0]).toMatchObject({
@@ -75,13 +80,16 @@ describe("loadDashboard", () => {
     })
     expect(view.baseShas.routines).toBe("sha:main:data/routines.yaml")
     expect(view.baseFiles.dashboard).toBe(DASHBOARD_YAML)
+    expect(view.scope).toBe("personal")
+    expect(view.dashboardSlug).toBe("main")
+    expect(view.dashboards).toEqual(["main"])
   })
 
   it("falls back to empty defaults when the repo has no config yet", async () => {
     seedRepo(DATA_REPO, {})
     seedRepo(SHARED_REPO, {})
 
-    const view = await loadDashboard("token", DATA_REPO)
+    const view = await loadDashboard("token", MAIN_BOARD)
 
     expect(view.routines.routines).toEqual([])
     expect(view.dashboard.grid).toEqual({ columns: 4, rowHeight: 150 })
@@ -93,7 +101,7 @@ describe("loadDashboard", () => {
   it("reports a never-published artifact as html: null", async () => {
     seedConfig()
 
-    const view = await loadDashboard("token", DATA_REPO)
+    const view = await loadDashboard("token", MAIN_BOARD)
 
     expect(view.artifacts["daily-plan"]).toEqual({
       html: null,
@@ -105,7 +113,7 @@ describe("loadDashboard", () => {
     seedConfig()
     failPath(DATA_REPO, "w/daily-plan/index.html", { status: 502 })
 
-    const view = await loadDashboard("token", DATA_REPO)
+    const view = await loadDashboard("token", MAIN_BOARD)
 
     expect(view.artifacts["daily-plan"]).toEqual({
       html: null,
@@ -127,7 +135,7 @@ describe("loadDashboard", () => {
     // Two failures, then success — inside the three GET attempts.
     failPath(DATA_REPO, "w/daily-plan/index.html", { status: 500, times: 2 })
 
-    const view = await loadDashboard("token", DATA_REPO)
+    const view = await loadDashboard("token", MAIN_BOARD)
 
     expect(view.artifacts["daily-plan"]?.html).toBe("<h1>plan</h1>")
     expect(view.artifacts["daily-plan"]?.unreachable).toBeUndefined()
@@ -138,7 +146,7 @@ describe("loadDashboard", () => {
     seedRepo(DATA_REPO, {})
     failPath(DATA_REPO, "data/routines.yaml", { status: 503 })
 
-    await expect(loadDashboard("token", DATA_REPO)).rejects.toBeInstanceOf(
+    await expect(loadDashboard("token", MAIN_BOARD)).rejects.toBeInstanceOf(
       GitHubError,
     )
   })

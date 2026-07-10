@@ -29,19 +29,20 @@ const draftSchema = z.object({
 
 export type Draft = z.infer<typeof draftSchema>
 
-function storageKey(dataRepo: string) {
-  return `bulletin:draft:${dataRepo}`
+/** `boardKey` is `<owner>/<repo>:<dashboard-slug>` — one draft per board. */
+function storageKey(boardKey: string) {
+  return `bulletin:draft:${boardKey}`
 }
 
-function readDraft(dataRepo: string): Draft | null {
-  const raw = localStorage.getItem(storageKey(dataRepo))
+function readDraft(boardKey: string): Draft | null {
+  const raw = localStorage.getItem(storageKey(boardKey))
   if (!raw) return null
   try {
     return draftSchema.parse(JSON.parse(raw))
   } catch {
     // A draft from an older schema version is not worth migrating: the
     // canonical state is one commit away (ADR-0003). Drop it.
-    localStorage.removeItem(storageKey(dataRepo))
+    localStorage.removeItem(storageKey(boardKey))
     return null
   }
 }
@@ -57,12 +58,12 @@ export interface ServerConfig {
  * hydration (localStorage is client-only) and while no edits exist; the
  * first `update` call forks the server config into a draft.
  */
-export function useDraft(dataRepo: string, server: ServerConfig) {
+export function useDraft(boardKey: string, server: ServerConfig) {
   const [draft, setDraft] = useState<Draft | null>(null)
 
   useEffect(() => {
-    setDraft(readDraft(dataRepo))
-  }, [dataRepo])
+    setDraft(readDraft(boardKey))
+  }, [boardKey])
 
   const update = useCallback(
     (mutate: (current: Draft) => Draft) => {
@@ -73,17 +74,17 @@ export function useDraft(dataRepo: string, server: ServerConfig) {
           dashboard: server.dashboard,
         }
         const next = mutate(structuredClone(base))
-        localStorage.setItem(storageKey(dataRepo), JSON.stringify(next))
+        localStorage.setItem(storageKey(boardKey), JSON.stringify(next))
         return next
       })
     },
-    [dataRepo, server],
+    [boardKey, server],
   )
 
   const clear = useCallback(() => {
-    localStorage.removeItem(storageKey(dataRepo))
+    localStorage.removeItem(storageKey(boardKey))
     setDraft(null)
-  }, [dataRepo])
+  }, [boardKey])
 
   /** Re-apply the draft onto a fresh base after a stale-base conflict. */
   const rebase = useCallback(

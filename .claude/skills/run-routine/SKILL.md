@@ -10,22 +10,33 @@ description: >-
 
 # run-routine
 
-You were invoked by a pointer prompt of the form _"Run the bulletin routine
-`<slug>` — follow the `run-routine` skill."_ The prompt is deliberately
-stable; everything that can change lives in the data repo's YAML.
+You were invoked by a pointer prompt of one of two forms (ADR-0005,
+ADR-0010):
+
+- _"Run the bulletin routine `<slug>` — follow the `run-routine` skill."_
+- _"Run the bulletin routine `<slug>` in `<owner/repo>` — follow the
+  `run-routine` skill."_
+
+The prompt is deliberately stable; everything that can change lives in the
+data repo's YAML.
 
 ## 1. Locate the data repo
 
-The data repo is `bulletin-data-<login>` for the account you run as
-(ADR-0001). In order of preference:
+When the prompt carries an ``in `<owner/repo>` `` clause, that repo IS the
+data repo — team routines name the shared team repo this way (ADR-0010).
+Without the clause, the data repo is personal: `bulletin-data-<login>` for
+the account you run as (ADR-0001). In order of preference:
 
-1. The current working directory, if it contains `data/routines.yaml`.
+1. The current working directory, if it contains `data/routines.yaml` —
+   and, when the prompt names a repo, its `origin` remote matches it.
 2. A sibling checkout (e.g. `~/bulletin-data-*` or a repo mounted into the
-   cloud environment).
-3. Clone it: `gh repo clone <login>/bulletin-data-<login>` (get `<login>`
-   from `gh api user --jq .login`).
+   cloud environment), same remote check.
+3. Clone it: `gh repo clone <owner/repo>` — for personal runs that is
+   `<login>/bulletin-data-<login>` (get `<login>` from
+   `gh api user --jq .login`).
 
-If the repo is unreachable, stop and report — do not invent config.
+If the repo is unreachable (or you cannot push to it), stop and report —
+do not invent config.
 
 ## 2. Resolve the routine
 
