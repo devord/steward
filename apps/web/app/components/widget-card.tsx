@@ -174,13 +174,22 @@ export function WidgetCard({
         </div>
       )}
       {editing ? (
-        <footer className="relative z-20 flex items-center justify-between gap-2 border-t bg-bg2 px-2 py-[3px] text-[11px]">
+        <footer className="relative z-20 flex items-center gap-1.5 border-t bg-bg2 py-0.5 pr-2 pl-1 text-[11px]">
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={`remove ${routine.name} from grid`}
+            className="size-5 shrink-0 text-ink-faint hover:bg-destructive/10 hover:text-destructive pointer-coarse:size-7"
+            onClick={() => onRemove?.()}
+          >
+            <X />
+          </Button>
           <span className="truncate font-mono text-ink-dim">
             {routine.slug}
           </span>
           <span
             className={cn(
-              "shrink-0 pr-3 font-mono text-[10px] tabular-nums",
+              "ml-auto shrink-0 pr-3 font-mono text-[10px] tabular-nums",
               resizing ? "text-orange" : "text-ink-faint",
             )}
           >
@@ -207,7 +216,9 @@ export function WidgetCard({
       {editing && (
         <>
           {/* Drag surface: covers the artifact (iframes swallow pointer
-              events) but sits under the footer, remove button, and handle. */}
+              events) but sits under the footer and resize handle. Remove
+              lives in the footer so no control ever floats over the
+              artifact — content stays clean while dragging. */}
           <div
             aria-hidden
             className={cn(
@@ -216,25 +227,20 @@ export function WidgetCard({
             )}
             onPointerDown={(event) => onDragStart?.("move", event)}
           />
-          <Button
-            variant="secondary"
-            size="icon-xs"
-            aria-label={`remove ${routine.name} from grid`}
-            className="absolute top-1 right-1 z-30 border text-ink-dim hover:text-destructive"
-            onClick={() => onRemove?.()}
-          >
-            <X />
-          </Button>
-          <div
-            aria-hidden
-            className={cn(
-              "absolute right-[3px] bottom-[3px] z-30 size-3.5 cursor-nwse-resize touch-none rounded-br-[5px] border-r-2 border-b-2",
-              resizing
-                ? "border-orange"
-                : "border-ink-faint hover:border-orange",
-            )}
-            onPointerDown={(event) => onDragStart?.("resize", event)}
-          />
+          {/* Corner resize handle — hidden mid-move so the lifted card is
+              just artifact + footer. */}
+          {drag?.kind !== "move" && (
+            <div
+              aria-hidden
+              className={cn(
+                "absolute right-[3px] bottom-[3px] z-30 size-3.5 cursor-nwse-resize touch-none rounded-br-[5px] border-r-2 border-b-2",
+                resizing
+                  ? "border-orange"
+                  : "border-ink-faint hover:border-orange",
+              )}
+              onPointerDown={(event) => onDragStart?.("resize", event)}
+            />
+          )}
         </>
       )}
     </article>
