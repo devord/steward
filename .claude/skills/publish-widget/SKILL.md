@@ -21,6 +21,7 @@ local file instead of a push — the live widget must never see a test run:
 
 ```bash
 set -euo pipefail   # a failed copy must fail the run, not open stale output
+printf '%s' "$SLUG" | LC_ALL=C grep -Eqx '[a-z0-9]+(-[a-z0-9]+)*' || { echo "bad slug: $SLUG" >&2; exit 1; }
 OUT="${TMPDIR:-/tmp}/bulletin-dry/$SLUG.html"
 mkdir -p "$(dirname "$OUT")"
 cp "$ARTIFACT_FILE" "$OUT.tmp" && mv "$OUT.tmp" "$OUT"
@@ -35,6 +36,13 @@ sandboxed iframe (`sandbox="allow-scripts"`, ADR-0002) — sandbox-sensitive
 behavior still needs a real publish.
 
 ## Steps
+
+The slug comes from YAML someone edited — validate it before it touches a
+path (kebab-case only; anything else could escape `w/`):
+
+```bash
+printf '%s' "$SLUG" | LC_ALL=C grep -Eqx '[a-z0-9]+(-[a-z0-9]+)*' || { echo "bad slug: $SLUG" >&2; exit 1; }
+```
 
 Work in a temporary worktree so the data repo checkout (on `main`) is
 untouched:
