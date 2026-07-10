@@ -31,6 +31,16 @@ An artifact MUST:
    - height: `≤ 160 px` (1 row) / taller
      A 1×1 widget shows the KPI essence; larger sizes add detail progressively
      (KPI row → line items → sparkline).
+   - **Full view** (`≥ ~900 px` wide): the dashboard can lift any widget into
+     a full-screen overlay — the same sandboxed, theme-injected iframe at
+     nearly the whole viewport — so the reader sees every row of data. Author
+     for it: the widest tier must read like a page, not a stretched cell. Cap
+     the content column (a `max-width` around `72ch`/`900 px`, centered) so
+     text never runs edge-to-edge on a wide monitor, and spend the extra
+     height on the fullest detail level (all line items, full history, the
+     large sparkline) rather than scaling one number up. There is no separate
+     full-screen artifact to author — the one published file must serve the
+     1×1 glance and the full page through its `@media` queries alone.
 3. **Use the shared theme tokens** — the gruvbox-dark-hard palette as CSS
    custom properties with `color-scheme: dark`. The canonical values live in
    the theme registry (`apps/web/app/lib/theme.ts`, the gruvbox-dark entry);

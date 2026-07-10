@@ -101,6 +101,9 @@ export const ptBR: Messages = {
   "widget.columns": "colunas",
   "widget.rows": "linhas",
   "widget.remove": "remover {name} da grade",
+  "widget.expand": "expandir {name} em tela cheia",
+  "widget.expandShort": "expandir",
+  "widget.collapse": "fechar",
 
   "time.now": "agora mesmo",
   "time.minutes": "há {n}m",

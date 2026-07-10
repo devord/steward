@@ -99,6 +99,9 @@ export const en = {
   "widget.columns": "columns",
   "widget.rows": "rows",
   "widget.remove": "remove {name} from grid",
+  "widget.expand": "expand {name} to full screen",
+  "widget.expandShort": "expand",
+  "widget.collapse": "close",
 
   "time.now": "just now",
   "time.minutes": "{n}m ago",

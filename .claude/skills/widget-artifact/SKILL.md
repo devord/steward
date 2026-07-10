@@ -25,6 +25,12 @@ respond to the widget's grid size — no JS needed for responsiveness.
      progressively (KPI row → line items → sparkline). Author with
      `min-width`/`min-height` queries that reveal sections, like the
      reference artifact.
+   - **Full view** (`≥ ~900px`): the dashboard lifts the widget into a
+     full-screen overlay rendering this same file (no separate full-screen
+     variant to author). The widest tier must read like a page — cap the
+     content column (`max-width` ~`72ch`/`900px`, centered) so nothing runs
+     edge-to-edge, and use the height for the fullest detail (every row, full
+     history), not a bigger single number.
 3. **The shared theme tokens only** — the gruvbox palette below, with
    `color-scheme: dark`. Do not invent colors.
 4. **Generation time**: `<meta name="widget-generated-at" content="<ISO-8601 UTC>">`
@@ -83,6 +89,8 @@ structure, breakpoint technique, and footer included.
 - [ ] No external request of any kind (grep for `http`, `//`, `url(`)
 - [ ] Renders sensibly at 340×160 (1×1) — the KPI essence, no overflow
 - [ ] Reveals more at 700×310 and full size
+- [ ] Full view (~1400×900) reads like a page — content column capped and
+      centered, extra height spent on detail, not one giant number
 - [ ] `widget-generated-at` meta + visible footer timestamp
 - [ ] Only palette colors; `color-scheme: dark` set
 - [ ] Empty state designed, not accidental
