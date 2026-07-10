@@ -268,7 +268,7 @@ function DemoWidget({
         <span className="truncate text-ink-dim">{name}</span>
         <span className="flex shrink-0 items-center gap-1.5 font-mono text-ink-faint">
           {stale && (
-            <span className="rounded bg-yellow/15 px-1 text-[10px] text-yellow">
+            <span className="rounded border border-yellow/45 bg-yellow/10 px-1 text-[10px] text-ink">
               {staleLabel}
             </span>
           )}

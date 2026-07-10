@@ -212,7 +212,7 @@ export function WidgetCard({
               {stale && (
                 <Badge
                   variant="secondary"
-                  className="h-[15px] bg-yellow/15 px-1 font-mono text-[10px] text-yellow"
+                  className="h-[15px] border-yellow/45 bg-yellow/10 px-1 font-mono text-[10px] text-ink"
                   title={t("widget.staleTitle")}
                 >
                   {t("widget.stale")}
