@@ -2,31 +2,30 @@ import { useMemo } from "react"
 
 import type { Routine, Widget, WidgetSize } from "@bulletin/schema"
 import { GRID_MAX_COLS, GRID_MAX_ROWS } from "@bulletin/schema"
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, X } from "lucide-react"
+import { X } from "lucide-react"
 
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select"
+import { cn } from "~/lib/utils"
 import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
 import { themeArtifactHtml } from "../lib/theme.ts"
 import { agoParts, cronIntervalMs } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
+import type { DragKind, GridDrag } from "../lib/use-grid-drag.ts"
 
 export interface WidgetCardProps {
   widget: Widget
   routine: Routine
   artifact: ArtifactInfo | undefined
   now: number
-  /** Edit mode swaps the footer for move/resize/remove controls. */
+  /** Edit mode: drag to move, corner handle to resize, × to remove. */
   editing?: boolean
+  /** This card's active drag, if it is the one being dragged. */
+  drag?: GridDrag | null
+  onDragStart?: (kind: DragKind, event: React.PointerEvent) => void
+  /** Keyboard fallbacks — arrows move, shift+arrows resize, del removes. */
   onMove?: (dCol: number, dRow: number) => void
   onResize?: (size: WidgetSize) => void
   onRemove?: () => void
@@ -48,6 +47,8 @@ export function WidgetCard({
   artifact,
   now,
   editing = false,
+  drag = null,
+  onDragStart,
   onMove,
   onResize,
   onRemove,
@@ -74,16 +75,78 @@ export function WidgetCard({
       : t("widget.ran", { ago: t(`time.${ago.unit}`, { n: ago.n }) })
     : t("widget.never")
 
+  const resizing = drag?.kind === "resize"
+  // While resizing, the footer readout tracks the snap target live.
+  const shownSize = resizing ? drag.candidate : size
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.target !== event.currentTarget) return
+    const step = (dCol: number, dRow: number) => {
+      if (event.shiftKey) {
+        onResize?.({
+          cols: Math.min(GRID_MAX_COLS, Math.max(1, size.cols + dCol)),
+          rows: Math.min(GRID_MAX_ROWS, Math.max(1, size.rows + dRow)),
+        })
+      } else {
+        onMove?.(dCol, dRow)
+      }
+    }
+    switch (event.key) {
+      case "ArrowLeft":
+        step(-1, 0)
+        break
+      case "ArrowRight":
+        step(1, 0)
+        break
+      case "ArrowUp":
+        step(0, -1)
+        break
+      case "ArrowDown":
+        step(0, 1)
+        break
+      case "Delete":
+      case "Backspace":
+        onRemove?.()
+        break
+      default:
+        return
+    }
+    event.preventDefault()
+  }
+
   return (
     <article
-      className="widget-cell flex flex-col overflow-hidden rounded-lg border bg-card"
-      style={cssVars({
-        "--col": position.col,
-        "--row": position.row,
-        "--cols": size.cols,
-        "--cols-md": Math.min(size.cols, 2),
-        "--rows": size.rows,
-      })}
+      className={cn(
+        "widget-cell relative flex flex-col overflow-hidden rounded-lg border bg-card",
+        editing && "focus-visible:outline-2 focus-visible:-outline-offset-1",
+        drag && "shadow-xl shadow-black/50",
+      )}
+      tabIndex={editing ? 0 : undefined}
+      aria-label={
+        editing
+          ? `${routine.name} — arrow keys move, shift+arrows resize, delete removes`
+          : undefined
+      }
+      onKeyDown={editing ? handleKeyDown : undefined}
+      style={{
+        ...cssVars({
+          "--col": position.col,
+          "--row": position.row,
+          "--cols": size.cols,
+          "--cols-md": Math.min(size.cols, 2),
+          "--rows": size.rows,
+        }),
+        ...(drag?.kind === "move" && {
+          transform: `translate(${drag.dx}px, ${drag.dy}px)`,
+          zIndex: 20,
+        }),
+        ...(resizing &&
+          drag.sizePx && {
+            width: drag.sizePx.width,
+            height: drag.sizePx.height,
+            zIndex: 20,
+          }),
+      }}
     >
       {html ? (
         <iframe
@@ -111,62 +174,17 @@ export function WidgetCard({
         </div>
       )}
       {editing ? (
-        <footer className="flex flex-wrap items-center gap-1 border-t bg-bg2 px-1.5 py-1">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label={t("widget.moveLeft")}
-            onClick={() => onMove?.(-1, 0)}
+        <footer className="relative z-20 flex items-center justify-between gap-2 border-t bg-bg2 px-2 py-[3px] text-[11px]">
+          <span className="truncate font-mono text-ink-dim">
+            {routine.slug}
+          </span>
+          <span
+            className={cn(
+              "shrink-0 pr-3 font-mono text-[10px] tabular-nums",
+              resizing ? "text-orange" : "text-ink-faint",
+            )}
           >
-            <ArrowLeft />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label={t("widget.moveRight")}
-            onClick={() => onMove?.(1, 0)}
-          >
-            <ArrowRight />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label={t("widget.moveUp")}
-            onClick={() => onMove?.(0, -1)}
-          >
-            <ArrowUp />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label={t("widget.moveDown")}
-            onClick={() => onMove?.(0, 1)}
-          >
-            <ArrowDown />
-          </Button>
-          <span className="ml-auto flex items-center gap-1">
-            <SizeSelect
-              label={t("widget.columns")}
-              max={GRID_MAX_COLS}
-              value={size.cols}
-              onChange={(cols) => onResize?.({ ...size, cols })}
-            />
-            <span className="text-xs text-ink-faint">×</span>
-            <SizeSelect
-              label={t("widget.rows")}
-              max={GRID_MAX_ROWS}
-              value={size.rows}
-              onChange={(rows) => onResize?.({ ...size, rows })}
-            />
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={t("widget.remove", { name: routine.name })}
-              className="text-destructive"
-              onClick={() => onRemove?.()}
-            >
-              <X />
-            </Button>
+            {shownSize.cols}×{shownSize.rows}
           </span>
         </footer>
       ) : (
@@ -186,39 +204,39 @@ export function WidgetCard({
           </span>
         </footer>
       )}
+      {editing && (
+        <>
+          {/* Drag surface: covers the artifact (iframes swallow pointer
+              events) but sits under the footer, remove button, and handle. */}
+          <div
+            aria-hidden
+            className={cn(
+              "absolute inset-0 z-10 touch-none",
+              drag?.kind === "move" ? "cursor-grabbing" : "cursor-grab",
+            )}
+            onPointerDown={(event) => onDragStart?.("move", event)}
+          />
+          <Button
+            variant="secondary"
+            size="icon-xs"
+            aria-label={`remove ${routine.name} from grid`}
+            className="absolute top-1 right-1 z-30 border text-ink-dim hover:text-destructive"
+            onClick={() => onRemove?.()}
+          >
+            <X />
+          </Button>
+          <div
+            aria-hidden
+            className={cn(
+              "absolute right-[3px] bottom-[3px] z-30 size-3.5 cursor-nwse-resize touch-none rounded-br-[5px] border-r-2 border-b-2",
+              resizing
+                ? "border-orange"
+                : "border-ink-faint hover:border-orange",
+            )}
+            onPointerDown={(event) => onDragStart?.("resize", event)}
+          />
+        </>
+      )}
     </article>
-  )
-}
-
-function SizeSelect({
-  label,
-  max,
-  value,
-  onChange,
-}: {
-  label: string
-  max: number
-  value: number
-  onChange: (value: number) => void
-}) {
-  return (
-    <Select
-      value={String(value)}
-      onValueChange={(next) => {
-        const parsed = Number(next)
-        if (Number.isInteger(parsed)) onChange(parsed)
-      }}
-    >
-      <SelectTrigger size="sm" aria-label={label} className="h-6 px-1.5">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {Array.from({ length: max }, (_, index) => (
-          <SelectItem key={index + 1} value={String(index + 1)}>
-            {index + 1}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
   )
 }

@@ -15,3 +15,7 @@ coverage
 .claude/skills/impeccable/
 design-shots/
 .env*
+
+# Vitest browser-mode artifacts (failure screenshots, attachments)
+__screenshots__/
+.vitest-attachments/

@@ -1,6 +1,6 @@
 import { GRID_MAX_COLS, type Widget, type WidgetSize } from "@bulletin/schema"
 
-interface Rect {
+export interface Rect {
   col: number
   row: number
   cols: number
