@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+
 import { http, HttpResponse } from "msw"
 
 /**
@@ -25,9 +27,42 @@ interface Failure {
 /** `${repo}:${path}` → injected failure for contents/commits requests. */
 const failures = new Map<string, Failure>()
 
+/**
+ * How the last requests resolved, so tests can assert the ETag path: `full`
+ * counts 200s that shipped a body, `conditional` counts 304s answered from a
+ * replayed `If-None-Match`.
+ */
+export const githubStats = { full: 0, conditional: 0 }
+
 export function resetGitHub() {
   repos.clear()
   failures.clear()
+  githubStats.full = 0
+  githubStats.conditional = 0
+}
+
+/** Deterministic content-derived validator — matches only identical bodies. */
+function etagFor(body: string): string {
+  return `"${createHash("sha1").update(body).digest("hex")}"`
+}
+
+/**
+ * Serve a JSON body with an ETag, honoring conditional requests exactly like
+ * GitHub: a matching `If-None-Match` yields a bodyless 304, everything else a
+ * full 200. Every GET handler routes success through here.
+ */
+function json(request: Request, value: unknown): Response {
+  const body = JSON.stringify(value)
+  const etag = etagFor(body)
+  if (request.headers.get("If-None-Match") === etag) {
+    githubStats.conditional += 1
+    return new HttpResponse(null, { status: 304, headers: { ETag: etag } })
+  }
+  githubStats.full += 1
+  return new HttpResponse(body, {
+    status: 200,
+    headers: { ETag: etag, "Content-Type": "application/json" },
+  })
 }
 
 export function seedRepo(
@@ -64,11 +99,14 @@ function takeFailure(repo: string, path: string): Failure | null {
 
 export const githubHandlers = [
   // repoExists probe.
-  http.get("https://api.github.com/repos/:owner/:repo", ({ params }) => {
-    const repo = `${params.owner}/${params.repo}`
-    if (!repos.has(repo)) return new HttpResponse(null, { status: 404 })
-    return HttpResponse.json({ full_name: repo })
-  }),
+  http.get(
+    "https://api.github.com/repos/:owner/:repo",
+    ({ params, request }) => {
+      const repo = `${params.owner}/${params.repo}`
+      if (!repos.has(repo)) return new HttpResponse(null, { status: 404 })
+      return json(request, { full_name: repo })
+    },
+  ),
 
   // Contents API — single file, base64 payload.
   http.get(
@@ -95,7 +133,8 @@ export const githubHandlers = [
           }
         }
         if (names.size === 0) return new HttpResponse(null, { status: 404 })
-        return HttpResponse.json(
+        return json(
+          request,
           [...names].map((name) => ({
             name,
             type: repos.get(repo)?.has(`${prefix}${name}`) ? "file" : "dir",
@@ -103,7 +142,7 @@ export const githubHandlers = [
           })),
         )
       }
-      return HttpResponse.json({
+      return json(request, {
         content: Buffer.from(file.text, "utf8").toString("base64"),
         sha: `sha:${ref}:${path}`,
       })
@@ -122,8 +161,8 @@ export const githubHandlers = [
       const ref = url.searchParams.get("sha") ?? "main"
       const file = repos.get(repo)?.get(`${ref}:${path}`)
       if (!file) return new HttpResponse(null, { status: 404 })
-      if (!file.lastCommit) return HttpResponse.json([])
-      return HttpResponse.json([
+      if (!file.lastCommit) return json(request, [])
+      return json(request, [
         { commit: { committer: { date: file.lastCommit } } },
       ])
     },
