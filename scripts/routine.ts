@@ -80,10 +80,12 @@ const prompt = `${verb} the bulletin routine \`${slug}\`${clause} — follow the
 
 // The session's cwd is the data repo, where the contract skills don't
 // exist — --add-dir pulls them in from this bulletin checkout (verified:
-// added dirs contribute their project skills).
-console.log(`> claude --add-dir ${root} "${prompt}"`)
+// added dirs contribute their project skills). The prompt must come
+// FIRST: --add-dir is variadic and would swallow a trailing positional
+// as another directory, leaving an interactive session with no prompt.
+console.log(`> claude "${prompt}" --add-dir ${root}`)
 console.log(`  (cwd: ${dataRepoDir})\n`)
-const result = spawnSync("claude", ["--add-dir", root, prompt], {
+const result = spawnSync("claude", [prompt, "--add-dir", root], {
   stdio: "inherit",
   cwd: dataRepoDir,
 })
