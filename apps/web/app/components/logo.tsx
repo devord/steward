@@ -6,7 +6,14 @@ import { cn } from "~/lib/utils"
  * written. Mirrored as static SVG in public/favicon.svg and public/og.png;
  * keep the three geometries in sync.
  */
-export function Logo({ className }: { className?: string }) {
+export function Logo({
+  className,
+  live,
+}: {
+  className?: string
+  /** Blink the orange cursor block like a terminal caret (landing only). */
+  live?: boolean
+}) {
   return (
     <svg viewBox="0 0 64 64" aria-hidden className={cn("shrink-0", className)}>
       <rect width="64" height="64" rx="14" className="fill-bg" />
@@ -42,14 +49,20 @@ export function Logo({ className }: { className?: string }) {
         width="17"
         height="40"
         rx="4"
-        className="fill-primary"
+        className={cn("fill-primary", live && "logo-cursor")}
       />
     </svg>
   )
 }
 
 /** Mark + name lockup; the mark scales with the surrounding font size. */
-export function Wordmark({ className }: { className?: string }) {
+export function Wordmark({
+  className,
+  live,
+}: {
+  className?: string
+  live?: boolean
+}) {
   return (
     <span
       className={cn(
@@ -57,7 +70,7 @@ export function Wordmark({ className }: { className?: string }) {
         className,
       )}
     >
-      <Logo className="size-[1.4em]" />
+      <Logo live={live} className="size-[1.4em]" />
       bulletin
     </span>
   )
