@@ -117,7 +117,7 @@ export const en = {
     "no API trigger for this routine — set one up with pnpm routines:sync",
   "widget.updateFailed": "the run request failed — try again",
   "widget.copyCommand": "copy the terminal command that runs {name}",
-  "widget.copied": "command copied — run it in a terminal",
+  "widget.copied": "command copied — run it from your bulletin checkout",
   "widget.unreachable": "github unreachable — retries on next refresh",
   "widget.waiting": "waiting for its first run —",
   "widget.disabled": "routine disabled",

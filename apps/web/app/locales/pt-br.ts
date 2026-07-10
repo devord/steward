@@ -120,7 +120,8 @@ export const ptBR: Messages = {
     "sem gatilho de API para esta rotina — configure com pnpm routines:sync",
   "widget.updateFailed": "a solicitação falhou — tente de novo",
   "widget.copyCommand": "copiar o comando de terminal que roda {name}",
-  "widget.copied": "comando copiado — rode em um terminal",
+  "widget.copied":
+    "comando copiado — rode a partir do seu checkout do bulletin",
   "widget.unreachable": "github inacessível — tenta de novo no próximo refresh",
   "widget.waiting": "esperando a primeira execução —",
   "widget.disabled": "rotina desativada",
