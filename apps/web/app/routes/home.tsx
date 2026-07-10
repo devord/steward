@@ -3,7 +3,7 @@ import { data, Form, Link, redirect, useRevalidator } from "react-router"
 
 import type { Routine, WidgetSize } from "@bulletin/schema"
 import { GRID_MAX_COLS } from "@bulletin/schema"
-import { LayoutGrid, Plus, Settings } from "lucide-react"
+import { Check, LayoutGrid, Plus, Settings } from "lucide-react"
 
 import type { Route } from "./+types/home"
 import { AddRoutineDialog } from "../components/add-routine-dialog.tsx"
@@ -456,27 +456,227 @@ function HeaderAction({
 function Landing() {
   const t = useT()
   return (
-    <main className="landing-bg grid min-h-dvh place-items-center px-4 sm:px-6">
-      <div className="w-full max-w-md pb-16">
-        <h1>
-          <Wordmark className="text-4xl" />
-        </h1>
-        <p className="mt-6 text-[15px] leading-relaxed text-balance">
-          {t("landing.tagline")}
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">{t("landing.sub")}</p>
-        <a
-          href="/auth/login"
-          className={cn(buttonVariants({ size: "lg" }), "mt-7")}
-        >
-          {t("landing.signIn")}
-        </a>
-        <p className="mt-4 text-xs leading-relaxed text-ink-faint">
-          {t("landing.privacy")}
-        </p>
+    <main className="landing-bg min-h-dvh">
+      <div className="mx-auto flex min-h-dvh max-w-6xl flex-col justify-center gap-12 px-4 py-16 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-16">
+        {/* Left: the pitch and the one action. */}
+        <div className="max-w-md">
+          <h1>
+            <Wordmark live className="text-4xl sm:text-5xl" />
+          </h1>
+          <p className="mt-7 text-lg leading-snug text-pretty text-foreground">
+            {t("landing.tagline")}
+          </p>
+          <p className="mt-2 font-mono text-sm text-ink-dim">
+            {t("landing.sub")}
+          </p>
+
+          <a
+            href="/auth/login"
+            className={cn(buttonVariants({ size: "lg" }), "mt-8 gap-2")}
+          >
+            <GithubMark className="size-4" />
+            {t("landing.signIn")}
+          </a>
+          <p className="mt-4 max-w-xs text-xs leading-relaxed text-ink-faint">
+            {t("landing.privacy")}
+          </p>
+
+          {/* The mechanism in four tokens — the same pipeline the OG card
+              carries. Git words stay untranslated (DESIGN.md). */}
+          <p className="mt-10 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-ink-faint">
+            <PipeStep>cron</PipeStep>
+            <PipeArrow />
+            <PipeStep>skill</PipeStep>
+            <PipeArrow />
+            <PipeStep>git push</PipeStep>
+            <PipeArrow />
+            <PipeStep>widget</PipeStep>
+          </p>
+        </div>
+
+        {/* Right: the product itself — a small living board. Decorative, so
+            it's hidden from assistive tech; the pitch carries the meaning. */}
+        <DemoBoard />
       </div>
     </main>
   )
+}
+
+function PipeStep({ children }: { children: React.ReactNode }) {
+  return <span className="text-ink-dim">{children}</span>
+}
+
+function PipeArrow() {
+  return (
+    <span aria-hidden className="text-primary/70">
+      ▸
+    </span>
+  )
+}
+
+/** The GitHub mark, currentColor so it inherits the button's ink. */
+function GithubMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden
+      fill="currentColor"
+      className={className}
+    >
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+    </svg>
+  )
+}
+
+// --- Landing demo board -----------------------------------------------------
+// A faux dashboard rendered in the real widget chrome (card + freshness
+// footer), so the landing shows the product instead of describing it. Content
+// is illustrative; colors are tokens only. Widget artifacts here are plain
+// markup, not iframes — this never touches a real routine.
+
+function DemoBoard() {
+  const t = useT()
+  return (
+    <div className="flex w-full max-w-md items-start gap-3 max-lg:mx-auto">
+      {/* Left column: one tall widget. */}
+      <DemoWidget name="daily plan" ago="ran 2h ago" className="flex-1">
+        <p className="mb-3 flex items-center justify-between font-mono text-[11px] text-ink-dim">
+          today
+          <span className="text-ink-faint">jul 09</span>
+        </p>
+        <ul className="space-y-2.5 text-xs">
+          <Task done>ship M1 acceptance</Task>
+          <Task done>review sync PR</Task>
+          <Task>draft ADR-0010</Task>
+          <Task>triage the inbox</Task>
+          <Task>merge appearance branch</Task>
+          <Task>reply to design thread</Task>
+        </ul>
+        <div className="mt-4 flex items-center gap-2 font-mono text-[11px] text-ink-faint">
+          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg3">
+            <span
+              className="block h-full rounded-full bg-green"
+              style={{ width: "33%" }}
+            />
+          </span>
+          2/6
+        </div>
+      </DemoWidget>
+
+      {/* Right column: two stacked widgets, ~matching the tall one. */}
+      <div className="flex flex-1 flex-col gap-3">
+        <DemoWidget name="repo pulse" ago="ran 14m ago">
+          <p className="mb-2.5 font-mono text-[11px] text-ink-dim">open PRs</p>
+          <div className="space-y-2">
+            <PulseRow label="bulletin" fill="68%" n={4} />
+            <PulseRow label="chat" fill="40%" n={2} />
+            <PulseRow label="kb" fill="18%" n={1} />
+          </div>
+        </DemoWidget>
+
+        <DemoWidget
+          name="changelog"
+          ago="ran 4d ago"
+          stale
+          staleLabel={t("widget.stale")}
+        >
+          <p className="mb-2.5 font-mono text-[11px] text-ink-dim">this week</p>
+          <div className="space-y-2">
+            <SkeletonLine w="w-full" />
+            <SkeletonLine w="w-4/5" />
+            <SkeletonLine w="w-11/12" />
+            <SkeletonLine w="w-2/3" />
+          </div>
+        </DemoWidget>
+      </div>
+    </div>
+  )
+}
+
+function DemoWidget({
+  name,
+  ago,
+  stale = false,
+  staleLabel,
+  className,
+  children,
+}: {
+  name: string
+  ago: string
+  stale?: boolean
+  staleLabel?: string
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col overflow-hidden rounded-lg border bg-card",
+        className,
+      )}
+    >
+      <div className="min-h-0 flex-1 p-3">{children}</div>
+      <footer className="flex items-center justify-between gap-2 border-t border-border-dim px-2 py-[3px] text-[11px]">
+        <span className="truncate text-ink-dim">{name}</span>
+        <span className="flex shrink-0 items-center gap-1.5 font-mono text-ink-faint">
+          {stale && (
+            <span className="rounded bg-yellow/15 px-1 text-[10px] text-yellow">
+              {staleLabel}
+            </span>
+          )}
+          {ago}
+        </span>
+      </footer>
+    </div>
+  )
+}
+
+function Task({
+  done = false,
+  children,
+}: {
+  done?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <li className="flex items-center gap-2">
+      {done ? (
+        <Check className="size-3 shrink-0 text-green" />
+      ) : (
+        <span className="size-3 shrink-0 rounded-full border border-border" />
+      )}
+      <span className={done ? "text-ink-faint line-through" : "text-ink-dim"}>
+        {children}
+      </span>
+    </li>
+  )
+}
+
+function PulseRow({
+  label,
+  fill,
+  n,
+}: {
+  label: string
+  fill: string
+  n: number
+}) {
+  return (
+    <div className="flex items-center gap-2 font-mono text-[11px]">
+      <span className="w-16 shrink-0 truncate text-ink-dim">{label}</span>
+      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg3">
+        <span
+          className="block h-full rounded-full bg-aqua"
+          style={{ width: fill }}
+        />
+      </span>
+      <span className="w-3 shrink-0 text-right text-ink-faint">{n}</span>
+    </div>
+  )
+}
+
+function SkeletonLine({ w }: { w: string }) {
+  return <span className={cn("block h-2 rounded-full bg-bg3", w)} />
 }
 
 function EmptyDashboard({ onAdd }: { onAdd: () => void }) {
