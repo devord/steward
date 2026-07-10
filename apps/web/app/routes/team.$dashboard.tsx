@@ -8,7 +8,8 @@ import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import {
   dataRepoExists,
   listDashboards,
-  loadDashboardOr503,
+  loadArtifacts,
+  loadDashboardStructureOr503,
   resolveDataRepo,
   resolveTeamRepo,
 } from "../lib/dashboard.server.ts"
@@ -31,21 +32,25 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   // The switcher's personal group: best-effort, never blocks a team board
   // (a brand-new member may not even have a personal repo yet).
   const personalRepo = resolveDataRepo(auth.login, auth.dataRepo)
+  const ref = {
+    scope: "team" as const,
+    repo: teamRepo,
+    dashboard: params.dashboard,
+  }
   const [view, personalDashboards] = await Promise.all([
-    loadDashboardOr503(auth.token, {
-      scope: "team",
-      repo: teamRepo,
-      dashboard: params.dashboard,
-    }),
+    loadDashboardStructureOr503(auth.token, ref),
     listDashboards(auth.token, personalRepo).catch(() => null),
   ])
   // Unknown board → the /team index picks a real one (or the empty state).
   if (view.baseShas.dashboard === null) throw redirect("/team")
 
+  // Streamed after the redirect check so an unknown board never fires it.
+  const artifacts = loadArtifacts(auth.token, ref, view.routines)
   return {
     login: auth.login,
     now: Date.now(),
     view,
+    artifacts,
     personalDashboards: personalDashboards ?? [DEFAULT_DASHBOARD],
   }
 }
@@ -54,6 +59,7 @@ export default function TeamDashboard({ loaderData }: Route.ComponentProps) {
   return (
     <DashboardBoard
       view={loaderData.view}
+      artifacts={loaderData.artifacts}
       login={loaderData.login}
       now={loaderData.now}
       personalDashboards={loaderData.personalDashboards}

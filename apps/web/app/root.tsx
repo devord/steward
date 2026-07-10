@@ -10,6 +10,7 @@ import {
 
 import type { Route } from "./+types/root"
 import "./app.css"
+import { RouteProgress } from "./components/route-progress.tsx"
 import { DEFAULT_LOCALE, I18nProvider, useT } from "./lib/i18n.tsx"
 import { getLocale } from "./lib/locale.server.ts"
 import {
@@ -61,6 +62,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
+        <RouteProgress />
         <I18nProvider locale={locale}>{children}</I18nProvider>
         <ScrollRestoration />
         <Scripts />

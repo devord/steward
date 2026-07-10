@@ -8,7 +8,8 @@ import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import {
   dataRepoExists,
   listDashboards,
-  loadDashboardOr503,
+  loadArtifacts,
+  loadDashboardStructureOr503,
   resolveDataRepo,
   resolveTeamRepo,
 } from "../lib/dashboard.server.ts"
@@ -30,13 +31,14 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
   if (!(await dataRepoExists(auth.token, dataRepo))) throw redirect("/setup")
 
+  const ref = {
+    scope: "personal" as const,
+    repo: dataRepo,
+    dashboard: params.dashboard,
+  }
   const teamRepo = resolveTeamRepo()
   const [view, teamDashboards] = await Promise.all([
-    loadDashboardOr503(auth.token, {
-      scope: "personal",
-      repo: dataRepo,
-      dashboard: params.dashboard,
-    }),
+    loadDashboardStructureOr503(auth.token, ref),
     teamRepo
       ? listDashboards(auth.token, teamRepo).catch(() => null)
       : Promise.resolve(null),
@@ -46,7 +48,10 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   if (view.baseShas.dashboard === null) {
     throw data("not found", { status: 404 })
   }
-  return { login: auth.login, now: Date.now(), view, teamDashboards }
+  // Fire artifacts only after the existence checks pass, so a 404 never
+  // leaves a dangling request. Streamed (ADR-0002), not awaited.
+  const artifacts = loadArtifacts(auth.token, ref, view.routines)
+  return { login: auth.login, now: Date.now(), view, artifacts, teamDashboards }
 }
 
 export default function PersonalDashboard({
@@ -55,6 +60,7 @@ export default function PersonalDashboard({
   return (
     <DashboardBoard
       view={loaderData.view}
+      artifacts={loaderData.artifacts}
       login={loaderData.login}
       now={loaderData.now}
       personalDashboards={loaderData.view.dashboards}

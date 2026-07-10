@@ -44,7 +44,14 @@ export interface BoardRef {
   dashboard: string
 }
 
-export interface DashboardView {
+/**
+ * Everything a board needs to render its chrome and grid *except* the widget
+ * artifacts — routines, layout, catalog, sibling boards. Fast enough to await
+ * on the request path (a handful of GitHub reads), so redirects and 404s stay
+ * in the loader. The artifacts, many more round trips, stream in after
+ * (loadArtifacts) so the frame paints without waiting on them.
+ */
+export interface DashboardBase {
   dataRepo: string
   scope: BoardScope
   dashboardSlug: string
@@ -52,9 +59,6 @@ export interface DashboardView {
   dashboardName: string | null
   routines: RoutinesFile
   dashboard: DashboardFile
-  /** Keyed by routine slug. The client joins these with the draft config,
-      so a draft that reshapes the grid still finds its artifacts. */
-  artifacts: Record<string, ArtifactInfo>
   catalog: CatalogFile
   /** Sibling dashboards in the same repo, for the switcher. */
   dashboards: string[]
@@ -62,6 +66,12 @@ export interface DashboardView {
   baseShas: { routines: string | null; dashboard: string | null }
   /** Raw file bodies, so the Sync panel diffs against exactly what's on main. */
   baseFiles: { routines: string | null; dashboard: string | null }
+}
+
+export interface DashboardView extends DashboardBase {
+  /** Keyed by routine slug. The client joins these with the draft config,
+      so a draft that reshapes the grid still finds its artifacts. */
+  artifacts: Record<string, ArtifactInfo>
 }
 
 export function resolveDataRepo(login: string, override?: string): string {
@@ -95,37 +105,14 @@ export async function listDashboards(
 }
 
 /**
- * loadDashboard for route loaders: config that can't load at all (GitHub
- * outage) becomes a clear 503 instead of an anonymous error page.
- * Artifact-level failures degrade per-widget inside loadDashboard and
- * never reach the catch.
+ * The board's structure (config from the data repo's main, catalog from the
+ * shared repo, sibling boards) — everything but the artifacts. Route loaders
+ * await this so redirect/404 decisions stay on the request path.
  */
-export async function loadDashboardOr503(
+export async function loadDashboardStructure(
   token: string,
   ref: BoardRef,
-): Promise<DashboardView> {
-  try {
-    return await loadDashboard(token, ref)
-  } catch (error) {
-    if (error instanceof GitHubError) {
-      throw data(
-        "GitHub's API is having trouble right now, so your config couldn't load. The dashboard will be back on the next refresh once GitHub recovers.",
-        { status: 503 },
-      )
-    }
-    throw error
-  }
-}
-
-/**
- * Assemble everything the dashboard needs in one loader pass: config from
- * the data repo's main, the catalog from the shared repo, and per-routine
- * artifact + freshness from the artifacts branch.
- */
-export async function loadDashboard(
-  token: string,
-  ref: BoardRef,
-): Promise<DashboardView> {
+): Promise<DashboardBase> {
   const [routinesRaw, dashboardRaw, catalogRaw, dashboards] = await Promise.all(
     [
       getFile(token, ref.repo, "data/routines.yaml"),
@@ -146,25 +133,6 @@ export async function loadDashboard(
     ? catalogFileSchema.parse(JSON.parse(catalogRaw.text))
     : { skills: [] }
 
-  const artifacts: Record<string, ArtifactInfo> = {}
-  await Promise.all(
-    routines.routines.map(async ({ slug }) => {
-      const path = `w/${slug}/index.html`
-      try {
-        const [artifact, lastRunAt] = await Promise.all([
-          getFile(token, ref.repo, path, "artifacts"),
-          getLastCommitDate(token, ref.repo, path, "artifacts"),
-        ])
-        artifacts[slug] = { html: artifact?.text ?? null, lastRunAt }
-      } catch (error) {
-        // One widget's artifact failing (GitHub 5xx flap) must not take
-        // down the whole board — degrade that cell, keep the rest.
-        if (!(error instanceof GitHubError)) throw error
-        artifacts[slug] = { html: null, lastRunAt: null, unreachable: true }
-      }
-    }),
-  )
-
   return {
     dataRepo: ref.repo,
     scope: ref.scope,
@@ -172,7 +140,6 @@ export async function loadDashboard(
     dashboardName: dashboard.name ?? null,
     routines,
     dashboard,
-    artifacts,
     catalog,
     dashboards: dashboards ?? [ref.dashboard],
     baseShas: {
@@ -184,4 +151,71 @@ export async function loadDashboard(
       dashboard: dashboardRaw?.text ?? null,
     },
   }
+}
+
+/**
+ * Per-routine artifact body + freshness from the artifacts branch, keyed by
+ * slug. Loaders return this promise *unawaited* so the grid streams (the
+ * WidgetCard skeleton fills each cell until its artifact lands). One widget's
+ * artifact failing (GitHub 5xx flap) degrades that cell, never the board.
+ */
+export async function loadArtifacts(
+  token: string,
+  ref: BoardRef,
+  routines: RoutinesFile,
+): Promise<Record<string, ArtifactInfo>> {
+  const artifacts: Record<string, ArtifactInfo> = {}
+  await Promise.all(
+    routines.routines.map(async ({ slug }) => {
+      const path = `w/${slug}/index.html`
+      try {
+        const [artifact, lastRunAt] = await Promise.all([
+          getFile(token, ref.repo, path, "artifacts"),
+          getLastCommitDate(token, ref.repo, path, "artifacts"),
+        ])
+        artifacts[slug] = { html: artifact?.text ?? null, lastRunAt }
+      } catch (error) {
+        if (!(error instanceof GitHubError)) throw error
+        artifacts[slug] = { html: null, lastRunAt: null, unreachable: true }
+      }
+    }),
+  )
+  return artifacts
+}
+
+/**
+ * loadDashboardStructure for route loaders: config that can't load at all
+ * (GitHub outage) becomes a clear 503 instead of an anonymous error page.
+ * Artifact-level failures degrade per-widget in loadArtifacts and never reach
+ * this catch.
+ */
+export async function loadDashboardStructureOr503(
+  token: string,
+  ref: BoardRef,
+): Promise<DashboardBase> {
+  try {
+    return await loadDashboardStructure(token, ref)
+  } catch (error) {
+    if (error instanceof GitHubError) {
+      throw data(
+        "GitHub's API is having trouble right now, so your config couldn't load. The dashboard will be back on the next refresh once GitHub recovers.",
+        { status: 503 },
+      )
+    }
+    throw error
+  }
+}
+
+/**
+ * The whole board in one awaited pass — structure plus artifacts. Route
+ * loaders stream instead (loadDashboardStructureOr503 + loadArtifacts); this
+ * stays for tests and any caller that wants everything resolved up front.
+ */
+export async function loadDashboard(
+  token: string,
+  ref: BoardRef,
+): Promise<DashboardView> {
+  const base = await loadDashboardStructure(token, ref)
+  const artifacts = await loadArtifacts(token, ref, base.routines)
+  return { ...base, artifacts }
 }

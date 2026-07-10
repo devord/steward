@@ -11,7 +11,8 @@ import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import {
   dataRepoExists,
   listDashboards,
-  loadDashboardOr503,
+  loadArtifacts,
+  loadDashboardStructureOr503,
   resolveDataRepo,
   resolveTeamRepo,
 } from "../lib/dashboard.server.ts"
@@ -49,25 +50,31 @@ export async function loader({ request }: Route.LoaderArgs) {
   const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
   if (!(await dataRepoExists(auth.token, dataRepo))) throw redirect("/setup")
 
+  const ref = {
+    scope: "personal" as const,
+    repo: dataRepo,
+    dashboard: DEFAULT_DASHBOARD,
+  }
   // The team dashboard list is switcher garnish: no team repo, no access,
   // or a GitHub flap all degrade to "no team section", never an error.
   const teamRepo = resolveTeamRepo()
   const [view, teamDashboards] = await Promise.all([
-    loadDashboardOr503(auth.token, {
-      scope: "personal",
-      repo: dataRepo,
-      dashboard: DEFAULT_DASHBOARD,
-    }),
+    loadDashboardStructureOr503(auth.token, ref),
     teamRepo
       ? listDashboards(auth.token, teamRepo).catch(() => null)
       : Promise.resolve(null),
   ])
+  // Widget bodies stream in after the chrome + grid paint — returning the
+  // promise unawaited defers it (ADR-0002); the board renders skeleton cells
+  // until it resolves.
+  const artifacts = loadArtifacts(auth.token, ref, view.routines)
   return {
     kind: "dashboard" as const,
     origin,
     login: auth.login,
     now: Date.now(),
     view,
+    artifacts,
     teamDashboards,
   }
 }
@@ -77,6 +84,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   return (
     <DashboardBoard
       view={loaderData.view}
+      artifacts={loaderData.artifacts}
       login={loaderData.login}
       now={loaderData.now}
       personalDashboards={loaderData.view.dashboards}
