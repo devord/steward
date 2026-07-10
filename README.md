@@ -13,9 +13,10 @@ update themselves, never written by hand again.
 
 Bulletin has no database and no artifact host. GitHub is both:
 
-- **This repo (shared):** the web app, the schemas, the contract skills, and
-  the generated catalog of routine-capable skills. Team-visible; never holds
-  user data.
+- **This repo (shared):** the web app, the schemas, and the contract
+  skills. Content skills live in the narrowest repo their users can read —
+  the team's plugins repo or a data repo (ADR-0014). Team-visible; never
+  holds user data.
 - **Your data repo (`bulletin-data-<login>`, private):** created for you from
   a template on first sign-in. `main` holds your config
   (`data/routines.yaml`, `data/dashboard.yaml`); the `artifacts` branch holds
@@ -24,15 +25,17 @@ Bulletin has no database and no artifact host. GitHub is both:
 
 The loop, end to end:
 
-1. **You add a routine** in the UI: pick a skill from the catalog, name it
-   (the slug fixes the artifact address forever), pick a widget size and a
-   schedule. Edits accumulate as a local draft; **Sync** commits them to your
-   data repo (or opens a PR if you prefer review).
-2. **A schedule fires** — a Claude cloud routine, a local schedule, or a team
-   runner. Its prompt is one stable line: _"Run the bulletin routine
-   `<slug>` — follow the `run-routine` skill."_ Everything the run actually
-   does is versioned in the repos, so the cloud resource is created once and
-   never edited.
+1. **You add a routine** in the UI: describe what the widget should show
+   (optionally accelerated by a discovered skill), name it (the slug fixes
+   the artifact address forever), pick a widget size, a schedule — or
+   manual — and a host. Edits accumulate as a local draft; **Sync** commits
+   them to your data repo (or opens a PR if you prefer review).
+2. **A run starts** — a Claude cloud routine or local launchd schedule
+   fires, someone clicks the widget's update button (manual cloud), or you
+   run `pnpm routine <slug>` in a terminal. Every path is one stable line:
+   _"Run the bulletin routine `<slug>` — follow the `run-routine` skill."_
+   Everything the run actually does is versioned in the repos, so the
+   cloud resource is created once and never edited.
 3. **The routine publishes** — the skill produces a self-contained,
    responsive HTML artifact (see
    [docs/widget-standard.md](./docs/widget-standard.md)) and pushes it to
@@ -53,10 +56,10 @@ Prerequisites: a GitHub account; Claude Code (for routines to run).
 1. Open the app and **sign in with GitHub** (scopes: `repo`, `read:user`).
 2. First run: accept the **"create your dashboard repo"** wizard — it
    generates private `bulletin-data-<you>` from the template.
-3. **Add a routine** (skill → name → size → schedule) and **Sync**.
-4. **Schedule it** once: `/schedule` in Claude Code (or the web UI) with the
-   pointer prompt shown by the app. `pnpm routines:sync` reconciles schedule
-   drift later.
+3. **Add a routine** (prompt → name → size → schedule/host) and **Sync**.
+4. **Enact it** once: `pnpm routines:sync --apply` creates the cloud
+   routine or launchd agent (and walks you through the API trigger for
+   manual cloud routines); it reconciles drift on every later run.
 5. Widgets refresh on their own from then on. Stale or never-run widgets say
    so on the card.
 
@@ -80,7 +83,7 @@ Workspace layout:
 | Path              | What                                                                    |
 | ----------------- | ----------------------------------------------------------------------- |
 | `apps/web`        | React Router v8 app (framework mode, SSR, Tailwind 4)                   |
-| `packages/schema` | zod schemas for routines/dashboard/catalog — buildless, source-exported |
+| `packages/schema` | zod schemas for routines/dashboards/skills — buildless, source-exported |
 | `.claude/skills`  | agent skills incl. the routine contracts (M4)                           |
 | `docs/`           | ADRs, widget standard, roadmap                                          |
 

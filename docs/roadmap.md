@@ -58,9 +58,9 @@ long-form routine guidance, dashboard rename (today: delete + recreate),
 dashboard display names in the switcher (today: slugs). "Run now" and the
 `bulletin apply` CLI graduated into M6 (ADR-0016/0017).
 
-## M6 — Hosts, manual runs, prompt-first (planned)
+## M6 — Hosts, manual runs, prompt-first ✅ (code)
 
-Implements ADR-0012…0017:
+Implements ADR-0012…0017 (built 2026-07-10):
 
 - **Schema**: `host: cloud | local` (default cloud); `skill:` and
   `schedule:` optional (prompt-only / manual-only routines).
@@ -88,13 +88,14 @@ Implements ADR-0012…0017:
 - **Dry runs + launcher**: dry clause in `run-routine`/`publish-widget`
   (local tree in, local file out); `pnpm routine <slug> [--dry] [--repo]`.
 
-Facts to verify before/while building: claude.ai connectors under headless
-`claude -p` (launchd); plugins-repo install inside the cloud routine
-environment (else dispatcher clones it); the `/schedule` CLI surface
-`routines:sync` drives for creation without API triggers; whether a cloud
-routine can be created with **no schedule at all** (API-trigger-only) or
-only via the web UI — decides how much of the cloud-manual flow sync can
-automate.
+Facts still to verify live (acceptance, alongside M4's): claude.ai
+connectors under headless `claude -p` (launchd); plugins-repo install
+inside the cloud routine environment (else the dispatcher's clone
+fallback kicks in); whether a cloud routine can be created with **no
+schedule at all** (API-trigger-only) or only via the web UI — sync's
+apply prompt asks the schedule tooling and reports back; the fire API
+endpoint/beta header shape (`ANTHROPIC_ROUTINES_BETA` overrides the
+pinned value).
 
 ## Watch items
 

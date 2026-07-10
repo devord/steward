@@ -5,10 +5,10 @@ when they care, or an interactive skill that interviews its owner before
 authoring. **`schedule:` becomes optional**; absent means manual-only.
 Crossed with `host:` (ADR-0012):
 
-|             | `schedule:` set             | manual-only                          |
-| ----------- | --------------------------- | ------------------------------------ |
-| **`cloud`** | cloud routine, cron trigger | cloud routine, API trigger only      |
-| **`local`** | launchd plist, headless     | nothing to enact — interactive CLI   |
+|             | `schedule:` set             | manual-only                        |
+| ----------- | --------------------------- | ---------------------------------- |
+| **`cloud`** | cloud routine, cron trigger | cloud routine, API trigger only    |
+| **`local`** | launchd plist, headless     | nothing to enact — interactive CLI |
 
 **Cloud manual runs.** The runner stays the canonical executor —
 ADR-0010's `runner:` generalized from "owns the schedule" to "owns the
@@ -19,7 +19,7 @@ can't read anything; a leak's blast radius is quota burn on the runner's
 account. So it lives **in the data repo itself** (ADR-0001 applied
 consistently): everyone who can read the repo is exactly the set entitled
 to trigger. The app's **Update button fires server-side**: the server reads
-the token from the repo *with the clicking user's GitHub token* — GitHub
+the token from the repo _with the clicking user's GitHub token_ — GitHub
 proves the entitlement — then POSTs, passing "requested by <login>" in the
 fire body's `text` field. No secret in the deploy env, no new access
 control, runs as the runner with the runner's connectors.
