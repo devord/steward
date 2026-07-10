@@ -68,7 +68,9 @@ export function cronToLaunchd(schedule: string): LaunchdSchedule | null {
     /^\*(?:\/\d+)?$/.test(minuteF) &&
     [hourF, domF, monthF, dowF].every((f) => f === "*")
   ) {
-    return { interval: Number(minuteF.slice(2) || 1) * 60 }
+    const by = minuteF === "*" ? 1 : Number(minuteF.slice(2))
+    if (by < 1) return null // `*/0` is not a schedule
+    return { interval: by * 60 }
   }
 
   const minute = expand(minuteF, 0, 59)
@@ -113,6 +115,11 @@ export function cronToLaunchd(schedule: string): LaunchdSchedule | null {
     if (entries.length > MAX_ENTRIES) return null
   }
   return { calendar: entries }
+}
+
+/** POSIX single-quoting: close, escaped quote, reopen. */
+function shellQuote(text: string): string {
+  return `'${text.replaceAll("'", `'\\''`)}'`
 }
 
 function xmlEscape(text: string): string {
@@ -163,11 +170,10 @@ export function launchdPlist(options: {
           "  </array>",
         ].join("\n")
 
-  // The prompt sits inside single quotes in a zsh -c string; the slug and
-  // repo it interpolates are schema-validated (kebab / owner-name), so no
-  // quoting surprises. The add-dir path is single-quoted for spaces; a
-  // path containing a single quote is not worth contorting for.
-  const command = `exec claude --add-dir '${options.addDir}' -p '${options.prompt}'`
+  // Everything interpolated into the zsh -c string is single-quoted with
+  // embedded quotes escaped — the prompt carries an unvalidated --repo
+  // value, and paths can contain anything.
+  const command = `exec claude --add-dir ${shellQuote(options.addDir)} -p ${shellQuote(options.prompt)}`
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

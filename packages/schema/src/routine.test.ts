@@ -89,6 +89,13 @@ describe("routinesFileSchema", () => {
     })
     expect(result.success).toBe(false)
   })
+
+  it("rejects blank instructions as the only content source", () => {
+    const result = routinesFileSchema.safeParse({
+      routines: [{ slug: "empty", name: "Empty", instructions: "" }],
+    })
+    expect(result.success).toBe(false)
+  })
 })
 
 describe("triggerPath", () => {

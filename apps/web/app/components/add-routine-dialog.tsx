@@ -442,7 +442,13 @@ export function AddRoutineDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              reset()
+              onOpenChange(false)
+            }}
+          >
             {t("dialog.cancel")}
           </Button>
           <Button disabled={!canSubmit} onClick={submit}>

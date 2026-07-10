@@ -17,18 +17,26 @@ ADR-0010, ADR-0017):
 - _"Run the bulletin routine `<slug>` — follow the `run-routine` skill."_
 - _"Run the bulletin routine `<slug>` in `<owner/repo>` — follow the
   `run-routine` skill."_
-- Either form starting with **"Dry-run"** instead of "Run" — see § Dry
-  runs; everything below applies with the two listed changes.
+- Either form starting with **"Dry-run"** instead of "Run" — a dry run
+  (ADR-0017). **Decide this first**: dry mode changes step 1 (local tree
+  only, no remotes) and step 3 (no plugin install/clone) — see § Dry runs.
 
 The prompt is deliberately stable; everything that can change lives in the
 data repo's YAML.
 
 ## 1. Locate the data repo
 
-When the prompt carries an ``in `<owner/repo>` `` clause, that repo IS the
-data repo — team routines name the shared team repo this way (ADR-0010).
-Without the clause, the data repo is personal: `bulletin-data-<login>` for
-the account you run as (ADR-0001). In order of preference:
+**Dry run?** The current working directory is authoritative, full stop: it
+must contain `data/routines.yaml`, dirty state included — no remote
+matching, no push-access check, no fetch, no clone. If the cwd has no
+routines file, stop and report; never fall through to the network steps
+below.
+
+Otherwise: when the prompt carries an ``in `<owner/repo>` `` clause, that
+repo IS the data repo — team routines name the shared team repo this way
+(ADR-0010). Without the clause, the data repo is personal:
+`bulletin-data-<login>` for the account you run as (ADR-0001). In order of
+preference:
 
 1. The current working directory, if it contains `data/routines.yaml` —
    and, when the prompt names a repo, its `origin` remote matches it.
@@ -61,10 +69,12 @@ Two shapes of routine (ADR-0013):
   skill resolution: the data repo's own `.claude/skills/` and installed
   plugins (ADR-0014). If the named skill does not resolve, first try
   installing the team's plugins repo (`Form-Factory/plugins`) — or clone
-  it and read the skill from `<plugin>/skills/<name>/` directly. Still
-  unresolved → **hard-fail loudly**: stop, report the bad `skill:`
-  reference and where you looked. That error surface is the point of the
-  structured field — never improvise a missing skill's job.
+  it and read the skill from `<plugin>/skills/<name>/` directly. **On a
+  dry run skip that install/clone entirely** — only locally-present
+  skills count (ADR-0017). Still unresolved → **hard-fail loudly**: stop,
+  report the bad `skill:` reference and where you looked. That error
+  surface is the point of the structured field — never improvise a
+  missing skill's job.
 - **`skill:` absent** — a prompt-only routine: execute `instructions:`
   directly as the content brief. The contract holds either way; a prompt
   is a degenerate skill.
@@ -85,8 +95,10 @@ A "Dry-run …" prompt changes exactly two behaviors — routine skills never
 know they are being dry-run:
 
 - **In**: resolve `data/routines.yaml` and skills from the **local working
-  tree, dirty state included** — the cwd checkout is authoritative; do not
-  fetch, clone, or compare remotes. What's being edited is what runs.
+  tree, dirty state included** — the cwd checkout is authoritative; no
+  remote matching, no push-access requirement, no fetch, no clone, no
+  plugin install (steps 1 and 3 above carry the specifics). What's being
+  edited is what runs.
 - **Out**: tell `publish-widget` this is a dry run — it writes the
   artifact to a local file and opens it in the browser. Nothing is
   committed or pushed; the live widget never sees a test run.

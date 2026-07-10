@@ -49,7 +49,9 @@ export function parseRoutineSkill(
   id: string,
   skillMd: string,
 ): RoutineSkill | null {
-  const match = skillMd.match(/^---\n([\s\S]*?)\n---(?:\n|$)/)
+  // Tolerate a UTF-8 BOM and CRLF line endings — a Windows-committed
+  // SKILL.md must not silently vanish from the picker.
+  const match = skillMd.match(/^\uFEFF?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
   if (!match) return null
   let raw: unknown
   try {
