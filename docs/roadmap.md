@@ -104,8 +104,10 @@ pinned value).
   bites, at the cost of version browsing.
 - **Cloud routine limits** — daily run caps (API-fired runs count too);
   local schedule / team runner runs the same pointer prompt when they bind.
-- **Routines fire API is research preview** — dated beta header
-  (`anthropic-beta: experimental-cc-routine-…`), token minting UI-only;
-  expect surface changes (ADR-0016).
+- **Routines fire API is research preview** — surface verified 2026-07-10
+  (`POST …/routines/{trigger-id}/fire`, `anthropic-version: 2023-06-01`,
+  `anthropic-beta: experimental-cc-routine-2026-04-01`, token minting
+  UI-only); `ANTHROPIC_ROUTINES_BETA` overrides the pinned header when it
+  changes (ADR-0016).
 - **Palette duplication** — `@theme` block vs the `widget-artifact` token
   snippet must stay identical (ADR-0007).
