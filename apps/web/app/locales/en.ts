@@ -108,6 +108,16 @@ export const en = {
   "widget.staleTitle": "overdue relative to its schedule",
   "widget.ran": "ran {ago}",
   "widget.never": "never ran",
+  "widget.manual": "manual",
+  "widget.manualTitle": "runs on demand — no schedule",
+  "widget.update": "update {name} now",
+  "widget.updateShort": "update",
+  "widget.updateRequested": "run requested — refresh in a minute",
+  "widget.updateNoTrigger":
+    "no API trigger for this routine — set one up with pnpm routines:sync",
+  "widget.updateFailed": "the run request failed — try again",
+  "widget.copyCommand": "copy the terminal command that runs {name}",
+  "widget.copied": "command copied — run it in a terminal",
   "widget.unreachable": "github unreachable — retries on next refresh",
   "widget.waiting": "waiting for its first run —",
   "widget.disabled": "routine disabled",
@@ -129,11 +139,13 @@ export const en = {
 
   "dialog.title": "Add a routine",
   "dialog.description":
-    "A skill from the catalog, run on a schedule, rendering one widget.",
+    "Describe what the widget shows; a routine keeps it fresh on a schedule or on demand.",
+  "dialog.prompt": "What should this widget show?",
+  "dialog.promptPlaceholder": "Open PRs across our repos, grouped by reviewer…",
   "dialog.skill": "Skill",
-  "dialog.catalogEmpty1": "The catalog is empty — no skill has published a",
-  "dialog.catalogEmpty2":
-    "block yet. Add one to a skill in the shared repo and run",
+  "dialog.skillHint": "(optional — picking one pre-fills size and schedule)",
+  "dialog.sourcePrivate": "private",
+  "dialog.sourceTeam": "team",
   "dialog.name": "Name",
   "dialog.namePlaceholder": "Daily Plan",
   "dialog.slug": "Slug",
@@ -148,12 +160,16 @@ export const en = {
   "dialog.presetDaily8": "daily at 8:00",
   "dialog.presetWeekdays9": "weekdays at 9:00",
   "dialog.presetWeeklyMon9": "weekly, Monday 9:00",
-  "dialog.instructions": "Instructions",
-  "dialog.instructionsHint": "(optional — passed to the skill on every run)",
-  "dialog.instructionsPlaceholder":
-    "Which projects matter, what to ignore, tone…",
+  "dialog.manual": "manual — run on demand",
+  "dialog.host": "Runs on",
+  "dialog.hostCloud": "cloud — a Claude routine",
+  "dialog.hostLocal": "local — your machine",
+  "dialog.hostLocalHint":
+    "local routines run from your machine: scheduled ones enact via pnpm routines:sync, manual ones run with pnpm routine <slug>",
+  "dialog.manualCloudHint":
+    "manual cloud routines fire from the widget's update button via an API trigger — pnpm routines:sync sets it up",
   "dialog.runnerHint":
-    "the schedule runs on {login}'s Claude account — after committing, run pnpm routines:sync against the team repo",
+    "the cloud resource runs on {login}'s Claude account — after committing, run pnpm routines:sync against the team repo",
   "dialog.cancel": "Cancel",
   "dialog.add": "Add to draft",
 

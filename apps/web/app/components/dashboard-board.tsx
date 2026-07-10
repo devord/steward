@@ -329,6 +329,8 @@ export function DashboardBoard({
                           artifact={resolved[widget.routine]}
                           now={now}
                           columns={columns}
+                          scope={view.scope}
+                          dataRepo={view.dataRepo}
                           editing={editing}
                           drag={drag?.slug === widget.routine ? drag : null}
                           onDragStart={(kind, event) =>
@@ -391,7 +393,7 @@ export function DashboardBoard({
       <AddRoutineDialog
         open={adding}
         onOpenChange={setAdding}
-        catalog={view.catalog}
+        skills={view.skills}
         columns={columns}
         existingSlugs={routines.routines.map((r) => r.slug)}
         onAdd={addRoutine}

@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react"
+import { useFetcher } from "react-router"
 
 import type { Routine, Widget, WidgetSize } from "@bulletin/schema"
-import { GRID_MAX_COLS, GRID_MAX_ROWS } from "@bulletin/schema"
-import { Maximize2, X } from "lucide-react"
+import { GRID_MAX_COLS, GRID_MAX_ROWS, routineHost } from "@bulletin/schema"
+import { Check, Copy, Maximize2, RefreshCw, X } from "lucide-react"
 
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
+import type { BoardScope } from "../lib/board.ts"
 import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
@@ -14,6 +16,7 @@ import { frameArtifactHtml } from "../lib/theme.ts"
 import { agoParts, cronIntervalMs } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
 import type { DragKind, GridDrag } from "../lib/use-grid-drag.ts"
+import type { RunResult } from "../routes/run.ts"
 import { WidgetLightbox } from "./widget-lightbox.tsx"
 
 export interface WidgetCardProps {
@@ -24,6 +27,10 @@ export interface WidgetCardProps {
   /** The board's column count — bounds keyboard resize (defaults to the
       grid ceiling for standalone renders like tests). */
   columns?: number
+  /** Which board this card sits on — enables the Update action (ADR-0016).
+      Standalone renders (tests) omit both and get no Update control. */
+  scope?: BoardScope
+  dataRepo?: string
   /** Edit mode: drag to move, corner handle to resize, × to remove. */
   editing?: boolean
   /** This card's active drag, if it is the one being dragged. */
@@ -51,6 +58,8 @@ export function WidgetCard({
   artifact,
   now,
   columns = GRID_MAX_COLS,
+  scope,
+  dataRepo,
   editing = false,
   drag = null,
   onDragStart,
@@ -67,7 +76,9 @@ export function WidgetCard({
     [artifact?.html, theme],
   )
   const lastRunAt = artifact?.lastRunAt ?? null
-  const interval = cronIntervalMs(routine.schedule)
+  // Manual routines have no cadence to be stale against (ADR-0016).
+  const manual = routine.schedule == null
+  const interval = routine.schedule ? cronIntervalMs(routine.schedule) : null
   // Overdue by more than one full interval → the schedule missed a run.
   const stale =
     lastRunAt != null &&
@@ -174,7 +185,9 @@ export function WidgetCard({
               ) : routine.enabled ? (
                 <>
                   {t("widget.waiting")}{" "}
-                  <span className="font-mono">{routine.schedule}</span>
+                  <span className="font-mono">
+                    {routine.schedule ?? t("widget.manual")}
+                  </span>
                 </>
               ) : (
                 t("widget.disabled")
@@ -219,7 +232,19 @@ export function WidgetCard({
                 </Badge>
               )}
               {ranLabel}
+              {manual && (
+                <span title={t("widget.manualTitle")}>
+                  · {t("widget.manual")}
+                </span>
+              )}
             </span>
+            {scope != null && dataRepo != null && routine.enabled && (
+              <UpdateAction
+                routine={routine}
+                scope={scope}
+                dataRepo={dataRepo}
+              />
+            )}
             {/* Peek at full size. Recedes until the card is hovered/focused
               (fine pointers), always shown on touch where there is no hover;
               the reserved slot means no layout shift on reveal. */}
@@ -280,5 +305,101 @@ export function WidgetCard({
         />
       )}
     </>
+  )
+}
+
+/** The reveal-on-hover footer control style the expand button set. */
+const FOOTER_ACTION =
+  "size-5 shrink-0 text-ink-faint transition-opacity hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:size-7 pointer-coarse:opacity-100"
+
+/**
+ * The Update control (ADR-0016). Cloud routines fire their runner-owned API
+ * trigger server-side (/run) — the server reads the trigger token from the
+ * data repo with the clicker's GitHub token, so repo read access is the
+ * whole entitlement. Local routines have no cloud resource to poke: the
+ * button degrades honestly to copying the terminal one-liner.
+ */
+function UpdateAction({
+  routine,
+  scope,
+  dataRepo,
+}: {
+  routine: Routine
+  scope: BoardScope
+  dataRepo: string
+}) {
+  const t = useT()
+  const fetcher = useFetcher<RunResult>()
+  const [copied, setCopied] = useState(false)
+
+  if (routineHost(routine) === "local") {
+    // Works without a bulletin checkout — the raw pointer prompt (ADR-0005);
+    // team boards carry the repo clause (ADR-0010).
+    const clause = scope === "team" ? ` in \`${dataRepo}\`` : ""
+    const command = `claude "Run the bulletin routine \`${routine.slug}\`${clause} — follow the run-routine skill."`
+    const label = copied
+      ? t("widget.copied")
+      : t("widget.copyCommand", { name: routine.name })
+    return (
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label={label}
+        title={label}
+        className={cn(FOOTER_ACTION, copied ? "opacity-100" : "opacity-0")}
+        onClick={() => {
+          void navigator.clipboard.writeText(command)
+          setCopied(true)
+          window.setTimeout(() => setCopied(false), 2500)
+        }}
+      >
+        {copied ? <Check /> : <Copy />}
+        <span role="status" className="sr-only">
+          {copied ? t("widget.copied") : ""}
+        </span>
+      </Button>
+    )
+  }
+
+  const busy = fetcher.state !== "idle"
+  const result = fetcher.data
+  const status =
+    result == null
+      ? null
+      : result.ok
+        ? t("widget.updateRequested")
+        : result.error === "no-trigger"
+          ? t("widget.updateNoTrigger")
+          : t("widget.updateFailed")
+  const label = status ?? t("widget.update", { name: routine.name })
+  return (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      aria-label={label}
+      title={label}
+      disabled={busy}
+      className={cn(
+        FOOTER_ACTION,
+        busy || status != null ? "opacity-100" : "opacity-0",
+        result != null && !result.ok && "text-destructive",
+      )}
+      onClick={() => {
+        void fetcher.submit(JSON.stringify({ scope, slug: routine.slug }), {
+          method: "post",
+          action: "/run",
+          encType: "application/json",
+        })
+      }}
+    >
+      {result?.ok ? (
+        <Check />
+      ) : (
+        <RefreshCw className={cn(busy && "animate-spin")} />
+      )}
+      <span role="status" className="sr-only">
+        {status ?? ""}
+      </span>
+    </Button>
   )
 }
