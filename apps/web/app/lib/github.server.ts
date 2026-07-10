@@ -256,6 +256,7 @@ export async function listDirectory(
 
 const treeSchema = z.object({
   tree: z.array(z.object({ path: z.string(), type: z.string() })),
+  truncated: z.boolean(),
 })
 
 /**
@@ -274,8 +275,17 @@ export async function listTreePaths(
   if (!res.ok) {
     throw new GitHubError(res.status, `${repo} tree → ${res.status}`)
   }
-  const parsed = treeSchema.parse(await res.json())
-  return parsed.tree
+  const parsed = treeSchema.safeParse(await res.json())
+  if (!parsed.success) {
+    throw new GitHubError(422, `${repo} tree → unexpected payload`)
+  }
+  // GitHub caps recursive trees (100k entries / 7MB) and flags the cut with
+  // `truncated` instead of paginating — a partial listing would silently
+  // drop skills, so fail the source loudly and let the caller degrade.
+  if (parsed.data.truncated) {
+    throw new GitHubError(422, `${repo} tree → truncated by GitHub`)
+  }
+  return parsed.data.tree
     .filter((entry) => entry.type === "blob")
     .map((entry) => entry.path)
 }

@@ -20,14 +20,17 @@ When the dispatcher says the run is a **dry run**, publishing means a
 local file instead of a push — the live widget must never see a test run:
 
 ```bash
+set -euo pipefail   # a failed copy must fail the run, not open stale output
 OUT="${TMPDIR:-/tmp}/bulletin-dry/$SLUG.html"
 mkdir -p "$(dirname "$OUT")"
-cp "$ARTIFACT_FILE" "$OUT"
+cp "$ARTIFACT_FILE" "$OUT.tmp" && mv "$OUT.tmp" "$OUT"
 open "$OUT" 2>/dev/null || xdg-open "$OUT" 2>/dev/null || true
 ```
 
-Report the file path, skip everything below (no fetch, no worktree, no
-commit), and note that dry output renders outside the dashboard's
+If any step before the `open` fails, stop and report the failure — never
+open a pre-existing `$OUT` from an earlier run as if it were this run's
+output. Report the file path, skip everything below (no fetch, no
+worktree, no commit), and note that dry output renders outside the dashboard's
 sandboxed iframe (`sandbox="allow-scripts"`, ADR-0002) — sandbox-sensitive
 behavior still needs a real publish.
 

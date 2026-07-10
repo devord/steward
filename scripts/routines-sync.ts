@@ -380,12 +380,20 @@ if (plistPlans.length > 0 || orphanPlists.length > 0) {
     mkdirSync(agentsDir, { recursive: true })
     mkdirSync(logsDir, { recursive: true })
     const uid = process.getuid?.() ?? 501
-    const launchctl = (argv: string[]) => {
+    let launchctlError = ""
+    /** True on success; bootout of a not-loaded agent is routine noise,
+        so callers decide which failures matter. */
+    const launchctl = (argv: string[]): boolean => {
       try {
         execFileSync("launchctl", argv, { stdio: "pipe" })
-      } catch {
-        // bootout of a not-loaded agent is routine; bootstrap failures
-        // surface via the summary below when the plist is bad.
+        return true
+      } catch (error) {
+        const stderr =
+          error instanceof Error && "stderr" in error
+            ? String(Reflect.get(error, "stderr")).trim()
+            : String(error)
+        launchctlError = stderr
+        return false
       }
     }
     for (const plan of plistPlans) {
@@ -398,8 +406,16 @@ if (plistPlans.length > 0 || orphanPlists.length > 0) {
       }
       writeFileSync(plan.plistPath, plan.content)
       launchctl(["bootout", `gui/${uid}/${plan.label}`])
-      launchctl(["bootstrap", `gui/${uid}`, plan.plistPath])
-      console.log(`launchd: ${plan.label} ${current ? "updated" : "created"}`)
+      if (launchctl(["bootstrap", `gui/${uid}`, plan.plistPath])) {
+        console.log(`launchd: ${plan.label} ${current ? "updated" : "created"}`)
+      } else {
+        localErrors.push(
+          `${plan.label}: launchctl bootstrap failed — ${launchctlError}`,
+        )
+        console.error(
+          `launchd: ${plan.label} FAILED to load — ${launchctlError}`,
+        )
+      }
     }
     for (const orphan of orphanPlists) {
       const label = path.basename(orphan, ".plist")
@@ -411,6 +427,22 @@ if (plistPlans.length > 0 || orphanPlists.length > 0) {
 }
 
 // --- Apply: missing trigger tokens (ADR-0016) ----------------------------------
+
+/** A prompt with the echo disabled (stty -echo) — the trigger token is a
+    real secret (ADR-0016) and must not land in scrollback or recordings.
+    Reads the terminal directly so the readline interface stays usable. */
+function questionMasked(query: string): string {
+  return execFileSync(
+    "/bin/sh",
+    [
+      "-c",
+      `printf '%s' "$1" >&2; stty -echo; trap 'stty echo' EXIT; read -r line; printf '\\n' >&2; printf '%s' "$line"`,
+      "sh",
+      query,
+    ],
+    { stdio: ["inherit", "pipe", "inherit"], encoding: "utf8" },
+  )
+}
 
 const missingTriggers = cloudManual.filter((routine) => !hasTrigger(routine))
 if (missingTriggers.length > 0) {
@@ -436,9 +468,7 @@ if (missingTriggers.length > 0) {
         console.log(`  skipped ${routine.slug}`)
         continue
       }
-      const token = (
-        await rl.question(`${routine.slug} — trigger token: `)
-      ).trim()
+      const token = questionMasked(`${routine.slug} — trigger token: `).trim()
       if (!token) {
         console.log(`  skipped ${routine.slug}`)
         continue

@@ -35,7 +35,8 @@ The loop, end to end:
    run `pnpm routine <slug>` in a terminal. Every path is one stable line:
    _"Run the bulletin routine `<slug>` — follow the `run-routine` skill."_
    Everything the run actually does is versioned in the repos, so the
-   cloud resource is created once and never edited.
+   cloud routine's prompt is created once and never edited — the only
+   thing `routines:sync` ever touches on an existing resource is its cron.
 3. **The routine publishes** — the skill produces a self-contained,
    responsive HTML artifact (see
    [docs/widget-standard.md](./docs/widget-standard.md)) and pushes it to

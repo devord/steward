@@ -33,9 +33,11 @@ export const routineSchema = z
      * Per-routine guidance passed to the skill by the run-routine
      * dispatcher — or, with no `skill:`, the routine's whole content brief.
      * Lives here (not in the cloud routine's prompt) so edits are versioned
-     * and never require touching the cloud resource.
+     * and never require touching the cloud resource. Non-empty when present:
+     * a blank prompt would satisfy the skill-or-instructions refine below
+     * while giving the dispatcher nothing to run.
      */
-    instructions: z.string().optional(),
+    instructions: z.string().min(1).optional(),
     /**
      * GitHub login of the account whose Claude account owns this routine's
      * cloud resource — schedule and API trigger alike (ADR-0010/0016).

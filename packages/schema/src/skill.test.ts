@@ -59,6 +59,14 @@ describe("parseRoutineSkill", () => {
     expect(parseRoutineSkill("x", "no frontmatter at all")).toBeNull()
   })
 
+  it("tolerates CRLF line endings and a BOM in the frontmatter", () => {
+    const crlf = SKILL_MD.replaceAll("\n", "\r\n")
+    expect(parseRoutineSkill("daily-plan", crlf)?.id).toBe("daily-plan")
+    expect(parseRoutineSkill("daily-plan", "\uFEFF" + SKILL_MD)?.id).toBe(
+      "daily-plan",
+    )
+  })
+
   it("rejects a non-kebab-case skill directory name", () => {
     const md = `---\ndescription: d\nwidget:\n  artifact: a\n---\n`
     expect(parseRoutineSkill("Daily Plan", md)).toBeNull()
