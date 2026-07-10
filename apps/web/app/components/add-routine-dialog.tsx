@@ -160,7 +160,7 @@ export function AddRoutineDialog({
                     key={entry.id}
                     type="button"
                     onClick={() => pickSkill(entry)}
-                    className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:bg-muted ${
+                    className={`cursor-pointer rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:bg-muted ${
                       entry.id === skillId
                         ? "border-primary bg-muted"
                         : "border-border"

@@ -216,8 +216,14 @@ function Dashboard({
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
-      <AppHeader>
+      <AppHeader className="gap-x-2">
         <Wordmark className="text-sm" />
+        <span
+          aria-hidden
+          className="hidden font-mono text-xs text-ink-faint md:inline"
+        >
+          ·
+        </span>
         <a
           href={`https://github.com/${view.dataRepo}`}
           target="_blank"
@@ -226,60 +232,73 @@ function Dashboard({
         >
           {view.dataRepo}
         </a>
-        <div className="ml-auto flex items-center gap-1">
-          {draft && (
-            <HeaderAction
-              variant="outline"
-              className="gap-2 font-mono text-xs sm:mr-2"
-              label={t("header.unsynced")}
-              icon={
-                <span aria-hidden className="size-1.5 rounded-full bg-yellow" />
-              }
-              onClick={() => setSyncing(true)}
-            />
-          )}
-          <HeaderAction
-            variant="ghost"
-            className="text-ink-dim hover:text-foreground"
-            label={t("header.addRoutine")}
-            icon={<Plus />}
-            onClick={() => setAdding(true)}
-          />
-          <HeaderAction
-            variant={editing ? "secondary" : "ghost"}
-            className={
-              editing ? undefined : "text-ink-dim hover:text-foreground"
-            }
-            aria-pressed={editing}
-            label={editing ? t("header.done") : t("header.editLayout")}
-            icon={<LayoutGrid />}
-            onClick={() => setEditing((value) => !value)}
-          />
-          <Link
-            to="/settings"
-            aria-label={t("header.settings")}
-            title={t("header.settings")}
-            className={cn(
-              buttonVariants({ size: "icon-sm", variant: "ghost" }),
-              "text-ink-dim hover:text-foreground",
+
+        {/* Two clusters, one divider: board actions | account. Spacing is
+            tighter within a cluster (gap-1) than between them (gap-3), so
+            the grouping reads without extra ornament. */}
+        <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            {draft && (
+              <HeaderAction
+                variant="outline"
+                className="gap-2 font-mono text-xs"
+                label={t("header.unsynced")}
+                icon={
+                  <span
+                    aria-hidden
+                    className="size-1.5 rounded-full bg-yellow"
+                  />
+                }
+                onClick={() => setSyncing(true)}
+              />
             )}
-          >
-            <Settings className="size-3.5" />
-          </Link>
-          <Separator orientation="vertical" className="mx-2 h-4!" />
-          <span className="hidden font-mono text-xs text-ink-faint md:inline">
-            {login}
-          </span>
-          <Form method="post" action="/auth/logout">
-            <Button
-              size="sm"
+            <HeaderAction
               variant="ghost"
-              type="submit"
-              className="text-ink-faint hover:text-foreground"
+              className="text-ink-dim hover:text-foreground"
+              label={t("header.addRoutine")}
+              icon={<Plus />}
+              onClick={() => setAdding(true)}
+            />
+            <HeaderAction
+              variant={editing ? "secondary" : "ghost"}
+              className={
+                editing ? undefined : "text-ink-dim hover:text-foreground"
+              }
+              aria-pressed={editing}
+              label={editing ? t("header.done") : t("header.editLayout")}
+              icon={<LayoutGrid />}
+              onClick={() => setEditing((value) => !value)}
+            />
+          </div>
+
+          <Separator orientation="vertical" className="h-4!" />
+
+          <div className="flex items-center gap-1">
+            <Link
+              to="/settings"
+              aria-label={t("header.settings")}
+              title={t("header.settings")}
+              className={cn(
+                buttonVariants({ size: "icon-sm", variant: "ghost" }),
+                "text-ink-dim hover:text-foreground",
+              )}
             >
-              {t("header.signOut")}
-            </Button>
-          </Form>
+              <Settings className="size-3.5" />
+            </Link>
+            <span className="hidden px-1 font-mono text-xs text-ink-faint md:inline">
+              {login}
+            </span>
+            <Form method="post" action="/auth/logout">
+              <Button
+                size="sm"
+                variant="ghost"
+                type="submit"
+                className="text-ink-faint hover:text-foreground"
+              >
+                {t("header.signOut")}
+              </Button>
+            </Form>
+          </div>
         </div>
       </AppHeader>
 
