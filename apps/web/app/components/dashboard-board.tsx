@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useState } from "react"
-import { Form, useFetcher, useNavigate, useRevalidator } from "react-router"
+import { useFetcher, useNavigate, useRevalidator } from "react-router"
 
 import type { Routine, WidgetSize } from "@bulletin/schema"
 import { dashboardPath, GRID_MAX_COLS } from "@bulletin/schema"
-import { LayoutGrid, Plus, Settings, Trash2 } from "lucide-react"
+import { Plus } from "lucide-react"
 
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
-import { AppHeader } from "./app-header.tsx"
-import { DashboardSwitcher } from "./dashboard-switcher.tsx"
-import { Wordmark } from "./logo.tsx"
+import { DashboardHeader } from "./dashboard-header.tsx"
 import { SyncPanel } from "./sync-panel.tsx"
 import { WidgetCard } from "./widget-card.tsx"
-import { Button, buttonVariants } from "~/components/ui/button"
+import { Button } from "~/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -20,8 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog"
-import { Link } from "~/components/ui/link"
-import { Separator } from "~/components/ui/separator"
 import { cn } from "~/lib/utils"
 import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import { cssVars } from "../lib/css.ts"
@@ -208,112 +204,21 @@ export function DashboardBoard({
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
-      <AppHeader className="gap-x-2">
-        <Wordmark className="text-sm" />
-        <span
-          aria-hidden
-          className="hidden font-mono text-xs text-ink-faint md:inline"
-        >
-          ·
-        </span>
-        <a
-          href={`https://github.com/${view.dataRepo}`}
-          target="_blank"
-          rel="noreferrer"
-          className="hidden font-mono text-xs text-ink-faint transition-colors hover:text-foreground md:inline"
-        >
-          {view.dataRepo}
-        </a>
-        <span
-          aria-hidden
-          className="hidden font-mono text-xs text-ink-faint md:inline"
-        >
-          ·
-        </span>
-        <DashboardSwitcher
-          scope={view.scope}
-          dashboardSlug={view.dashboardSlug}
-          personalDashboards={personalDashboards}
-          teamDashboards={teamDashboards}
-        />
-
-        {/* Two clusters, one divider: board actions | account. Spacing is
-            tighter within a cluster (gap-1) than between them (gap-3), so
-            the grouping reads without extra ornament. */}
-        <div className="ml-auto flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            {draft && (
-              <HeaderAction
-                variant="outline"
-                className="gap-2 font-mono text-xs"
-                label={t("header.unsynced")}
-                icon={
-                  <span
-                    aria-hidden
-                    className="size-1.5 rounded-full bg-yellow"
-                  />
-                }
-                onClick={() => setSyncing(true)}
-              />
-            )}
-            <HeaderAction
-              variant="ghost"
-              className="text-ink-dim hover:text-foreground"
-              label={t("header.addRoutine")}
-              icon={<Plus />}
-              onClick={() => setAdding(true)}
-            />
-            <HeaderAction
-              variant={editing ? "secondary" : "ghost"}
-              className={
-                editing ? undefined : "text-ink-dim hover:text-foreground"
-              }
-              aria-pressed={editing}
-              label={editing ? t("header.done") : t("header.editLayout")}
-              icon={<LayoutGrid />}
-              onClick={() => setEditing((value) => !value)}
-            />
-            {editing && deletable && (
-              <HeaderAction
-                variant="ghost"
-                className="text-ink-dim hover:text-red"
-                label={t("board.deleteDashboard")}
-                icon={<Trash2 />}
-                onClick={() => setDeleting(true)}
-              />
-            )}
-          </div>
-
-          <Separator orientation="vertical" className="h-4! self-center!" />
-
-          <div className="flex items-center gap-1">
-            <Link
-              to="/settings"
-              aria-label={t("header.settings")}
-              title={t("header.settings")}
-              className={cn(
-                buttonVariants({ size: "icon-sm", variant: "ghost" }),
-                "text-ink-dim hover:text-foreground",
-              )}
-            >
-              <Settings className="size-3.5" />
-            </Link>
-            <span className="hidden px-1 font-mono text-xs text-ink-faint md:inline">
-              {login}
-            </span>
-            <Form method="post" action="/auth/logout">
-              <Button
-                size="sm"
-                variant="ghost"
-                type="submit"
-                className="text-ink-faint hover:text-foreground"
-              >
-                {t("header.signOut")}
-              </Button>
-            </Form>
-          </div>
-        </div>
-      </AppHeader>
+      <DashboardHeader
+        dataRepo={view.dataRepo}
+        scope={view.scope}
+        dashboardSlug={view.dashboardSlug}
+        personalDashboards={personalDashboards}
+        teamDashboards={teamDashboards}
+        login={login}
+        hasDraft={draft != null}
+        editing={editing}
+        deletable={deletable}
+        onSync={() => setSyncing(true)}
+        onAdd={() => setAdding(true)}
+        onToggleEdit={() => setEditing((value) => !value)}
+        onDelete={() => setDeleting(true)}
+      />
 
       {editing && (
         <p className="-mt-2 mb-3 hidden font-mono text-[11px] text-ink-faint min-[1100px]:block">
@@ -500,32 +405,6 @@ function DeleteDashboardDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-/**
- * A header button that collapses to its icon on phones: the label goes
- * sr-only and the button squares off, so the action row holds one line
- * on a 360px viewport. The label is still the accessible name.
- */
-function HeaderAction({
-  icon,
-  label,
-  className,
-  ...props
-}: React.ComponentProps<typeof Button> & {
-  icon: React.ReactNode
-  label: string
-}) {
-  return (
-    <Button
-      size="sm"
-      className={cn("max-sm:aspect-square max-sm:px-0", className)}
-      {...props}
-    >
-      {icon}
-      <span className="max-sm:sr-only">{label}</span>
-    </Button>
   )
 }
 
