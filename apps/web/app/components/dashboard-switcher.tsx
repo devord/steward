@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useFetcher, useNavigate } from "react-router"
 
 import { slugSchema } from "@bulletin/schema"
@@ -150,20 +150,23 @@ export function NewDashboardDialog({
   const busy = fetcher.state !== "idle"
   const canSubmit = name.trim().length > 0 && slugValid && !slugTaken && !busy
 
-  function reset() {
+  const reset = useCallback(() => {
     setScope(defaultScope)
     setName("")
     setSlugEdited(false)
     setSlug("")
-  }
+  }, [defaultScope])
 
-  // A successful create closes the dialog and navigates to the new board.
+  // A successful create resets + closes the dialog and navigates to the
+  // new board. Every close path must reset, or the next open shows stale
+  // fields — Escape/backdrop resets via the Dialog wrapper below.
   const createdSlug = fetcher.data?.ok ? fetcher.data.slug : undefined
   useEffect(() => {
     if (!createdSlug || !open) return
+    reset()
     onOpenChange(false)
     void navigate(boardHref(effectiveScope, createdSlug))
-  }, [createdSlug, open, effectiveScope, onOpenChange, navigate])
+  }, [createdSlug, open, effectiveScope, onOpenChange, navigate, reset])
 
   function submit() {
     if (!canSubmit) return
@@ -256,7 +259,13 @@ export function NewDashboardDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              reset()
+              onOpenChange(false)
+            }}
+          >
             {t("dialog.cancel")}
           </Button>
           <Button disabled={!canSubmit} onClick={submit}>

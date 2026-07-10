@@ -84,6 +84,17 @@ const repo =
     : inferRepo(path.dirname(file))
 const login = ghLogin()
 
+// Fail closed: with a known target repo but no gh login we cannot tell
+// personal from team mode — guessing personal would sync a team file's
+// every entry as unclaused personal schedules under the wrong ownership.
+if (repo != null && login == null) {
+  console.error(
+    `routines-sync: can't determine the gh login (is \`gh\` authenticated?),\n` +
+      `so ${repo} can't be classified as personal or team. Run \`gh auth login\`.`,
+  )
+  process.exit(1)
+}
+
 // Team mode: the target repo is not the signed-in user's own data repo.
 // The naming convention mirrors the app's resolveDataRepo (ADR-0001).
 const teamMode =
