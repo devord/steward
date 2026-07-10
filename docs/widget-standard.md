@@ -40,7 +40,11 @@ An artifact MUST:
    the iframe (ADR-0009) — hard-coded hexes won't retheme.
 4. **Carry its generation time**:
    `<meta name="widget-generated-at" content="<ISO-8601>">` plus a visible
-   compact timestamp in a footer.
+   compact timestamp in a `<footer>`. That footer is the artifact's
+   _standalone_ chrome — for when it's opened raw. On the dashboard the
+   widget-card footer already shows the routine name and freshness, so the
+   frame hides the artifact's own `<footer>` to avoid writing the identity
+   and run time twice.
 5. **Degrade gracefully** when data is missing — an empty state is part of
    the artifact, not an error.
 

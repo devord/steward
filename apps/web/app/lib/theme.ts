@@ -494,10 +494,24 @@ export function artifactThemeStyle(name: ThemeName): string | null {
   return `<style data-bulletin-theme>:root{${vars};color-scheme:${mode}}</style>`
 }
 
-/** Append the theme override to an artifact document (no-op on the default). */
-export function themeArtifactHtml(html: string, name: ThemeName): string {
-  const style = artifactThemeStyle(name)
-  return style ? html + style : html
+/**
+ * Frame an artifact for the dashboard grid. Two jobs:
+ *
+ *  - Hide the artifact's own footer. That slug + generated-at line is the
+ *    artifact's standalone chrome (widget-standard §4, for when it's opened
+ *    raw); on the board the WidgetCard footer already carries the routine
+ *    name and freshness, so leaving both visible writes the identity and the
+ *    run time twice, one row above the other.
+ *  - Append the active theme override (a no-op string on the default).
+ *
+ * Only this embedded path suppresses the footer; a raw view of the artifact
+ * keeps it.
+ */
+const EMBED_FRAME_STYLE =
+  "<style data-bulletin-embed>footer{display:none !important}</style>"
+
+export function frameArtifactHtml(html: string, name: ThemeName): string {
+  return html + EMBED_FRAME_STYLE + artifactThemeStyle(name)
 }
 
 /**
