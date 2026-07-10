@@ -73,9 +73,16 @@ export function DashboardSwitcher({
           aria-label={t("switcher.label")}
           className="gap-1 rounded-md border-none bg-transparent! px-1.5 font-mono text-xs text-ink-dim shadow-none transition-colors hover:bg-muted! hover:text-foreground aria-expanded:bg-muted! aria-expanded:text-foreground [&_svg]:size-3.5 [&_svg]:text-ink-faint"
         >
-          <SelectValue />
+          {/* The value encodes scope + slug; show only the board name — the
+              repo attribution beside the switcher already carries the scope,
+              so `team:` / `personal:` here would just be enum noise. */}
+          <SelectValue>
+            {(value) =>
+              typeof value === "string" ? (value.split(":")[1] ?? value) : null
+            }
+          </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent align="start" alignItemWithTrigger={false}>
           <SelectGroup>
             <SelectLabel>{t("switcher.personal")}</SelectLabel>
             {personalDashboards.map((slug) => (
@@ -95,7 +102,12 @@ export function DashboardSwitcher({
             </SelectGroup>
           )}
           <SelectSeparator />
-          <SelectItem value={NEW_VALUE}>{t("switcher.new")}</SelectItem>
+          {/* Grouped like the board rows above so its text and highlight
+              share the same horizontal inset — an ungrouped item would sit
+              a few px to the left of them. */}
+          <SelectGroup>
+            <SelectItem value={NEW_VALUE}>{t("switcher.new")}</SelectItem>
+          </SelectGroup>
         </SelectContent>
       </Select>
 
