@@ -30,6 +30,13 @@ export const routineSchema = z.object({
 /** Shape of data/routines.yaml in a user's data repo. */
 export const routinesFileSchema = z.object({
   routines: z.array(routineSchema),
+  /**
+   * Repo-level opt-in for the "Run now" button and its `workflow_dispatch`
+   * trigger (ADR-0012). Off by default: manual runs spend a stored Claude
+   * credential, so the capability is enabled deliberately, per data repo,
+   * and only takes effect once the run-routine workflow + secret exist.
+   */
+  manualRun: z.boolean().default(false),
 })
 
 export type Routine = z.infer<typeof routineSchema>

@@ -124,7 +124,7 @@ export async function loadDashboardStructure(
 
   const routines = routinesRaw
     ? parseRoutinesFile(routinesRaw.text)
-    : { routines: [] }
+    : { routines: [], manualRun: false }
   const dashboard = dashboardRaw
     ? parseDashboardFile(dashboardRaw.text)
     : // Schema defaults fill grid.columns/rowHeight — one source of truth.

@@ -357,3 +357,79 @@ export function createPullRequest(
     body: JSON.stringify(options),
   })
 }
+
+/**
+ * Fire a `workflow_dispatch` for the "Run now" trigger (ADR-0012). The API
+ * answers 204 with no body — nothing to parse, and no run id, so callers poll
+ * `listWorkflowRuns` to find the run this kicked off. `ref` is the branch the
+ * workflow lives on (the data repo's default), not anything about the routine.
+ */
+export async function dispatchWorkflow(
+  token: string,
+  repo: string,
+  workflowFile: string,
+  ref: string,
+  inputs: Record<string, string>,
+): Promise<void> {
+  const res = await gh(
+    token,
+    `/repos/${repo}/actions/workflows/${encodeURIComponent(workflowFile)}/dispatches`,
+    { method: "POST", body: JSON.stringify({ ref, inputs }) },
+  )
+  if (!res.ok) {
+    // 404 here usually means the workflow file isn't on the default branch yet
+    // (repo predates ADR-0012) — surface it as-is; the route maps it to a hint.
+    throw new GitHubError(
+      res.status,
+      `dispatch ${repo}/${workflowFile} → ${res.status}`,
+    )
+  }
+}
+
+const workflowRunsSchema = z.object({
+  workflow_runs: z.array(
+    z.object({
+      id: z.number(),
+      /** `run-name` from the workflow — carries the slug so we can match. */
+      name: z.string().nullable(),
+      /** queued | in_progress | completed. */
+      status: z.string().nullable(),
+      /** success | failure | cancelled | … once status is completed. */
+      conclusion: z.string().nullable(),
+      html_url: z.string(),
+      created_at: z.string(),
+    }),
+  ),
+})
+
+export type WorkflowRun = z.infer<
+  typeof workflowRunsSchema
+>["workflow_runs"][number]
+
+/**
+ * Recent `workflow_dispatch` runs of one workflow, newest first — the poll
+ * side of "Run now" (ADR-0012). The caller matches by `run-name` (which holds
+ * the slug) and `created_at`, since dispatch returns no run id to track.
+ *
+ * `createdSince` (an ISO instant) applies the API's `created=>=…` filter so a
+ * burst of dispatches for *other* slugs can't push the target run off the
+ * first page and leave the poll blind.
+ */
+export async function listWorkflowRuns(
+  token: string,
+  repo: string,
+  workflowFile: string,
+  options: { perPage?: number; createdSince?: string } = {},
+): Promise<WorkflowRun[]> {
+  const search = new URLSearchParams({
+    event: "workflow_dispatch",
+    per_page: String(options.perPage ?? 30),
+  })
+  if (options.createdSince) search.set("created", `>=${options.createdSince}`)
+  const result = await ghJson(
+    token,
+    `/repos/${repo}/actions/workflows/${encodeURIComponent(workflowFile)}/runs?${search}`,
+    workflowRunsSchema,
+  )
+  return result.workflow_runs
+}

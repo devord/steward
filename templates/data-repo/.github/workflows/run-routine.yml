@@ -1,0 +1,152 @@
+# Run a bulletin routine on demand (ADR-0012).
+#
+# This is the "Run now" executor. The Bulletin dashboard dispatches it (or you
+# can from the Actions tab / `gh workflow run run-routine.yml -f slug=<slug>`).
+# It fires the SAME stable pointer prompt as the scheduled cloud routine, so a
+# manual run and a scheduled run take the identical dispatcher path.
+#
+# Two gates, both required (ADR-0012):
+#   1. `manualRun: true` in data/routines.yaml — the app only shows the button
+#      when this is set; a direct dispatch is still cheap to leave on.
+#   2. A Claude credential secret: ANTHROPIC_API_KEY (metered API) OR
+#      CLAUDE_CODE_OAUTH_TOKEN (a subscription's headless token). Add whichever
+#      matches how you want the run billed; without one, the job stops.
+name: Run routine
+
+# The run name carries the slug so the dashboard can find *this* run in the
+# Actions API (workflow_dispatch returns no run id) and poll its status.
+run-name: "run-routine ${{ inputs.slug }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: Routine slug to run now
+        required: true
+        type: string
+
+# One in-flight run per slug; the rest queue so two runs never race to publish
+# the same artifact (ADR-0012). Not cancel-in-progress: a running publish
+# should finish, not be killed.
+concurrency:
+  group: run-routine-${{ inputs.slug }}
+  cancel-in-progress: false
+
+env:
+  # Which ref of the shared Bulletin repo supplies the skills (run-routine,
+  # publish-widget, widget-artifact, and the per-routine skills). Skills are
+  # not packaged — they live only in the code repo — so we check it out and
+  # run against it. Pin to a release tag for stability; main tracks latest.
+  BULLETIN_REPO: Form-Factory/bulletin
+  BULLETIN_REF: main
+  # Skip a run when the widget was published more recently than this, so the
+  # button can't be spammed into burning tokens or racing publishes.
+  COOLDOWN_MINUTES: "5"
+  # Which Claude Code CLI to install. Pin to an exact version (e.g. "1.2.3")
+  # for a fully reproducible manual path — matching the ADR's pinning intent;
+  # "latest" tracks the newest release.
+  CLAUDE_CLI_VERSION: latest
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      # publish-widget pushes the artifact to the `artifacts` branch of THIS
+      # repo; the checkout's GITHUB_TOKEN needs write to do that.
+      contents: write
+    steps:
+      - name: Gate — credential present and slug well-formed
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          SLUG: ${{ inputs.slug }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANTHROPIC_API_KEY}" ] && [ -z "${CLAUDE_CODE_OAUTH_TOKEN}" ]; then
+            echo "::error::No Claude credential. Add ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN to enable manual runs (ADR-0012)."
+            exit 1
+          fi
+          # The app validates the slug, but a hand-fired dispatch might not.
+          # Enforce kebab-case before it ever reaches a path or git command.
+          if ! printf '%s' "${SLUG}" | grep -Eq '^[a-z0-9]+(-[a-z0-9]+)*$'; then
+            echo "::error::Slug '${SLUG}' is not kebab-case."
+            exit 1
+          fi
+
+      # Cooldown runs before any checkout — it needs only GITHUB_REPOSITORY +
+      # gh api, so a skipped run costs no checkout I/O (esp. the data repo's
+      # full-history clone).
+      - name: Cooldown guard
+        id: cooldown
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SLUG: ${{ inputs.slug }}
+        run: |
+          set -euo pipefail
+          # `// empty` maps a null/absent date (no publish history yet) to an
+          # empty string, so `date -d` below never runs on the literal "null"
+          # and abort the job under `set -e`.
+          last=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/commits?sha=artifacts&path=w/${SLUG}/index.html&per_page=1" \
+            --jq '.[0].commit.committer.date // empty' 2>/dev/null || true)
+          if [ -n "${last}" ]; then
+            age=$(( ( $(date -u +%s) - $(date -u -d "${last}" +%s) ) / 60 ))
+            if [ "${age}" -lt "${COOLDOWN_MINUTES}" ]; then
+              echo "::notice::Skipped — '${SLUG}' published ${age}m ago (< ${COOLDOWN_MINUTES}m cooldown, ADR-0012)."
+              echo "skip=true" >> "${GITHUB_OUTPUT}"
+            fi
+          fi
+
+      - name: Check out data repo (config + publish target)
+        if: steps.cooldown.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          path: data-repo
+          # Full history so publish-widget can fetch/update the artifacts branch.
+          fetch-depth: 0
+
+      - name: Check out shared Bulletin repo (skills)
+        if: steps.cooldown.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BULLETIN_REPO }}
+          ref: ${{ env.BULLETIN_REF }}
+          path: bulletin
+          # The shared Bulletin repo is private in the standard deployment, and
+          # this data repo's default GITHUB_TOKEN can't read another repo — so
+          # a read-scoped PAT is REQUIRED there: add it as BULLETIN_REPO_TOKEN
+          # and uncomment the line below. (Only omit it if your shared repo is
+          # public.)
+          # token: ${{ secrets.BULLETIN_REPO_TOKEN }}
+
+      - name: Run the routine
+        if: steps.cooldown.outputs.skip != 'true'
+        working-directory: data-repo
+        env:
+          # Whichever is set authenticates the CLI; the other is empty.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # publish-widget pushes over https using the checkout's stored token.
+          GH_TOKEN: ${{ github.token }}
+          SLUG: ${{ inputs.slug }}
+          DATA_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # The dispatcher finds the data repo by its working dir, and loads
+          # skills from `.claude/skills`. Copy the shared repo's skills in so a
+          # single working dir has both — no reliance on an ambient checkout.
+          mkdir -p .claude
+          cp -R "${GITHUB_WORKSPACE}/bulletin/.claude/skills" .claude/skills
+          # Identity for the publish commit publish-widget makes.
+          git config user.name "bulletin[bot]"
+          git config user.email "bulletin[bot]@users.noreply.github.com"
+
+          npm install -g "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}"
+
+          # The team-form pointer prompt (ADR-0010) names the data repo, which
+          # is correct for personal repos too — it just pins which repo is the
+          # data repo. Headless, non-interactive; this is a trusted ephemeral
+          # runner, so tool permissions are skipped.
+          claude -p \
+            "Run the bulletin routine ${SLUG} in ${DATA_REPO} — follow the run-routine skill." \
+            --dangerously-skip-permissions

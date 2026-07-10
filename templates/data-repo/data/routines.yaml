@@ -10,3 +10,8 @@ routines:
     instructions: |
       Replace me: which projects matter, what to ignore, tone.
     enabled: false
+# Opt in to the "Run now" button (ADR-0012). Off by default: a manual run
+# spends a stored Claude credential, so turn it on deliberately and only once
+# the run-routine workflow and its ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN
+# secret are in place (see README → "Running a routine now").
+manualRun: false

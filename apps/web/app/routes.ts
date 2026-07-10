@@ -8,6 +8,7 @@ export default [
   route("settings", "routes/settings.tsx"),
   route("setup", "routes/setup.tsx"),
   route("sync", "routes/sync.ts"),
+  route("run", "routes/run.ts"),
   route("dashboards", "routes/dashboards.ts"),
   route("auth/login", "routes/auth.login.ts"),
   route("auth/callback", "routes/auth.callback.ts"),

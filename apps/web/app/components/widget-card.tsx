@@ -2,17 +2,19 @@ import { useMemo, useState } from "react"
 
 import type { Routine, Widget, WidgetSize } from "@bulletin/schema"
 import { GRID_MAX_COLS, GRID_MAX_ROWS } from "@bulletin/schema"
-import { Maximize2, X } from "lucide-react"
+import { AlertTriangle, Loader2, Maximize2, Play, X } from "lucide-react"
 
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
+import type { BoardScope } from "../lib/board.ts"
 import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
 import { frameArtifactHtml } from "../lib/theme.ts"
 import { agoParts, cronIntervalMs } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
+import { useRunNow } from "../lib/use-run-now.ts"
 import type { DragKind, GridDrag } from "../lib/use-grid-drag.ts"
 import { WidgetLightbox } from "./widget-lightbox.tsx"
 
@@ -26,6 +28,10 @@ export interface WidgetCardProps {
   columns?: number
   /** Edit mode: drag to move, corner handle to resize, × to remove. */
   editing?: boolean
+  /** Board scope, so a "Run now" click dispatches against the right repo. */
+  scope?: BoardScope
+  /** Show the "Run now" button — repo opted in (manualRun) and routine enabled. */
+  canRun?: boolean
   /** This card's active drag, if it is the one being dragged. */
   drag?: GridDrag | null
   onDragStart?: (kind: DragKind, event: React.PointerEvent) => void
@@ -52,6 +58,8 @@ export function WidgetCard({
   now,
   columns = GRID_MAX_COLS,
   editing = false,
+  scope,
+  canRun = false,
   drag = null,
   onDragStart,
   onMove,
@@ -207,6 +215,13 @@ export function WidgetCard({
           </footer>
         ) : (
           <footer className="flex items-center gap-2 border-t border-border-dim py-[3px] pr-1 pl-2 text-[11px]">
+            {canRun && scope && (
+              <RunNowButton
+                scope={scope}
+                slug={routine.slug}
+                name={routine.name}
+              />
+            )}
             <span className="truncate text-ink-dim">{routine.name}</span>
             <span className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-ink-faint">
               {stale && (
@@ -280,5 +295,60 @@ export function WidgetCard({
         />
       )}
     </>
+  )
+}
+
+/**
+ * "Run now" (ADR-0012): dispatch this routine's workflow and reflect the run.
+ * Disabled while triggering/running (spinner); re-enabled on every terminal
+ * state — a failed run stays clickable to retry, cooldown clears itself.
+ */
+function RunNowButton({
+  scope,
+  slug,
+  name,
+}: {
+  scope: BoardScope
+  slug: string
+  name: string
+}) {
+  const t = useT()
+  const { phase, note, run } = useRunNow(scope, slug)
+  const busy = phase === "triggering" || phase === "running"
+  const failed = phase === "failed"
+  const Icon = busy ? Loader2 : failed ? AlertTriangle : Play
+  // On cooldown `note` carries the seconds remaining; show them concretely.
+  const cooldownSecs = phase === "cooldown" && note ? Number(note) : null
+  const status = busy
+    ? t("widget.running")
+    : failed
+      ? t("widget.runFailed")
+      : phase === "cooldown"
+        ? cooldownSecs
+          ? t("widget.runCooldownIn", { secs: cooldownSecs })
+          : t("widget.runCooldown")
+        : t("widget.run")
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      disabled={busy || phase === "cooldown"}
+      title={status}
+      // Screen readers read aria-label over title, so mirror the run state
+      // there too — otherwise assistive tech never hears running/failed/cooldown.
+      aria-label={
+        phase === "idle" ? t("widget.runAria", { name }) : `${name} — ${status}`
+      }
+      className={cn(
+        "size-5 shrink-0 text-ink-faint hover:bg-orange/10 hover:text-orange pointer-coarse:size-7",
+        failed &&
+          "text-destructive hover:text-destructive hover:bg-destructive/10",
+      )}
+      // Failure stays clickable to retry (the run is also in the Actions tab).
+      onClick={() => run()}
+    >
+      <Icon className={cn(busy && "animate-spin")} />
+    </Button>
   )
 }

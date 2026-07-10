@@ -330,6 +330,10 @@ export function DashboardBoard({
                           now={now}
                           columns={columns}
                           editing={editing}
+                          scope={view.scope}
+                          // Committed opt-in (view, not draft): the workflow +
+                          // secret track main; a disabled routine no-ops a run.
+                          canRun={view.routines.manualRun && routine.enabled}
                           drag={drag?.slug === widget.routine ? drag : null}
                           onDragStart={(kind, event) =>
                             startDrag(widget.routine, kind, event)
