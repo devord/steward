@@ -1,6 +1,6 @@
 import { data, Link, useFetcher } from "react-router"
 
-import { Check } from "lucide-react"
+import { ArrowLeft, Check } from "lucide-react"
 
 import type { Route } from "./+types/settings"
 import { AppHeader } from "../components/app-header.tsx"
@@ -17,6 +17,7 @@ import {
   useT,
 } from "../lib/i18n.tsx"
 import { getLocale, localeCookie } from "../lib/locale.server.ts"
+import { buttonVariants } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
 
 export function loader({ request }: Route.LoaderArgs) {
@@ -52,24 +53,22 @@ export default function Settings(_props: Route.ComponentProps) {
   return (
     <div className="mx-auto max-w-2xl px-4 pb-16 sm:px-6">
       <AppHeader className="mb-8 gap-x-2">
-        <Link
-          to="/"
-          className="rounded-md transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-          aria-label={t("settings.back")}
-        >
-          <Wordmark className="text-sm" />
-        </Link>
-        <span aria-hidden className="font-mono text-sm text-ink-faint">
-          /
+        <Wordmark className="text-sm" />
+        <span aria-hidden className="font-mono text-xs text-ink-faint">
+          ·
         </span>
-        <h1 className="font-mono text-sm text-ink-dim">
+        <h1 className="font-mono text-xs text-ink-dim">
           {t("settings.title")}
         </h1>
         <Link
           to="/"
-          className="ml-auto py-1 font-mono text-xs text-ink-faint transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className={cn(
+            buttonVariants({ size: "sm", variant: "ghost" }),
+            "ml-auto text-ink-dim hover:text-foreground",
+          )}
         >
-          ← {t("settings.back")}
+          <ArrowLeft data-icon="inline-start" />
+          {t("settings.back")}
         </Link>
       </AppHeader>
 
@@ -137,7 +136,7 @@ function LanguageSettings() {
               void fetcher.submit({ locale: option.value }, { method: "post" })
             }
             className={cn(
-              "flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+              "flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
               selected
                 ? "border-primary text-foreground"
                 : "border-border-dim text-ink-dim hover:border-border hover:bg-bg2 hover:text-foreground",

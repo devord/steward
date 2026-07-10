@@ -46,7 +46,7 @@ const MODE_HINT = {
 
 /** Shared tile chrome: bordered card, quiet until active. */
 const TILE_BASE =
-  "group flex flex-col gap-1.5 rounded-lg border p-1.5 text-left transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+  "group flex cursor-pointer flex-col gap-1.5 rounded-lg border p-1.5 text-left transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 const TILE_ACTIVE = "border-primary"
 const TILE_IDLE = "border-border-dim hover:border-border hover:bg-bg2"
 
@@ -239,7 +239,7 @@ export function AppearanceSettings() {
                 }}
                 onKeyDown={handleRadioKeydown}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 font-mono text-xs transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 font-mono text-xs transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                   active
                     ? "bg-secondary text-foreground"
                     : "text-ink-dim hover:text-foreground",
@@ -294,7 +294,7 @@ export function AppearanceSettings() {
           type="button"
           aria-expanded={mixOpen}
           onClick={() => setMixOpen((v) => !v)}
-          className="inline-flex items-center gap-1.5 self-start rounded-md font-mono text-xs text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-md font-mono text-xs text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <span
             aria-hidden
@@ -330,7 +330,7 @@ export function AppearanceSettings() {
                     onClick={() => setEditSlot(slot)}
                     onKeyDown={handleRadioKeydown}
                     className={cn(
-                      "flex min-w-0 flex-1 items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                      "flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                       active ? "border-primary bg-bg1" : TILE_IDLE,
                     )}
                   >
