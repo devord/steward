@@ -13,6 +13,18 @@ export interface SessionData {
   dataRepo?: string
   /** OAuth CSRF state, only present mid-login. */
   oauthState?: string
+  /** Device-flow state, only present between requesting a code and polling. */
+  device?: {
+    /** Secret polled for the token — never rendered. */
+    code: string
+    /** The code the person types on github.com. */
+    userCode: string
+    verificationUri: string
+    /** Seconds to wait between polls; grows on `slow_down`. */
+    interval: number
+    /** Epoch ms when the code stops working. */
+    expiresAt: number
+  }
 }
 
 const storage = createCookieSessionStorage<SessionData>({

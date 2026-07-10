@@ -12,6 +12,22 @@ export const ptBR: Messages = {
   "landing.signIn": "Entrar com GitHub",
   "landing.privacy":
     "Tudo vive em um repo privado do GitHub que é seu — o app não guarda nada.",
+  "landing.deviceLink": "Entrar com um código de dispositivo",
+
+  "device.title": "Entrar com um código de dispositivo",
+  "device.intro":
+    "Para builds de preview e qualquer lugar que o redirect do GitHub não alcança — você recebe um código curto para digitar no github.com.",
+  "device.start": "Obter um código",
+  "device.starting": "Obtendo um código…",
+  "device.enterCode": "Digite este código no GitHub:",
+  "device.copy": "Copiar código",
+  "device.copied": "Copiado",
+  "device.openLink": "Abrir a página de dispositivo do GitHub",
+  "device.waiting": "Esperando você autorizar no GitHub…",
+  "device.newCode": "Obter um novo código",
+  "device.expired": "O código expirou antes de ser autorizado.",
+  "device.denied": "A autorização foi negada no GitHub.",
+  "device.error": "Algo deu errado ao acessar o GitHub. Tente de novo.",
 
   "header.unsynced": "mudanças não sincronizadas",
   "header.addRoutine": "adicionar rotina",

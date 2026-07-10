@@ -112,6 +112,14 @@ function Landing() {
           <p className="mt-4 max-w-xs text-xs leading-relaxed text-ink-faint">
             {t("landing.privacy")}
           </p>
+          {/* Fallback for hosts the OAuth callback can't reach — chiefly
+              Vercel preview subdomains, whose URL no callback can match. */}
+          <a
+            href="/auth/device"
+            className="mt-3 inline-block text-xs text-ink-faint underline underline-offset-2 hover:text-ink-dim"
+          >
+            {t("landing.deviceLink")}
+          </a>
 
           {/* The mechanism in four tokens — the same pipeline the OG card
               carries. Git words stay untranslated (DESIGN.md). */}
