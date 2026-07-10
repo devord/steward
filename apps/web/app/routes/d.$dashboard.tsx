@@ -57,8 +57,12 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 export default function PersonalDashboard({
   loaderData,
 }: Route.ComponentProps) {
+  // Key by board identity so switching slugs under this same route remounts
+  // the board — a clean slate for draft/last-commit/resolved state instead of
+  // briefly painting (or persisting) the previous board's.
   return (
     <DashboardBoard
+      key={`${loaderData.view.dataRepo}:${loaderData.view.dashboardSlug}`}
       view={loaderData.view}
       artifacts={loaderData.artifacts}
       login={loaderData.login}

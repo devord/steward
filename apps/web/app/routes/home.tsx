@@ -81,8 +81,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function Home({ loaderData }: Route.ComponentProps) {
   if (loaderData.kind === "anonymous") return <Landing />
+  // Key by board identity so the board remounts cleanly per board (consistent
+  // with the /d and /team routes).
   return (
     <DashboardBoard
+      key={`${loaderData.view.dataRepo}:${loaderData.view.dashboardSlug}`}
       view={loaderData.view}
       artifacts={loaderData.artifacts}
       login={loaderData.login}

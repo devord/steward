@@ -56,8 +56,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 }
 
 export default function TeamDashboard({ loaderData }: Route.ComponentProps) {
+  // Key by board identity so switching slugs under this same route remounts
+  // the board — a clean slate instead of the previous board's draft/resolved.
   return (
     <DashboardBoard
+      key={`${loaderData.view.dataRepo}:${loaderData.view.dashboardSlug}`}
       view={loaderData.view}
       artifacts={loaderData.artifacts}
       login={loaderData.login}

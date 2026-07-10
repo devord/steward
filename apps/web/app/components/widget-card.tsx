@@ -366,10 +366,12 @@ function UpdateAction({
   const [copied, setCopied] = useState(false)
 
   // Tell the board a fire landed so it can start the pending/running state.
-  const fired = fetcher.data?.ok === true
+  // Depend on the fetcher.data object (a fresh response each submit), not a
+  // derived boolean — otherwise a second successful run of the same widget
+  // leaves the boolean at true and the effect never re-runs.
   useEffect(() => {
-    if (fired) onFired?.()
-  }, [fired, onFired])
+    if (fetcher.data?.ok === true) onFired?.()
+  }, [fetcher.data, onFired])
 
   if (routineHost(routine) === "local") {
     // Works without a bulletin checkout — the raw pointer prompt (ADR-0005);
