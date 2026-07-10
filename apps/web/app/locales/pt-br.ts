@@ -42,6 +42,14 @@ export const ptBR: Messages = {
   "empty.cta": "Adicione sua primeira rotina",
 
   "offgrid.title": "fora da grade",
+  "offgrid.hint":
+    "estas rotinas vivem no routines.yaml compartilhado deste repo mas não estão neste painel — coloque uma, ou exclua-a do repo.",
+  "offgrid.delete": "excluir {name} do repo",
+
+  "routine.deleteTitle": "Excluir {name}?",
+  "routine.deleteBody":
+    "Remove a rotina do routines.yaml no próximo sync. Rotinas são compartilhadas por todos os painéis deste repo, então ela some de todos.",
+  "routine.deleteConfirm": "Excluir rotina",
 
   "grid.columnsLabel": "colunas",
   "grid.width": "largura",
@@ -123,8 +131,20 @@ export const ptBR: Messages = {
   "widget.copied":
     "comando copiado — rode a partir do seu checkout do bulletin",
   "widget.unreachable": "github inacessível — tenta de novo no próximo refresh",
-  "widget.waiting": "esperando a primeira execução —",
   "widget.disabled": "rotina desativada",
+  "widget.running": "rodando",
+  "widget.runningSince": "rodando — começou {ago}",
+  "widget.draftHint": "no seu rascunho — sincronize para commitar",
+  "widget.needsTriggerHint":
+    "precisa de um gatilho de API antes do atualizar funcionar — no seu checkout do bulletin:",
+  "widget.awaitEnact": "commitado — ative no seu checkout do bulletin:",
+  "widget.awaitLocalManual": "roda na sua máquina — rode quando precisar:",
+  "widget.readyManual": "pronto — aperte atualizar para rodar",
+  "widget.firstRunSchedule":
+    "a primeira execução acontece no agendamento ({cron})",
+  "widget.runnerNote":
+    "{runner} precisa rodar isto — o recurso na nuvem é dele",
+  "widget.copyCmd": "copiar comando",
   "widget.moveLeft": "mover para a esquerda",
   "widget.moveRight": "mover para a direita",
   "widget.moveUp": "mover para cima",
@@ -187,9 +207,14 @@ export const ptBR: Messages = {
   "sync.nothing2": "— nada para sincronizar.",
   "sync.baseMoved": "A base mudou",
   "sync.baseMovedBody":
-    "{files} mudou no repo desde que este rascunho foi criado. Reaplique o rascunho sobre a base nova e revise o diff de novo.",
+    "{files} mudou no repo desde que este rascunho foi criado. Mantenha a sua versão para sobrescrever a cópia do repo, ou pegue a do servidor e descarte seu rascunho.",
   "sync.and": " e ",
-  "sync.reapply": "Reaplicar na base nova",
+  "sync.keepMine": "Manter minha versão",
+  "sync.takeServer": "Pegar versão do servidor",
+  "sync.nextSteps": "Commitado — agora ative suas novas rotinas",
+  "sync.nextStepsBody":
+    "Salvo no repo, mas uma rotina só roda depois de ativada. No seu checkout do bulletin:",
+  "sync.done": "Concluído",
   "sync.asPr": "abrir um PR em vez disso",
   "sync.discard": "Descartar rascunho",
   "sync.commit": "Commit na main",

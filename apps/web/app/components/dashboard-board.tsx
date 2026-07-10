@@ -1,9 +1,9 @@
-import { Suspense, useCallback, useEffect, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { Await, useFetcher, useNavigate, useRevalidator } from "react-router"
 
 import type { DashboardFile, Routine, WidgetSize } from "@bulletin/schema"
 import { dashboardPath, GRID_MAX_COLS } from "@bulletin/schema"
-import { Plus } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
 import { DashboardHeader } from "./dashboard-header.tsx"
@@ -30,10 +30,12 @@ import { cn } from "~/lib/utils"
 import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo, DashboardBase } from "../lib/dashboard.server.ts"
-import { type BaseShas, useDraft } from "../lib/draft.ts"
+import { removeRoutine, type SyncKind, useDraft } from "../lib/draft.ts"
 import { useT } from "../lib/i18n.tsx"
+import { usePendingRuns } from "../lib/pending-runs.ts"
 import { collides, findFreeSlot, type Rect } from "../lib/placement.ts"
 import { useGridDrag } from "../lib/use-grid-drag.ts"
+import { usePollRevalidate } from "../lib/use-poll-revalidate.ts"
 
 /**
  * One board — personal or team (ADR-0010) — extracted from the home route
@@ -64,13 +66,18 @@ export function DashboardBoard({
   // One draft per board: two dashboards in the same repo are separate edit
   // surfaces even though they share routines.yaml (ADR-0003/0010).
   const boardKey = `${view.dataRepo}:${view.dashboardSlug}`
-  const { draft, update, clear, rebase } = useDraft(boardKey, {
-    routines: view.routines,
-    dashboard: view.dashboard,
-    baseShas: view.baseShas,
-  })
-  const routines = draft?.routines ?? view.routines
-  const dashboard = draft?.dashboard ?? view.dashboard
+  const { draft, base, update, clear, rebase, applyCommit, patchBaseShas } =
+    useDraft(boardKey, {
+      routines: view.routines,
+      dashboard: view.dashboard,
+      baseShas: view.baseShas,
+      baseFiles: view.baseFiles,
+    })
+  // `base` is the loader config reconciled with our last commit — use it, not
+  // the raw loader view, so a lagging post-commit read can't resurrect stale
+  // config (ADR-0003).
+  const routines = draft?.routines ?? base.routines
+  const dashboard = draft?.dashboard ?? base.dashboard
   // The board's own grid resolution and canvas — drive placement bounds, the
   // rendered column count, and the container width (all one decision).
   const columns = dashboard.grid.columns
@@ -80,6 +87,40 @@ export function DashboardBoard({
   const [adding, setAdding] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [deletingRoutine, setDeletingRoutine] = useState<string | null>(null)
+
+  // Client-tracked in-flight runs (ADR-0016: no server-side run state) and
+  // live refresh so a published artifact appears without a manual reload.
+  const { pending, markFired, resolveAgainst, anyPending } = usePendingRuns(
+    view.dataRepo,
+  )
+  usePollRevalidate({ fast: anyPending })
+
+  // Hold the last resolved artifacts: a poll's revalidation returns a fresh
+  // `artifacts` promise, and rendering it through <Await> would re-suspend the
+  // whole grid into skeletons. Instead swap the resolved map in place.
+  const [resolved, setResolved] = useState<Record<string, ArtifactInfo> | null>(
+    null,
+  )
+  useEffect(() => {
+    let alive = true
+    void artifacts.then((a) => {
+      if (alive) setResolved(a)
+    })
+    return () => {
+      alive = false
+    }
+  }, [artifacts])
+  useEffect(() => {
+    if (resolved) resolveAgainst(resolved)
+  }, [resolved, resolveAgainst])
+
+  // A routine is "committed" once it's in the server config (not just the
+  // draft) — drives the tile's draft vs. awaiting states.
+  const committedSlugs = useMemo(
+    () => new Set(base.routines.routines.map((r) => r.slug)),
+    [base.routines],
+  )
 
   const routinesBySlug = new Map(routines.routines.map((r) => [r.slug, r]))
   const placed = new Set(dashboard.widgets.map((w) => w.routine))
@@ -200,6 +241,16 @@ export function DashboardBoard({
     [update],
   )
 
+  // Delete the routine outright — from routines.yaml and any widget that
+  // referenced it. Distinct from removeWidget (which only unplaces it from
+  // this board's grid, leaving the routine and its slug in the repo).
+  const deleteRoutine = useCallback(
+    (slug: string) => {
+      update((current) => removeRoutine(current, slug))
+    },
+    [update],
+  )
+
   const setGrid = useCallback(
     (patch: Partial<typeof dashboard.grid>) => {
       update((current) => {
@@ -229,25 +280,84 @@ export function DashboardBoard({
     if (!editing) cancel()
   }, [editing, cancel])
 
-  const handleRebase = useCallback(
-    (fresh: BaseShas) => {
-      rebase(fresh)
-      // Pull the fresh base files so the diff re-renders against them.
+  // "Keep my version": adopt the base the loader currently sees (so the next
+  // commit force-overwrites it, never a silent one) and revalidate to refresh
+  // the diff against it. The old loop came from the cache-key split serving a
+  // different SHA on revalidation; with the loader and /sync now sharing one
+  // ETag entry, the reread is consistent and this converges in one pass — a
+  // genuinely newer SHA re-flags the conflict, which is correct, not a loop.
+  const handleRebase = useCallback(() => {
+    rebase(base.baseShas)
+    void revalidator.revalidate()
+  }, [rebase, base.baseShas, revalidator])
+
+  const handleSynced = useCallback(
+    (newShas: Partial<Record<SyncKind, string>>) => {
+      applyCommit(newShas)
+      setSyncing(false)
       void revalidator.revalidate()
     },
-    [rebase, revalidator],
+    [applyCommit, revalidator],
   )
-
-  const handleSynced = useCallback(() => {
-    clear()
-    setSyncing(false)
-    void revalidator.revalidate()
-  }, [clear, revalidator])
 
   // The personal default board is the one board that must always exist —
   // it's what `/` renders.
   const deletable = !(
     view.scope === "personal" && view.dashboardSlug === DEFAULT_DASHBOARD
+  )
+
+  // Routines added in the draft but not yet on the server — the Sync panel
+  // hands off their enactment steps after a commit.
+  const addedRoutines = draft
+    ? draft.routines.routines.filter((r) => !committedSlugs.has(r.slug))
+    : []
+
+  const renderCards = (data: Record<string, ArtifactInfo>) => (
+    <>
+      {orderedWidgets.flatMap((widget) => {
+        const routine = routinesBySlug.get(widget.routine)
+        if (!routine) return []
+        return [
+          <WidgetCard
+            key={widget.routine}
+            widget={widget}
+            routine={routine}
+            artifact={data[widget.routine]}
+            now={now}
+            columns={columns}
+            scope={view.scope}
+            dataRepo={view.dataRepo}
+            login={login}
+            committed={committedSlugs.has(widget.routine)}
+            pendingFiredAt={pending[widget.routine] ?? null}
+            onFired={() => markFired(widget.routine)}
+            editing={editing}
+            drag={drag?.slug === widget.routine ? drag : null}
+            onDragStart={(kind, event) =>
+              startDrag(widget.routine, kind, event)
+            }
+            onMove={(dCol, dRow) => moveWidget(widget.routine, dCol, dRow)}
+            onResize={(size) => resizeWidget(widget.routine, size)}
+            onRemove={() => removeWidget(widget.routine)}
+          />,
+        ]
+      })}
+      {drag && (
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none z-10 rounded-lg border border-dashed",
+            drag.valid
+              ? "border-orange-deep bg-orange/5"
+              : "border-red/70 bg-red/10",
+          )}
+          style={{
+            gridColumn: `${drag.candidate.col} / span ${drag.candidate.cols}`,
+            gridRow: `${drag.candidate.row} / span ${drag.candidate.rows}`,
+          }}
+        />
+      )}
+    </>
   )
 
   return (
@@ -306,85 +416,63 @@ export function DashboardBoard({
               "--row-h": `${dashboard.grid.rowHeight}px`,
             })}
           >
-            {/* The frame is already placed; only the artifact bodies stream. Each
-              cell holds its slot with a skeleton until its artifact lands. */}
-            <Suspense
-              fallback={orderedWidgets.flatMap((widget) =>
-                routinesBySlug.has(widget.routine)
-                  ? [<WidgetSkeleton key={widget.routine} widget={widget} />]
-                  : [],
-              )}
-            >
-              <Await resolve={artifacts}>
-                {(resolved) => (
-                  <>
-                    {orderedWidgets.flatMap((widget) => {
-                      const routine = routinesBySlug.get(widget.routine)
-                      if (!routine) return []
-                      return [
-                        <WidgetCard
-                          key={widget.routine}
-                          widget={widget}
-                          routine={routine}
-                          artifact={resolved[widget.routine]}
-                          now={now}
-                          columns={columns}
-                          scope={view.scope}
-                          dataRepo={view.dataRepo}
-                          editing={editing}
-                          drag={drag?.slug === widget.routine ? drag : null}
-                          onDragStart={(kind, event) =>
-                            startDrag(widget.routine, kind, event)
-                          }
-                          onMove={(dCol, dRow) =>
-                            moveWidget(widget.routine, dCol, dRow)
-                          }
-                          onResize={(size) =>
-                            resizeWidget(widget.routine, size)
-                          }
-                          onRemove={() => removeWidget(widget.routine)}
-                        />,
-                      ]
-                    })}
-                    {drag && (
-                      <div
-                        aria-hidden
-                        className={cn(
-                          "pointer-events-none z-10 rounded-lg border border-dashed",
-                          drag.valid
-                            ? "border-orange-deep bg-orange/5"
-                            : "border-red/70 bg-red/10",
-                        )}
-                        style={{
-                          gridColumn: `${drag.candidate.col} / span ${drag.candidate.cols}`,
-                          gridRow: `${drag.candidate.row} / span ${drag.candidate.rows}`,
-                        }}
-                      />
-                    )}
-                  </>
+            {/* First load streams: the frame is placed and each cell holds its
+              slot with a skeleton until the artifacts resolve. Once resolved,
+              render from state so a poll's revalidation swaps bodies in place
+              rather than re-suspending back to skeletons. */}
+            {resolved === null ? (
+              <Suspense
+                fallback={orderedWidgets.flatMap((widget) =>
+                  routinesBySlug.has(widget.routine)
+                    ? [<WidgetSkeleton key={widget.routine} widget={widget} />]
+                    : [],
                 )}
-              </Await>
-            </Suspense>
+              >
+                <Await resolve={artifacts}>
+                  {(awaited) => renderCards(awaited)}
+                </Await>
+              </Suspense>
+            ) : (
+              renderCards(resolved)
+            )}
           </main>
         </>
       )}
 
       {unplaced.length > 0 && editing && (
         <section className="mt-6">
-          <h2 className="mb-2 font-mono text-xs text-ink-faint">
+          <h2 className="mb-1 font-mono text-xs text-ink-faint">
             {t("offgrid.title")}
           </h2>
+          <p className="mb-2 max-w-prose text-xs text-ink-faint">
+            {t("offgrid.hint")}
+          </p>
           <div className="flex flex-wrap gap-2">
             {unplaced.map((routine) => (
-              <Button
+              <div
                 key={routine.slug}
-                size="sm"
-                variant="outline"
-                onClick={() => placeRoutine(routine.slug)}
+                className="flex items-center rounded-lg border"
               >
-                <Plus data-icon="inline-start" />
-                {routine.name}
-              </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="rounded-r-none"
+                  onClick={() => placeRoutine(routine.slug)}
+                >
+                  <Plus data-icon="inline-start" />
+                  {routine.name}
+                </Button>
+                <Button
+                  size="icon-xs"
+                  variant="ghost"
+                  aria-label={t("offgrid.delete", { name: routine.name })}
+                  title={t("offgrid.delete", { name: routine.name })}
+                  className="mr-0.5 size-6 rounded-l-none text-ink-faint hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setDeletingRoutine(routine.slug)}
+                >
+                  <Trash2 />
+                </Button>
+              </div>
             ))}
           </div>
         </section>
@@ -406,16 +494,25 @@ export function DashboardBoard({
           scope={view.scope}
           dashboardSlug={view.dashboardSlug}
           draft={draft}
-          baseFiles={view.baseFiles}
-          serverShas={view.baseShas}
+          baseFiles={base.baseFiles}
+          serverShas={base.baseShas}
+          rebasing={revalidator.state !== "idle"}
+          addedRoutines={addedRoutines}
           onSynced={handleSynced}
           onDiscard={() => {
             clear()
             setSyncing(false)
           }}
           onRebase={handleRebase}
+          onConflictCommitted={patchBaseShas}
         />
       )}
+      <DeleteRoutineDialog
+        slug={deletingRoutine}
+        routines={routines.routines}
+        onClose={() => setDeletingRoutine(null)}
+        onConfirm={deleteRoutine}
+      />
       {deletable && (
         <DeleteDashboardDialog
           open={deleting}
@@ -498,6 +595,51 @@ function DeleteDashboardDialog({
             }}
           >
             {busy ? t("board.deleting") : t("board.deleteConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * Confirm deleting a routine outright. It's a draft edit (nothing leaves the
+ * repo until the next sync), but routines are shared repo-wide — deleting
+ * removes the routine from every dashboard, so the copy says so plainly.
+ */
+function DeleteRoutineDialog({
+  slug,
+  routines,
+  onClose,
+  onConfirm,
+}: {
+  slug: string | null
+  routines: Routine[]
+  onClose: () => void
+  onConfirm: (slug: string) => void
+}) {
+  const t = useT()
+  const routine = routines.find((r) => r.slug === slug)
+  const name = routine?.name ?? slug ?? ""
+  return (
+    <Dialog open={slug != null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("routine.deleteTitle", { name })}</DialogTitle>
+          <DialogDescription>{t("routine.deleteBody")}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            {t("dialog.cancel")}
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              if (slug) onConfirm(slug)
+              onClose()
+            }}
+          >
+            {t("routine.deleteConfirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

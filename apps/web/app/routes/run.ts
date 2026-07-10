@@ -55,7 +55,12 @@ export async function action({ request }: { request: Request }) {
 
   // Only runner-owned cloud routines carry a trigger; the client offers a
   // copy-command fallback for local ones, so reject a crafted local fire.
-  const routinesRaw = await getFile(auth.token, dataRepo, "data/routines.yaml")
+  const routinesRaw = await getFile(
+    auth.token,
+    dataRepo,
+    "data/routines.yaml",
+    "main",
+  )
   const routine = routinesRaw
     ? parseRoutinesFile(routinesRaw.text).routines.find(
         (entry) => entry.slug === slug,
@@ -65,7 +70,12 @@ export async function action({ request }: { request: Request }) {
     throw data({ error: "not a cloud routine" }, { status: 400 })
   }
 
-  const triggerRaw = await getFile(auth.token, dataRepo, triggerPath(slug))
+  const triggerRaw = await getFile(
+    auth.token,
+    dataRepo,
+    triggerPath(slug),
+    "main",
+  )
   if (!triggerRaw) {
     return { ok: false, error: "no-trigger" } satisfies RunResult
   }

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 
 import { http, HttpResponse } from "msw"
+import { z } from "zod"
 
 /**
  * GitHub REST mock (the slice github.server.ts touches): a seedable
@@ -33,6 +34,14 @@ interface Failure {
 /** `${repo}:${path}` → injected failure for contents/commits requests. */
 const failures = new Map<string, Failure>()
 
+/** The slice of a contents-API PUT body the mock reads (base64 content +
+    branch + optional expected SHA). */
+const putBodySchema = z.object({
+  content: z.string(),
+  branch: z.string().optional(),
+  sha: z.string().optional(),
+})
+
 /**
  * How the last requests resolved, so tests can assert the ETag path: `full`
  * counts 200s that shipped a body, `conditional` counts 304s answered from a
@@ -50,6 +59,16 @@ export function resetGitHub() {
 /** Deterministic content-derived validator — matches only identical bodies. */
 function etagFor(body: string): string {
   return `"${createHash("sha1").update(body).digest("hex")}"`
+}
+
+/**
+ * Content-derived blob SHA — like GitHub's, a different body yields a
+ * different SHA, so the sync stale-base check and the PUT's optimistic
+ * concurrency have something real to compare (a constant-per-path SHA can
+ * never conflict, hiding exactly the races the sync flow guards against).
+ */
+function blobSha(ref: string, path: string, text: string): string {
+  return `sha:${ref}:${path}:${createHash("sha1").update(text).digest("hex").slice(0, 12)}`
 }
 
 /**
@@ -176,8 +195,44 @@ export const githubHandlers = [
       }
       return json(request, {
         content: Buffer.from(file.text, "utf8").toString("base64"),
-        sha: `sha:${ref}:${path}`,
+        sha: blobSha(ref, path, file.text),
       })
+    },
+  ),
+
+  // Contents API PUT — create or update a file with GitHub's optimistic
+  // concurrency: an update whose `sha` doesn't match the current blob is a
+  // 409, and a create over an existing file (no `sha`) is a 422. Returns the
+  // new content SHA so the sync flow can capture the authoritative base.
+  http.put(
+    "https://api.github.com/repos/:owner/:repo/contents/*",
+    async ({ params, request }) => {
+      const repo = `${params.owner}/${params.repo}`
+      const url = new URL(request.url)
+      const path = decodeURIComponent(
+        url.pathname.replace(`/repos/${repo}/contents/`, ""),
+      )
+      const failure = takeFailure(repo, path, "contents")
+      if (failure) return failureResponse(failure)
+      const body = putBodySchema.parse(await request.json())
+      const ref = body.branch ?? "main"
+      const store = repos.get(repo) ?? new Map<string, MockFile>()
+      const key = `${ref}:${path}`
+      const existing = store.get(key)
+      const existingSha = existing ? blobSha(ref, path, existing.text) : null
+      if (body.sha) {
+        // Update: the supplied SHA must match the current blob.
+        if (!existing || existingSha !== body.sha) {
+          return new HttpResponse(null, { status: 409 })
+        }
+      } else if (existing) {
+        // Create over an existing file — GitHub demands the SHA.
+        return new HttpResponse(null, { status: 422 })
+      }
+      const text = Buffer.from(body.content, "base64").toString("utf8")
+      store.set(key, { text, lastCommit: existing?.lastCommit ?? null })
+      repos.set(repo, store)
+      return HttpResponse.json({ content: { sha: blobSha(ref, path, text) } })
     },
   ),
 

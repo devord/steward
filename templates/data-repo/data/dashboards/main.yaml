@@ -13,3 +13,6 @@ widgets:
   - routine: daily-plan
     position: { col: 1, row: 1 }
     size: { cols: 2, rows: 2 }
+  - routine: meeting-prep
+    position: { col: 3, row: 1 }
+    size: { cols: 2, rows: 2 }
