@@ -21,10 +21,13 @@ or by hand — it's plain YAML, and the app validates on load.
 
 Scheduled runs fire on their own (ADR-0005). To also trigger a routine on
 demand — a "Run now" button on each widget, plus the Actions tab and
-`gh workflow run run-routine.yml -f slug=<slug>` — this repo ships
+`gh workflow run run-routine.yml -f slug=daily-plan` (swap in your slug) —
+this repo ships
 [`.github/workflows/run-routine.yml`](./.github/workflows/run-routine.yml)
-(ADR-0012). It runs the same dispatcher prompt as the schedule, so a manual
-run and a scheduled run are identical. To enable it:
+(ADR-0012). It fires the same dispatcher prompt as the schedule; the two
+differ only in how the skills reach the run — a manual run checks out the
+pinned Bulletin repo, a scheduled run uses its cloud environment. To enable
+it:
 
 1. Set `manualRun: true` in [`data/routines.yaml`](./data/routines.yaml).
 2. Add a Claude credential as an Actions secret (Settings → Secrets and
@@ -37,8 +40,8 @@ run and a scheduled run are identical. To enable it:
 The workflow checks out the shared Bulletin repo for its skills. That repo is
 private in the standard deployment, so also add a read-scoped PAT as
 `BULLETIN_REPO_TOKEN` and uncomment the `token:` line in the workflow (skip
-this only if your shared repo is public). A 5-minute cooldown per widget
-throttles repeat runs.
+this only if your shared repo is public). A 5-minute cooldown per routine
+slug throttles repeat runs (so widgets sharing a routine share its cooldown).
 
 ## Bootstrapping the artifacts branch
 
