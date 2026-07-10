@@ -47,7 +47,12 @@ preference:
    `gh api user --jq .login`).
 
 If the repo is unreachable (or you cannot push to it), stop and report —
-do not invent config.
+do not invent config. When GitHub answers 404/"not found" for the data
+repo, report it as a **likely access problem, not a missing repo**: data
+repos are private, and an environment whose GitHub grant lacks the repo
+can't tell the difference. Say which repo you looked for and point at the
+fix — add it to the cloud routine's Repositories list, or grant it to the
+Claude GitHub App on the owner's account.
 
 ## 2. Resolve the routine
 
