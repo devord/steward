@@ -148,7 +148,11 @@ export function AddRoutineDialog({
           <DialogDescription>{t("dialog.description")}</DialogDescription>
         </DialogHeader>
 
-        <div className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto">
+        {/* -m-1 p-1: the overflow-y-auto scroll box would otherwise clip the
+            3px focus/invalid ring of any field flush with its edge; the
+            negative-margin/padding pair reserves a 4px halo without shifting
+            the content off the dialog's column. */}
+        <div className="-m-1 grid min-h-0 flex-1 content-start gap-4 overflow-y-auto p-1">
           <div className="grid gap-2">
             <Label>{t("dialog.skill")}</Label>
             {catalog.skills.length === 0 ? (
@@ -185,7 +189,7 @@ export function AddRoutineDialog({
 
           {skill && (
             <>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 sm:items-start">
                 <div className="grid gap-2">
                   <Label htmlFor="routine-name">{t("dialog.name")}</Label>
                   <Input
@@ -218,7 +222,7 @@ export function AddRoutineDialog({
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 sm:items-start">
                 <div className="grid gap-2">
                   <Label>{t("dialog.size")}</Label>
                   <div className="flex items-center gap-1.5">
