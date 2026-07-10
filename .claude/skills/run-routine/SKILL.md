@@ -1,21 +1,24 @@
 ---
 name: run-routine
 description: >-
-  The bulletin dispatcher (ADR-0005): every scheduled run enters here. Given
-  a routine slug, resolve it in the data repo's data/routines.yaml, execute
-  that routine's skill with its instructions, enforce the widget standard,
-  and publish the artifact. Use when a prompt says "Run the bulletin routine
-  <slug>".
+  The bulletin dispatcher (ADR-0005): every run enters here — scheduled,
+  manual, or dry. Given a routine slug, resolve it in the data repo's
+  data/routines.yaml, execute that routine's skill (or its bare
+  instructions) with its instructions, enforce the widget standard, and
+  publish the artifact. Use when a prompt says "Run the bulletin routine
+  <slug>" or "Dry-run the bulletin routine <slug>".
 ---
 
 # run-routine
 
-You were invoked by a pointer prompt of one of two forms (ADR-0005,
-ADR-0010):
+You were invoked by a pointer prompt of one of these forms (ADR-0005,
+ADR-0010, ADR-0017):
 
 - _"Run the bulletin routine `<slug>` — follow the `run-routine` skill."_
 - _"Run the bulletin routine `<slug>` in `<owner/repo>` — follow the
   `run-routine` skill."_
+- Either form starting with **"Dry-run"** instead of "Run" — see § Dry
+  runs; everything below applies with the two listed changes.
 
 The prompt is deliberately stable; everything that can change lives in the
 data repo's YAML.
@@ -48,24 +51,50 @@ prompt. Then:
   A disabled routine firing is schedule drift, worth one line in the report
   (`pnpm routines:sync` fixes it), not an error.
 
-## 3. Execute the routine's skill
+## 3. Produce the content
 
-Invoke the skill named in the routine's `skill:` field (it comes from the
-shared repo's catalog). Pass the routine's `instructions:` field as the
-user's standing guidance — the skill treats it as configuration, not
-conversation. While executing, keep the routine's `slug` authoritative: the
-artifact path is derived from it, never from the skill name.
+Two shapes of routine (ADR-0013):
+
+- **`skill:` present** — invoke that skill, passing the routine's
+  `instructions:` as the user's standing guidance (the skill treats it as
+  configuration, not conversation). Skills resolve through your normal
+  skill resolution: the data repo's own `.claude/skills/` and installed
+  plugins (ADR-0014). If the named skill does not resolve, first try
+  installing the team's plugins repo (`Form-Factory/plugins`) — or clone
+  it and read the skill from `<plugin>/skills/<name>/` directly. Still
+  unresolved → **hard-fail loudly**: stop, report the bad `skill:`
+  reference and where you looked. That error surface is the point of the
+  structured field — never improvise a missing skill's job.
+- **`skill:` absent** — a prompt-only routine: execute `instructions:`
+  directly as the content brief. The contract holds either way; a prompt
+  is a degenerate skill.
+
+While executing, keep the routine's `slug` authoritative: the artifact
+path is derived from it, never from the skill name.
 
 ## 4. Author and publish
 
-The routine's skill produces content; the artifact itself MUST follow the
+Whatever the content source, the artifact MUST follow the
 `widget-artifact` skill (self-contained HTML, gruvbox tokens, breakpoints,
 generated-at meta + footer, graceful empty state). Then publish it with the
 `publish-widget` skill to `w/<slug>/index.html` on the `artifacts` branch.
 
+## Dry runs (ADR-0017)
+
+A "Dry-run …" prompt changes exactly two behaviors — routine skills never
+know they are being dry-run:
+
+- **In**: resolve `data/routines.yaml` and skills from the **local working
+  tree, dirty state included** — the cwd checkout is authoritative; do not
+  fetch, clone, or compare remotes. What's being edited is what runs.
+- **Out**: tell `publish-widget` this is a dry run — it writes the
+  artifact to a local file and opens it in the browser. Nothing is
+  committed or pushed; the live widget never sees a test run.
+
 ## 5. Report
 
-One short summary: routine, skill, data gathered (or "no live data"),
-publish commit SHA. A run that gathered nothing still publishes an artifact
-with an explicit empty state — staleness on the dashboard is the failure
-signal, not a missing file (ADR-0005).
+One short summary: routine, skill (or "prompt-only"), data gathered (or
+"no live data"), publish commit SHA (or the local file path on a dry run).
+A run that gathered nothing still publishes an artifact with an explicit
+empty state — staleness on the dashboard is the failure signal, not a
+missing file (ADR-0005).
