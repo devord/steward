@@ -89,21 +89,44 @@ async function gh(token: string, path: string, init?: RequestInit) {
   // Only GETs are cached; writes must never be revalidated or replayed.
   const cacheKey = method === "GET" ? `${token}\0${path}` : undefined
   const cached = cacheKey ? readCache(cacheKey) : undefined
+  // A hung GitHub call would otherwise block the loader indefinitely. Compose
+  // the timeout with any caller signal (loader cancellation) rather than let
+  // `...init` clobber one with the other — both must be able to abort.
+  const timeout = AbortSignal.timeout(15_000)
+  const signal = init?.signal
+    ? AbortSignal.any([init.signal, timeout])
+    : timeout
   let res: Response
   for (let attempt = 1; ; attempt++) {
-    res = await fetch(`${API}${path}`, {
-      // A hung GitHub call would otherwise block the loader indefinitely.
-      signal: AbortSignal.timeout(15_000),
-      ...init,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        ...(cached ? { "If-None-Match": cached.etag } : {}),
-        ...(init?.body ? { "Content-Type": "application/json" } : {}),
-        ...init?.headers,
-      },
-    })
+    try {
+      res = await fetch(`${API}${path}`, {
+        ...init,
+        signal,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          ...(cached ? { "If-None-Match": cached.etag } : {}),
+          ...(init?.body ? { "Content-Type": "application/json" } : {}),
+          ...init?.headers,
+        },
+      })
+    } catch (cause) {
+      // An abort is terminal, not transient: retrying a caller cancellation
+      // ignores their intent, and each timeout retry is another 15s hang on
+      // the request path. Surface it (still a GitHubError, so callers degrade
+      // to a 503 rather than the generic crash) without burning retries.
+      const aborted =
+        cause instanceof Error &&
+        (cause.name === "AbortError" || cause.name === "TimeoutError")
+      // Every other throw — dropped connection, DNS blip — is the transient
+      // class the 5xx retry rides out, so retry GETs the same way.
+      if (aborted || attempt >= attempts) {
+        throw new GitHubError(503, `${path} → request failed: ${String(cause)}`)
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250 * attempt))
+      continue
+    }
     if (res.status < 500 || attempt >= attempts) break
     await new Promise((resolve) => setTimeout(resolve, 250 * attempt))
   }
