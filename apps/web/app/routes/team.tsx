@@ -1,10 +1,11 @@
 import { useState } from "react"
-import { Form, Link, redirect, useNavigation } from "react-router"
+import { Form, redirect, useNavigation } from "react-router"
 
 import type { Route } from "./+types/team"
 import { NewDashboardDialog } from "../components/dashboard-switcher.tsx"
 import { Wordmark } from "../components/logo.tsx"
 import { Button } from "~/components/ui/button"
+import { Link } from "~/components/ui/link"
 import { listDashboards, resolveTeamRepo } from "../lib/dashboard.server.ts"
 import { env } from "../lib/env.server.ts"
 import {

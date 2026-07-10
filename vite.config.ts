@@ -13,6 +13,22 @@ export default defineConfig({
       eqeqeq: ["error", "always", { null: "ignore" }],
       "no-unused-vars": "warn",
       "no-console": "off",
+      // Route in-app navigation through ~/components/ui/link, which defaults
+      // prefetch to "intent" so route data loads on hover/focus. React
+      // Router's raw Link has no prefetch by default.
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "react-router",
+              importNames: ["Link", "NavLink"],
+              message:
+                "Import Link from ~/components/ui/link instead; it defaults prefetch to intent for faster navigation.",
+            },
+          ],
+        },
+      ],
       "import/no-duplicates": "error",
       "import/no-self-import": "error",
       "import/no-cycle": "warn",
@@ -42,6 +58,14 @@ export default defineConfig({
         rules: {
           "typescript/consistent-type-assertions": "off",
           "typescript/no-explicit-any": "off",
+        },
+      },
+      {
+        // The Link wrapper is the one place allowed to reach for React
+        // Router's Link — it's what re-exports it with the prefetch default.
+        files: ["**/components/ui/link.tsx"],
+        rules: {
+          "no-restricted-imports": "off",
         },
       },
     ],
