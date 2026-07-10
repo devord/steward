@@ -28,8 +28,10 @@ respond to the widget's grid size — no JS needed for responsiveness.
 3. **The shared theme tokens only** — the gruvbox palette below, with
    `color-scheme: dark`. Do not invent colors.
 4. **Generation time**: `<meta name="widget-generated-at" content="<ISO-8601 UTC>">`
-   plus a visible compact timestamp in a footer
-   (`<slug>` left, `YYYY-MM-DD HH:MMZ` right).
+   plus a visible compact timestamp in a `<footer>`
+   (`<slug>` left, `YYYY-MM-DD HH:MMZ` right). The footer is standalone
+   chrome (shown when the artifact is opened raw); on the board the frame
+   hides it, since the widget-card footer already carries name + freshness.
 5. **Graceful degradation**: missing data renders a designed empty state
    ("no live data", "nothing to show today"), never an error or a blank
    file.

@@ -5,7 +5,7 @@ import {
   DEFAULT_APPEARANCE,
   DEFAULT_THEME,
   resolveTheme,
-  themeArtifactHtml,
+  frameArtifactHtml,
   themeEntries,
   themeFamilies,
   themes,
@@ -87,16 +87,22 @@ describe("registry integrity", () => {
   })
 })
 
-describe("themeArtifactHtml", () => {
+describe("frameArtifactHtml", () => {
   const doc = "<html><head></head><body>hi</body></html>"
 
-  it("leaves the default theme's artifacts untouched", () => {
-    expect(themeArtifactHtml(doc, DEFAULT_THEME)).toBe(doc)
+  it("hides the artifact footer, adding no theme override on the default", () => {
+    const framed = frameArtifactHtml(doc, DEFAULT_THEME)
+    expect(framed.startsWith(doc)).toBe(true)
+    // The card chrome renders identity + freshness; the artifact's own
+    // footer is standalone-only, so the embedded frame suppresses it.
+    expect(framed).toContain("footer{display:none !important}")
+    expect(framed).not.toContain("--color-")
   })
 
   it("appends the --color-* overrides for any other theme", () => {
-    const themed = themeArtifactHtml(doc, "catppuccin-mocha")
+    const themed = frameArtifactHtml(doc, "catppuccin-mocha")
     expect(themed.startsWith(doc)).toBe(true)
+    expect(themed).toContain("footer{display:none !important}")
     expect(themed).toContain("--color-bg:#181825 !important")
     // The artifact contract's historical `orange` slot carries the accent.
     expect(themed).toContain("--color-orange:#cba6f7 !important")
@@ -104,7 +110,7 @@ describe("themeArtifactHtml", () => {
   })
 
   it("flips color-scheme for light themes", () => {
-    expect(themeArtifactHtml(doc, "gruvbox-light")).toContain(
+    expect(frameArtifactHtml(doc, "gruvbox-light")).toContain(
       "color-scheme:light",
     )
   })

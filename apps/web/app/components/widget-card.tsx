@@ -10,7 +10,7 @@ import { cn } from "~/lib/utils"
 import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
-import { themeArtifactHtml } from "../lib/theme.ts"
+import { frameArtifactHtml } from "../lib/theme.ts"
 import { agoParts, cronIntervalMs } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
 import type { DragKind, GridDrag } from "../lib/use-grid-drag.ts"
@@ -57,7 +57,7 @@ export function WidgetCard({
   const theme = useResolvedTheme()
   const { position, size } = widget
   const html = useMemo(
-    () => (artifact?.html ? themeArtifactHtml(artifact.html, theme) : null),
+    () => (artifact?.html ? frameArtifactHtml(artifact.html, theme) : null),
     [artifact?.html, theme],
   )
   const lastRunAt = artifact?.lastRunAt ?? null
