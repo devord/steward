@@ -47,12 +47,13 @@ No `source:` field, no custom loader.
   a member's personal data repo — other runners couldn't read it there.
 - Local runs launch Claude in the _data repo_ (ADR-0017), where the
   contract skills don't exist — verified: a session cwd'd there resolves
-  neither `run-routine` nor `publish-widget`. Two closures: the launcher
+  neither `run-routine` nor `publish-widget`. The closure: the launcher
   and the launchd agents pass `--add-dir <bulletin checkout>` (added dirs
-  contribute their project skills), and the plugins repo's `bulletin`
-  plugin **mirrors the contract skills** so the app's copy-command
-  one-liner works without a bulletin checkout. The bulletin repo stays the
-  source of truth — a contract change must ship atomically with the app
-  and the widget standard, and dry runs must execute the local tree's
-  version — so the mirror is a copy: update here first, then re-mirror
-  (drift is a roadmap watch item, not a mechanism).
+  contribute their project skills). The contract skills are deliberately
+  **not** mirrored into the plugins repo: they must ship atomically with
+  the app and the widget standard, dry runs must execute the local tree's
+  version, and a second copy would collide with the checkout's own
+  `run-routine` on every machine that has the plugin installed.
+  Consequence: the app's copy-command one-liner runs from a bulletin
+  checkout — a machine with local routines has one, since routines:sync
+  enacted them from it.

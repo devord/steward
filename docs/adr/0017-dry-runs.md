@@ -30,8 +30,9 @@ alone can't resolve the contract skills, ADR-0014), so interactive skills
 can ask their questions and dry runs land in front of your eyes. All real
 logic stays in the contract skills; the script is prompt assembly + cwd +
 exec. The app's "copy command" button copies the raw `claude "…"`
-one-liner, which works without a bulletin checkout once the `bulletin`
-plugin (which mirrors the contract skills, ADR-0014) is installed.
+one-liner — run it from a bulletin checkout, where the contract skills
+resolve (ADR-0014); a machine with local routines has one, since
+routines:sync enacted them from it.
 
 ## Considered options
 
