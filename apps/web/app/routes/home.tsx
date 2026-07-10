@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { data, Form, Link, redirect, useRevalidator } from "react-router"
 
 import type { Routine, WidgetSize } from "@bulletin/schema"
@@ -23,8 +23,9 @@ import {
 } from "../lib/dashboard.server.ts"
 import { type BaseShas, useDraft } from "../lib/draft.ts"
 import { GitHubError } from "../lib/github.server.ts"
-import { collides, findFreeSlot } from "../lib/placement.ts"
+import { collides, findFreeSlot, type Rect } from "../lib/placement.ts"
 import { getAuth } from "../lib/session.server.ts"
+import { useGridDrag } from "../lib/use-grid-drag.ts"
 
 export function meta({ loaderData }: Route.MetaArgs) {
   const description = "A dashboard of living widgets, kept fresh by routines."
@@ -159,10 +160,23 @@ function Dashboard({
         )
         const row = Math.max(1, widget.position.row + dRow)
         const candidate = { col, row, ...widget.size }
-        // Moving onto another widget is a no-op — predictable beats clever
-        // until drag-and-drop lands.
+        // Moving onto another widget is a no-op — predictable beats clever.
         if (!collides(current.dashboard.widgets, candidate, slug)) {
           widget.position = { col, row }
+        }
+        return current
+      })
+    },
+    [update],
+  )
+
+  const placeWidget = useCallback(
+    (slug: string, rect: Rect) => {
+      update((current) => {
+        const widget = current.dashboard.widgets.find((w) => w.routine === slug)
+        if (widget) {
+          widget.position = { col: rect.col, row: rect.row }
+          widget.size = { cols: rect.cols, rows: rect.rows }
         }
         return current
       })
@@ -198,6 +212,17 @@ function Dashboard({
     },
     [update],
   )
+
+  const { drag, gridRef, startDrag, cancel } = useGridDrag({
+    widgets: dashboard.widgets,
+    rowHeight: dashboard.grid.rowHeight,
+    onCommit: placeWidget,
+  })
+
+  // Leaving edit mode mid-drag must not leave a floating card behind.
+  useEffect(() => {
+    if (!editing) cancel()
+  }, [editing, cancel])
 
   const handleRebase = useCallback(
     (fresh: BaseShas) => {
@@ -302,10 +327,17 @@ function Dashboard({
         </div>
       </AppHeader>
 
+      {editing && (
+        <p className="-mt-2 mb-3 hidden font-mono text-[11px] text-ink-faint min-[1100px]:block">
+          drag to move · corner to resize · del to remove
+        </p>
+      )}
+
       {dashboard.widgets.length === 0 ? (
         <EmptyDashboard onAdd={() => setAdding(true)} />
       ) : (
         <main
+          ref={gridRef}
           className="dash-grid"
           style={cssVars({ "--row-h": `${dashboard.grid.rowHeight}px` })}
         >
@@ -320,12 +352,31 @@ function Dashboard({
                 artifact={view.artifacts[widget.routine]}
                 now={now}
                 editing={editing}
+                drag={drag?.slug === widget.routine ? drag : null}
+                onDragStart={(kind, event) =>
+                  startDrag(widget.routine, kind, event)
+                }
                 onMove={(dCol, dRow) => moveWidget(widget.routine, dCol, dRow)}
                 onResize={(size) => resizeWidget(widget.routine, size)}
                 onRemove={() => removeWidget(widget.routine)}
               />,
             ]
           })}
+          {drag && (
+            <div
+              aria-hidden
+              className={cn(
+                "pointer-events-none z-10 rounded-lg border border-dashed",
+                drag.valid
+                  ? "border-orange-deep bg-orange/5"
+                  : "border-red/70 bg-red/10",
+              )}
+              style={{
+                gridColumn: `${drag.candidate.col} / span ${drag.candidate.cols}`,
+                gridRow: `${drag.candidate.row} / span ${drag.candidate.rows}`,
+              }}
+            />
+          )}
         </main>
       )}
 

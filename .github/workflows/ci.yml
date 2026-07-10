@@ -24,4 +24,6 @@ jobs:
       - run: pnpm exec vp check
       - run: pnpm run typecheck
       - run: pnpm run build
+      - name: Install Chromium (vitest browser project)
+        run: pnpm --filter @bulletin/web exec playwright install chromium --with-deps
       - run: pnpm test
