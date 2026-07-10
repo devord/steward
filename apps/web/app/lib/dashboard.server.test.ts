@@ -222,4 +222,22 @@ describe("loadDashboard", () => {
       GitHubError,
     )
   })
+
+  it("throws GitHubError, not a raw fetch error, when config load hits a network blip", async () => {
+    seedRepo(DATA_REPO, {})
+    // A thrown fetch (dropped connection, DNS, or the 15s timeout) on the
+    // awaited structure path must arrive as a GitHubError so the loader
+    // degrades to a 503 page instead of the generic crash — the intermittent
+    // refresh failure this guards against.
+    failPath(DATA_REPO, "data/routines.yaml", {
+      network: true,
+      endpoint: "contents",
+    })
+
+    const error = await loadDashboard("token", MAIN_BOARD).catch((e) => e)
+    expect(error).toBeInstanceOf(GitHubError)
+    // 503 is the service-unavailable contract loadDashboardStructureOr503
+    // keys off — a regression to any other status would break the 503 page.
+    expect((error as GitHubError).status).toBe(503)
+  })
 })
