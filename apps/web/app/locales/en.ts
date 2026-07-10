@@ -51,6 +51,8 @@ export const en = {
     "Removes {path} from {repo}. Routines keep running — only this layout goes away.",
   "board.deleteConfirm": "Delete",
   "board.deleting": "deleting…",
+  "board.deleteConflict":
+    "the dashboard changed in the repo just now — close and retry",
 
   "team.notConfigured":
     "Team dashboards aren't configured — set BULLETIN_TEAM_REPO on the deployment.",
@@ -59,6 +61,8 @@ export const en = {
   "team.missingCreate": "Create team repo",
   "team.missingDenied":
     "GitHub wouldn't let this account create it — ask an org admin to create the repo from the template, then reload.",
+  "team.missingTemplate":
+    "the data-repo template couldn't be found — check BULLETIN_DATA_REPO_TEMPLATE, or ask an org admin to create the team repo by hand.",
   "team.emptyTitle": "No team dashboards yet",
   "team.emptyBody":
     "Create the first one — everyone with access to the team repo will see it.",

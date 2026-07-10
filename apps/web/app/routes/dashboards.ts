@@ -96,10 +96,23 @@ export async function action({ request }: { request: Request }) {
   if (!current) {
     return data({ ok: false as const, error: "missing" }, { status: 404 })
   }
-  await deleteFile(auth.token, repo, path, {
-    message: `config: delete dashboard ${payload.slug} via bulletin`,
-    sha: current.sha,
-    branch: "main",
-  })
+  try {
+    await deleteFile(auth.token, repo, path, {
+      message: `config: delete dashboard ${payload.slug} via bulletin`,
+      sha: current.sha,
+      branch: "main",
+    })
+  } catch (error) {
+    // The file moved between the read above and the DELETE (another editor
+    // synced): GitHub rejects the stale sha — surface a conflict, not a 500,
+    // mirroring the sync route's translation (ADR-0003).
+    if (
+      error instanceof GitHubError &&
+      (error.status === 409 || error.status === 422)
+    ) {
+      return data({ ok: false as const, error: "conflict" }, { status: 409 })
+    }
+    throw error
+  }
   return { ok: true as const, slug: payload.slug }
 }

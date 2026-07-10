@@ -471,6 +471,13 @@ function DeleteDashboardDialog({
             })}
           </DialogDescription>
         </DialogHeader>
+        {fetcher.data?.ok === false && (
+          <p className="text-xs text-destructive">
+            {fetcher.data.error === "conflict"
+              ? t("board.deleteConflict")
+              : t("error.generic")}
+          </p>
+        )}
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {t("dialog.cancel")}

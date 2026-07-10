@@ -52,6 +52,8 @@ export const ptBR: Messages = {
     "Remove {path} de {repo}. As rotinas continuam rodando — só este layout some.",
   "board.deleteConfirm": "Excluir",
   "board.deleting": "excluindo…",
+  "board.deleteConflict":
+    "o painel acabou de mudar no repo — feche e tente de novo",
 
   "team.notConfigured":
     "Painéis de time não estão configurados — defina BULLETIN_TEAM_REPO no deploy.",
@@ -61,6 +63,8 @@ export const ptBR: Messages = {
   "team.missingCreate": "Criar repo do time",
   "team.missingDenied":
     "O GitHub não deixou esta conta criá-lo — peça a um admin da org para criar o repo a partir do template e recarregue.",
+  "team.missingTemplate":
+    "o template do repo de dados não foi encontrado — confira BULLETIN_DATA_REPO_TEMPLATE, ou peça a um admin da org para criar o repo do time à mão.",
   "team.emptyTitle": "Nenhum painel de time ainda",
   "team.emptyBody":
     "Crie o primeiro — todo mundo com acesso ao repo do time vai vê-lo.",

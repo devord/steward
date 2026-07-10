@@ -56,13 +56,14 @@ export async function action({ request }: Route.ActionArgs) {
       name,
     )
   } catch (error) {
-    // No permission to create repos in the org (or the OAuth app isn't
-    // approved for it): tell the user who can, instead of crashing.
-    if (
-      error instanceof GitHubError &&
-      (error.status === 403 || error.status === 404)
-    ) {
-      return { denied: true as const }
+    // 403: no permission to create repos in the org (or the OAuth app isn't
+    // approved for it) — tell the user who can. 404: the template itself is
+    // missing or unreadable — a config problem, not a permission one.
+    if (error instanceof GitHubError && error.status === 403) {
+      return { error: "denied" as const }
+    }
+    if (error instanceof GitHubError && error.status === 404) {
+      return { error: "template" as const }
     }
     throw error
   }
@@ -101,9 +102,11 @@ export default function Team({ loaderData, actionData }: Route.ComponentProps) {
           <p className="mt-4 rounded-md border border-border-dim bg-bg1 px-4 py-3 font-mono text-sm break-all">
             {loaderData.teamRepo}
           </p>
-          {actionData?.denied ? (
+          {actionData?.error ? (
             <p className="mt-4 text-sm text-destructive">
-              {t("team.missingDenied")}
+              {actionData.error === "denied"
+                ? t("team.missingDenied")
+                : t("team.missingTemplate")}
             </p>
           ) : (
             <Form method="post" className="mt-8">
