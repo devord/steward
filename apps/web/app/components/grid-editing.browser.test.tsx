@@ -89,12 +89,10 @@ function card(slug: string): HTMLElement {
   return found
 }
 
-/** React 19 commits asynchronously — wait until all cards are mounted. */
+/** Render (async in vitest-browser-react) and assert all cards mounted. */
 async function mounted(ui: React.ReactElement, cards: number) {
-  render(ui)
-  await expect
-    .poll(() => document.querySelectorAll("article.widget-cell").length)
-    .toBe(cards)
+  await render(ui)
+  expect(document.querySelectorAll("article.widget-cell")).toHaveLength(cards)
 }
 
 function placementOf(el: HTMLElement) {

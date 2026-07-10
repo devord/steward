@@ -169,10 +169,14 @@ export function useGridDrag({
         if (e.key === "Escape") cleanup()
       }
 
+      const onCancel = (e: PointerEvent) => {
+        if (e.pointerId === pointerId) cleanup()
+      }
+
       const cleanup = () => {
         window.removeEventListener("pointermove", onMove)
         window.removeEventListener("pointerup", onUp)
-        window.removeEventListener("pointercancel", cleanup)
+        window.removeEventListener("pointercancel", onCancel)
         window.removeEventListener("keydown", onKey)
         cleanupRef.current = null
         setDrag(null)
@@ -180,7 +184,7 @@ export function useGridDrag({
 
       window.addEventListener("pointermove", onMove)
       window.addEventListener("pointerup", onUp)
-      window.addEventListener("pointercancel", cleanup)
+      window.addEventListener("pointercancel", onCancel)
       window.addEventListener("keydown", onKey)
       cleanupRef.current = cleanup
     },
