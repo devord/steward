@@ -69,8 +69,9 @@ export function DashboardSwitcher({
         }}
       >
         <SelectTrigger
+          size="sm"
           aria-label={t("switcher.label")}
-          className="h-7 gap-1.5 border-none bg-transparent px-1.5 font-mono text-xs text-ink-dim shadow-none hover:text-foreground"
+          className="gap-1 rounded-md border-none bg-transparent! px-1.5 font-mono text-xs text-ink-dim shadow-none transition-colors hover:bg-muted! hover:text-foreground aria-expanded:bg-muted! aria-expanded:text-foreground [&_svg]:size-3.5 [&_svg]:text-ink-faint"
         >
           <SelectValue />
         </SelectTrigger>
