@@ -1,9 +1,14 @@
 import { Form, redirect, useNavigation } from "react-router"
 
 import type { Route } from "./+types/setup"
-import { Wordmark } from "../components/logo.tsx"
+import { AccountBar } from "../components/account-bar.tsx"
 import { Button } from "~/components/ui/button"
-import { dataRepoExists, resolveDataRepo } from "../lib/dashboard.server.ts"
+import { Link } from "~/components/ui/link"
+import {
+  dataRepoExists,
+  resolveDataRepo,
+  resolveTeamRepo,
+} from "../lib/dashboard.server.ts"
 import { env } from "../lib/env.server.ts"
 import { generateFromTemplate } from "../lib/github.server.ts"
 import { useT } from "../lib/i18n.tsx"
@@ -17,7 +22,9 @@ export async function loader({ request }: Route.LoaderArgs) {
   const auth = await requireAuth(request)
   const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
   if (await dataRepoExists(auth.token, dataRepo)) throw redirect("/")
-  return { login: auth.login, dataRepo }
+  // Team boards live in a separate repo and don't depend on this one, so offer
+  // the way there when a team is configured — setup isn't a gate on them.
+  return { login: auth.login, dataRepo, hasTeam: resolveTeamRepo() != null }
 }
 
 /** First-run wizard: create the private data repo from the template. */
@@ -59,38 +66,56 @@ function BranchLine({ text, branch }: { text: string; branch: string }) {
 }
 
 export default function Setup({ loaderData }: Route.ComponentProps) {
-  const { login, dataRepo } = loaderData
+  const { login, dataRepo, hasTeam } = loaderData
   const t = useT()
   const navigation = useNavigation()
   const creating = navigation.state !== "idle"
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-16 leading-relaxed sm:px-6">
-      <Wordmark className="text-sm" />
-      <h1 className="mt-10 font-mono text-2xl font-bold text-foreground">
-        {t("setup.title")}
-      </h1>
-      <p className="mt-4">
-        {t("setup.hi1")} <span className="font-mono">{login}</span>{" "}
-        {t("setup.hi2")}
-      </p>
-      <p className="mt-4 rounded-md border border-border-dim bg-bg1 px-4 py-3 font-mono text-sm break-all">
-        {dataRepo}
-      </p>
-      <ul className="mt-4 list-inside list-disc text-sm text-ink-dim">
-        <li>
-          <BranchLine text={t("setup.bulletMain")} branch="main" />
-        </li>
-        <li>
-          <BranchLine text={t("setup.bulletArtifacts")} branch="artifacts" />
-        </li>
-        <li>{t("setup.bulletPrivate")}</li>
-      </ul>
-      <Form method="post" className="mt-8">
-        <Button type="submit" disabled={creating}>
-          {creating ? t("setup.creating") : t("setup.create")}
-        </Button>
-      </Form>
-    </main>
+    <div className="mx-auto max-w-2xl px-4 pb-16 leading-relaxed sm:px-6">
+      <AccountBar login={login} className="mb-8" />
+      <main>
+        <h1 className="font-mono text-2xl font-bold text-foreground">
+          {t("setup.title")}
+        </h1>
+        <p className="mt-4">
+          {t("setup.hi1")} <span className="font-mono">{login}</span>{" "}
+          {t("setup.hi2")}
+        </p>
+        <p className="mt-4 rounded-md border border-border-dim bg-bg1 px-4 py-3 font-mono text-sm break-all">
+          {dataRepo}
+        </p>
+        <ul className="mt-4 list-inside list-disc text-sm text-ink-dim">
+          <li>
+            <BranchLine text={t("setup.bulletMain")} branch="main" />
+          </li>
+          <li>
+            <BranchLine text={t("setup.bulletArtifacts")} branch="artifacts" />
+          </li>
+          <li>{t("setup.bulletPrivate")}</li>
+        </ul>
+        <Form method="post" className="mt-8">
+          <Button type="submit" disabled={creating}>
+            {creating ? t("setup.creating") : t("setup.create")}
+          </Button>
+        </Form>
+        {/* If the page insists on creating a repo you know exists, you're
+            almost always signed in as the wrong account — name that, since the
+            check is live per-load, not a stale cache. */}
+        <p className="mt-6 max-w-prose text-xs text-ink-faint">
+          {t("setup.wrongAccount")}
+        </p>
+        {hasTeam && (
+          <p className="mt-8 border-t border-border-dim pt-4 text-sm text-ink-dim">
+            <Link
+              to="/team"
+              className="font-mono text-xs text-ink-dim transition-colors hover:text-foreground"
+            >
+              {t("setup.teamLink")} →
+            </Link>
+          </p>
+        )}
+      </main>
+    </div>
   )
 }

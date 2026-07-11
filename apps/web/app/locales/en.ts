@@ -229,6 +229,9 @@ export const en = {
     "Private: only you (and collaborators you invite) can read it",
   "setup.create": "Create repo",
   "setup.creating": "Creating…",
+  "setup.wrongAccount":
+    "Sure this repo already exists? This check runs live each time, so it's not stale — you're most likely signed in as a different GitHub account than the one that owns it. Check the login above and sign out to switch.",
+  "setup.teamLink": "Go to team boards",
 
   "settings.title": "Settings",
   "settings.back": "Back to the board",
