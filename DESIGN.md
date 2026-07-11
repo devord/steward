@@ -75,13 +75,16 @@ mirrors that must stay geometrically in sync:
   (mark + mono name lockup, scales with font size) for in-app use; token-
   based, so it follows the active theme.
 - `apps/web/public/favicon.svg` (+ `favicon.ico` 16/32/48,
-  `apple-touch-icon.png`) — static favicons, linked from `root.tsx`. The
-  SVG carries light + dark via `prefers-color-scheme`; the `.ico` is a
-  single-look fallback for old browsers.
+  `apple-touch-icon.png`) — static favicons, linked from `root.tsx`. Light
+  is the baseline; the SVG swaps to dark via `prefers-color-scheme: dark`.
+  The `.ico` and `apple-touch-icon.png` are single-look light fallbacks —
+  static formats and home-screen icons can't theme-switch.
 - `apps/web/public/wordmark-{dark,light}.svg` — the mark + `bulletin`
   lockup for the README, swapped by `prefers-color-scheme` in a `<picture>`.
-- `apps/web/public/og.png` — 1200×630 social card; OG/Twitter meta lives
-  in the home route's `meta`.
+- `apps/web/public/og.png` — 1200×630 (@2x) social card in the light
+  (gruvbox-light) palette; OG/Twitter meta lives in the home route's
+  `meta`. One fixed image for every viewer — OG previews can't theme-switch,
+  so it stays light to match the default.
 
 The wordmark text is `foreground` ink; the mark carries the orange. The
 wordmark stays lowercase — a deliberate logotype, the one place lowercase
