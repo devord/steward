@@ -5,6 +5,7 @@ import { LayoutGrid, Plus, Settings, Trash2 } from "lucide-react"
 import { AppHeader } from "./app-header.tsx"
 import { DashboardSwitcher } from "./dashboard-switcher.tsx"
 import { Wordmark } from "./logo.tsx"
+import { SyncIndicator } from "./sync-indicator.tsx"
 import { Button, buttonVariants } from "~/components/ui/button"
 import { Link } from "~/components/ui/link"
 import { Separator } from "~/components/ui/separator"
@@ -82,6 +83,11 @@ export function DashboardHeader({
         personalDashboards={personalDashboards}
         teamDashboards={teamDashboards}
       />
+
+      {/* Background-refresh beat: a faint dot beside the board context, only
+          for the freshness poll (focus/interval/post-run). Navigations use the
+          top RouteProgress bar. */}
+      <SyncIndicator />
 
       {/* Two clusters, one divider: board actions | account. Spacing is
           tighter within a cluster (gap-1) than between them, so the grouping
