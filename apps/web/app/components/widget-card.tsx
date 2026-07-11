@@ -455,7 +455,11 @@ function UpdateAction({
       {result?.ok && !pending ? (
         <Check />
       ) : (
-        <RefreshCw className={cn(spinning && "animate-spin")} />
+        // Spin only for this button's own in-flight submit. While a run is
+        // pending the header already shows the "Running" spinner, so spinning
+        // here too would put two spinners on one card; stay a static, disabled
+        // icon instead.
+        <RefreshCw className={cn(busy && "animate-spin")} />
       )}
       <span role="status" className="sr-only">
         {status ?? ""}

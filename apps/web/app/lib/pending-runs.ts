@@ -4,17 +4,28 @@ import type { ArtifactInfo } from "./dashboard.server.ts"
 
 /**
  * A fired run has no server-side state to poll (ADR-0016: the server holds no
- * secret and just fires). So the client remembers, per routine, when it fired
- * a run — surviving reloads via localStorage — and clears the mark once a
- * newer artifact publishes or the wait times out. That drives the tile's
- * "running" spinner and disables re-firing inside the window.
+ * secret and just fires). So the client remembers, per routine, the run it
+ * fired — surviving reloads via localStorage — and clears the mark once a new
+ * artifact publishes or the wait times out. That drives the tile's "running"
+ * spinner and disables re-firing inside the window.
+ *
+ * Freshness keys off the artifact's blob SHA, not its last-commit date: the
+ * SHA comes from the contents API and tracks the branch tip immediately, while
+ * the commits-list date lags behind a fresh push — which used to leave a tile
+ * spinning "Running" long after its artifact had already updated. We record
+ * the SHA on file at fire time and clear once the loaded SHA differs from it.
  */
 const PENDING_TIMEOUT_MS = 10 * 60_000
-/** A publish just before the fire (clock skew between client and GitHub)
-    shouldn't clear the mark; require the artifact to be meaningfully newer. */
-const CLOCK_SKEW_MS = 60_000
 
 const PREFIX = "bulletin:pending-run:"
+
+/** What we remember about an in-flight run: when it fired and the artifact
+    SHA at that moment (null → nothing published yet), so a later load can tell
+    "the artifact changed" from "still the one that was there when we fired". */
+export interface PendingRun {
+  firedAt: number
+  sha: string | null
+}
 
 function storageKey(dataRepo: string, slug: string): string {
   return `${PREFIX}${dataRepo}:${slug}`
@@ -22,32 +33,36 @@ function storageKey(dataRepo: string, slug: string): string {
 
 /**
  * Which pending runs to clear given the freshly loaded artifacts: one whose
- * artifact published after it fired (past the skew guard), or one that has
- * waited past the timeout. Pure, so the decision is unit-testable.
+ * artifact SHA has changed from what it was when the run fired (the publish
+ * landed), or one that has waited past the timeout. Pure, so the decision is
+ * unit-testable.
  */
 export function pendingToClear(
-  pending: Record<string, number>,
+  pending: Record<string, PendingRun>,
   artifacts: Record<string, ArtifactInfo>,
   now: number,
 ): string[] {
   const clear: string[] = []
-  for (const [slug, firedAt] of Object.entries(pending)) {
-    const lastRunAt = artifacts[slug]?.lastRunAt
-    const published =
-      lastRunAt != null && Date.parse(lastRunAt) > firedAt - CLOCK_SKEW_MS
-    const timedOut = now - firedAt >= PENDING_TIMEOUT_MS
+  for (const [slug, run] of Object.entries(pending)) {
+    const info = artifacts[slug]
+    // A SHA that differs from the one on file means the artifact changed since
+    // the fire — including the first-ever publish (baseline null → a real SHA).
+    // Skip an unreachable read (GitHub flap): its null SHA isn't a real change,
+    // so it mustn't clear a run that's still in flight — let the timeout decide.
+    const published = info != null && !info.unreachable && info.sha !== run.sha
+    const timedOut = now - run.firedAt >= PENDING_TIMEOUT_MS
     if (published || timedOut) clear.push(slug)
   }
   return clear
 }
 
 export function usePendingRuns(dataRepo: string) {
-  const [pending, setPending] = useState<Record<string, number>>({})
+  const [pending, setPending] = useState<Record<string, PendingRun>>({})
 
   // Hydrate from localStorage (client-only), pruning entries past the timeout.
   useEffect(() => {
     const now = Date.now()
-    const next: Record<string, number> = {}
+    const next: Record<string, PendingRun> = {}
     const prefix = `${PREFIX}${dataRepo}:`
     const keys: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
@@ -56,7 +71,7 @@ export function usePendingRuns(dataRepo: string) {
     }
     for (const k of keys) {
       const slug = k.slice(prefix.length)
-      let firedAt: number | undefined
+      let run: PendingRun | undefined
       try {
         const raw = localStorage.getItem(k)
         const parsed: unknown = raw ? JSON.parse(raw) : null
@@ -66,13 +81,19 @@ export function usePendingRuns(dataRepo: string) {
           "firedAt" in parsed &&
           typeof parsed.firedAt === "number"
         ) {
-          firedAt = parsed.firedAt
+          // Marks written before SHA tracking carry no `sha`; treat that as a
+          // null baseline (any published artifact then reads as "changed").
+          const sha =
+            "sha" in parsed && typeof parsed.sha === "string"
+              ? parsed.sha
+              : null
+          run = { firedAt: parsed.firedAt, sha }
         }
       } catch {
-        firedAt = undefined
+        run = undefined
       }
-      if (firedAt != null && now - firedAt < PENDING_TIMEOUT_MS) {
-        next[slug] = firedAt
+      if (run != null && now - run.firedAt < PENDING_TIMEOUT_MS) {
+        next[slug] = run
       } else {
         localStorage.removeItem(k)
       }
@@ -81,13 +102,10 @@ export function usePendingRuns(dataRepo: string) {
   }, [dataRepo])
 
   const markFired = useCallback(
-    (slug: string) => {
-      const firedAt = Date.now()
-      localStorage.setItem(
-        storageKey(dataRepo, slug),
-        JSON.stringify({ firedAt }),
-      )
-      setPending((prev) => ({ ...prev, [slug]: firedAt }))
+    (slug: string, sha: string | null) => {
+      const run: PendingRun = { firedAt: Date.now(), sha }
+      localStorage.setItem(storageKey(dataRepo, slug), JSON.stringify(run))
+      setPending((prev) => ({ ...prev, [slug]: run }))
     },
     [dataRepo],
   )

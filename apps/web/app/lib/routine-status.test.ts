@@ -27,6 +27,7 @@ const ctx = (over: Partial<Parameters<typeof widgetStatus>[1]> = {}) => ({
 
 const artifact = (over: Partial<ArtifactInfo> = {}): ArtifactInfo => ({
   html: null,
+  sha: null,
   lastRunAt: null,
   ...over,
 })

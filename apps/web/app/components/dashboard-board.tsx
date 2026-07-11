@@ -329,8 +329,10 @@ export function DashboardBoard({
             dataRepo={view.dataRepo}
             login={login}
             committed={committedSlugs.has(widget.routine)}
-            pendingFiredAt={pending[widget.routine] ?? null}
-            onFired={() => markFired(widget.routine)}
+            pendingFiredAt={pending[widget.routine]?.firedAt ?? null}
+            onFired={() =>
+              markFired(widget.routine, data[widget.routine]?.sha ?? null)
+            }
             editing={editing}
             drag={drag?.slug === widget.routine ? drag : null}
             onDragStart={(kind, event) =>
