@@ -37,8 +37,10 @@ export function AccountBar({
       </Link>
 
       {/* The account cluster, always visible — on phones too, since telling
-          which login owns the repo is the whole point here. */}
-      <div className="ml-auto flex items-center gap-1">
+          which login owns the repo is the whole point here. It may wrap and
+          the login may break, so a long username never shoves sign-out (the
+          reason we're here) off a narrow screen. */}
+      <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
         <Link
           to="/settings"
           aria-label={t("header.settings")}
@@ -50,7 +52,9 @@ export function AccountBar({
         >
           <Settings className="size-3.5" />
         </Link>
-        <span className="px-1 font-mono text-xs text-ink-faint">{login}</span>
+        <span className="min-w-0 px-1 font-mono text-xs break-all text-ink-faint">
+          {login}
+        </span>
         <Form method="post" action="/auth/logout">
           <Button
             size="sm"
