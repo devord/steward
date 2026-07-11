@@ -169,6 +169,17 @@ The wordmark is the one deliberate lowercase logotype. Git words used
 plainly: draft, diff, commit, PR, base. Empty states state
 the fact and the next action in one line each — no cheerleading.
 
+The product name splits on **who sets the type**. Where we render the
+lockup — the `Wordmark`/`Logo` components, the README SVGs — it is the
+lowercase logotype **`bulletin`**. Everywhere a string is handed off to the
+system or a reader — page `<title>`s, `manifest` name/`short_name`, OG/
+Twitter meta, `aria-label`s, and all prose ("from your Bulletin checkout")
+— it is the capitalized product noun **`Bulletin`**. Lowercase in a
+system-rendered label or mid-sentence reads as a typo, not a logotype, so it
+stays confined to the marks we draw. Identifiers keep lowercase for the usual
+machine-string reason (`@bulletin/schema`, `bulletin-data-*`, cookies, storage
+keys, the `Run the bulletin routine` command).
+
 ## Language
 
 Chrome speaks English and Português (Brasil) — typed dictionaries in
