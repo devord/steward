@@ -80,6 +80,7 @@ export async function action({ request }: Route.ActionArgs) {
         const user = await getAuthedUser(result.token)
         session.set("token", result.token)
         session.set("login", user.login)
+        if (user.name) session.set("name", user.name)
         session.unset("device")
         session.unset("oauthState")
         return redirect("/", await cookie(session))

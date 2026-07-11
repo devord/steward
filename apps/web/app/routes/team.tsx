@@ -33,16 +33,31 @@ export async function loader({ request }: Route.LoaderArgs) {
   const auth = await requireAuth(request)
   const teamRepo = resolveTeamRepo()
   if (!teamRepo) {
-    return { state: "unconfigured" as const, teamRepo: null, login: auth.login }
+    return {
+      state: "unconfigured" as const,
+      teamRepo: null,
+      login: auth.login,
+      displayName: auth.name ?? null,
+    }
   }
 
   if (!(await repoExistsOr503(auth.token, teamRepo))) {
-    return { state: "missing" as const, teamRepo, login: auth.login }
+    return {
+      state: "missing" as const,
+      teamRepo,
+      login: auth.login,
+      displayName: auth.name ?? null,
+    }
   }
   const dashboards = (await listDashboards(auth.token, teamRepo)) ?? []
   const [first] = dashboards
   if (first) throw redirect(`/team/${first}`)
-  return { state: "empty" as const, teamRepo, login: auth.login }
+  return {
+    state: "empty" as const,
+    teamRepo,
+    login: auth.login,
+    displayName: auth.name ?? null,
+  }
 }
 
 /** Create the team repo from the data-repo template. */
@@ -92,7 +107,11 @@ export default function Team({ loaderData, actionData }: Route.ComponentProps) {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-16 leading-relaxed sm:px-6">
-      <AccountBar login={loaderData.login} className="mb-8" />
+      <AccountBar
+        login={loaderData.login}
+        displayName={loaderData.displayName}
+        className="mb-8"
+      />
       <main>
         {loaderData.state === "unconfigured" && (
           <p className="text-sm text-muted-foreground">

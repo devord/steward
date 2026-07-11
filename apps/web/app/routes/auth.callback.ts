@@ -38,6 +38,7 @@ export async function loader({ request }: { request: Request }) {
 
   session.set("token", token)
   session.set("login", user.login)
+  if (user.name) session.set("name", user.name)
   session.unset("oauthState")
 
   return redirect("/", {

@@ -1,4 +1,4 @@
-import { LayoutGrid, Plus, Trash2 } from "lucide-react"
+import { CalendarPlus, Check, PencilRuler, Trash2 } from "lucide-react"
 
 import { NavShell } from "./nav-shell.tsx"
 import { Button } from "~/components/ui/button"
@@ -23,6 +23,7 @@ export function DashboardShell({
   personalDashboards,
   teamDashboards,
   login,
+  displayName,
   hasDraft,
   editing,
   deletable,
@@ -39,6 +40,7 @@ export function DashboardShell({
   personalDashboards: string[]
   teamDashboards: string[] | null
   login: string
+  displayName?: string | null
   hasDraft: boolean
   editing: boolean
   deletable: boolean
@@ -61,6 +63,7 @@ export function DashboardShell({
         personalDashboards,
         teamDashboards,
         login,
+        displayName,
       }}
       // Canvas cap: `wide` fills a large monitor (still bounded so the board
       // stays composed, not stretched edge-to-edge); `fixed` keeps the
@@ -83,7 +86,7 @@ export function DashboardShell({
             variant="ghost"
             className="text-ink-dim hover:text-foreground"
             label={t("header.addRoutine")}
-            icon={<Plus />}
+            icon={<CalendarPlus />}
             onClick={onAdd}
           />
           <ToolbarAction
@@ -93,7 +96,7 @@ export function DashboardShell({
             }
             aria-pressed={editing}
             label={editing ? t("header.done") : t("header.editLayout")}
-            icon={<LayoutGrid />}
+            icon={editing ? <Check /> : <PencilRuler />}
             onClick={onToggleEdit}
           />
           {editing && deletable && (

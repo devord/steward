@@ -25,7 +25,12 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (await repoExistsOr503(auth.token, dataRepo)) throw redirect("/")
   // Team boards live in a separate repo and don't depend on this one, so offer
   // the way there when a team is configured — setup isn't a gate on them.
-  return { login: auth.login, dataRepo, hasTeam: resolveTeamRepo() != null }
+  return {
+    login: auth.login,
+    displayName: auth.name ?? null,
+    dataRepo,
+    hasTeam: resolveTeamRepo() != null,
+  }
 }
 
 /** First-run wizard: create the private data repo from the template. */
@@ -69,14 +74,14 @@ function BranchLine({ text, branch }: { text: string; branch: string }) {
 }
 
 export default function Setup({ loaderData }: Route.ComponentProps) {
-  const { login, dataRepo, hasTeam } = loaderData
+  const { login, displayName, dataRepo, hasTeam } = loaderData
   const t = useT()
   const navigation = useNavigation()
   const creating = navigation.state !== "idle"
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-16 leading-relaxed sm:px-6">
-      <AccountBar login={login} className="mb-8" />
+      <AccountBar login={login} displayName={displayName} className="mb-8" />
       <main>
         <h1 className="font-mono text-2xl font-bold text-foreground">
           {t("setup.title")}

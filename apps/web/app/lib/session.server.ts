@@ -10,6 +10,9 @@ import { env } from "./env.server.ts"
 export interface SessionData {
   token: string
   login: string
+  /** GitHub display name (nullable upstream), stored at login so the chrome
+      can greet the person, not the handle. Absent on pre-existing sessions. */
+  name?: string
   dataRepo?: string
   /** OAuth CSRF state, only present mid-login. */
   oauthState?: string
@@ -46,7 +49,13 @@ export async function getAuth(request: Request) {
   const token = session.get("token")
   const login = session.get("login")
   if (!token || !login) return null
-  return { token, login, dataRepo: session.get("dataRepo"), session }
+  return {
+    token,
+    login,
+    name: session.get("name"),
+    dataRepo: session.get("dataRepo"),
+    session,
+  }
 }
 
 /** Loader guard: bounce anonymous users to the landing page. */

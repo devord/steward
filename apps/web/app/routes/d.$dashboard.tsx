@@ -51,7 +51,14 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   // Fire artifacts only after the existence checks pass, so a 404 never
   // leaves a dangling request. Streamed (ADR-0002), not awaited.
   const artifacts = loadArtifacts(auth.token, ref, view.routines)
-  return { login: auth.login, now: Date.now(), view, artifacts, teamDashboards }
+  return {
+    login: auth.login,
+    displayName: auth.name ?? null,
+    now: Date.now(),
+    view,
+    artifacts,
+    teamDashboards,
+  }
 }
 
 export default function PersonalDashboard({
@@ -66,6 +73,7 @@ export default function PersonalDashboard({
       view={loaderData.view}
       artifacts={loaderData.artifacts}
       login={loaderData.login}
+      displayName={loaderData.displayName}
       now={loaderData.now}
       personalDashboards={loaderData.view.dashboards}
       teamDashboards={loaderData.teamDashboards}

@@ -11,16 +11,17 @@ import { type BoardScope, boardHref } from "../lib/board.ts"
 import { useT } from "../lib/i18n.tsx"
 
 /**
- * The board navigation rail — brand, the full list of boards grouped by
- * scope, a new-board affordance, and the account menu pinned to the foot.
- * Renders the same inner content in two hosts: the persistent `<aside>` on
- * wide viewports and the mobile drawer (`dashboard-shell.tsx`). It carries no
- * surface or positioning of its own — the host owns the border, background,
- * and scroll container — so the two placements can't drift.
+ * The board navigation rail — brand, the boards grouped by scope, a new-board
+ * affordance, and the account menu pinned to the foot. Renders the same inner
+ * content in two hosts: the persistent `<aside>` on wide viewports and the
+ * mobile drawer (`dashboard-shell.tsx`). It carries no surface, width, or
+ * positioning of its own — the host owns the border, background, collapse, and
+ * resize — so the two placements can't drift.
  *
- * Board switching moved off the header's cramped `<select>` (ADR-0010) into
- * this always-visible list: every board is one click, the active one reads
- * from across the room, and "new dashboard" is a peer of the boards it joins.
+ * Board switching lives in this always-visible list (ADR-0010): every board is
+ * one click, the active one reads from across the room, and "new dashboard" is
+ * a peer of the boards it joins. The data repo is reachable from the account
+ * menu ("View data repo"), so it isn't repeated here.
  */
 export function DashboardSidebar({
   dataRepo,
@@ -29,6 +30,7 @@ export function DashboardSidebar({
   personalDashboards,
   teamDashboards,
   login,
+  displayName,
   onNavigate,
 }: {
   dataRepo: string
@@ -37,6 +39,7 @@ export function DashboardSidebar({
   personalDashboards: string[]
   teamDashboards: string[] | null
   login: string
+  displayName?: string | null
   /** Fired when a board link is followed — lets the mobile drawer close. */
   onNavigate?: () => void
 }) {
@@ -45,10 +48,9 @@ export function DashboardSidebar({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Brand row, height-matched to the board toolbar so the top hairline
-          runs unbroken across both columns (the divider is the only vertical
-          seam). */}
-      <div className="flex min-h-11 items-center border-b border-border-dim px-3 py-1.5">
+      {/* Brand row, exactly the board toolbar's height (h-11 + border-b) so
+          the top hairline runs unbroken across both columns. */}
+      <div className="flex h-11 shrink-0 items-center border-b border-border-dim px-3">
         <Link
           to="/"
           aria-label="Bulletin"
@@ -59,60 +61,52 @@ export function DashboardSidebar({
         </Link>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto px-2 py-3">
-        {/* Repo attribution — the board's home on GitHub, captioning the
-            boards it scopes. Full width here (it was hidden below md in the
-            old header). */}
-        <a
-          href={`https://github.com/${dataRepo}`}
-          target="_blank"
-          rel="noreferrer"
-          className="block truncate px-2 font-mono text-xs text-ink-faint transition-colors hover:text-ink-dim"
-        >
-          {dataRepo}
-        </a>
+      <nav
+        aria-label={t("nav.boards")}
+        className="flex-1 space-y-4 overflow-y-auto px-2 py-3"
+      >
+        <NavGroup label={t("switcher.personal")}>
+          {personalDashboards.map((slug) => (
+            <NavItem
+              key={`personal:${slug}`}
+              to={boardHref("personal", slug)}
+              label={slug}
+              active={scope === "personal" && dashboardSlug === slug}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </NavGroup>
 
-        <nav aria-label={t("nav.boards")} className="space-y-3">
-          <NavGroup label={t("switcher.personal")}>
-            {personalDashboards.map((slug) => (
+        {teamDashboards && (
+          <NavGroup label={t("switcher.team")}>
+            {teamDashboards.map((slug) => (
               <NavItem
-                key={`personal:${slug}`}
-                to={boardHref("personal", slug)}
+                key={`team:${slug}`}
+                to={boardHref("team", slug)}
                 label={slug}
-                active={scope === "personal" && dashboardSlug === slug}
+                active={scope === "team" && dashboardSlug === slug}
                 onNavigate={onNavigate}
               />
             ))}
           </NavGroup>
+        )}
 
-          {teamDashboards && (
-            <NavGroup label={t("switcher.team")}>
-              {teamDashboards.map((slug) => (
-                <NavItem
-                  key={`team:${slug}`}
-                  to={boardHref("team", slug)}
-                  label={slug}
-                  active={scope === "team" && dashboardSlug === slug}
-                  onNavigate={onNavigate}
-                />
-              ))}
-            </NavGroup>
-          )}
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <span className="flex size-4 shrink-0 items-center justify-center">
+            <Plus className="size-3.5" />
+          </span>
+          {t("switcher.new")}
+        </button>
+      </nav>
 
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <Plus className="size-3.5 shrink-0" />
-            {t("switcher.new")}
-          </button>
-        </nav>
-      </div>
-
-      <div className="border-t border-border-dim p-2">
+      <div className="shrink-0 border-t border-border-dim p-2">
         <AccountMenu
           login={login}
+          displayName={displayName}
           dataRepo={dataRepo}
           block
           onNavigate={onNavigate}
@@ -133,7 +127,7 @@ export function DashboardSidebar({
   )
 }
 
-/** A scope heading over its board list — mono, muted, Sentence case. */
+/** A scope heading over its board list — muted, Sentence case, mono. */
 function NavGroup({
   label,
   children,
@@ -143,16 +137,18 @@ function NavGroup({
 }) {
   return (
     <div>
-      <div className="px-2 pb-1 font-mono text-xs text-ink-faint">{label}</div>
+      <div className="mb-1 px-2.5 font-mono text-xs font-medium text-ink-faint">
+        {label}
+      </div>
       <div className="flex flex-col gap-0.5">{children}</div>
     </div>
   )
 }
 
 /**
- * One board link. The active board carries an accent dot in a reserved
- * leading slot (never a side-stripe) and the full-ink label; the slot keeps
- * every row's text aligned whether or not the dot is lit.
+ * One board link. Every row reserves a fixed leading slot so labels align
+ * whether the row shows the active accent dot, nothing, or (the New-dashboard
+ * peer) a plus — never a side-stripe. Active also fills and lifts to full ink.
  */
 function NavItem({
   to,
@@ -171,19 +167,21 @@ function NavItem({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2 rounded-md px-2 py-1.5 font-mono text-xs transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        "flex items-center gap-2 rounded-md px-2.5 py-1.5 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
         active
-          ? "bg-sidebar-accent text-foreground"
+          ? "bg-sidebar-accent font-medium text-foreground"
           : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
       )}
     >
-      <span
-        aria-hidden
-        className={cn(
-          "size-1.5 shrink-0 rounded-full",
-          active ? "bg-primary" : "bg-transparent",
-        )}
-      />
+      <span className="flex size-4 shrink-0 items-center justify-center">
+        <span
+          aria-hidden
+          className={cn(
+            "size-1.5 rounded-full",
+            active ? "bg-primary" : "bg-transparent",
+          )}
+        />
+      </span>
       <span className="truncate">{label}</span>
     </Link>
   )

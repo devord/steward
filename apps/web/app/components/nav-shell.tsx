@@ -1,6 +1,6 @@
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
-import { Menu } from "lucide-react"
+import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 
 import { DashboardSidebar } from "./dashboard-sidebar.tsx"
 import { Wordmark } from "./logo.tsx"
@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet"
 import { cn } from "~/lib/utils"
 import type { BoardScope } from "../lib/board.ts"
 import { useT } from "../lib/i18n.tsx"
+import { useSidebarCollapsed, useSidebarWidth } from "../lib/sidebar-panel.ts"
 
 /** The navigation the rail renders — the boards, the account, the repo home. */
 export interface ShellNav {
@@ -21,6 +22,8 @@ export interface ShellNav {
   personalDashboards: string[]
   teamDashboards: string[] | null
   login: string
+  /** GitHub display name for the account menu; falls back to the login. */
+  displayName?: string | null
 }
 
 /**
@@ -33,7 +36,11 @@ export interface ShellNav {
  * through `actions`; settings passes its own. Extracting the frame here is what
  * keeps the two from drifting.
  *
- * Pure presentation: it owns the drawer open state and nothing else.
+ * The rail collapses and drag-resizes, both persisted per device; the toolbar
+ * and the rail's brand row are the identical `h-11` bordered box, so the top
+ * hairline runs unbroken across both columns. When the rail is hidden —
+ * collapsed on desktop, or below `lg` — the toolbar carries the wordmark so the
+ * brand never disappears.
  */
 export function NavShell({
   nav,
@@ -51,13 +58,91 @@ export function NavShell({
 }) {
   const t = useT()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed()
+  const { width, setWidth, persist } = useSidebarWidth()
+  const [resizing, setResizing] = useState(false)
+  // Transitions (and the stored collapse/width) apply only after mount, so the
+  // first client paint matches SSR and the initial preference correction
+  // doesn't animate.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  const onGutterPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault()
+      const startX = e.clientX
+      const startWidth = width
+      let current = startWidth
+      e.currentTarget.setPointerCapture(e.pointerId)
+      setResizing(true)
+      document.body.style.userSelect = "none"
+      document.body.style.cursor = "col-resize"
+      const onMove = (ev: PointerEvent) => {
+        current = startWidth + (ev.clientX - startX)
+        setWidth(current)
+      }
+      const onUp = () => {
+        window.removeEventListener("pointermove", onMove)
+        window.removeEventListener("pointerup", onUp)
+        document.body.style.userSelect = ""
+        document.body.style.cursor = ""
+        setResizing(false)
+        persist(current)
+      }
+      window.addEventListener("pointermove", onMove)
+      window.addEventListener("pointerup", onUp)
+    },
+    [width, setWidth, persist],
+  )
+
+  const onGutterKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const step = e.shiftKey ? 32 : 8
+      if (e.key === "ArrowLeft") {
+        e.preventDefault()
+        const next = width - step
+        setWidth(next)
+        persist(next)
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault()
+        const next = width + step
+        setWidth(next)
+        persist(next)
+      }
+    },
+    [width, setWidth, persist],
+  )
 
   return (
     <div className="flex min-h-dvh">
-      {/* Persistent rail — the second neutral layer (bg1), a hairline off the
-          page. Sticks full-height while the content scrolls beside it. */}
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-border-dim bg-sidebar lg:flex">
-        <DashboardSidebar {...nav} />
+      {/* Persistent rail — the second neutral layer (bg1). Collapses to zero
+          width (content clipped, not reflowed) and resizes via the gutter. */}
+      <aside
+        inert={collapsed || undefined}
+        className={cn(
+          "sticky top-0 hidden h-dvh shrink-0 overflow-hidden bg-sidebar lg:block",
+          mounted && !resizing
+            ? "transition-[width] duration-200 ease-out motion-reduce:transition-none"
+            : "",
+        )}
+        style={{ width: collapsed ? 0 : width }}
+      >
+        <div
+          style={{ width }}
+          className="relative flex h-full flex-col border-r border-border-dim"
+        >
+          <DashboardSidebar {...nav} />
+          {/* Drag/keyboard gutter — the ARIA window-splitter pattern. */}
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t("nav.resize")}
+            tabIndex={collapsed ? -1 : 0}
+            onPointerDown={onGutterPointerDown}
+            onKeyDown={onGutterKeyDown}
+            className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize touch-none transition-colors hover:bg-primary/40 focus-visible:bg-primary/60 focus-visible:outline-none"
+          />
+        </div>
       </aside>
 
       {/* Mobile drawer — the same rail, off-canvas. */}
@@ -69,15 +154,26 @@ export function NavShell({
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 border-b bg-background">
+        {/* h-11 + border-b, the same box as the rail's brand row → continuous
+            top hairline across the two columns. */}
+        <header className="sticky top-0 z-20 flex h-11 shrink-0 items-center border-b bg-background">
           <div
             className={cn(
-              "mx-auto flex min-h-11 items-center gap-2 px-4 py-1.5 sm:px-6",
+              "mx-auto flex h-full w-full items-center gap-1.5 px-4 sm:px-6",
               cap,
             )}
           >
-            {/* Below lg the rail is gone, so the toolbar carries the drawer
-                trigger and the brand it would otherwise show. */}
+            {/* Desktop: collapse/expand the rail. */}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="hidden text-ink-dim hover:text-foreground lg:inline-flex"
+              aria-label={collapsed ? t("nav.expand") : t("nav.collapse")}
+              onClick={toggleCollapsed}
+            >
+              {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            </Button>
+            {/* Mobile: open the drawer. */}
             <Button
               variant="ghost"
               size="icon-sm"
@@ -87,10 +183,15 @@ export function NavShell({
             >
               <Menu />
             </Button>
+            {/* Brand shows here whenever the rail's own wordmark is hidden:
+                always below lg, and on desktop only while collapsed. */}
             <Link
               to="/"
               aria-label="Bulletin"
-              className="-mx-1 inline-flex items-center rounded-md px-1 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 lg:hidden"
+              className={cn(
+                "-mx-1 mr-1 inline-flex items-center rounded-md px-1 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                !collapsed && "lg:hidden",
+              )}
             >
               <Wordmark className="text-sm" />
             </Link>

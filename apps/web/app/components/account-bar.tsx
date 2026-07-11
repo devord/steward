@@ -16,9 +16,11 @@ import { cn } from "~/lib/utils"
  */
 export function AccountBar({
   login,
+  displayName,
   className,
 }: {
   login: string
+  displayName?: string | null
   className?: string
 }) {
   return (
@@ -32,7 +34,7 @@ export function AccountBar({
       </Link>
 
       <div className="ml-auto flex min-w-0 items-center">
-        <AccountMenu login={login} />
+        <AccountMenu login={login} displayName={displayName} />
       </div>
     </AppHeader>
   )

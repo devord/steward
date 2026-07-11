@@ -39,6 +39,9 @@ export const ptBR: Messages = {
 
   "nav.boards": "Painéis",
   "nav.openMenu": "Abrir navegação",
+  "nav.collapse": "Recolher a barra lateral",
+  "nav.expand": "Expandir a barra lateral",
+  "nav.resize": "Redimensionar a barra lateral",
   "account.menu": "Conta",
   "account.githubAccount": "Conta do GitHub",
   "account.viewRepo": "Ver repo de dados",
