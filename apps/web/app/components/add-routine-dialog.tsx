@@ -90,6 +90,7 @@ export function AddRoutineDialog({
   const [instructions, setInstructions] = useState("")
   const [skillId, setSkillId] = useState<string | null>(null)
   const [name, setName] = useState("")
+  const [nameEdited, setNameEdited] = useState(false)
   const [slugEdited, setSlugEdited] = useState(false)
   const [slug, setSlug] = useState("")
   const [size, setSize] = useState<WidgetSize>({
@@ -119,6 +120,7 @@ export function AddRoutineDialog({
     setInstructions("")
     setSkillId(null)
     setName("")
+    setNameEdited(false)
     setSlugEdited(false)
     setSlug("")
     setSize({
@@ -133,9 +135,14 @@ export function AddRoutineDialog({
 
   function pickSkill(next: DiscoveredSkill) {
     // The picker is an accelerator, not a gate — a second click deselects
-    // back to a prompt-only routine, keeping whatever was typed.
+    // back to a prompt-only routine, keeping whatever the user typed but
+    // dropping any name/slug this skill auto-filled.
     if (next.id === skillId) {
       setSkillId(null)
+      if (!nameEdited) {
+        setName("")
+        if (!slugEdited) setSlug("")
+      }
       return
     }
     setSkillId(next.id)
@@ -151,7 +158,9 @@ export function AddRoutineDialog({
       setCustomSize(false)
     }
     if (next.widget.schedule) setSchedule(next.widget.schedule)
-    if (!name) {
+    // Re-fill from the newly picked skill unless the user typed their own
+    // name — otherwise switching skills leaves the first skill's name/slug.
+    if (!nameEdited) {
       setName(next.name)
       if (!slugEdited) setSlug(kebab(next.name))
     }
@@ -273,6 +282,7 @@ export function AddRoutineDialog({
                 id="routine-name"
                 value={name}
                 onChange={(event) => {
+                  setNameEdited(true)
                   setName(event.target.value)
                   if (!slugEdited) setSlug(kebab(event.target.value))
                 }}
