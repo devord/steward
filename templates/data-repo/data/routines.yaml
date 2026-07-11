@@ -8,6 +8,15 @@
 #             widget's update button or `pnpm routine <slug>` (ADR-0016)
 #   host:     cloud (default) or local — local runs on your machine and is
 #             the only host that can read local data (ADR-0012)
+#   repos:    extra source repos (owner/repo) a CLOUD run needs beyond the
+#             two always attached — the bulletin app repo (contract skills)
+#             and this data repo. A cloud run reaches only attached repos,
+#             so a `skill:` from a plugin repo must list it here, e.g.
+#             `Form-Factory/plugins` (ADR-0018). Ignored for local runs.
+#   connectors: MCP connector allowlist for a CLOUD run, by account name
+#             (e.g. GitHub, Google_Calendar). Omit → none: the run gets no
+#             connectors rather than your whole account's set (ADR-0018).
+#             Ignored for local runs (they inherit the machine's servers).
 # Enact schedules and triggers with `pnpm routines:sync`. Edit via the
 # Bulletin app or by hand.
 routines:
@@ -15,6 +24,9 @@ routines:
     name: Daily Plan
     skill: daily-plan # the private-skill example in .claude/skills/
     schedule: "0 8 * * *"
+    # This skill lives in THIS data repo (already attached), so no `repos:`.
+    # It reads your calendar, so allow just that connector — nothing else:
+    connectors: [Google_Calendar]
     instructions: |
       Replace me: which projects matter, what to ignore, tone.
     enabled: false

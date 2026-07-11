@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest"
 
 import { dashboardFileSchema, dashboardPath } from "./dashboard.ts"
 import {
+  cloudSources,
   isManual,
   routineHost,
+  routineSchema,
   routinesFileSchema,
   triggerPath,
 } from "./routine.ts"
@@ -95,6 +97,76 @@ describe("routinesFileSchema", () => {
       routines: [{ slug: "empty", name: "Empty", instructions: "" }],
     })
     expect(result.success).toBe(false)
+  })
+
+  it("parses cloud repos and connectors (ADR-0018)", () => {
+    const parsed = routinesFileSchema.parse({
+      routines: [
+        {
+          slug: "repo-pulse",
+          name: "Repo Pulse",
+          skill: "repo-pulse",
+          schedule: "0 */4 * * *",
+          repos: ["Form-Factory/plugins"],
+          connectors: ["GitHub"],
+        },
+      ],
+    })
+    expect(parsed.routines[0]?.repos).toEqual(["Form-Factory/plugins"])
+    expect(parsed.routines[0]?.connectors).toEqual(["GitHub"])
+  })
+
+  it("rejects a repo that is not owner/repo", () => {
+    const result = routinesFileSchema.safeParse({
+      routines: [
+        {
+          slug: "repo-pulse",
+          name: "Repo Pulse",
+          skill: "repo-pulse",
+          repos: ["just-a-name"],
+        },
+      ],
+    })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe("cloudSources", () => {
+  const base = [
+    "Form-Factory/bulletin",
+    "danielmoraes/bulletin-data-danielmoraes",
+  ]
+
+  it("unions declared extras onto the base, base first", () => {
+    const routine = routineSchema.parse({
+      slug: "repo-pulse",
+      name: "Repo Pulse",
+      skill: "repo-pulse",
+      repos: ["Form-Factory/plugins"],
+    })
+    expect(cloudSources(routine, base)).toEqual([
+      ...base,
+      "Form-Factory/plugins",
+    ])
+  })
+
+  it("de-duplicates a repo already in the base", () => {
+    const routine = routineSchema.parse({
+      slug: "daily-plan",
+      name: "Daily Plan",
+      skill: "daily-plan",
+      repos: ["Form-Factory/bulletin"],
+    })
+    expect(cloudSources(routine, base)).toEqual(base)
+  })
+
+  it("is just the base when no extras are declared", () => {
+    const routine = routineSchema.parse({
+      slug: "daily-plan",
+      name: "Daily Plan",
+      skill: "daily-plan",
+    })
+    expect(cloudSources(routine, base)).toEqual(base)
   })
 })
 

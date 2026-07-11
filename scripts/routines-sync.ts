@@ -2,8 +2,9 @@
  * Reconcile data/routines.yaml against the account's enacted state on every
  * host (ADR-0005/0012): cloud routines on the runner's Claude account and
  * launchd agents on this machine. The YAML is the source of truth; every
- * enacted copy is a projection holding nothing but a stable pointer prompt
- * plus its trigger (cron, API trigger, or launchd calendar).
+ * enacted copy is a projection holding a stable pointer prompt, its trigger
+ * (cron, API trigger, or launchd calendar), and — for cloud routines — the
+ * source repos and MCP connector allowlist the run needs (ADR-0018).
  *
  * Works for a personal data repo and for the shared team repo (ADR-0010):
  * team runs are classified by the target repo differing from
@@ -47,6 +48,7 @@ import { createInterface } from "node:readline/promises"
 
 import {
   type Routine,
+  cloudSources,
   parseRoutinesFile,
   routineHost,
   triggerFileSchema,
@@ -54,6 +56,13 @@ import {
 } from "@bulletin/schema"
 
 import { cronToLaunchd, launchdPlist, plistRepo } from "./launchd.ts"
+
+/**
+ * Where the contract skills (run-routine, widget-artifact, publish-widget)
+ * live — always attached to a cloud run so the pointer prompt resolves,
+ * across personal and team repos alike (ADR-0018).
+ */
+const CONTRACT_REPO = "Form-Factory/bulletin"
 
 const args = process.argv.slice(2)
 const apply = args.includes("--apply")
@@ -150,6 +159,26 @@ function cloudName(routine: Routine): string {
   return teamMode ? `bulletin-team-${routine.slug}` : `bulletin-${routine.slug}`
 }
 
+/**
+ * Source repos to attach to this routine's cloud run (ADR-0018): the
+ * contract repo and the data repo, always, plus the routine's declared
+ * extras. A cloud session can only reach repos attached as sources.
+ */
+function sourcesFor(routine: Routine): string[] {
+  const base = repo != null ? [CONTRACT_REPO, repo] : [CONTRACT_REPO]
+  return cloudSources(routine, base)
+}
+
+/** Connector allowlist for this routine's cloud run; empty means none. */
+function connectorsFor(routine: Routine): string[] {
+  return routine.connectors ?? []
+}
+
+/** Comma-joined list, or "(none)" so an empty set reads as intentional. */
+function orNone(values: string[]): string {
+  return values.length > 0 ? values.join(", ") : "(none)"
+}
+
 // In team mode each teammate syncs only the routines they run — otherwise
 // every sync would duplicate every schedule onto every account.
 let mine = routines
@@ -200,22 +229,29 @@ const cloudPlan = [
   "# Bulletin routines — desired cloud state",
   "#",
   "# One cloud routine per enabled cloud entry. The prompt is a stable",
-  "# pointer; instructions edits in routines.yaml need no cloud change —",
-  "# only the cron below ever drifts. Manual entries have no cron: they",
-  "# carry an API trigger instead (ADR-0016).",
+  "# pointer; instructions edits in routines.yaml need no cloud change. The",
+  "# cron, the repos, and the connectors below are all reconciled — any of",
+  "# them can drift. repos is the exact source set (a cloud run reaches only",
+  "# attached repos); connectors is the exact MCP allowlist, empty meaning",
+  "# none (ADR-0018). Manual entries have no cron: they carry an API trigger",
+  "# instead (ADR-0016).",
   orphanRule,
   "",
   ...cloudScheduled.flatMap((routine) => [
     `routine: ${cloudName(routine)}`,
-    `  cron:   ${routine.schedule}`,
-    `  prompt: ${pointerPrompt(routine)}`,
+    `  cron:       ${routine.schedule}`,
+    `  prompt:     ${pointerPrompt(routine)}`,
+    `  repos:      ${orNone(sourcesFor(routine))}`,
+    `  connectors: ${orNone(connectorsFor(routine))}`,
     "",
   ]),
   ...cloudManual.flatMap((routine) => [
     `routine: ${cloudName(routine)}`,
-    "  cron:   none — manual, fired via its API trigger (ADR-0016)",
-    `  prompt: ${pointerPrompt(routine)}`,
-    `  trigger: ${triggerPath(routine.slug)} ${hasTrigger(routine) ? "(token present)" : "(TOKEN MISSING — see below)"}`,
+    "  cron:       none — manual, fired via its API trigger (ADR-0016)",
+    `  prompt:     ${pointerPrompt(routine)}`,
+    `  repos:      ${orNone(sourcesFor(routine))}`,
+    `  connectors: ${orNone(connectorsFor(routine))}`,
+    `  trigger:    ${triggerPath(routine.slug)} ${hasTrigger(routine) ? "(token present)" : "(TOKEN MISSING — see below)"}`,
     "",
   ]),
   ...(disabled.length > 0
@@ -340,18 +376,33 @@ if (!apply) {
 
 const instructions = [
   "Reconcile my cloud Claude Code routines with the desired state below,",
-  "using your schedule tooling:",
-  "1. List the current cloud routines.",
+  "using your routine/schedule tooling (the claude.ai code-triggers API:",
+  "list, get, create, update). Each routine's source repos live at",
+  "job_config.ccr.session_context.sources[].git_repository.url and its MCP",
+  "connectors at mcp_connections[]; both are settable on create and update.",
+  "1. List the current cloud routines (and read one existing routine to see",
+  "   the shape of sources[] and mcp_connections[]).",
   "2. Create every listed routine that is missing, with EXACTLY the given",
-  "   name, cron, and prompt. For entries marked manual (no cron): create",
-  "   the routine WITHOUT any schedule if your tooling supports that;",
-  "   otherwise report it as needing manual creation in the Claude web UI.",
-  "3. Fix the cron of any listed routine whose schedule drifted. Never",
-  "   edit an existing routine's prompt.",
-  "4. Delete orphans per the rule in the plan (this covers the disabled",
+  "   name, cron, prompt, repos (as sources[]), and connectors (as",
+  "   mcp_connections[]). For entries marked manual (no cron): create the",
+  "   routine WITHOUT any schedule if your tooling supports that; otherwise",
+  "   report it as needing manual creation in the Claude web UI.",
+  "3. For each listed routine that already exists, reconcile it to match:",
+  "   fix a drifted cron; set sources[] to EXACTLY the listed repos (add",
+  "   missing, remove extras); set mcp_connections[] to EXACTLY the listed",
+  "   connectors (add missing, remove extras). A routine with connectors",
+  "   '(none)' must end up with an empty mcp_connections[]. Never edit an",
+  "   existing routine's prompt.",
+  "4. To set a connector you must supply its account-specific connector_uuid",
+  "   and url. Resolve each connector NAME to its uuid/url from the",
+  "   mcp_connections[] of the existing routines you listed in step 1 (they",
+  "   already map name → uuid/url on this account). If a listed connector",
+  "   name resolves to no uuid anywhere, do NOT guess — report it as",
+  "   unresolved and leave that routine's other changes applied.",
+  "5. Delete orphans per the rule in the plan (this covers the disabled",
   "   ones). Match on the prompt's repo clause, not just the name.",
-  "5. Print a summary table: name, action taken (created/ok/re-scheduled/",
-  "   deleted/needs-web-ui), cron.",
+  "6. Print a summary table: name, action taken (created/ok/reconciled/",
+  "   deleted/needs-web-ui), and what changed (cron/repos/connectors).",
   "Touch nothing that is not named bulletin-*.",
   "",
   cloudPlan.join("\n"),
