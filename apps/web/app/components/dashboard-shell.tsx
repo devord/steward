@@ -1,4 +1,4 @@
-import { CalendarPlus, Check, PencilRuler, Trash2 } from "lucide-react"
+import { CalendarPlus, Check, PencilRuler } from "lucide-react"
 
 import { NavShell } from "./nav-shell.tsx"
 import { Button } from "~/components/ui/button"
@@ -11,7 +11,9 @@ import { useT } from "../lib/i18n.tsx"
  * mobile drawer, sticky header) with the board-scoped actions dropped into its
  * toolbar. Splitting navigation (the rail) from board actions (the toolbar) is
  * what unclutters the old single-row header — account and board-switching live
- * in the rail, leaving the toolbar to Sync / Add / Edit only.
+ * in the rail, leaving the toolbar to Sync / Add / Edit only. Deleting the
+ * board is board-lifecycle, not layout: it lives in the rail's per-board menu
+ * (passed down as `nav.onDeleteDashboard`), not in this toolbar.
  *
  * Pure presentation: every mutation is a callback so the board keeps all draft
  * and edit state.
@@ -64,6 +66,9 @@ export function DashboardShell({
         teamDashboards,
         login,
         displayName,
+        // The active board's delete lives in the rail's per-board menu. Only
+        // deletable boards get it — the personal default has no menu action.
+        onDeleteDashboard: deletable ? onDelete : undefined,
       }}
       // Canvas cap: `wide` fills a large monitor (still bounded so the board
       // stays composed, not stretched edge-to-edge); `fixed` keeps the
@@ -99,15 +104,6 @@ export function DashboardShell({
             icon={editing ? <Check /> : <PencilRuler />}
             onClick={onToggleEdit}
           />
-          {editing && deletable && (
-            <ToolbarAction
-              variant="ghost"
-              className="text-ink-dim hover:text-red"
-              label={t("board.deleteDashboard")}
-              icon={<Trash2 />}
-              onClick={onDelete}
-            />
-          )}
         </>
       }
     >

@@ -56,12 +56,18 @@ export function kebab(text: string): string {
 }
 
 /**
- * The add-routine wizard, prompt-first (ADR-0013): describe what the widget
+ * The routine wizard, prompt-first (ADR-0013): describe what the widget
  * should show; picking a discovered skill (ADR-0015) is an optional
  * accelerator that pre-fills schedule/size from its `widget:` hints. Then
  * name it, size the widget, pick a schedule (or manual, ADR-0016) and a
  * host (ADR-0012). Produces a draft edit — nothing is written until the
  * Sync panel commits (ADR-0003).
+ *
+ * Two modes on one form. In **add** mode it authors a new routine and its
+ * initial placement (size). In **edit** mode (`editRoutine` set) it changes
+ * an existing routine's config: the slug is fixed (it keys widgets and the
+ * published artifact path, so renaming would orphan both) and the size picker
+ * is hidden — placement is a grid concern, adjusted by drag/resize.
  */
 export function AddRoutineDialog({
   open,
@@ -70,6 +76,8 @@ export function AddRoutineDialog({
   columns,
   existingSlugs,
   onAdd,
+  editRoutine,
+  onEdit,
   runner,
 }: {
   open: boolean
@@ -81,12 +89,17 @@ export function AddRoutineDialog({
   columns: number
   existingSlugs: string[]
   onAdd: (routine: Routine, size: WidgetSize) => void
+  /** When set, the form edits this routine in place instead of adding one. */
+  editRoutine?: Routine | null
+  /** Called on submit in edit mode with the updated routine (slug unchanged). */
+  onEdit?: (routine: Routine) => void
   /** Set on team boards: the login whose Claude account owns the routine's
       cloud resource (ADR-0010/0016). Stamped on the routine and surfaced
       as a hint. */
   runner?: string
 }) {
   const t = useT()
+  const isEdit = editRoutine != null
   const [instructions, setInstructions] = useState("")
   const [skillId, setSkillId] = useState<string | null>(null)
   const [name, setName] = useState("")
@@ -115,6 +128,27 @@ export function AddRoutineDialog({
       current.cols > columns ? { ...current, cols: columns } : current,
     )
   }, [columns])
+
+  // Opening in edit mode seeds the fields from the routine. Keyed on the slug
+  // (stable for the life of an edit session) so it prefills once per open and
+  // never clobbers in-progress edits. A cron off every preset shows as Custom;
+  // a null schedule is Manual.
+  useEffect(() => {
+    if (!open || !editRoutine) return
+    setInstructions(editRoutine.instructions ?? "")
+    setSkillId(editRoutine.skill ?? null)
+    setName(editRoutine.name)
+    setSlug(editRoutine.slug)
+    setSlugEdited(true)
+    const cron = editRoutine.schedule
+    if (cron == null) setSchedule(MANUAL)
+    else if (SCHEDULE_PRESETS.some((p) => p.value === cron)) setSchedule(cron)
+    else {
+      setSchedule(CUSTOM)
+      setCustomCron(cron)
+    }
+    setHost(editRoutine.host ?? "cloud")
+  }, [open, editRoutine])
 
   function reset() {
     setInstructions("")
@@ -169,9 +203,13 @@ export function AddRoutineDialog({
   const manual = schedule === MANUAL
   const effectiveSchedule = schedule === CUSTOM ? customCron : schedule
   const slugValid = slugSchema.safeParse(slug).success
-  const slugTaken = existingSlugs.includes(slug)
+  // In edit mode the slug is the routine's own and fixed — never "taken".
+  const slugTaken = !isEdit && existingSlugs.includes(slug)
+  // Source can be a picked skill or typed instructions; test skillId (not the
+  // resolved `skill`) so an edited routine whose skill isn't currently
+  // discoverable still counts as having a source.
   const canSubmit =
-    (skill != null || instructions.trim().length > 0) &&
+    (skillId != null || instructions.trim().length > 0) &&
     name.trim().length > 0 &&
     slugValid &&
     !slugTaken &&
@@ -179,20 +217,29 @@ export function AddRoutineDialog({
 
   function submit() {
     if (!canSubmit) return
-    onAdd(
-      {
-        slug,
-        name: name.trim(),
-        ...(skill ? { skill: skill.id } : {}),
-        ...(manual ? {} : { schedule: effectiveSchedule.trim() }),
-        // Cloud is the default (ADR-0012) — leave it out of the YAML.
-        ...(host === "local" ? { host } : {}),
-        ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
-        ...(runner ? { runner } : {}),
-        enabled: true,
-      },
-      size,
-    )
+    // Build the routine the same minimal way in both modes (cloud host and a
+    // dropped schedule stay out of the YAML). In edit mode the slug is carried
+    // through unchanged and fields the form doesn't own (runner, enabled) are
+    // preserved from the original.
+    const routine: Routine = {
+      slug: isEdit ? editRoutine.slug : slug,
+      name: name.trim(),
+      ...(skillId ? { skill: skillId } : {}),
+      ...(manual ? {} : { schedule: effectiveSchedule.trim() }),
+      // Cloud is the default (ADR-0012) — leave it out of the YAML.
+      ...(host === "local" ? { host } : {}),
+      ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
+      ...(isEdit
+        ? editRoutine.runner
+          ? { runner: editRoutine.runner }
+          : {}
+        : runner
+          ? { runner }
+          : {}),
+      enabled: isEdit ? editRoutine.enabled : true,
+    }
+    if (isEdit) onEdit?.(routine)
+    else onAdd(routine, size)
     reset()
     onOpenChange(false)
   }
@@ -210,8 +257,12 @@ export function AddRoutineDialog({
           small phones with the keyboard open. */}
       <DialogContent className="flex max-h-[85svh] flex-col sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t("dialog.title")}</DialogTitle>
-          <DialogDescription>{t("dialog.description")}</DialogDescription>
+          <DialogTitle>
+            {t(isEdit ? "dialog.editTitle" : "dialog.title")}
+          </DialogTitle>
+          <DialogDescription>
+            {t(isEdit ? "dialog.editDescription" : "dialog.description")}
+          </DialogDescription>
         </DialogHeader>
 
         {/* -m-1 p-1: the overflow-y-auto scroll box would otherwise clip the
@@ -298,8 +349,11 @@ export function AddRoutineDialog({
                   setSlugEdited(true)
                   setSlug(event.target.value)
                 }}
+                // The slug keys widgets and the artifact path — fixed once the
+                // routine exists (delete + re-add to rename).
+                disabled={isEdit}
                 aria-invalid={slug.length > 0 && (!slugValid || slugTaken)}
-                className="font-mono"
+                className="font-mono disabled:opacity-70"
               />
               {slugTaken && (
                 <p className="text-xs text-destructive">
@@ -309,72 +363,76 @@ export function AddRoutineDialog({
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label>{t("dialog.size")}</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {WIDGET_SIZE_PRESETS.map((preset) => {
-                const cols = Math.min(preset.cols, columns)
-                const active =
-                  !customSize && size.cols === cols && size.rows === preset.rows
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => {
-                      setCustomSize(false)
-                      setSize({ cols, rows: preset.rows })
-                    }}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-colors hover:bg-muted",
-                      active
-                        ? "border-primary bg-muted"
-                        : "border-border text-ink-dim",
-                    )}
-                  >
-                    {t(`size.${preset.id}`)}
-                    <span className="font-mono text-xs text-ink-faint tabular-nums">
-                      {cols}×{preset.rows}
-                    </span>
-                  </button>
-                )
-              })}
-              <button
-                type="button"
-                aria-pressed={customSize}
-                onClick={() => setCustomSize(true)}
-                className={cn(
-                  "rounded-lg border px-2.5 py-1 text-xs transition-colors hover:bg-muted",
-                  customSize
-                    ? "border-primary bg-muted"
-                    : "border-border text-ink-dim",
-                )}
-              >
-                {t("size.custom")}
-              </button>
-            </div>
-            {customSize && (
-              <div className="flex items-center gap-1.5">
-                <SizeSelect
-                  label={t("widget.columns")}
-                  max={columns}
-                  value={size.cols}
-                  onChange={(cols) =>
-                    setSize((current) => ({ cols, rows: current.rows }))
-                  }
-                />
-                <span className="text-xs text-ink-faint">×</span>
-                <SizeSelect
-                  label={t("widget.rows")}
-                  max={GRID_MAX_ROWS}
-                  value={size.rows}
-                  onChange={(rows) =>
-                    setSize((current) => ({ cols: current.cols, rows }))
-                  }
-                />
+          {!isEdit && (
+            <div className="grid gap-2">
+              <Label>{t("dialog.size")}</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {WIDGET_SIZE_PRESETS.map((preset) => {
+                  const cols = Math.min(preset.cols, columns)
+                  const active =
+                    !customSize &&
+                    size.cols === cols &&
+                    size.rows === preset.rows
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => {
+                        setCustomSize(false)
+                        setSize({ cols, rows: preset.rows })
+                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-colors hover:bg-muted",
+                        active
+                          ? "border-primary bg-muted"
+                          : "border-border text-ink-dim",
+                      )}
+                    >
+                      {t(`size.${preset.id}`)}
+                      <span className="font-mono text-xs text-ink-faint tabular-nums">
+                        {cols}×{preset.rows}
+                      </span>
+                    </button>
+                  )
+                })}
+                <button
+                  type="button"
+                  aria-pressed={customSize}
+                  onClick={() => setCustomSize(true)}
+                  className={cn(
+                    "rounded-lg border px-2.5 py-1 text-xs transition-colors hover:bg-muted",
+                    customSize
+                      ? "border-primary bg-muted"
+                      : "border-border text-ink-dim",
+                  )}
+                >
+                  {t("size.custom")}
+                </button>
               </div>
-            )}
-          </div>
+              {customSize && (
+                <div className="flex items-center gap-1.5">
+                  <SizeSelect
+                    label={t("widget.columns")}
+                    max={columns}
+                    value={size.cols}
+                    onChange={(cols) =>
+                      setSize((current) => ({ cols, rows: current.rows }))
+                    }
+                  />
+                  <span className="text-xs text-ink-faint">×</span>
+                  <SizeSelect
+                    label={t("widget.rows")}
+                    max={GRID_MAX_ROWS}
+                    value={size.rows}
+                    onChange={(rows) =>
+                      setSize((current) => ({ cols: current.cols, rows }))
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-2 sm:items-start">
             <div className="grid gap-2">
@@ -470,7 +528,7 @@ export function AddRoutineDialog({
             {t("dialog.cancel")}
           </Button>
           <Button disabled={!canSubmit} onClick={submit}>
-            {t("dialog.add")}
+            {t(isEdit ? "dialog.save" : "dialog.add")}
           </Button>
         </DialogFooter>
       </DialogContent>

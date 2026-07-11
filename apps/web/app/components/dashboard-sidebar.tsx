@@ -1,10 +1,17 @@
 import { useState } from "react"
 
-import { LayoutGrid } from "lucide-react"
+import { LayoutGrid, MoreHorizontal, Trash2 } from "lucide-react"
 
 import { AccountMenu } from "./account-menu.tsx"
 import { Wordmark } from "./logo.tsx"
 import { NewDashboardDialog } from "./new-dashboard-dialog.tsx"
+import { Button } from "~/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
 import { type BoardScope, boardHref } from "../lib/board.ts"
@@ -31,6 +38,7 @@ export function DashboardSidebar({
   teamDashboards,
   login,
   displayName,
+  onDeleteDashboard,
   onNavigate,
 }: {
   dataRepo: string
@@ -40,6 +48,9 @@ export function DashboardSidebar({
   teamDashboards: string[] | null
   login: string
   displayName?: string | null
+  /** Delete for the active board — renders its per-board menu when present
+      (absent on the personal default and on chrome pages). */
+  onDeleteDashboard?: () => void
   /** Fired when a board link is followed — lets the mobile drawer close. */
   onNavigate?: () => void
 }) {
@@ -66,28 +77,36 @@ export function DashboardSidebar({
         className="flex-1 space-y-4 overflow-y-auto px-2 py-3"
       >
         <NavGroup label={t("switcher.personal")}>
-          {personalDashboards.map((slug) => (
-            <NavItem
-              key={`personal:${slug}`}
-              to={boardHref("personal", slug)}
-              label={slug}
-              active={scope === "personal" && dashboardSlug === slug}
-              onNavigate={onNavigate}
-            />
-          ))}
+          {personalDashboards.map((slug) => {
+            const active = scope === "personal" && dashboardSlug === slug
+            return (
+              <NavItem
+                key={`personal:${slug}`}
+                to={boardHref("personal", slug)}
+                label={slug}
+                active={active}
+                onDelete={active ? onDeleteDashboard : undefined}
+                onNavigate={onNavigate}
+              />
+            )
+          })}
         </NavGroup>
 
         {teamDashboards && (
           <NavGroup label={t("switcher.team")}>
-            {teamDashboards.map((slug) => (
-              <NavItem
-                key={`team:${slug}`}
-                to={boardHref("team", slug)}
-                label={slug}
-                active={scope === "team" && dashboardSlug === slug}
-                onNavigate={onNavigate}
-              />
-            ))}
+            {teamDashboards.map((slug) => {
+              const active = scope === "team" && dashboardSlug === slug
+              return (
+                <NavItem
+                  key={`team:${slug}`}
+                  to={boardHref("team", slug)}
+                  label={slug}
+                  active={active}
+                  onDelete={active ? onDeleteDashboard : undefined}
+                  onNavigate={onNavigate}
+                />
+              )
+            })}
           </NavGroup>
         )}
 
@@ -164,38 +183,71 @@ function NavGroup({
  * pinned to the rail's x so the active accent dot reads as a node on the spine
  * ("you are here"); inactive rows leave the rail unbroken. Active also fills and
  * lifts to full ink.
+ *
+ * When `onDelete` is set (the active, deletable board) the row grows a trailing
+ * `⋯` menu — board-lifecycle actions live here, beside the board they act on,
+ * rather than in the layout-edit toolbar. The Link is a sibling of the menu
+ * button (never its parent) so no interactive control nests inside the anchor.
  */
 function NavItem({
   to,
   label,
   active,
+  onDelete,
   onNavigate,
 }: {
   to: string
   label: string
   active: boolean
+  onDelete?: () => void
   onNavigate?: () => void
 }) {
+  const t = useT()
   return (
-    <Link
-      to={to}
-      onClick={onNavigate}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "group relative flex items-center rounded-md py-1.5 pr-2.5 pl-6 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-        active
-          ? "bg-sidebar-accent font-medium text-foreground"
-          : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
-      )}
-    >
-      <span
-        aria-hidden
+    <div className="group/nav relative flex items-center">
+      <Link
+        to={to}
+        onClick={onNavigate}
+        aria-current={active ? "page" : undefined}
         className={cn(
-          "absolute top-1/2 left-[13px] size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors",
-          active ? "bg-primary" : "bg-transparent group-hover:bg-ink-faint",
+          "group relative flex min-w-0 flex-1 items-center rounded-md py-1.5 pr-2.5 pl-6 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          onDelete && "pr-8",
+          active
+            ? "bg-sidebar-accent font-medium text-foreground"
+            : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
         )}
-      />
-      <span className="truncate">{label}</span>
-    </Link>
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "absolute top-1/2 left-[13px] size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors",
+            active ? "bg-primary" : "bg-transparent group-hover:bg-ink-faint",
+          )}
+        />
+        <span className="truncate">{label}</span>
+      </Link>
+      {onDelete && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("board.menu")}
+                className="absolute right-1 size-6 text-ink-dim opacity-0 transition-opacity hover:bg-sidebar-accent hover:text-foreground focus-visible:opacity-100 group-hover/nav:opacity-100 aria-expanded:opacity-100 pointer-coarse:opacity-100"
+              />
+            }
+          >
+            <MoreHorizontal />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" sideOffset={4} className="w-48">
+            <DropdownMenuItem variant="destructive" onClick={onDelete}>
+              <Trash2 />
+              {t("board.deleteDashboard")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
   )
 }

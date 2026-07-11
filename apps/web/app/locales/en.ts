@@ -31,7 +31,7 @@ export const en = {
 
   "header.unsynced": "Unsynced changes",
   "header.addRoutine": "Add routine",
-  "header.editLayout": "Edit layout",
+  "header.editLayout": "Edit",
   "header.done": "Done",
   "header.settings": "Settings",
   "header.signOut": "Sign out",
@@ -54,11 +54,14 @@ export const en = {
   "offgrid.hint":
     "These routines live in this repo's shared routines.yaml but aren't on this board — place one, or delete it from the repo.",
   "offgrid.delete": "Delete {name} from the repo",
+  "offgrid.edit": "Edit {name}",
+  "offgrid.viewHint": "{n} not on this board — Edit to place",
 
   "routine.deleteTitle": "Delete {name}?",
   "routine.deleteBody":
     "Removes the routine from routines.yaml when you next sync. Routines are shared across every dashboard in this repo, so it disappears from all of them.",
   "routine.deleteConfirm": "Delete routine",
+  "routine.edit": "Edit {name}",
 
   "grid.columnsLabel": "Columns",
   "grid.width": "Width",
@@ -97,6 +100,7 @@ export const en = {
   "newDash.exists": "That dashboard already exists in the repo",
 
   "board.deleteDashboard": "Delete dashboard",
+  "board.menu": "Dashboard options",
   "board.deleteTitle": "Delete this dashboard?",
   "board.deleteBody":
     "Removes {path} from {repo}. Routines keep running — only this layout goes away.",
@@ -168,6 +172,9 @@ export const en = {
   "dialog.title": "Add a routine",
   "dialog.description":
     "Describe what the widget shows; a routine keeps it fresh on a schedule or on demand.",
+  "dialog.editTitle": "Edit routine",
+  "dialog.editDescription":
+    "Change how this routine runs. Its slug is fixed — delete and re-add to rename it. Placement and size are set on the grid.",
   "dialog.prompt": "What should this widget show?",
   "dialog.promptPlaceholder": "Open PRs across our repos, grouped by reviewer…",
   "dialog.skill": "Skill",
@@ -202,6 +209,7 @@ export const en = {
     "The cloud resource runs on {login}'s Claude account — after committing, run pnpm routines:sync against the team repo",
   "dialog.cancel": "Cancel",
   "dialog.add": "Add to draft",
+  "dialog.save": "Save changes",
 
   "sync.title": "Sync changes",
   "sync.description":
