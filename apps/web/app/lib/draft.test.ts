@@ -5,6 +5,7 @@ import {
   type Draft,
   type LastCommit,
   type ServerConfig,
+  pruneDanglingWidgets,
   reconcileServerBase,
   rebaseDraft,
   removeRoutine,
@@ -45,6 +46,27 @@ describe("removeRoutine", () => {
   it("leaves the draft unchanged for an unknown slug", () => {
     const next = removeRoutine(draft(), "missing")
     expect(next.routines.routines.map((r) => r.slug)).toEqual(["a", "b"])
+  })
+})
+
+describe("pruneDanglingWidgets", () => {
+  it("drops widgets whose routine no longer exists", () => {
+    const pruned = pruneDanglingWidgets(
+      dashboard(["a", "gone", "b"]),
+      routines(["a", "b"]),
+    )
+    expect(pruned.widgets.map((w) => w.routine)).toEqual(["a", "b"])
+  })
+
+  it("returns the same object when every widget is live", () => {
+    const board = dashboard(["a", "b"])
+    expect(pruneDanglingWidgets(board, routines(["a", "b"]))).toBe(board)
+  })
+
+  it("preserves grid and other dashboard fields", () => {
+    const pruned = pruneDanglingWidgets(dashboard(["gone"]), routines(["a"]))
+    expect(pruned.widgets).toEqual([])
+    expect(pruned.grid).toEqual({ columns: 4, rowHeight: 150, width: "fixed" })
   })
 })
 
