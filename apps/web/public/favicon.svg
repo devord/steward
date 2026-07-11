@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <style>
-    .bg { fill: #1d2021 }
-    .frame { stroke: #504945 }
-    .widget { fill: #504945 }
-    .accent { fill: #fe8019 }
-    @media (prefers-color-scheme: light) {
-      .bg { fill: #f9f5d7 }
-      .frame { stroke: #bdae93 }
-      .widget { fill: #bdae93 }
-      .accent { fill: #af3a03 }
+    .bg { fill: #f9f5d7 }
+    .frame { stroke: #bdae93 }
+    .widget { fill: #bdae93 }
+    .accent { fill: #af3a03 }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1d2021 }
+      .frame { stroke: #504945 }
+      .widget { fill: #504945 }
+      .accent { fill: #fe8019 }
     }
   </style>
   <rect class="bg" width="64" height="64" rx="14"/>

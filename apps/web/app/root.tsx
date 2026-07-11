@@ -28,6 +28,9 @@ const THEME_STYLESHEET = themeStylesheet()
 
 export const links: Route.LinksFunction = () => [
   // SVG first for modern browsers; .ico carries 16/32/48 fallbacks.
+  // Light is the baseline; the SVG swaps to dark under prefers-color-scheme:
+  // dark, while the raster fallbacks (.ico, apple-touch-icon) stay light —
+  // they're static formats and home-screen icons can't theme-switch.
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
   { rel: "icon", href: "/favicon.ico", sizes: "16x16 32x32 48x48" },
   { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
