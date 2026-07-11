@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest"
 
 import { failPath, seedRepo } from "../mocks/github.ts"
-import { loadDashboard, repoExistsOr503 } from "./dashboard.server.ts"
+import {
+  loadDashboard,
+  loadDashboardStructureOr503,
+  repoExistsOr503,
+} from "./dashboard.server.ts"
 import { GitHubError } from "./github.server.ts"
 
 const DATA_REPO = "daniel/bulletin-data-daniel"
@@ -310,5 +314,47 @@ describe("repoExistsOr503", () => {
     )) as { init?: ResponseInit }
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(503)
+  })
+
+  it("degrades a dead-token 401 to a 401 re-auth page, not a 503 outage", async () => {
+    // A revoked/expired token 401s on every read. Classifying it as the
+    // transient 503 outage is a trap: the "back on next refresh" page never
+    // recovers (each refresh replays the same dead token) and carries no way
+    // out. It must degrade to a distinct 401 the error boundary pairs with a
+    // sign-out instead.
+    seedRepo(DATA_REPO, {})
+    failPath(DATA_REPO, "", { status: 401, endpoint: "repo" })
+
+    const thrown = (await repoExistsOr503("token", DATA_REPO).catch(
+      (e) => e,
+    )) as { init?: ResponseInit }
+    expect(thrown).not.toBeInstanceOf(GitHubError)
+    expect(thrown.init?.status).toBe(401)
+  })
+})
+
+describe("loadDashboardStructureOr503", () => {
+  it("degrades a transient config-load failure to a 503 refresh page", async () => {
+    seedRepo(DATA_REPO, {})
+    failPath(DATA_REPO, "data/routines.yaml", { status: 503 })
+
+    const thrown = (await loadDashboardStructureOr503(
+      "token",
+      MAIN_BOARD,
+    ).catch((e) => e)) as { init?: ResponseInit }
+    expect(thrown).not.toBeInstanceOf(GitHubError)
+    expect(thrown.init?.status).toBe(503)
+  })
+
+  it("degrades a dead-token 401 to a 401 re-auth page", async () => {
+    seedRepo(DATA_REPO, {})
+    failPath(DATA_REPO, "data/routines.yaml", { status: 401 })
+
+    const thrown = (await loadDashboardStructureOr503(
+      "token",
+      MAIN_BOARD,
+    ).catch((e) => e)) as { init?: ResponseInit }
+    expect(thrown).not.toBeInstanceOf(GitHubError)
+    expect(thrown.init?.status).toBe(401)
   })
 })

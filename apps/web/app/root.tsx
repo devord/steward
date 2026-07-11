@@ -1,4 +1,5 @@
 import {
+  Form,
   isRouteErrorResponse,
   Links,
   Meta,
@@ -10,7 +11,11 @@ import {
 
 import type { Route } from "./+types/root"
 import "./app.css"
+import { AppHeader } from "./components/app-header.tsx"
+import { Wordmark } from "./components/logo.tsx"
 import { RouteProgress } from "./components/route-progress.tsx"
+import { Button } from "~/components/ui/button"
+import { Link } from "~/components/ui/link"
 import { DEFAULT_LOCALE, I18nProvider, useT } from "./lib/i18n.tsx"
 import { getLocale } from "./lib/locale.server.ts"
 import {
@@ -83,14 +88,20 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = t("error.title")
   let details = t("error.generic")
   let stack: string | undefined
+  // A dead-token 401 is the one error the user recovers from *here*, by
+  // re-authing — so surface the sign-out as a primary action, not just the
+  // header escape hatch.
+  let sessionExpired = false
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "404" : t("error.title")
+    sessionExpired = error.status === 401
     details =
       error.status === 404
         ? t("error.notFound")
         : // Loaders throw data("<human message>", { status }) for expected
-          // failures (e.g. GitHub outage) — surface that over statusText.
+          // failures (e.g. GitHub outage, dead session) — surface that over
+          // statusText.
           (typeof error.data === "string" && error.data) ||
           error.statusText ||
           details
@@ -99,17 +110,62 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     stack = error.stack
   }
 
+  // The error boundary replaces the whole app — including the board chrome that
+  // renders sign-out. Without its own chrome, a config-load failure (a dead
+  // token, an outage) would trap the user on a dead-end page with no way to
+  // sign out and re-auth. So carry a minimal header with the escape hatch on
+  // every error state (its sign-out form needs no loader data, so it can't be
+  // taken down by the same failure).
   return (
-    <main className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
-      <h1 className="font-mono text-2xl font-bold text-destructive">
-        {message}
-      </h1>
-      <p className="mt-4">{details}</p>
-      {stack && (
-        <pre className="mt-4 overflow-x-auto rounded-md border border-border-dim bg-bg1 p-4">
-          <code>{stack}</code>
-        </pre>
-      )}
-    </main>
+    <div className="mx-auto max-w-2xl px-4 sm:px-6">
+      <ErrorChrome />
+      <main className="py-16">
+        <h1 className="font-mono text-2xl font-bold text-destructive">
+          {message}
+        </h1>
+        <p className="mt-4">{details}</p>
+        {sessionExpired && (
+          <Form method="post" action="/auth/logout" className="mt-6">
+            <Button type="submit">{t("header.signOut")}</Button>
+          </Form>
+        )}
+        {stack && (
+          <pre className="mt-4 overflow-x-auto rounded-md border border-border-dim bg-bg1 p-4">
+            <code>{stack}</code>
+          </pre>
+        )}
+      </main>
+    </div>
+  )
+}
+
+/**
+ * The header shell for the error boundary: the wordmark home link and an
+ * always-available sign-out. Deliberately loader-data-free so it renders no
+ * matter which loader failed — the guarantee that an error can never strand the
+ * user without a way out.
+ */
+function ErrorChrome() {
+  const t = useT()
+  return (
+    <AppHeader className="gap-x-2.5">
+      <Link
+        to="/"
+        aria-label="Bulletin"
+        className="-mx-1 inline-flex items-center rounded-md px-1 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <Wordmark className="text-sm" />
+      </Link>
+      <Form method="post" action="/auth/logout" className="ml-auto">
+        <Button
+          size="sm"
+          variant="ghost"
+          type="submit"
+          className="text-ink-dim hover:text-foreground"
+        >
+          {t("header.signOut")}
+        </Button>
+      </Form>
+    </AppHeader>
   )
 }

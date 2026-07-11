@@ -111,10 +111,39 @@ function githubOutage503(): never {
 }
 
 /**
+ * The dead-session degrade: a revoked or expired token 401s on every read, so
+ * "back on the next refresh" is a lie — refreshing replays the same dead token
+ * forever. That's not a transient outage; it's a session the user must re-auth.
+ * The root ErrorBoundary always renders a working sign-out, so this state is an
+ * escape hatch, not a trap.
+ */
+function sessionExpired401(): never {
+  throw data(
+    "Your GitHub session has expired or was revoked, so your config couldn't load. Sign out and sign in again to reconnect.",
+    { status: 401 },
+  )
+}
+
+/**
+ * Turn a GitHub read failure into the right loader degrade: a 401 is a dead
+ * token (re-auth), every other GitHubError — 5xx, rate-limit 403, timeout,
+ * network blip — is the transient class that recovers on the next refresh.
+ * Non-GitHub errors are re-thrown to the generic crash boundary.
+ */
+function degradeGitHubError(error: unknown): never {
+  if (error instanceof GitHubError) {
+    if (error.status === 401) sessionExpired401()
+    githubOutage503()
+  }
+  throw error
+}
+
+/**
  * repoExists for route loaders: a transient GitHub failure (5xx, rate limit,
  * network blip, timeout) becomes a 503 refresh page rather than the generic
  * crash — or a false "repo missing" that would bounce an existing user into
- * the setup wizard mid-outage. A definitive 404 still returns false.
+ * the setup wizard mid-outage. A dead token (401) becomes a 401 re-auth page
+ * instead. A definitive 404 still returns false.
  */
 export async function repoExistsOr503(
   token: string,
@@ -123,8 +152,7 @@ export async function repoExistsOr503(
   try {
     return await repoExists(token, repo)
   } catch (error) {
-    if (error instanceof GitHubError) githubOutage503()
-    throw error
+    degradeGitHubError(error)
   }
 }
 
@@ -257,9 +285,9 @@ export async function loadArtifacts(
 
 /**
  * loadDashboardStructure for route loaders: config that can't load at all
- * (GitHub outage) becomes a clear 503 instead of an anonymous error page.
- * Artifact-level failures degrade per-widget in loadArtifacts and never reach
- * this catch.
+ * becomes a clear degrade instead of an anonymous error page — a 503 refresh
+ * page for a GitHub outage, or a 401 re-auth page for a dead token. Artifact-
+ * level failures degrade per-widget in loadArtifacts and never reach this catch.
  */
 export async function loadDashboardStructureOr503(
   token: string,
@@ -268,8 +296,7 @@ export async function loadDashboardStructureOr503(
   try {
     return await loadDashboardStructure(token, ref)
   } catch (error) {
-    if (error instanceof GitHubError) githubOutage503()
-    throw error
+    degradeGitHubError(error)
   }
 }
 
