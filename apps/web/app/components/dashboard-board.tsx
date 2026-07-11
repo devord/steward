@@ -6,7 +6,7 @@ import { dashboardPath, GRID_MAX_COLS } from "@bulletin/schema"
 import { Plus, Trash2 } from "lucide-react"
 
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
-import { DashboardHeader } from "./dashboard-header.tsx"
+import { DashboardShell } from "./dashboard-shell.tsx"
 import { SyncPanel } from "./sync-panel.tsx"
 import { WidgetCard } from "./widget-card.tsx"
 import { WidgetSkeleton } from "./widget-skeleton.tsx"
@@ -363,16 +363,8 @@ export function DashboardBoard({
   )
 
   return (
-    <div
-      className={cn(
-        "mx-auto px-4 pb-16 sm:px-6",
-        // Canvas cap: `wide` fills a large monitor (still bounded so the
-        // board stays composed, not stretched edge-to-edge); `fixed` keeps
-        // the comfortable centered reading width.
-        wide ? "max-w-[1800px]" : "max-w-7xl",
-      )}
-    >
-      <DashboardHeader
+    <>
+      <DashboardShell
         dataRepo={view.dataRepo}
         scope={view.scope}
         dashboardSlug={view.dashboardSlug}
@@ -382,103 +374,112 @@ export function DashboardBoard({
         hasDraft={draft != null}
         editing={editing}
         deletable={deletable}
+        // Canvas cap: `wide` fills a large monitor (still bounded so the board
+        // stays composed, not stretched edge-to-edge); `fixed` keeps the
+        // comfortable centered reading width.
+        wide={wide}
         onSync={() => setSyncing(true)}
         onAdd={() => setAdding(true)}
         onToggleEdit={() => setEditing((value) => !value)}
         onDelete={() => setDeleting(true)}
-      />
+      >
+        {editing && (
+          <GridSettings
+            grid={dashboard.grid}
+            minColumns={minColumns}
+            onChange={setGrid}
+          />
+        )}
 
-      {editing && (
-        <GridSettings
-          grid={dashboard.grid}
-          minColumns={minColumns}
-          onChange={setGrid}
-        />
-      )}
-
-      {dashboard.widgets.length === 0 ? (
-        <EmptyDashboard onAdd={() => setAdding(true)} />
-      ) : (
-        <>
-          {/* The skeleton cells are aria-hidden, so announce the artifact
+        {dashboard.widgets.length === 0 ? (
+          <EmptyDashboard onAdd={() => setAdding(true)} />
+        ) : (
+          <>
+            {/* The skeleton cells are aria-hidden, so announce the artifact
               stream once for assistive tech — a persistent live region whose
               text flips from loading to loaded when the promise resolves. */}
-          <p role="status" aria-live="polite" className="sr-only">
-            <Suspense fallback={t("board.widgetsLoading")}>
-              <Await resolve={artifacts}>
-                {() => t("board.widgetsLoaded")}
-              </Await>
-            </Suspense>
-          </p>
-          <main
-            ref={gridRef}
-            className="dash-grid"
-            style={cssVars({
-              "--grid-cols": columns,
-              "--row-h": `${dashboard.grid.rowHeight}px`,
-            })}
-          >
-            {/* First load streams: the frame is placed and each cell holds its
+            <p role="status" aria-live="polite" className="sr-only">
+              <Suspense fallback={t("board.widgetsLoading")}>
+                <Await resolve={artifacts}>
+                  {() => t("board.widgetsLoaded")}
+                </Await>
+              </Suspense>
+            </p>
+            <main
+              ref={gridRef}
+              className="dash-grid"
+              style={cssVars({
+                "--grid-cols": columns,
+                "--row-h": `${dashboard.grid.rowHeight}px`,
+              })}
+            >
+              {/* First load streams: the frame is placed and each cell holds its
               slot with a skeleton until the artifacts resolve. Once resolved,
               render from state so a poll's revalidation swaps bodies in place
               rather than re-suspending back to skeletons. */}
-            {resolved === null ? (
-              <Suspense
-                fallback={orderedWidgets.flatMap((widget) =>
-                  routinesBySlug.has(widget.routine)
-                    ? [<WidgetSkeleton key={widget.routine} widget={widget} />]
-                    : [],
-                )}
-              >
-                <Await resolve={artifacts}>
-                  {(awaited) => renderCards(awaited)}
-                </Await>
-              </Suspense>
-            ) : (
-              renderCards(resolved)
-            )}
-          </main>
-        </>
-      )}
+              {resolved === null ? (
+                <Suspense
+                  fallback={orderedWidgets.flatMap((widget) =>
+                    routinesBySlug.has(widget.routine)
+                      ? [
+                          <WidgetSkeleton
+                            key={widget.routine}
+                            widget={widget}
+                          />,
+                        ]
+                      : [],
+                  )}
+                >
+                  <Await resolve={artifacts}>
+                    {(awaited) => renderCards(awaited)}
+                  </Await>
+                </Suspense>
+              ) : (
+                renderCards(resolved)
+              )}
+            </main>
+          </>
+        )}
 
-      {unplaced.length > 0 && editing && (
-        <section className="mt-6">
-          <h2 className="mb-1 font-mono text-xs text-ink-dim">
-            {t("offgrid.title")}
-          </h2>
-          <p className="mb-2 max-w-prose text-xs text-ink-dim">
-            {t("offgrid.hint")}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {unplaced.map((routine) => (
-              <div
-                key={routine.slug}
-                className="flex items-center rounded-lg border"
-              >
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="rounded-r-none"
-                  onClick={() => placeRoutine(routine.slug)}
+        {unplaced.length > 0 && editing && (
+          <section className="mt-6">
+            <h2 className="mb-1 font-mono text-xs text-ink-dim">
+              {t("offgrid.title")}
+            </h2>
+            <p className="mb-2 max-w-prose text-xs text-ink-dim">
+              {t("offgrid.hint")}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {unplaced.map((routine) => (
+                <div
+                  key={routine.slug}
+                  className="flex items-center rounded-lg border"
                 >
-                  <Plus data-icon="inline-start" />
-                  {routine.name}
-                </Button>
-                <Button
-                  size="icon-xs"
-                  variant="ghost"
-                  aria-label={t("offgrid.delete", { name: routine.name })}
-                  title={t("offgrid.delete", { name: routine.name })}
-                  className="mr-0.5 size-6 rounded-l-none text-ink-dim hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => setDeletingRoutine(routine.slug)}
-                >
-                  <Trash2 />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="rounded-r-none"
+                    onClick={() => placeRoutine(routine.slug)}
+                  >
+                    <Plus data-icon="inline-start" />
+                    {routine.name}
+                  </Button>
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    aria-label={t("offgrid.delete", { name: routine.name })}
+                    title={t("offgrid.delete", { name: routine.name })}
+                    className="mr-0.5 size-6 rounded-l-none text-ink-dim hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setDeletingRoutine(routine.slug)}
+                  >
+                    <Trash2 />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+      </DashboardShell>
 
       <AddRoutineDialog
         open={adding}
@@ -523,7 +524,7 @@ export function DashboardBoard({
           onDeleted={clear}
         />
       )}
-    </div>
+    </>
   )
 }
 

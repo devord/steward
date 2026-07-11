@@ -36,6 +36,12 @@ export const en = {
   "header.settings": "Settings",
   "header.signOut": "Sign out",
 
+  "nav.boards": "Boards",
+  "nav.openMenu": "Open navigation",
+  "account.menu": "Account",
+  "account.githubAccount": "GitHub account",
+  "account.viewRepo": "View data repo",
+
   "empty.fact": "The grid is empty",
   "empty.hint":
     "A routine runs a skill on a schedule and publishes one widget here.",

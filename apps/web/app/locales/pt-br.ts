@@ -37,6 +37,12 @@ export const ptBR: Messages = {
   "header.settings": "Ajustes",
   "header.signOut": "Sair",
 
+  "nav.boards": "Painéis",
+  "nav.openMenu": "Abrir navegação",
+  "account.menu": "Conta",
+  "account.githubAccount": "Conta do GitHub",
+  "account.viewRepo": "Ver repo de dados",
+
   "empty.fact": "A grade está vazia",
   "empty.hint":
     "Uma rotina executa uma skill num agendamento e publica um widget aqui.",
