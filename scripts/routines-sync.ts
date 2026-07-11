@@ -160,12 +160,22 @@ function cloudName(routine: Routine): string {
 }
 
 /**
+ * The data repo to attach as a source. Normally `repo` (the --repo flag or
+ * the checkout's inferred origin); when the origin can't be inferred, fall
+ * back to the personal-repo convention `<login>/bulletin-data-<login>`
+ * (ADR-0001), the same name run-routine resolves at runtime. Null only when
+ * neither is known — a `gh`-less run against a remote-less checkout.
+ */
+const dataRepo =
+  repo ?? (login != null ? `${login}/bulletin-data-${login}` : null)
+
+/**
  * Source repos to attach to this routine's cloud run (ADR-0018): the
  * contract repo and the data repo, always, plus the routine's declared
  * extras. A cloud session can only reach repos attached as sources.
  */
 function sourcesFor(routine: Routine): string[] {
-  const base = repo != null ? [CONTRACT_REPO, repo] : [CONTRACT_REPO]
+  const base = dataRepo != null ? [CONTRACT_REPO, dataRepo] : [CONTRACT_REPO]
   return cloudSources(routine, base)
 }
 
@@ -264,6 +274,19 @@ const cloudPlan = [
 ]
 
 console.log(cloudPlan.join("\n"))
+
+// The data repo couldn't be determined (no --repo, unascertainable origin,
+// no gh login), so every cloud plan above lists only the contract repo —
+// its run can't reach routines.yaml. Say so loudly rather than enact a
+// half-attached routine.
+if (dataRepo == null && cloudScheduled.length + cloudManual.length > 0) {
+  console.error(
+    "# WARNING: couldn't determine the data repo (no --repo, no inferable\n" +
+      "# origin, no gh login), so the cloud repos above omit it — those runs\n" +
+      "# can't reach routines.yaml. Pass --repo <owner/repo> or run from a\n" +
+      "# checkout with an origin remote.\n",
+  )
+}
 
 // --- Local half (launchd, ADR-0012) ------------------------------------------
 
