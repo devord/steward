@@ -6,10 +6,10 @@ import type { Route } from "./+types/d.$dashboard"
 import { DashboardBoard } from "../components/dashboard-board.tsx"
 import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import {
-  dataRepoExists,
   listDashboards,
   loadArtifacts,
   loadDashboardStructureOr503,
+  repoExistsOr503,
   resolveDataRepo,
   resolveTeamRepo,
 } from "../lib/dashboard.server.ts"
@@ -29,7 +29,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   if (params.dashboard === DEFAULT_DASHBOARD) throw redirect("/")
 
   const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
-  if (!(await dataRepoExists(auth.token, dataRepo))) throw redirect("/setup")
+  if (!(await repoExistsOr503(auth.token, dataRepo))) throw redirect("/setup")
 
   const ref = {
     scope: "personal" as const,

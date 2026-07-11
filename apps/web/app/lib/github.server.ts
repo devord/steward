@@ -240,9 +240,21 @@ export async function getLastCommitDate(
   return first?.commit.committer?.date ?? null
 }
 
-export async function repoExists(token: string, repo: string) {
+/**
+ * Whether the token can see `repo`. Only a definitive 404 (absent, or private
+ * and invisible to this token) is a real "no"; every other non-2xx — a 5xx, a
+ * rate-limit 403, a network blip surfaced by `gh` as a GitHubError — is
+ * transient and re-thrown, so callers degrade to a 503 refresh page instead of
+ * crashing or falsely concluding the repo is missing (ADR: degrade, not crash).
+ */
+export async function repoExists(
+  token: string,
+  repo: string,
+): Promise<boolean> {
   const res = await gh(token, `/repos/${repo}`)
-  return res.ok
+  if (res.ok) return true
+  if (res.status === 404) return false
+  throw new GitHubError(res.status, `${repo} → ${res.status}`)
 }
 
 const dirEntriesSchema = z.array(

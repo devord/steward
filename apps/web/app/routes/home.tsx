@@ -12,10 +12,10 @@ import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import type { AppearanceMode } from "../lib/theme.ts"
 import { useAppearance } from "../lib/use-appearance.ts"
 import {
-  dataRepoExists,
   listDashboards,
   loadArtifacts,
   loadDashboardStructureOr503,
+  repoExistsOr503,
   resolveDataRepo,
   resolveTeamRepo,
 } from "../lib/dashboard.server.ts"
@@ -51,7 +51,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (!auth) return { kind: "anonymous" as const, origin }
 
   const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
-  if (!(await dataRepoExists(auth.token, dataRepo))) throw redirect("/setup")
+  if (!(await repoExistsOr503(auth.token, dataRepo))) throw redirect("/setup")
 
   const ref = {
     scope: "personal" as const,

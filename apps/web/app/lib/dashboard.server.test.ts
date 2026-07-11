@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { failPath, seedRepo } from "../mocks/github.ts"
-import { loadDashboard } from "./dashboard.server.ts"
+import { loadDashboard, repoExistsOr503 } from "./dashboard.server.ts"
 import { GitHubError } from "./github.server.ts"
 
 const DATA_REPO = "daniel/bulletin-data-daniel"
@@ -286,5 +286,29 @@ describe("loadDashboard", () => {
     // 503 is the service-unavailable contract loadDashboardStructureOr503
     // keys off — a regression to any other status would break the 503 page.
     expect((error as GitHubError).status).toBe(503)
+  })
+})
+
+describe("repoExistsOr503", () => {
+  it("returns true/false for the definitive present/absent cases", async () => {
+    seedRepo(DATA_REPO, {})
+    expect(await repoExistsOr503("token", DATA_REPO)).toBe(true)
+    expect(await repoExistsOr503("token", "daniel/absent")).toBe(false)
+  })
+
+  it("degrades a transient existence-check failure to a 503, not a crash", async () => {
+    // The bug behind the intermittent post-sign-in/refresh error page: a
+    // network blip on the repo-existence probe used to escape the loader as a
+    // raw GitHubError and render the generic error boundary. It must now become
+    // the same 503 refresh page the config-load path already produces — never a
+    // false `false` that would bounce an existing user to the setup wizard.
+    seedRepo(DATA_REPO, {})
+    failPath(DATA_REPO, "", { network: true, endpoint: "repo" })
+
+    const thrown = (await repoExistsOr503("token", DATA_REPO).catch(
+      (e) => e,
+    )) as { init?: ResponseInit }
+    expect(thrown).not.toBeInstanceOf(GitHubError)
+    expect(thrown.init?.status).toBe(503)
   })
 })

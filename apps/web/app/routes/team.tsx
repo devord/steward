@@ -6,7 +6,11 @@ import { AccountBar } from "../components/account-bar.tsx"
 import { NewDashboardDialog } from "../components/dashboard-switcher.tsx"
 import { Button } from "~/components/ui/button"
 import { Link } from "~/components/ui/link"
-import { listDashboards, resolveTeamRepo } from "../lib/dashboard.server.ts"
+import {
+  listDashboards,
+  repoExistsOr503,
+  resolveTeamRepo,
+} from "../lib/dashboard.server.ts"
 import { env } from "../lib/env.server.ts"
 import {
   generateFromTemplate,
@@ -32,7 +36,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     return { state: "unconfigured" as const, teamRepo: null, login: auth.login }
   }
 
-  if (!(await repoExists(auth.token, teamRepo))) {
+  if (!(await repoExistsOr503(auth.token, teamRepo))) {
     return { state: "missing" as const, teamRepo, login: auth.login }
   }
   const dashboards = (await listDashboards(auth.token, teamRepo)) ?? []
@@ -74,7 +78,7 @@ export async function action({ request }: Route.ActionArgs) {
   // Repo generation is asynchronous on GitHub's side; wait for it to be
   // readable so the redirect doesn't bounce straight back here.
   for (let i = 0; i < 10; i++) {
-    if (await repoExists(auth.token, teamRepo)) break
+    if (await repoExists(auth.token, teamRepo).catch(() => false)) break
     await new Promise((resolve) => setTimeout(resolve, 1000))
   }
   return redirect("/team")
