@@ -43,13 +43,35 @@ function readDraft(boardKey: string): Draft | null {
   const raw = localStorage.getItem(storageKey(boardKey))
   if (!raw) return null
   try {
-    return draftSchema.parse(JSON.parse(raw))
+    const parsed = draftSchema.parse(JSON.parse(raw))
+    return {
+      ...parsed,
+      dashboard: pruneDanglingWidgets(parsed.dashboard, parsed.routines),
+    }
   } catch {
     // A draft from an older schema version is not worth migrating: the
     // canonical state is one commit away (ADR-0003). Drop it.
     localStorage.removeItem(storageKey(boardKey))
     return null
   }
+}
+
+/**
+ * Drop widgets whose routine no longer exists. Such a widget renders nothing
+ * (the board skips it) yet still occupies its cells for collision and inflates
+ * the column floor — an invisible blocker that pins the grid. Pruning is the
+ * symmetric counterpart to `removeRoutine`: it keeps the two config sides in
+ * sync so the board self-heals on the next commit. Returns the same object
+ * when nothing dangles, to keep memo identity stable for healthy boards.
+ */
+export function pruneDanglingWidgets(
+  dashboard: DashboardFile,
+  routines: RoutinesFile,
+): DashboardFile {
+  const known = new Set(routines.routines.map((r) => r.slug))
+  const widgets = dashboard.widgets.filter((w) => known.has(w.routine))
+  if (widgets.length === dashboard.widgets.length) return dashboard
+  return { ...dashboard, widgets }
 }
 
 /** Drop a routine and every widget that references it (bug: "delete" that
@@ -169,10 +191,20 @@ export function useDraft(boardKey: string, view: ServerConfig) {
     setLastCommit(null)
   }, [boardKey])
 
-  const base = useMemo(
-    () => reconcileServerBase(view, lastCommit),
-    [view, lastCommit],
-  )
+  const base = useMemo(() => {
+    const reconciled = reconcileServerBase(view, lastCommit)
+    // A widget whose routine was removed straight from routines.yaml (or by an
+    // older delete path) renders nothing but still pins the grid; prune it here
+    // so every downstream consumer — render, drag collision, column floor, and
+    // the draft that forks from this base — sees only live widgets.
+    return {
+      ...reconciled,
+      dashboard: pruneDanglingWidgets(
+        reconciled.dashboard,
+        reconciled.routines,
+      ),
+    }
+  }, [view, lastCommit])
 
   // Once the server has caught up, the commit record has nothing left to fix.
   useEffect(() => {
