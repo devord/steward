@@ -33,7 +33,7 @@ export function Logo({
         width="17"
         height="17"
         rx="4"
-        className="fill-border"
+        className="fill-muted-foreground"
       />
       <rect
         x="12"
@@ -41,7 +41,7 @@ export function Logo({
         width="17"
         height="17"
         rx="4"
-        className="fill-border"
+        className="fill-muted-foreground"
       />
       <rect
         x="35"
