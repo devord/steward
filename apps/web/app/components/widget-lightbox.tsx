@@ -27,7 +27,8 @@ export interface WidgetLightboxProps {
   /** Routine display name — the panel's accessible title. */
   name: string
   slug: string
-  /** Already theme-injected artifact HTML (same srcdoc the card renders). */
+  /** Theme-injected artifact HTML framed for the full view — no tile
+      overflow guard, so the page scrolls to every row (ADR-0019). */
   html: string
   /** "ran 2h ago" / "never ran" — the same freshness readout as the card. */
   ranLabel: string

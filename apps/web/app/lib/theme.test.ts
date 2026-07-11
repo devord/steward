@@ -96,7 +96,9 @@ describe("frameArtifactHtml", () => {
     // The card chrome renders identity + freshness; the artifact's own
     // footer is standalone-only, so the embedded frame suppresses it.
     expect(framed).toContain("footer{display:none !important}")
-    expect(framed).not.toContain("--color-")
+    // No override block — the tile guard's var(--color-bg1) fallback is the
+    // only palette reference the default framing carries.
+    expect(framed).not.toContain("data-bulletin-theme")
     // A null override must not stringify into the srcdoc as visible "null".
     expect(framed).not.toContain("null")
   })
@@ -115,6 +117,23 @@ describe("frameArtifactHtml", () => {
     expect(frameArtifactHtml(doc, "gruvbox-light")).toContain(
       "color-scheme:light",
     )
+  })
+
+  it("guards tile overflow by default: no scrolling, stamp, fade", () => {
+    const tile = frameArtifactHtml(doc, DEFAULT_THEME)
+    // Tiles never scroll (ADR-0019) — a non-compliant artifact clips…
+    expect(tile).toContain("overflow:hidden !important")
+    // …visibly: the fade marks truncation instead of a mid-line crop.
+    expect(tile).toContain("bulletin-tile-fade")
+    // The stamp artifacts gate their fit-to-height logic on.
+    expect(tile).toContain('data-bulletin-tile",""')
+  })
+
+  it("leaves the full view scrollable — footer hidden, no tile guard", () => {
+    const full = frameArtifactHtml(doc, DEFAULT_THEME, "full")
+    expect(full).toContain("footer{display:none !important}")
+    expect(full).not.toContain("overflow:hidden")
+    expect(full).not.toContain("data-bulletin-tile")
   })
 })
 
