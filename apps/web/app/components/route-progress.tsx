@@ -1,20 +1,24 @@
 import { useEffect, useState } from "react"
-import { useNavigation, useRevalidator } from "react-router"
+import { useNavigation } from "react-router"
 
 /**
- * A thin accent line across the top of the viewport during any pending
- * navigation or revalidation — the "not frozen" signal for the window where
- * React Router holds the current page inert while a loader runs (switching
- * boards, returning from settings). It trickles toward ~90% while the loader
- * is in flight, then snaps to 100% and fades on arrival.
+ * A thin accent line across the top of the viewport during a pending
+ * navigation — the "not frozen" signal for the window where React Router
+ * holds the current page inert while a loader runs (switching boards,
+ * returning from settings). It trickles toward ~90% while the loader is in
+ * flight, then snaps to 100% and fades on arrival.
+ *
+ * Navigation only — deliberately *not* revalidation. A background freshness
+ * poll (use-poll-revalidate: tab focus, interval, post-run) refreshes loader
+ * data while the page stays fully live, so a viewport-wide bar there is too
+ * loud; the header SyncIndicator carries that beat instead.
  *
  * Terminal-calm: 2px, the brand accent, one faint glow — feedback, not
  * decoration. Honors prefers-reduced-motion (no trickle, no transition).
  */
 export function RouteProgress() {
   const navigation = useNavigation()
-  const revalidator = useRevalidator()
-  const active = navigation.state !== "idle" || revalidator.state !== "idle"
+  const active = navigation.state !== "idle"
 
   const [state, setState] = useState({ visible: false, width: 0 })
 
