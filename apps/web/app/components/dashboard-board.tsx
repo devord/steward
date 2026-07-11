@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { Await, useFetcher, useNavigate, useRevalidator } from "react-router"
 
@@ -712,6 +713,38 @@ const DENSITY_PRESETS = [
 ] as const
 
 /**
+ * One labeled grid knob. The label rides *inside* the field border so the
+ * pair reads as a single control, not a caption floating beside a chip:
+ * dim label, a hairline, then the bright value that opens the menu.
+ */
+function GridKnob({
+  label,
+  value,
+  onValueChange,
+  children,
+}: {
+  label: ReactNode
+  value: string
+  onValueChange: (value: string | null) => void
+  children: ReactNode
+}) {
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <label className="inline-flex h-7 items-center gap-2 rounded-sm border border-input pl-2.5 text-ink-dim transition-colors hover:border-ink-dim/40 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 pointer-coarse:h-9 dark:bg-bg2">
+        {label}
+        <SelectTrigger
+          size="sm"
+          className="h-full rounded-none border-y-0 border-r-0 bg-transparent pr-2 pl-2 text-xs text-ink shadow-none focus-visible:border-l-input focus-visible:ring-0 pointer-coarse:data-[size=sm]:h-full dark:bg-transparent dark:hover:bg-transparent"
+        >
+          <SelectValue />
+        </SelectTrigger>
+      </label>
+      <SelectContent>{children}</SelectContent>
+    </Select>
+  )
+}
+
+/**
  * Edit-mode board controls: columns, canvas width, and row density — the
  * three knobs that were frozen (columns/width) or schema-only (rowHeight).
  * Compact and mono to sit quietly above the grid; the keyboard hint rides
@@ -735,72 +768,51 @@ function GridSettings({
 
   return (
     <div className="-mt-2 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs text-ink-dim">
-      <label className="flex items-center gap-1.5">
-        {t("grid.columnsLabel")}
-        <Select
-          value={String(grid.columns)}
-          onValueChange={(next) => {
-            const n = Number(next)
-            if (Number.isInteger(n)) onChange({ columns: n })
-          }}
-        >
-          <SelectTrigger size="sm" className="h-7 gap-1 font-mono text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {columnOptions.map((n) => (
-              <SelectItem key={n} value={String(n)}>
-                {n}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </label>
+      <GridKnob
+        label={t("grid.columnsLabel")}
+        value={String(grid.columns)}
+        onValueChange={(next) => {
+          const n = Number(next)
+          if (Number.isInteger(n)) onChange({ columns: n })
+        }}
+      >
+        {columnOptions.map((n) => (
+          <SelectItem key={n} value={String(n)}>
+            {n}
+          </SelectItem>
+        ))}
+      </GridKnob>
 
-      <label className="flex items-center gap-1.5">
-        {t("grid.width")}
-        <Select
-          value={grid.width}
-          onValueChange={(next) => {
-            if (next === "fixed" || next === "wide") onChange({ width: next })
-          }}
-        >
-          <SelectTrigger size="sm" className="h-7 gap-1 font-mono text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="fixed">{t("grid.widthFixed")}</SelectItem>
-            <SelectItem value="wide">{t("grid.widthWide")}</SelectItem>
-          </SelectContent>
-        </Select>
-      </label>
+      <GridKnob
+        label={t("grid.width")}
+        value={grid.width}
+        onValueChange={(next) => {
+          if (next === "fixed" || next === "wide") onChange({ width: next })
+        }}
+      >
+        <SelectItem value="fixed">{t("grid.widthFixed")}</SelectItem>
+        <SelectItem value="wide">{t("grid.widthWide")}</SelectItem>
+      </GridKnob>
 
-      <label className="flex items-center gap-1.5">
-        {t("grid.density")}
-        <Select
-          value={String(grid.rowHeight)}
-          onValueChange={(next) => {
-            const n = Number(next)
-            if (Number.isInteger(n)) onChange({ rowHeight: n })
-          }}
-        >
-          <SelectTrigger size="sm" className="h-7 gap-1 font-mono text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {DENSITY_PRESETS.map((d) => (
-              <SelectItem key={d.value} value={String(d.value)}>
-                {t(d.label)}
-              </SelectItem>
-            ))}
-            {!densityKnown && (
-              <SelectItem value={String(grid.rowHeight)}>
-                {grid.rowHeight}px
-              </SelectItem>
-            )}
-          </SelectContent>
-        </Select>
-      </label>
+      <GridKnob
+        label={t("grid.density")}
+        value={String(grid.rowHeight)}
+        onValueChange={(next) => {
+          const n = Number(next)
+          if (Number.isInteger(n)) onChange({ rowHeight: n })
+        }}
+      >
+        {DENSITY_PRESETS.map((d) => (
+          <SelectItem key={d.value} value={String(d.value)}>
+            {t(d.label)}
+          </SelectItem>
+        ))}
+        {!densityKnown && (
+          <SelectItem value={String(grid.rowHeight)}>
+            {grid.rowHeight}px
+          </SelectItem>
+        )}
+      </GridKnob>
 
       <span className="ml-auto hidden text-ink-dim min-[1100px]:inline">
         {t("grid.hint")}
