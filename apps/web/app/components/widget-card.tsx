@@ -215,64 +215,70 @@ export function WidgetCard({
             </span>
           </header>
         ) : (
-          /* View-mode title bar: name (left), freshness/state (right), and the
-             hover-revealed actions. One slim strip; the artifact keeps a clean
+          /* View-mode title bar: name (left), then a right-aligned cluster of
+             hover-revealed actions followed by the freshness/state readout.
+             Actions sit *before* the readout so the timestamp stays pinned to
+             the card's edge (symmetric with the title inset) and the reserved
+             action width is absorbed by the flex gap — no idle dead space, no
+             layout shift on reveal. One slim strip; the artifact keeps a clean
              bottom edge. */
-          <header className="flex min-h-8 items-center gap-2 border-b border-border-dim py-1.5 pr-1 pl-2.5 text-xs">
+          <header className="flex min-h-8 items-center gap-2 border-b border-border-dim py-1.5 pr-2.5 pl-2.5 text-xs">
             <span className="min-w-0 truncate font-medium text-foreground">
               {routine.name}
             </span>
-            <span className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-ink-dim">
-              {running ? (
-                <span className="flex items-center gap-1 text-primary">
-                  <RefreshCw className="size-3 animate-spin" />
-                  {t("widget.running")}
-                </span>
-              ) : (
-                <>
-                  {stale && (
-                    <Badge
-                      variant="secondary"
-                      className="h-[18px] border-yellow/45 bg-yellow/10 px-1.5 font-mono text-xs text-ink"
-                      title={t("widget.staleTitle")}
-                    >
-                      {t("widget.stale")}
-                    </Badge>
-                  )}
-                  {ranLabel}
-                  {manual && (
-                    <span title={t("widget.manualTitle")}>
-                      · {t("widget.manual")}
-                    </span>
-                  )}
-                </>
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              {scope != null && dataRepo != null && routine.enabled && (
+                <UpdateAction
+                  routine={routine}
+                  scope={scope}
+                  dataRepo={dataRepo}
+                  pending={pendingFiredAt != null}
+                  onFired={onFired}
+                  forceVisible={status.kind !== "live"}
+                />
               )}
-            </span>
-            {scope != null && dataRepo != null && routine.enabled && (
-              <UpdateAction
-                routine={routine}
-                scope={scope}
-                dataRepo={dataRepo}
-                pending={pendingFiredAt != null}
-                onFired={onFired}
-                forceVisible={status.kind !== "live"}
-              />
-            )}
-            {/* Peek at full size. Recedes until the card is hovered/focused
-              (fine pointers), always shown on touch where there is no hover;
-              the reserved slot means no layout shift on reveal. */}
-            {html && (
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label={t("widget.expand", { name: routine.name })}
-                title={t("widget.expandShort")}
-                className={cn(BAR_ACTION, "opacity-0")}
-                onClick={() => setExpanded(true)}
-              >
-                <Maximize2 />
-              </Button>
-            )}
+              {/* Peek at full size. Recedes until the card is hovered/focused
+                (fine pointers), always shown on touch where there is no hover;
+                the reserved slot means no layout shift on reveal. */}
+              {html && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={t("widget.expand", { name: routine.name })}
+                  title={t("widget.expandShort")}
+                  className={cn(BAR_ACTION, "opacity-0")}
+                  onClick={() => setExpanded(true)}
+                >
+                  <Maximize2 />
+                </Button>
+              )}
+              <span className="flex items-center gap-1.5 font-mono text-ink-dim">
+                {running ? (
+                  <span className="flex items-center gap-1 text-primary">
+                    <RefreshCw className="size-3 animate-spin" />
+                    {t("widget.running")}
+                  </span>
+                ) : (
+                  <>
+                    {stale && (
+                      <Badge
+                        variant="secondary"
+                        className="h-[18px] border-yellow/45 bg-yellow/10 px-1.5 font-mono text-xs text-ink"
+                        title={t("widget.staleTitle")}
+                      >
+                        {t("widget.stale")}
+                      </Badge>
+                    )}
+                    {ranLabel}
+                    {manual && (
+                      <span title={t("widget.manualTitle")}>
+                        · {t("widget.manual")}
+                      </span>
+                    )}
+                  </>
+                )}
+              </span>
+            </div>
           </header>
         )}
         {html ? (
