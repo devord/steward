@@ -348,7 +348,7 @@ export function DashboardBoard({
           className={cn(
             "pointer-events-none z-10 rounded-lg border border-dashed",
             drag.valid
-              ? "border-orange-deep bg-orange/5"
+              ? "border-primary bg-primary/5"
               : "border-red/70 bg-red/10",
           )}
           style={{
@@ -441,10 +441,10 @@ export function DashboardBoard({
 
       {unplaced.length > 0 && editing && (
         <section className="mt-6">
-          <h2 className="mb-1 font-mono text-xs text-ink-faint">
+          <h2 className="mb-1 font-mono text-xs text-ink-dim">
             {t("offgrid.title")}
           </h2>
-          <p className="mb-2 max-w-prose text-xs text-ink-faint">
+          <p className="mb-2 max-w-prose text-xs text-ink-dim">
             {t("offgrid.hint")}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -467,7 +467,7 @@ export function DashboardBoard({
                   variant="ghost"
                   aria-label={t("offgrid.delete", { name: routine.name })}
                   title={t("offgrid.delete", { name: routine.name })}
-                  className="mr-0.5 size-6 rounded-l-none text-ink-faint hover:bg-destructive/10 hover:text-destructive"
+                  className="mr-0.5 size-6 rounded-l-none text-ink-dim hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => setDeletingRoutine(routine.slug)}
                 >
                   <Trash2 />
@@ -678,7 +678,7 @@ function GridSettings({
   const densityKnown = DENSITY_PRESETS.some((d) => d.value === grid.rowHeight)
 
   return (
-    <div className="-mt-2 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] text-ink-faint">
+    <div className="-mt-2 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs text-ink-dim">
       <label className="flex items-center gap-1.5">
         {t("grid.columnsLabel")}
         <Select
@@ -746,7 +746,7 @@ function GridSettings({
         </Select>
       </label>
 
-      <span className="ml-auto hidden text-ink-faint min-[1100px]:inline">
+      <span className="ml-auto hidden text-ink-dim min-[1100px]:inline">
         {t("grid.hint")}
       </span>
     </div>
@@ -756,8 +756,8 @@ function GridSettings({
 function EmptyDashboard({ onAdd }: { onAdd: () => void }) {
   const t = useT()
   return (
-    <main className="flex flex-col items-center gap-1.5 rounded-lg border border-dashed py-24 text-center">
-      <p className="font-mono text-xs text-ink-faint">{t("empty.fact")}</p>
+    <main className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-24 text-center">
+      <p className="font-mono text-sm text-ink-dim">{t("empty.fact")}</p>
       <p className="max-w-sm text-sm text-muted-foreground">
         {t("empty.hint")}
       </p>

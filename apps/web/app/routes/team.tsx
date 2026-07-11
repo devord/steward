@@ -17,7 +17,7 @@ import { useT } from "../lib/i18n.tsx"
 import { requireAuth } from "../lib/session.server.ts"
 
 export function meta(_args: Route.MetaArgs) {
-  return [{ title: "Bulletin — team" }]
+  return [{ title: "Bulletin — Team" }]
 }
 
 /**
@@ -143,7 +143,7 @@ export default function Team({ loaderData, actionData }: Route.ComponentProps) {
       <p className="mt-10">
         <Link
           to="/"
-          className="font-mono text-xs text-ink-faint transition-colors hover:text-foreground"
+          className="font-mono text-xs text-ink-dim transition-colors hover:text-foreground"
         >
           ← {t("team.back")}
         </Link>

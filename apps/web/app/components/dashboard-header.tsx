@@ -54,7 +54,7 @@ export function DashboardHeader({
     <AppHeader className="gap-x-2.5">
       <Link
         to="/"
-        aria-label="bulletin"
+        aria-label="Bulletin"
         className="-mx-1 inline-flex items-center rounded-md px-1 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <Wordmark className="text-sm" />
@@ -66,7 +66,7 @@ export function DashboardHeader({
         href={`https://github.com/${dataRepo}`}
         target="_blank"
         rel="noreferrer"
-        className="hidden font-mono text-xs text-ink-faint transition-colors hover:text-foreground md:inline"
+        className="hidden font-mono text-xs text-ink-dim transition-colors hover:text-foreground md:inline"
       >
         {dataRepo}
       </a>
@@ -144,7 +144,7 @@ export function DashboardHeader({
             size="sm"
             variant="ghost"
             type="submit"
-            className="text-ink-faint hover:text-foreground"
+            className="text-ink-dim hover:text-foreground"
           >
             {t("header.signOut")}
           </Button>

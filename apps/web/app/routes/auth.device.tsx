@@ -17,7 +17,7 @@ import { commitSession, getAuth, getSession } from "../lib/session.server.ts"
 import { cn } from "~/lib/utils"
 
 export function meta(_args: Route.MetaArgs) {
-  return [{ title: "Bulletin — device sign-in" }]
+  return [{ title: "Bulletin — Device sign-in" }]
 }
 
 /**
@@ -231,7 +231,7 @@ function Pending({
       >
         {t("device.openLink")}
       </a>
-      <p className="mt-6 flex items-center gap-2 text-sm text-ink-faint">
+      <p className="mt-6 flex items-center gap-2 text-sm text-ink-dim">
         <Loader2 aria-hidden className="size-4 animate-spin" />
         {t("device.waiting")}
       </p>

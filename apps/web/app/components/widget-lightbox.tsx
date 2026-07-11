@@ -90,15 +90,15 @@ export function WidgetLightbox({
             </DialogPrimitive.Title>
             <span
               aria-hidden
-              className="hidden truncate font-mono text-ink-faint sm:inline"
+              className="hidden truncate font-mono text-ink-dim sm:inline"
             >
               {slug}
             </span>
-            <div className="ml-auto flex shrink-0 items-center gap-2 font-mono text-ink-faint">
+            <div className="ml-auto flex shrink-0 items-center gap-2 font-mono text-ink-dim">
               {stale && (
                 <Badge
                   variant="secondary"
-                  className="h-[15px] border-yellow/45 bg-yellow/10 px-1 font-mono text-[10px] text-ink"
+                  className="h-[18px] border-yellow/45 bg-yellow/10 px-1.5 font-mono text-xs text-ink"
                   title={t("widget.staleTitle")}
                 >
                   {t("widget.stale")}

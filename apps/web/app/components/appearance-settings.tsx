@@ -187,7 +187,7 @@ function ThemeTile({
       </span>
       <span
         className={cn(
-          "px-0.5 pb-0.5 font-mono text-[11px] leading-tight transition-colors",
+          "px-0.5 pb-0.5 font-mono text-xs leading-tight transition-colors",
           active
             ? "text-foreground"
             : "text-ink-dim group-hover:text-foreground",
@@ -251,7 +251,7 @@ export function AppearanceSettings() {
             )
           })}
         </div>
-        <p className="font-mono text-xs text-ink-faint">
+        <p className="font-mono text-xs text-ink-dim">
           {t(MODE_HINT[prefs.mode])}
         </p>
       </div>
@@ -284,7 +284,7 @@ export function AppearanceSettings() {
             />
           ))}
         </div>
-        <p className="font-mono text-xs text-ink-faint">
+        <p className="font-mono text-xs text-ink-dim">
           {t("settings.themeHint")}
         </p>
       </div>
@@ -342,7 +342,7 @@ export function AppearanceSettings() {
                       )}
                     />
                     <span className="flex min-w-0 flex-col">
-                      <span className="font-mono text-[10px] text-ink-faint">
+                      <span className="font-mono text-xs text-ink-dim">
                         {t(
                           slot === "light"
                             ? "settings.mixLight"
@@ -358,7 +358,7 @@ export function AppearanceSettings() {
               })}
             </div>
             {shownMode && editSlot !== shownMode && (
-              <p className="font-mono text-xs text-ink-faint">
+              <p className="font-mono text-xs text-ink-dim">
                 {t("settings.notApplied")}
               </p>
             )}

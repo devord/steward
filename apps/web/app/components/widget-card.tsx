@@ -59,9 +59,9 @@ export interface WidgetCardProps {
 }
 
 /**
- * One grid cell: the routine's artifact in a sandboxed srcdoc iframe
- * (scripts allowed, no same-origin, no network — ADR-0002), a freshness
- * footer, and a placeholder when nothing was ever published.
+ * One grid cell: a title bar (name + freshness + actions), the routine's
+ * artifact in a sandboxed srcdoc iframe (scripts allowed, no same-origin, no
+ * network — ADR-0002), and a placeholder when nothing was ever published.
  *
  * Artifacts are authored in gruvbox; a non-default theme is injected as a
  * `--color-*` override appended to the document (ADR-0009). The server
@@ -116,7 +116,7 @@ export function WidgetCard({
     : t("widget.never")
 
   const resizing = drag?.kind === "resize"
-  // While resizing, the footer readout tracks the snap target live.
+  // While resizing, the title-bar readout tracks the snap target live.
   const shownSize = resizing ? drag.candidate : size
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
@@ -189,30 +189,15 @@ export function WidgetCard({
             }),
         }}
       >
-        {html ? (
-          <iframe
-            srcDoc={html}
-            sandbox="allow-scripts"
-            title={routine.name}
-            loading="lazy"
-            className="min-h-0 w-full flex-1 border-0"
-          />
-        ) : (
-          <WidgetEmptyState
-            status={status}
-            routine={routine}
-            scope={scope}
-            login={login}
-            now={now}
-          />
-        )}
         {editing ? (
-          <footer className="relative z-20 flex items-center gap-1.5 border-t bg-bg2 py-0.5 pr-2 pl-1 text-[11px]">
+          /* Edit-mode title bar: remove, identity, and the live size readout.
+             Controls live in the bar, never floating over the artifact. */
+          <header className="relative z-20 flex items-center gap-1.5 border-b bg-bg2 py-1 pr-2.5 pl-1 text-xs">
             <Button
               variant="ghost"
               size="icon-xs"
-              aria-label={`remove ${routine.name} from grid`}
-              className="size-5 shrink-0 text-ink-faint hover:bg-destructive/10 hover:text-destructive pointer-coarse:size-7"
+              aria-label={t("widget.remove", { name: routine.name })}
+              className="size-5 shrink-0 text-ink-dim hover:bg-destructive/10 hover:text-destructive pointer-coarse:size-7"
               onClick={() => onRemove?.()}
             >
               <X />
@@ -222,19 +207,24 @@ export function WidgetCard({
             </span>
             <span
               className={cn(
-                "ml-auto shrink-0 pr-3 font-mono text-[10px] tabular-nums",
-                resizing ? "text-orange" : "text-ink-faint",
+                "ml-auto shrink-0 pr-1 font-mono tabular-nums",
+                resizing ? "text-primary" : "text-ink-dim",
               )}
             >
               {shownSize.cols}×{shownSize.rows}
             </span>
-          </footer>
+          </header>
         ) : (
-          <footer className="flex items-center gap-2 border-t border-border-dim py-[3px] pr-1 pl-2 text-[11px]">
-            <span className="truncate text-ink-dim">{routine.name}</span>
-            <span className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-ink-faint">
+          /* View-mode title bar: name (left), freshness/state (right), and the
+             hover-revealed actions. One slim strip; the artifact keeps a clean
+             bottom edge. */
+          <header className="flex min-h-8 items-center gap-2 border-b border-border-dim py-1.5 pr-1 pl-2.5 text-xs">
+            <span className="min-w-0 truncate font-medium text-foreground">
+              {routine.name}
+            </span>
+            <span className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-ink-dim">
               {running ? (
-                <span className="flex items-center gap-1 text-orange">
+                <span className="flex items-center gap-1 text-primary">
                   <RefreshCw className="size-3 animate-spin" />
                   {t("widget.running")}
                 </span>
@@ -243,7 +233,7 @@ export function WidgetCard({
                   {stale && (
                     <Badge
                       variant="secondary"
-                      className="h-[15px] border-yellow/45 bg-yellow/10 px-1 font-mono text-[10px] text-ink"
+                      className="h-[18px] border-yellow/45 bg-yellow/10 px-1.5 font-mono text-xs text-ink"
                       title={t("widget.staleTitle")}
                     >
                       {t("widget.stale")}
@@ -277,19 +267,36 @@ export function WidgetCard({
                 size="icon-xs"
                 aria-label={t("widget.expand", { name: routine.name })}
                 title={t("widget.expandShort")}
-                className="size-5 shrink-0 text-ink-faint opacity-0 transition-opacity hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:size-7 pointer-coarse:opacity-100"
+                className={cn(BAR_ACTION, "opacity-0")}
                 onClick={() => setExpanded(true)}
               >
                 <Maximize2 />
               </Button>
             )}
-          </footer>
+          </header>
+        )}
+        {html ? (
+          <iframe
+            srcDoc={html}
+            sandbox="allow-scripts"
+            title={routine.name}
+            loading="lazy"
+            className="min-h-0 w-full flex-1 border-0"
+          />
+        ) : (
+          <WidgetEmptyState
+            status={status}
+            routine={routine}
+            scope={scope}
+            login={login}
+            now={now}
+          />
         )}
         {editing && (
           <>
             {/* Drag surface: covers the artifact (iframes swallow pointer
-              events) but sits under the footer and resize handle. Remove
-              lives in the footer so no control ever floats over the
+              events) but sits under the title bar and resize handle. Remove
+              lives in the bar so no control ever floats over the
               artifact — content stays clean while dragging. */}
             <div
               aria-hidden
@@ -307,8 +314,8 @@ export function WidgetCard({
                 className={cn(
                   "absolute right-[3px] bottom-[3px] z-30 size-3.5 cursor-nwse-resize touch-none rounded-br-[5px] border-r-2 border-b-2",
                   resizing
-                    ? "border-orange"
-                    : "border-ink-faint hover:border-orange",
+                    ? "border-primary"
+                    : "border-ink-dim hover:border-primary",
                 )}
                 onPointerDown={(event) => onDragStart?.("resize", event)}
               />
@@ -331,9 +338,9 @@ export function WidgetCard({
   )
 }
 
-/** The reveal-on-hover footer control style the expand button set. */
-const FOOTER_ACTION =
-  "size-5 shrink-0 text-ink-faint transition-opacity hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:size-7 pointer-coarse:opacity-100"
+/** The reveal-on-hover title-bar action style the expand + update buttons share. */
+const BAR_ACTION =
+  "size-5 shrink-0 text-ink-dim transition-opacity hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:size-7 pointer-coarse:opacity-100"
 
 /**
  * The Update control (ADR-0016). Cloud routines fire their runner-owned API
@@ -388,7 +395,7 @@ function UpdateAction({
         aria-label={label}
         title={label}
         className={cn(
-          FOOTER_ACTION,
+          BAR_ACTION,
           copied || forceVisible ? "opacity-100" : "opacity-0",
         )}
         onClick={() => {
@@ -425,7 +432,7 @@ function UpdateAction({
       title={label}
       disabled={spinning}
       className={cn(
-        FOOTER_ACTION,
+        BAR_ACTION,
         spinning || status != null || forceVisible
           ? "opacity-100"
           : "opacity-0",
@@ -460,7 +467,7 @@ export function CopyableCommand({ command }: { command: string }) {
       type="button"
       aria-label={t("widget.copyCmd")}
       title={t("widget.copyCmd")}
-      className="flex items-center gap-1.5 rounded border border-border-dim bg-bg px-1.5 py-1 font-mono text-[10px] text-ink-dim transition-colors hover:border-orange hover:text-foreground"
+      className="flex max-w-full items-center gap-1.5 rounded border border-border-dim bg-bg px-1.5 py-1 font-mono text-xs text-ink-dim transition-colors hover:border-primary hover:text-foreground"
       onClick={() => {
         void navigator.clipboard.writeText(command)
         setCopied(true)
@@ -472,7 +479,7 @@ export function CopyableCommand({ command }: { command: string }) {
       ) : (
         <Copy className="size-3 shrink-0" />
       )}
-      <span className="truncate">{command}</span>
+      <span className="min-w-0 truncate">{command}</span>
     </button>
   )
 }
@@ -558,16 +565,14 @@ function WidgetEmptyState({
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 p-3 text-center">
       {status.kind === "running" && (
-        <RefreshCw className="size-4 shrink-0 animate-spin text-orange" />
+        <RefreshCw className="size-4 shrink-0 animate-spin text-primary" />
       )}
       <span className="font-mono text-xs text-ink-dim">{routine.slug}</span>
-      <span className="text-xs text-ink-faint">{hint}</span>
-      {note && (
-        <span className="font-mono text-[10px] text-ink-faint">{note}</span>
-      )}
+      <span className="text-sm text-ink-dim">{hint}</span>
+      {note && <span className="font-mono text-xs text-ink-faint">{note}</span>}
       {command && <CopyableCommand command={command} />}
       {runnerNote && (
-        <span className="text-[10px] text-ink-faint">{runnerNote}</span>
+        <span className="text-xs text-ink-faint">{runnerNote}</span>
       )}
     </div>
   )

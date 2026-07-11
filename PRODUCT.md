@@ -25,8 +25,8 @@ renderer and editor.
 
 Terminal-calm. Quiet, precise, monospace-flavored — tmux/lazygit energy,
 not SaaS energy. The chrome recedes; the widgets are the color and the
-content. Confidence through restraint: small type, exact alignment, few
-words, no decoration that doesn't inform.
+content. Confidence through restraint: exact alignment, few words, readable
+type, no decoration that doesn't inform.
 
 ## Anti-references
 
@@ -47,8 +47,9 @@ words, no decoration that doesn't inform.
    mental model — name them plainly; never euphemize ("save" is a commit).
 4. **Glanceable in two seconds.** Hierarchy tuned for the drive-by look:
    state legible from across the room, detail on approach.
-5. **Terminal manners.** Monospace for identifiers and state, lowercase
-   labels where natural, keyboard-friendly, no motion that outlives 200ms.
+5. **Terminal manners.** Monospace for identifiers and state, Sentence case
+   for labels and prose (machine strings kept verbatim), keyboard-friendly,
+   no motion that outlives 200ms.
 
 ## Accessibility & Inclusion
 

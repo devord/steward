@@ -28,7 +28,7 @@ export function loader({ request }: Route.LoaderArgs) {
 export function meta({ loaderData }: Route.MetaArgs) {
   const title = loaderData
     ? `Bulletin — ${translate(loaderData.locale, "settings.title")}`
-    : "Bulletin — settings"
+    : "Bulletin — Settings"
   return [{ title }]
 }
 
@@ -55,7 +55,7 @@ export default function Settings(_props: Route.ComponentProps) {
     <div className="mx-auto max-w-2xl px-4 pb-16 sm:px-6">
       <AppHeader className="mb-8 gap-x-2">
         <Wordmark className="text-sm" />
-        <span aria-hidden className="font-mono text-xs text-ink-faint">
+        <span aria-hidden className="font-mono text-xs text-ink-dim">
           ·
         </span>
         <h1 className="font-mono text-xs text-ink-dim">
@@ -77,7 +77,7 @@ export default function Settings(_props: Route.ComponentProps) {
         <section aria-labelledby="settings-appearance">
           <h2
             id="settings-appearance"
-            className="mb-4 font-mono text-xs text-ink-faint"
+            className="mb-4 font-mono text-xs text-ink-dim"
           >
             {t("settings.appearance")}
           </h2>
@@ -87,17 +87,17 @@ export default function Settings(_props: Route.ComponentProps) {
         <section aria-labelledby="settings-language">
           <h2
             id="settings-language"
-            className="mb-4 font-mono text-xs text-ink-faint"
+            className="mb-4 font-mono text-xs text-ink-dim"
           >
             {t("settings.language")}
           </h2>
           <LanguageSettings />
-          <p className="mt-2 font-mono text-xs text-ink-faint">
+          <p className="mt-2 font-mono text-xs text-ink-dim">
             {t("settings.languageHint")}
           </p>
         </section>
 
-        <p className="border-t border-border-dim pt-3 font-mono text-xs text-ink-faint">
+        <p className="border-t border-border-dim pt-3 font-mono text-xs text-ink-dim">
           {t("settings.saved")}
         </p>
       </main>
