@@ -220,13 +220,14 @@ export function WidgetCard({
              Actions sit *before* the readout so the timestamp stays pinned to
              the card's edge (symmetric with the title inset) and the reserved
              action width is absorbed by the flex gap — no idle dead space, no
-             layout shift on reveal. One slim strip; the artifact keeps a clean
-             bottom edge. */
-          <header className="flex min-h-8 items-center gap-2 border-b border-border-dim py-1.5 pr-2.5 pl-2.5 text-xs">
-            <span className="min-w-0 truncate font-medium text-foreground">
+             layout shift on reveal. The name is the board's two-second glance
+             target, so it rides a step above the 12px metadata floor in the
+             mono terminal voice; state reads as pills, not prose (ADR-0009). */
+          <header className="flex min-h-8 items-center gap-2 border-b border-border-dim py-1.5 pr-2.5 pl-2.5">
+            <span className="min-w-0 truncate font-mono text-sm font-medium text-foreground">
               {routine.name}
             </span>
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-xs text-ink-dim">
               {scope != null && dataRepo != null && routine.enabled && (
                 <UpdateAction
                   routine={routine}
@@ -252,29 +253,28 @@ export function WidgetCard({
                   <Maximize2 />
                 </Button>
               )}
-              <span className="flex items-center gap-1.5 font-mono text-ink-dim">
+              <span className="flex items-center gap-1.5">
                 {running ? (
-                  <span className="flex items-center gap-1 text-primary">
+                  <StatusPill tone="running" title={t("widget.running")}>
                     <RefreshCw className="size-3 animate-spin" />
                     {t("widget.running")}
-                  </span>
+                  </StatusPill>
                 ) : (
                   <>
                     {stale && (
-                      <Badge
-                        variant="secondary"
-                        className="h-[18px] border-yellow/45 bg-yellow/10 px-1.5 font-mono text-xs text-ink"
-                        title={t("widget.staleTitle")}
-                      >
+                      <StatusPill tone="stale" title={t("widget.staleTitle")}>
                         {t("widget.stale")}
-                      </Badge>
+                      </StatusPill>
                     )}
-                    {ranLabel}
                     {manual && (
-                      <span title={t("widget.manualTitle")}>
-                        · {t("widget.manual")}
-                      </span>
+                      <StatusPill
+                        tone="neutral"
+                        title={t("widget.manualTitle")}
+                      >
+                        {t("widget.manual")}
+                      </StatusPill>
                     )}
+                    <span className="tabular-nums">{ranLabel}</span>
                   </>
                 )}
               </span>
@@ -341,6 +341,38 @@ export function WidgetCard({
         />
       )}
     </>
+  )
+}
+
+/**
+ * One title-bar state pill — the tile's tag vocabulary. Compact, mono, one
+ * step tighter than the base Badge. Tones are the only semantic color the
+ * chrome spends here: accent for a live run, yellow for staleness, a neutral
+ * well for descriptors like "manual" (DESIGN.md — color only when it means
+ * something, so a fresh tile carries no pill at all).
+ */
+function StatusPill({
+  tone,
+  title,
+  children,
+}: {
+  tone: "running" | "stale" | "neutral"
+  title?: string
+  children: React.ReactNode
+}) {
+  return (
+    <Badge
+      variant="secondary"
+      title={title}
+      className={cn(
+        "h-[18px] gap-1 border px-1.5 font-mono text-xs font-normal",
+        tone === "running" && "border-primary/40 bg-primary/10 text-primary",
+        tone === "stale" && "border-yellow/45 bg-yellow/10 text-ink",
+        tone === "neutral" && "border-border-dim bg-bg2 text-ink-dim",
+      )}
+    >
+      {children}
+    </Badge>
   )
 }
 

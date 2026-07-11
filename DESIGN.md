@@ -63,6 +63,16 @@ non-default theme.
   mono. Body 14px, secondary labels 13px, metadata and timestamps 12px — the
   floor, nothing smaller in chrome; section headings 15–16px. No display
   sizes in chrome.
+- Widget title exception: the `widget-card` tile name is **mono, 14px
+  medium** — a deliberate break from sans-for-names. The name is the board's
+  two-second glance target, so it carries the terminal voice and sits a step
+  above the 12px metadata beside it. State reads as pills in that same mono
+  voice (`running`/`stale`/`manual`), never prose; a fresh tile carries no
+  pill (semantic color only when it means something).
+- Artifacts set their own type, one register bolder than chrome since they
+  are the content that glows: body/data ≥14px, section labels ≥12px, nothing
+  below 12px (the contract lives in `docs/widget-standard.md` §6 and the
+  `widget-artifact` skill).
 
 ## Mark
 
