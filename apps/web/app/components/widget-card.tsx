@@ -533,7 +533,7 @@ export function CopyableCommand({ command }: { command: string }) {
       type="button"
       aria-label={t("widget.copyCmd")}
       title={t("widget.copyCmd")}
-      className="flex max-w-full items-center gap-1.5 rounded border border-border-dim bg-bg px-1.5 py-1 font-mono text-xs text-ink-dim transition-colors hover:border-primary hover:text-foreground"
+      className="flex max-w-full cursor-pointer items-center gap-1.5 rounded border border-border-dim bg-bg px-1.5 py-1 font-mono text-xs text-ink-dim transition-colors hover:border-primary hover:text-foreground"
       onClick={() => {
         void navigator.clipboard.writeText(command)
         setCopied(true)

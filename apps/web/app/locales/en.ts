@@ -83,7 +83,7 @@ export const en = {
   "switcher.label": "Dashboard",
   "switcher.personal": "Personal",
   "switcher.team": "Team",
-  "switcher.new": "New dashboard…",
+  "switcher.new": "New dashboard",
 
   "newDash.title": "New dashboard",
   "newDash.description":

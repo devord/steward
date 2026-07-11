@@ -85,7 +85,7 @@ export const ptBR: Messages = {
   "switcher.label": "Painel",
   "switcher.personal": "Pessoal",
   "switcher.team": "Time",
-  "switcher.new": "Novo painel…",
+  "switcher.new": "Novo painel",
 
   "newDash.title": "Novo painel",
   "newDash.description":
