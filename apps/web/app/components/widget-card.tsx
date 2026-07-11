@@ -43,7 +43,7 @@ export interface WidgetCardProps {
       standalone renders. */
   committed?: boolean
   /** When set, a run fired at this epoch hasn't published yet — the tile shows
-      a running indicator and the update button is disabled (ADR-0016). */
+      the running indicator and the update control steps aside (ADR-0016). */
   pendingFiredAt?: number | null
   /** Called when the update button successfully fires a cloud run. */
   onFired?: () => void
@@ -228,16 +228,22 @@ export function WidgetCard({
               {routine.name}
             </span>
             <div className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-xs text-ink-dim">
-              {scope != null && dataRepo != null && routine.enabled && (
-                <UpdateAction
-                  routine={routine}
-                  scope={scope}
-                  dataRepo={dataRepo}
-                  pending={pendingFiredAt != null}
-                  onFired={onFired}
-                  forceVisible={status.kind !== "live"}
-                />
-              )}
+              {/* The Update control is a re-run affordance; while a run is in
+                  flight it can't fire and the "Running" readout already owns
+                  the state, so it steps aside — one run glyph per card, never
+                  a disabled refresh arrow beside the running one. */}
+              {scope != null &&
+                dataRepo != null &&
+                routine.enabled &&
+                !running && (
+                  <UpdateAction
+                    routine={routine}
+                    scope={scope}
+                    dataRepo={dataRepo}
+                    onFired={onFired}
+                    forceVisible={status.kind !== "live"}
+                  />
+                )}
               {/* Peek at full size. Recedes until the card is hovered/focused
                 (fine pointers), always shown on touch where there is no hover;
                 the reserved slot means no layout shift on reveal. */}
@@ -256,7 +262,10 @@ export function WidgetCard({
               <span className="flex items-center gap-1.5">
                 {running ? (
                   <StatusPill tone="running" title={t("widget.running")}>
-                    <RefreshCw className="size-3 animate-spin" />
+                    <span
+                      aria-hidden
+                      className="run-pulse size-1.5 shrink-0 rounded-full bg-primary"
+                    />
                     {t("widget.running")}
                   </StatusPill>
                 ) : (
@@ -391,18 +400,14 @@ function UpdateAction({
   routine,
   scope,
   dataRepo,
-  pending = false,
   forceVisible = false,
   onFired,
 }: {
   routine: Routine
   scope: BoardScope
   dataRepo: string
-  /** A fired run hasn't published yet (persists across reloads) — the button
-      spins and can't re-fire until it clears (ADR-0016). */
-  pending?: boolean
-  /** Keep the button visible (not hover-only) — for tiles with no artifact,
-      a pending run, or a missing trigger, where it's the primary affordance. */
+  /** Keep the button visible (not hover-only) — for tiles with no artifact
+      or a missing trigger, where it's the primary affordance. */
   forceVisible?: boolean
   onFired?: () => void
 }) {
@@ -451,7 +456,6 @@ function UpdateAction({
   }
 
   const busy = fetcher.state !== "idle"
-  const spinning = busy || pending
   const result = fetcher.data
   const status =
     result == null
@@ -468,12 +472,10 @@ function UpdateAction({
       size="icon-xs"
       aria-label={label}
       title={label}
-      disabled={spinning}
+      disabled={busy}
       className={cn(
         BAR_ACTION,
-        spinning || status != null || forceVisible
-          ? "opacity-100"
-          : "opacity-0",
+        busy || status != null || forceVisible ? "opacity-100" : "opacity-0",
         result != null && !result.ok && "text-destructive",
       )}
       onClick={() => {
@@ -484,13 +486,12 @@ function UpdateAction({
         })
       }}
     >
-      {result?.ok && !pending ? (
+      {result?.ok ? (
         <Check />
       ) : (
-        // Spin only for this button's own in-flight submit. While a run is
-        // pending the header already shows the "Running" spinner, so spinning
-        // here too would put two spinners on one card; stay a static, disabled
-        // icon instead.
+        // Spins only for this button's own in-flight submit; the moment the
+        // fire lands the tile flips to Running and this control unmounts, so
+        // the spinning arrow hands off to the header's run dot — never both.
         <RefreshCw className={cn(busy && "animate-spin")} />
       )}
       <span role="status" className="sr-only">
@@ -607,7 +608,10 @@ function WidgetEmptyState({
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 p-3 text-center">
       {status.kind === "running" && (
-        <RefreshCw className="size-4 shrink-0 animate-spin text-primary" />
+        <span
+          aria-hidden
+          className="run-pulse size-2 shrink-0 rounded-full bg-primary"
+        />
       )}
       <span className="font-mono text-xs text-ink-dim">{routine.slug}</span>
       <span className="text-sm text-ink-dim">{hint}</span>

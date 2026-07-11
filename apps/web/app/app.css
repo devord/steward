@@ -172,6 +172,28 @@
       animation: none;
     }
   }
+
+  /* A run in flight: a single accent dot that breathes. The status glyph (a
+     dot) stays a different shape from the action glyph (the refresh arrows),
+     so a run and its re-run control never read as two competing spinners; and
+     a slow pulse is calmer than a spin for a cloud run that can last minutes. */
+  @keyframes run-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+  .run-pulse {
+    animation: run-pulse 1.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .run-pulse {
+      animation: none;
+    }
+  }
 }
 
 /* Dashboard grid (docs/widget-standard.md): the board's own column count
