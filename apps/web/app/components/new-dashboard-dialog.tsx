@@ -3,6 +3,7 @@ import { useFetcher, useNavigate } from "react-router"
 
 import { slugSchema } from "@bulletin/schema"
 
+import { kebab } from "./add-routine-dialog.tsx"
 import { Button } from "~/components/ui/button"
 import {
   Dialog,
@@ -17,113 +18,12 @@ import { Label } from "~/components/ui/label"
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select"
-import { kebab } from "./add-routine-dialog.tsx"
 import { type BoardScope, boardHref } from "../lib/board.ts"
 import { useT } from "../lib/i18n.tsx"
-
-const NEW_VALUE = "::new"
-
-/**
- * Board navigation (ADR-0010): personal boards, team boards, and the
- * new-dashboard entry in one compact select. Values encode scope + slug;
- * picking one navigates, so the select never holds transient state.
- */
-export function DashboardSwitcher({
-  scope,
-  dashboardSlug,
-  personalDashboards,
-  teamDashboards,
-}: {
-  scope: BoardScope
-  dashboardSlug: string
-  personalDashboards: string[]
-  /** null → no team repo configured or no access: hide the team group. */
-  teamDashboards: string[] | null
-}) {
-  const t = useT()
-  const navigate = useNavigate()
-  const [creating, setCreating] = useState(false)
-
-  return (
-    <>
-      <Select
-        value={`${scope}:${dashboardSlug}`}
-        onValueChange={(value) => {
-          if (typeof value !== "string") return
-          if (value === NEW_VALUE) {
-            setCreating(true)
-            return
-          }
-          const [nextScope, slug] = value.split(":")
-          if (!slug) return
-          void navigate(
-            boardHref(nextScope === "team" ? "team" : "personal", slug),
-          )
-        }}
-      >
-        <SelectTrigger
-          size="sm"
-          aria-label={t("switcher.label")}
-          className="gap-1 rounded-md border-none bg-transparent! px-1.5 font-mono text-xs text-ink-dim shadow-none transition-colors hover:bg-muted! hover:text-foreground aria-expanded:bg-muted! aria-expanded:text-foreground [&_svg]:size-3.5 [&_svg]:text-ink-faint"
-        >
-          {/* The value encodes scope + slug; show only the board name — the
-              repo attribution beside the switcher already carries the scope,
-              so `team:` / `personal:` here would just be enum noise. */}
-          <SelectValue>
-            {(value) =>
-              typeof value === "string" ? (value.split(":")[1] ?? value) : null
-            }
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent align="start" alignItemWithTrigger={false}>
-          <SelectGroup>
-            <SelectLabel>{t("switcher.personal")}</SelectLabel>
-            {personalDashboards.map((slug) => (
-              <SelectItem key={`personal:${slug}`} value={`personal:${slug}`}>
-                {slug}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-          {teamDashboards && (
-            <SelectGroup>
-              <SelectLabel>{t("switcher.team")}</SelectLabel>
-              {teamDashboards.map((slug) => (
-                <SelectItem key={`team:${slug}`} value={`team:${slug}`}>
-                  {slug}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          )}
-          <SelectSeparator />
-          {/* Grouped like the board rows above so its text and highlight
-              share the same horizontal inset — an ungrouped item would sit
-              a few px to the left of them. */}
-          <SelectGroup>
-            <SelectItem value={NEW_VALUE}>{t("switcher.new")}</SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
-      <NewDashboardDialog
-        open={creating}
-        onOpenChange={setCreating}
-        defaultScope={scope}
-        canTeam={teamDashboards != null}
-        takenSlugs={{
-          personal: personalDashboards,
-          team: teamDashboards ?? [],
-        }}
-      />
-    </>
-  )
-}
 
 interface CreateResult {
   ok: boolean

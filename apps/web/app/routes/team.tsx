@@ -3,7 +3,7 @@ import { Form, redirect, useNavigation } from "react-router"
 
 import type { Route } from "./+types/team"
 import { AccountBar } from "../components/account-bar.tsx"
-import { NewDashboardDialog } from "../components/dashboard-switcher.tsx"
+import { NewDashboardDialog } from "../components/new-dashboard-dialog.tsx"
 import { Button } from "~/components/ui/button"
 import { Link } from "~/components/ui/link"
 import {

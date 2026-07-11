@@ -1,13 +1,8 @@
-import { Form } from "react-router"
-
-import { Settings } from "lucide-react"
-
+import { AccountMenu } from "./account-menu.tsx"
 import { AppHeader } from "./app-header.tsx"
 import { Wordmark } from "./logo.tsx"
-import { Button, buttonVariants } from "~/components/ui/button"
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
-import { useT } from "../lib/i18n.tsx"
 
 /**
  * The chrome for signed-in pages that sit *before* a board — the first-run
@@ -15,8 +10,9 @@ import { useT } from "../lib/i18n.tsx"
  * were missing: who you're signed in as, a settings escape hatch, and a
  * sign-out. So creating the private data repo never traps you (you can still
  * reach settings, sign out, or switch accounts) and you can always tell which
- * GitHub account you're acting as (ADR-0004) — the account whose repo the page
- * is asking about.
+ * GitHub account you're acting as (ADR-0004). Those account actions live in
+ * the same {@link AccountMenu} the board rail uses — no data repo yet, so it
+ * shows identity, settings, and sign-out without the repo link.
  */
 export function AccountBar({
   login,
@@ -25,7 +21,6 @@ export function AccountBar({
   login: string
   className?: string
 }) {
-  const t = useT()
   return (
     <AppHeader className={cn("gap-x-2.5", className)}>
       <Link
@@ -36,35 +31,8 @@ export function AccountBar({
         <Wordmark className="text-sm" />
       </Link>
 
-      {/* The account cluster, always visible — on phones too, since telling
-          which login owns the repo is the whole point here. It may wrap and
-          the login may break, so a long username never shoves sign-out (the
-          reason we're here) off a narrow screen. */}
-      <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
-        <Link
-          to="/settings"
-          aria-label={t("header.settings")}
-          title={t("header.settings")}
-          className={cn(
-            buttonVariants({ size: "icon-sm", variant: "ghost" }),
-            "text-ink-dim hover:text-foreground",
-          )}
-        >
-          <Settings className="size-3.5" />
-        </Link>
-        <span className="min-w-0 px-1 font-mono text-xs break-all text-ink-faint">
-          {login}
-        </span>
-        <Form method="post" action="/auth/logout">
-          <Button
-            size="sm"
-            variant="ghost"
-            type="submit"
-            className="text-ink-dim hover:text-foreground"
-          >
-            {t("header.signOut")}
-          </Button>
-        </Form>
+      <div className="ml-auto flex min-w-0 items-center">
+        <AccountMenu login={login} />
       </div>
     </AppHeader>
   )
