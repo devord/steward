@@ -66,21 +66,40 @@ non-default theme.
 
 ## Mark
 
-The logo is a mini dashboard grid on a gruvbox tile: two quiet widgets
-(`border`) and one tall orange block — the wordmark's trailing cursor
-(`bulletin▮`) placed as the last widget on the board. One drawing, several
-mirrors that must stay geometrically in sync:
+The logo is a mini dashboard grid on a gruvbox tile: two widgets
+(`ink-dim`, legible not faint) and one tall orange block — the wordmark's
+trailing cursor (`bulletin▮`) placed as the last widget on the board. One
+drawing, several mirrors that must stay geometrically in sync; the fills
+differ by surface (context below), but never the geometry.
+
+Two contexts, deliberately split. **In-app** the mark is chrome, so it
+follows the active theme. **As an OS/browser icon** the mark is a fixed
+dark identity tile — a tile has to hold its own on an unknown background
+(a colorful launcher, a light or dark tab strip, a photo wallpaper), where
+a near-white body would melt in and read as a placeholder, so it does _not_
+theme-switch and does _not_ use the light palette. Canonical icon colors:
+`#1d2021` tile, `#ebdbb2` widgets, `#fe8019` cursor (raised widget contrast
+so all three shapes read at 16px; the frame stroke is dropped on icons
+where it turns to mush).
 
 - `apps/web/app/components/logo.tsx` — `Logo` (mark) and `Wordmark`
   (mark + mono name lockup, scales with font size) for in-app use; token-
-  based, so it follows the active theme.
-- `apps/web/public/favicon.svg` (+ `favicon.ico` 16/32/48,
-  `apple-touch-icon.png`) — static favicons, linked from `root.tsx`. Light
-  is the baseline; the SVG swaps to dark via `prefers-color-scheme: dark`.
-  The `.ico` and `apple-touch-icon.png` are single-look light fallbacks —
-  static formats and home-screen icons can't theme-switch.
+  based, so it follows the active theme. Widgets are `muted-foreground`,
+  the one frame that keeps its `border` stroke (rendered large enough).
+- `apps/web/public/favicon.svg` — the browser-tab mark: one fixed dark
+  tile, no frame, no `prefers-color-scheme` swap (see the split above).
+  `favicon.ico` (16/32/48) is the raster fallback, generated from it.
+- `apps/web/public/apple-touch-icon.png` (180) — iOS home screen: opaque,
+  full-bleed dark, no self-rounding (iOS supplies the corner radius).
+- `apps/web/public/manifest.webmanifest` + `icon-{192,512}.png` (`any`)
+  and `icon-maskable-512.png` (`maskable`, mark inside the 66% safe zone)
+  — the PWA/Android adaptive icon, so launchers build a real adaptive tile
+  instead of masking apple-touch into a flat squircle. Linked from
+  `root.tsx`; `theme_color`/`background_color` are the dark `#1d2021`.
 - `apps/web/public/wordmark-{dark,light}.svg` — the mark + `bulletin`
   lockup for the README, swapped by `prefers-color-scheme` in a `<picture>`.
+  These are a document context (a light or dark page), so they keep the
+  theme pair; widgets are the palette's `ink-dim` for legibility.
 - `apps/web/public/og.png` — 1200×630 (@2x) social card in the light
   (gruvbox-light) palette; OG/Twitter meta lives in the home route's
   `meta`. One fixed image for every viewer — OG previews can't theme-switch,

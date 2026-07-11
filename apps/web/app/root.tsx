@@ -32,13 +32,16 @@ export function loader({ request }: Route.LoaderArgs) {
 const THEME_STYLESHEET = themeStylesheet()
 
 export const links: Route.LinksFunction = () => [
-  // SVG first for modern browsers; .ico carries 16/32/48 fallbacks.
-  // Light is the baseline; the SVG swaps to dark under prefers-color-scheme:
-  // dark, while the raster fallbacks (.ico, apple-touch-icon) stay light —
-  // they're static formats and home-screen icons can't theme-switch.
+  // The standalone mark is one fixed dark identity tile across every OS
+  // surface — a tile has to hold its own on unknown backgrounds (a colorful
+  // launcher, a light or dark tab strip, a photo wallpaper), so it doesn't
+  // theme-switch the way the in-app <Logo> does. SVG first for modern
+  // browsers; .ico carries the 16/32/48 fallbacks. The manifest gives
+  // Android a real maskable adaptive icon instead of masking apple-touch.
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
   { rel: "icon", href: "/favicon.ico", sizes: "16x16 32x32 48x48" },
   { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+  { rel: "manifest", href: "/manifest.webmanifest" },
 ]
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -63,6 +66,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
+        {/* Match the SSR default (gruvbox dark) so mobile browser chrome
+            reads as part of the dark board, like the identity tile. */}
+        <meta name="theme-color" content="#1d2021" />
         <Meta />
         <Links />
         {/* Palette blocks for every theme (single source: lib/theme.ts). */}
