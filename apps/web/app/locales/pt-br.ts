@@ -236,6 +236,9 @@ export const ptBR: Messages = {
     "Privado: só você (e colaboradores que convidar) podem ler",
   "setup.create": "Criar repo",
   "setup.creating": "Criando…",
+  "setup.wrongAccount":
+    "Tem certeza de que esse repo já existe? Esta verificação roda ao vivo a cada acesso, então não está desatualizada — o mais provável é que você esteja logado em uma conta do GitHub diferente da dona do repo. Confira o login acima e saia para trocar.",
+  "setup.teamLink": "Ir para os painéis do time",
 
   "settings.title": "Ajustes",
   "settings.back": "Voltar ao painel",

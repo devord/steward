@@ -2,8 +2,8 @@ import { useState } from "react"
 import { Form, redirect, useNavigation } from "react-router"
 
 import type { Route } from "./+types/team"
+import { AccountBar } from "../components/account-bar.tsx"
 import { NewDashboardDialog } from "../components/dashboard-switcher.tsx"
-import { Wordmark } from "../components/logo.tsx"
 import { Button } from "~/components/ui/button"
 import { Link } from "~/components/ui/link"
 import { listDashboards, resolveTeamRepo } from "../lib/dashboard.server.ts"
@@ -28,15 +28,17 @@ export function meta(_args: Route.MetaArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
   const auth = await requireAuth(request)
   const teamRepo = resolveTeamRepo()
-  if (!teamRepo) return { state: "unconfigured" as const, teamRepo: null }
+  if (!teamRepo) {
+    return { state: "unconfigured" as const, teamRepo: null, login: auth.login }
+  }
 
   if (!(await repoExists(auth.token, teamRepo))) {
-    return { state: "missing" as const, teamRepo }
+    return { state: "missing" as const, teamRepo, login: auth.login }
   }
   const dashboards = (await listDashboards(auth.token, teamRepo)) ?? []
   const [first] = dashboards
   if (first) throw redirect(`/team/${first}`)
-  return { state: "empty" as const, teamRepo }
+  return { state: "empty" as const, teamRepo, login: auth.login }
 }
 
 /** Create the team repo from the data-repo template. */
@@ -85,69 +87,70 @@ export default function Team({ loaderData, actionData }: Route.ComponentProps) {
   const busy = navigation.state !== "idle"
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-16 leading-relaxed sm:px-6">
-      <Wordmark className="text-sm" />
-
-      {loaderData.state === "unconfigured" && (
-        <p className="mt-10 text-sm text-muted-foreground">
-          {t("team.notConfigured")}
-        </p>
-      )}
-
-      {loaderData.state === "missing" && (
-        <>
-          <h1 className="mt-10 font-mono text-2xl font-bold text-foreground">
-            {t("team.missingTitle")}
-          </h1>
-          <p className="mt-4">{t("team.missingBody")}</p>
-          <p className="mt-4 rounded-md border border-border-dim bg-bg1 px-4 py-3 font-mono text-sm break-all">
-            {loaderData.teamRepo}
+    <div className="mx-auto max-w-2xl px-4 pb-16 leading-relaxed sm:px-6">
+      <AccountBar login={loaderData.login} className="mb-8" />
+      <main>
+        {loaderData.state === "unconfigured" && (
+          <p className="text-sm text-muted-foreground">
+            {t("team.notConfigured")}
           </p>
-          {actionData?.error ? (
-            <p className="mt-4 text-sm text-destructive">
-              {actionData.error === "denied"
-                ? t("team.missingDenied")
-                : t("team.missingTemplate")}
+        )}
+
+        {loaderData.state === "missing" && (
+          <>
+            <h1 className="font-mono text-2xl font-bold text-foreground">
+              {t("team.missingTitle")}
+            </h1>
+            <p className="mt-4">{t("team.missingBody")}</p>
+            <p className="mt-4 rounded-md border border-border-dim bg-bg1 px-4 py-3 font-mono text-sm break-all">
+              {loaderData.teamRepo}
             </p>
-          ) : (
-            <Form method="post" className="mt-8">
-              <Button type="submit" disabled={busy}>
-                {busy ? t("setup.creating") : t("team.missingCreate")}
-              </Button>
-            </Form>
-          )}
-        </>
-      )}
+            {actionData?.error ? (
+              <p className="mt-4 text-sm text-destructive">
+                {actionData.error === "denied"
+                  ? t("team.missingDenied")
+                  : t("team.missingTemplate")}
+              </p>
+            ) : (
+              <Form method="post" className="mt-8">
+                <Button type="submit" disabled={busy}>
+                  {busy ? t("setup.creating") : t("team.missingCreate")}
+                </Button>
+              </Form>
+            )}
+          </>
+        )}
 
-      {loaderData.state === "empty" && (
-        <>
-          <h1 className="mt-10 font-mono text-2xl font-bold text-foreground">
-            {t("team.emptyTitle")}
-          </h1>
-          <p className="mt-4 text-sm text-muted-foreground">
-            {t("team.emptyBody")}
-          </p>
-          <Button className="mt-8" onClick={() => setCreating(true)}>
-            {t("team.emptyCta")}
-          </Button>
-          <NewDashboardDialog
-            open={creating}
-            onOpenChange={setCreating}
-            defaultScope="team"
-            canTeam
-            takenSlugs={{ personal: [], team: [] }}
-          />
-        </>
-      )}
+        {loaderData.state === "empty" && (
+          <>
+            <h1 className="font-mono text-2xl font-bold text-foreground">
+              {t("team.emptyTitle")}
+            </h1>
+            <p className="mt-4 text-sm text-muted-foreground">
+              {t("team.emptyBody")}
+            </p>
+            <Button className="mt-8" onClick={() => setCreating(true)}>
+              {t("team.emptyCta")}
+            </Button>
+            <NewDashboardDialog
+              open={creating}
+              onOpenChange={setCreating}
+              defaultScope="team"
+              canTeam
+              takenSlugs={{ personal: [], team: [] }}
+            />
+          </>
+        )}
 
-      <p className="mt-10">
-        <Link
-          to="/"
-          className="font-mono text-xs text-ink-dim transition-colors hover:text-foreground"
-        >
-          ← {t("team.back")}
-        </Link>
-      </p>
-    </main>
+        <p className="mt-10">
+          <Link
+            to="/"
+            className="font-mono text-xs text-ink-dim transition-colors hover:text-foreground"
+          >
+            ← {t("team.back")}
+          </Link>
+        </p>
+      </main>
+    </div>
   )
 }
