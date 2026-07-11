@@ -644,7 +644,10 @@ function DeleteDashboardDialog({
           <DialogTitle>{t("board.deleteTitle")}</DialogTitle>
           <DialogDescription>
             {t("board.deleteBody", {
-              path: dashboardPath(target?.slug ?? ""),
+              // Closed (target null) the dialog still renders; guard the path
+              // so `dashboardPath` is never handed an empty, non-kebab slug it
+              // would reject — the body is only ever read while a target is set.
+              path: target ? dashboardPath(target.slug) : "",
               repo: dataRepo,
             })}
           </DialogDescription>
