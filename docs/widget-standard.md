@@ -55,8 +55,8 @@ An artifact MUST:
    `<meta name="widget-generated-at" content="<ISO-8601>">` plus a visible
    compact timestamp in a `<footer>`. That footer is the artifact's
    _standalone_ chrome — for when it's opened raw. On the dashboard the
-   widget-card footer already shows the routine name and freshness, so the
-   frame hides the artifact's own `<footer>` to avoid writing the identity
+   widget-card's title bar already shows the routine name and freshness, so
+   the frame hides the artifact's own `<footer>` to avoid writing the identity
    and run time twice.
 5. **Degrade gracefully** when data is missing — an empty state is part of
    the artifact, not an error.
@@ -65,6 +65,6 @@ An artifact MUST:
 
 - Address: data repo, `artifacts` branch, `w/<slug>/index.html` — fixed the
   moment the routine is configured (ADR-0002).
-- Freshness: the last commit touching that path is the widget's "ran Xh ago"
-  footer; a run overdue relative to the routine's schedule shows a staleness
-  badge. Never published → placeholder card.
+- Freshness: the last commit touching that path is the widget's "Ran Xh ago"
+  freshness readout; a run overdue relative to the routine's schedule shows a
+  staleness badge. Never published → placeholder card.

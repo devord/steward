@@ -60,23 +60,32 @@ non-default theme.
 - Mono: `ui-monospace, "SF Mono", Menlo` — identifiers (slugs, repo names,
   cron expressions), timestamps, state labels, the wordmark.
 - Rule of thumb: if git or the schema would care about the string, it's
-  mono. Body 13–14px; metadata 10–12px mono; no display sizes in chrome.
+  mono. Body 14px, secondary labels 13px, metadata and timestamps 12px — the
+  floor, nothing smaller in chrome; section headings 15–16px. No display
+  sizes in chrome.
 
 ## Mark
 
 The logo is a mini dashboard grid on a gruvbox tile: two quiet widgets
 (`border`) and one tall orange block — the wordmark's trailing cursor
-(`bulletin▮`) placed as the last widget on the board. One drawing, three
+(`bulletin▮`) placed as the last widget on the board. One drawing, several
 mirrors that must stay geometrically in sync:
 
 - `apps/web/app/components/logo.tsx` — `Logo` (mark) and `Wordmark`
-  (mark + mono name lockup, scales with font size) for in-app use.
+  (mark + mono name lockup, scales with font size) for in-app use; token-
+  based, so it follows the active theme.
 - `apps/web/public/favicon.svg` (+ `favicon.ico` 16/32/48,
-  `apple-touch-icon.png`) — static favicons, linked from `root.tsx`.
+  `apple-touch-icon.png`) — static favicons, linked from `root.tsx`. The
+  SVG carries light + dark via `prefers-color-scheme`; the `.ico` is a
+  single-look fallback for old browsers.
+- `apps/web/public/wordmark-{dark,light}.svg` — the mark + `bulletin`
+  lockup for the README, swapped by `prefers-color-scheme` in a `<picture>`.
 - `apps/web/public/og.png` — 1200×630 social card; OG/Twitter meta lives
   in the home route's `meta`.
 
-The wordmark text is `foreground` ink; the mark carries the orange.
+The wordmark text is `foreground` ink; the mark carries the orange. The
+wordmark stays lowercase — a deliberate logotype, the one place lowercase
+survives the Sentence-case chrome.
 
 ## Layout
 
@@ -84,8 +93,9 @@ The wordmark text is `foreground` ink; the mark carries the orange.
   12px gap (`.dash-grid` in app.css; placement via CSS custom properties).
   Below 4 columns, widgets render in visual (row, col) order so the stack
   reads like the full board.
-- Chrome density: compact — the header is one slim row (`app-header`
-  shell, shared by every route); panels use `gap-4`.
+- Chrome density: quiet but legible — comfortable spacing and readable
+  type, never cramped; the header is one slim row (`app-header` shell,
+  shared by every route); panels use `gap-4`.
 - Page gutters: `px-4 sm:px-6` on every route container; `body` carries
   safe-area insets (`viewport-fit=cover`).
 - Touch: the vendored button/select primitives carry `pointer-coarse:`
@@ -102,7 +112,7 @@ The wordmark text is `foreground` ink; the mark carries the orange.
 shadcn/ui vendored in `apps/web/app/components/ui/` (Base UI primitives,
 `base-nova` style, cva variants). Domain components in
 `apps/web/app/components/`: `widget-card` (artifact iframe + freshness
-footer + edit controls), `add-routine-dialog`, `sync-panel` (YAML diff),
+title bar + edit controls), `add-routine-dialog`, `sync-panel` (YAML diff),
 `appearance-settings` (mode + theme pickers), `logo` (mark + wordmark),
 `app-header` (the shared header row).
 Add new primitives with `pnpm dlx shadcn@latest add <name>`.
@@ -116,8 +126,10 @@ entrance choreography — this is a glanceable tool. Honor
 
 ## Voice
 
-Labels lowercase where natural ("ran 2h ago", "never ran", "sign out").
-Git words used plainly: draft, diff, commit, PR, base. Empty states state
+Labels in Sentence case ("Ran 2h ago", "Never ran", "Sign out"); literal
+machine strings stay verbatim (slugs, branch names, cron, shell commands).
+The wordmark is the one deliberate lowercase logotype. Git words used
+plainly: draft, diff, commit, PR, base. Empty states state
 the fact and the next action in one line each — no cheerleading.
 
 ## Language
@@ -125,6 +137,6 @@ the fact and the next action in one line each — no cheerleading.
 Chrome speaks English and Português (Brasil) — typed dictionaries in
 `apps/web/app/locales/` (en.ts defines the key set), locale negotiated
 server-side via cookie then `Accept-Language` (ADR-0009). Both locales
-keep the same voice: lowercase labels, git vocabulary untranslated where
+keep the same voice: Sentence-case labels, git vocabulary untranslated where
 git would surface it (commit, PR, diff, slug). Widget artifacts are not
 translated — routines write them.

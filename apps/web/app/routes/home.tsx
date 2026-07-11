@@ -1,13 +1,16 @@
 import { redirect } from "react-router"
 
-import { Check } from "lucide-react"
+import { Check, Monitor, Moon, Sun } from "lucide-react"
 
 import type { Route } from "./+types/home"
+import { handleRadioKeydown } from "../components/appearance-settings.tsx"
 import { DashboardBoard } from "../components/dashboard-board.tsx"
 import { Wordmark } from "../components/logo.tsx"
 import { buttonVariants } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
 import { DEFAULT_DASHBOARD } from "../lib/board.ts"
+import type { AppearanceMode } from "../lib/theme.ts"
+import { useAppearance } from "../lib/use-appearance.ts"
 import {
   dataRepoExists,
   listDashboards,
@@ -99,7 +102,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 function Landing() {
   const t = useT()
   return (
-    <main className="landing-bg min-h-dvh">
+    <main className="landing-bg relative min-h-dvh">
+      <LandingModeToggle />
       <div className="mx-auto flex min-h-dvh max-w-6xl flex-col justify-center gap-12 px-4 py-16 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-16">
         {/* Left: the pitch and the one action. */}
         <div className="max-w-md">
@@ -153,6 +157,59 @@ function Landing() {
   )
 }
 
+const LANDING_MODES = [
+  { mode: "system", Icon: Monitor, label: "settings.modeAuto" },
+  { mode: "light", Icon: Sun, label: "settings.modeLight" },
+  { mode: "dark", Icon: Moon, label: "settings.modeDark" },
+] as const satisfies ReadonlyArray<{
+  mode: AppearanceMode
+  Icon: typeof Monitor
+  label: string
+}>
+
+/**
+ * A compact mode switch for signed-out visitors: auto / light / dark, writing
+ * the same device preference the app uses (use-appearance), so the choice
+ * carries through sign-in. The wordmark, pitch, and demo board are all
+ * token-based, so they re-theme the moment this changes.
+ */
+function LandingModeToggle() {
+  const t = useT()
+  const [prefs, update] = useAppearance()
+  return (
+    <div
+      role="radiogroup"
+      aria-label={t("settings.mode")}
+      className="absolute top-4 right-4 z-10 flex gap-0.5 rounded-lg border border-border-dim bg-bg1 p-0.5 sm:top-6 sm:right-6"
+    >
+      {LANDING_MODES.map(({ mode, Icon, label }) => {
+        const active = prefs.mode === mode
+        return (
+          <button
+            key={mode}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            aria-label={t(label)}
+            title={t(label)}
+            tabIndex={active ? 0 : -1}
+            onClick={() => update({ mode })}
+            onKeyDown={handleRadioKeydown}
+            className={cn(
+              "flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              active
+                ? "bg-secondary text-foreground"
+                : "text-ink-dim hover:text-foreground",
+            )}
+          >
+            <Icon aria-hidden className="size-3.5" />
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function PipeStep({ children }: { children: React.ReactNode }) {
   return <span className="text-ink-dim">{children}</span>
 }
@@ -180,30 +237,30 @@ function GithubMark({ className }: { className?: string }) {
 }
 
 // --- Landing demo board -----------------------------------------------------
-// A faux dashboard rendered in the real widget chrome (card + freshness
-// footer), so the landing shows the product instead of describing it. Content
-// is illustrative; colors are tokens only. Widget artifacts here are plain
+// A faux dashboard rendered in the real widget chrome (card + title bar), so
+// the landing shows the product instead of describing it. Content is
+// illustrative; colors are tokens only. Widget artifacts here are plain
 // markup, not iframes — this never touches a real routine.
 
 function DemoBoard() {
   const t = useT()
   return (
-    <div className="flex w-full max-w-md items-start gap-3 max-lg:mx-auto">
+    <div className="flex w-full max-w-md flex-col items-start gap-3 max-lg:mx-auto sm:flex-row">
       {/* Left column: one tall widget. */}
-      <DemoWidget name="daily plan" ago="ran 2h ago" className="flex-1">
-        <p className="mb-3 flex items-center justify-between font-mono text-[11px] text-ink-dim">
-          today
-          <span className="text-ink-faint">jul 09</span>
+      <DemoWidget name="Daily plan" ago="Ran 2h ago" className="flex-1">
+        <p className="mb-3 flex items-center justify-between font-mono text-xs text-ink-dim">
+          Today
+          <span className="text-ink-faint">Jul 09</span>
         </p>
         <ul className="space-y-2.5 text-xs">
-          <Task done>ship M1 acceptance</Task>
-          <Task done>review sync PR</Task>
-          <Task>draft ADR-0010</Task>
-          <Task>triage the inbox</Task>
-          <Task>merge appearance branch</Task>
-          <Task>reply to design thread</Task>
+          <Task done>Ship M1 acceptance</Task>
+          <Task done>Review sync PR</Task>
+          <Task>Draft ADR-0010</Task>
+          <Task>Triage the inbox</Task>
+          <Task>Merge appearance branch</Task>
+          <Task>Reply to design thread</Task>
         </ul>
-        <div className="mt-4 flex items-center gap-2 font-mono text-[11px] text-ink-faint">
+        <div className="mt-4 flex items-center gap-2 font-mono text-xs text-ink-dim">
           <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg3">
             <span
               className="block h-full rounded-full bg-green"
@@ -216,8 +273,8 @@ function DemoBoard() {
 
       {/* Right column: two stacked widgets, ~matching the tall one. */}
       <div className="flex flex-1 flex-col gap-3">
-        <DemoWidget name="repo pulse" ago="ran 14m ago">
-          <p className="mb-2.5 font-mono text-[11px] text-ink-dim">open PRs</p>
+        <DemoWidget name="Repo pulse" ago="Ran 14m ago">
+          <p className="mb-2.5 font-mono text-xs text-ink-dim">Open PRs</p>
           <div className="space-y-2">
             <PulseRow label="bulletin" fill="68%" n={4} />
             <PulseRow label="chat" fill="40%" n={2} />
@@ -226,12 +283,12 @@ function DemoBoard() {
         </DemoWidget>
 
         <DemoWidget
-          name="changelog"
-          ago="ran 4d ago"
+          name="Changelog"
+          ago="Ran 4d ago"
           stale
           staleLabel={t("widget.stale")}
         >
-          <p className="mb-2.5 font-mono text-[11px] text-ink-dim">this week</p>
+          <p className="mb-2.5 font-mono text-xs text-ink-dim">This week</p>
           <div className="space-y-2">
             <SkeletonLine w="w-full" />
             <SkeletonLine w="w-4/5" />
@@ -266,18 +323,18 @@ function DemoWidget({
         className,
       )}
     >
-      <div className="min-h-0 flex-1 p-3">{children}</div>
-      <footer className="flex items-center justify-between gap-2 border-t border-border-dim px-2 py-[3px] text-[11px]">
-        <span className="truncate text-ink-dim">{name}</span>
-        <span className="flex shrink-0 items-center gap-1.5 font-mono text-ink-faint">
+      <div className="flex items-center gap-2 border-b border-border-dim px-2.5 py-1.5 text-xs">
+        <span className="truncate font-medium text-foreground">{name}</span>
+        <span className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-ink-dim">
           {stale && (
-            <span className="rounded border border-yellow/45 bg-yellow/10 px-1 text-[10px] text-ink">
+            <span className="rounded border border-yellow/45 bg-yellow/10 px-1.5 text-xs text-ink">
               {staleLabel}
             </span>
           )}
           {ago}
         </span>
-      </footer>
+      </div>
+      <div className="min-h-0 flex-1 p-3">{children}</div>
     </div>
   )
 }
@@ -313,7 +370,7 @@ function PulseRow({
   n: number
 }) {
   return (
-    <div className="flex items-center gap-2 font-mono text-[11px]">
+    <div className="flex items-center gap-2 font-mono text-xs">
       <span className="w-16 shrink-0 truncate text-ink-dim">{label}</span>
       <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg3">
         <span

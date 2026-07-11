@@ -248,7 +248,7 @@ export function AddRoutineDialog({
                       </span>
                       <Badge
                         variant="secondary"
-                        className="h-[15px] px-1 font-mono text-[10px] text-ink-dim"
+                        className="h-[18px] px-1.5 font-mono text-xs text-ink-dim"
                       >
                         {t(
                           entry.source === "private"
@@ -323,7 +323,7 @@ export function AddRoutineDialog({
                     )}
                   >
                     {t(`size.${preset.id}`)}
-                    <span className="font-mono text-[10px] text-ink-faint tabular-nums">
+                    <span className="font-mono text-xs text-ink-faint tabular-nums">
                       {cols}×{preset.rows}
                     </span>
                   </button>
@@ -416,7 +416,15 @@ export function AddRoutineDialog({
                 }}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  {/* Base UI renders the raw value in the trigger; map it to a
+                      short proper-case label instead of the bare enum. */}
+                  <SelectValue>
+                    {(value) =>
+                      value === "local"
+                        ? t("dialog.hostLocalShort")
+                        : t("dialog.hostCloudShort")
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cloud">{t("dialog.hostCloud")}</SelectItem>

@@ -1,7 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#1d2021"/>
-  <rect x="1" y="1" width="62" height="62" rx="13" fill="none" stroke="#504945" stroke-width="2" opacity="0.7"/>
-  <rect x="12" y="12" width="17" height="17" rx="4" fill="#504945"/>
-  <rect x="12" y="35" width="17" height="17" rx="4" fill="#504945"/>
-  <rect x="35" y="12" width="17" height="40" rx="4" fill="#fe8019"/>
+  <style>
+    .bg { fill: #1d2021 }
+    .frame { stroke: #504945 }
+    .widget { fill: #504945 }
+    .accent { fill: #fe8019 }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #f9f5d7 }
+      .frame { stroke: #bdae93 }
+      .widget { fill: #bdae93 }
+      .accent { fill: #af3a03 }
+    }
+  </style>
+  <rect class="bg" width="64" height="64" rx="14"/>
+  <rect class="frame" x="1" y="1" width="62" height="62" rx="13" fill="none" stroke-width="2" opacity="0.7"/>
+  <rect class="widget" x="12" y="12" width="17" height="17" rx="4"/>
+  <rect class="widget" x="12" y="35" width="17" height="17" rx="4"/>
+  <rect class="accent" x="35" y="12" width="17" height="40" rx="4"/>
 </svg>

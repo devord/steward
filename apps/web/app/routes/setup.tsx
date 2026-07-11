@@ -10,7 +10,7 @@ import { useT } from "../lib/i18n.tsx"
 import { requireAuth } from "../lib/session.server.ts"
 
 export function meta(_args: Route.MetaArgs) {
-  return [{ title: "Bulletin — set up" }]
+  return [{ title: "Bulletin — Set up" }]
 }
 
 export async function loader({ request }: Route.LoaderArgs) {

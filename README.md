@@ -1,13 +1,17 @@
-# Bulletin
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/wordmark-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="apps/web/public/wordmark-light.svg" />
+    <img alt="Bulletin" src="apps/web/public/wordmark-dark.svg" width="280" />
+  </picture>
+</p>
 
-A personal dashboard of living widgets. Each widget renders a responsive HTML
-**artifact** that a scheduled Claude Code **routine** regenerates and
-publishes — daily plans, status reports, time tracking, billing: reports that
-update themselves, never written by hand again.
-
-> **Status:** early development. The scaffold and schemas exist; sign-in, the
-> widget grid, and the execution loop land next — see
-> [docs/roadmap.md](./docs/roadmap.md).
+<p align="center">
+  A dashboard of living widgets — each one an HTML report that a scheduled
+  Claude Code routine regenerates and publishes.<br />
+  Daily plans, status reports, time tracking, billing: reports that update
+  themselves, never written by hand again.
+</p>
 
 ## How it works
 
@@ -44,7 +48,7 @@ The loop, end to end:
 4. **The dashboard renders** — the app fetches your artifacts through the
    GitHub API with your token and shows each one in a sandboxed iframe sized
    by your grid layout. The artifact's media queries adapt it to the widget
-   size; the last commit becomes its "ran 2h ago" footer.
+   size; the last commit becomes its "Ran 2h ago" freshness readout.
 
 Deeper reading: [CONTEXT.md](./CONTEXT.md) (domain language),
 [docs/adr/](./docs/adr/) (why it's built this way),

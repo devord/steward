@@ -43,7 +43,7 @@ describe("WidgetCard empty states", () => {
         committed={false}
       />,
     )
-    await expect.poll(() => hasText("in your draft")).toBe(true)
+    await expect.poll(() => hasText("In your draft")).toBe(true)
   })
 
   it("shows the trigger setup command when the trigger is missing", async () => {
@@ -92,7 +92,7 @@ describe("WidgetCard empty states", () => {
     await expect
       .poll(() =>
         document
-          .querySelector('button[aria-label^="update"]')
+          .querySelector('button[aria-label^="Update"]')
           ?.hasAttribute("disabled"),
       )
       .toBe(true)
