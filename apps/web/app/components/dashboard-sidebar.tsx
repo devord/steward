@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import { Plus } from "lucide-react"
+import { LayoutGrid } from "lucide-react"
 
 import { AccountMenu } from "./account-menu.tsx"
 import { Wordmark } from "./logo.tsx"
@@ -91,14 +91,16 @@ export function DashboardSidebar({
           </NavGroup>
         )}
 
+        {/* Hairline setting the create action apart from the boards it makes —
+            a peer of them, but a verb, not one of the nouns. */}
+        <div className="mx-2.5 border-t border-border-dim" />
+
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <span className="flex size-4 shrink-0 items-center justify-center">
-            <Plus className="size-3.5" />
-          </span>
+          <LayoutGrid className="size-4 shrink-0 text-ink-faint" />
           {t("switcher.new")}
         </button>
       </nav>
@@ -127,7 +129,13 @@ export function DashboardSidebar({
   )
 }
 
-/** A scope heading over its board list — muted, Sentence case, mono. */
+/**
+ * A scope heading with its board list threaded on a single hairline spine — a
+ * tree indent guide (1px, neutral), not a side-stripe: the rail descends from
+ * under the heading and runs the height of the group, so the boards read as its
+ * children rather than rows floating in space. The active board is an accent
+ * node sitting on the rail (see {@link NavItem}).
+ */
 function NavGroup({
   label,
   children,
@@ -140,15 +148,22 @@ function NavGroup({
       <div className="mb-1 px-2.5 font-mono text-xs font-medium text-ink-faint">
         {label}
       </div>
-      <div className="flex flex-col gap-0.5">{children}</div>
+      <div className="relative flex flex-col gap-0.5">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-1 left-[13px] w-px bg-border-dim"
+        />
+        {children}
+      </div>
     </div>
   )
 }
 
 /**
- * One board link. Every row reserves a fixed leading slot so labels align
- * whether the row shows the active accent dot, nothing, or (the New-dashboard
- * peer) a plus — never a side-stripe. Active also fills and lifts to full ink.
+ * One board link, indented to hang off its group's rail. The leading slot is
+ * pinned to the rail's x so the active accent dot reads as a node on the spine
+ * ("you are here"); inactive rows leave the rail unbroken. Active also fills and
+ * lifts to full ink.
  */
 function NavItem({
   to,
@@ -167,21 +182,19 @@ function NavItem({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2 rounded-md px-2.5 py-1.5 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        "group relative flex items-center rounded-md py-1.5 pr-2.5 pl-6 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
         active
           ? "bg-sidebar-accent font-medium text-foreground"
           : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
       )}
     >
-      <span className="flex size-4 shrink-0 items-center justify-center">
-        <span
-          aria-hidden
-          className={cn(
-            "size-1.5 rounded-full",
-            active ? "bg-primary" : "bg-transparent",
-          )}
-        />
-      </span>
+      <span
+        aria-hidden
+        className={cn(
+          "absolute top-1/2 left-[13px] size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors",
+          active ? "bg-primary" : "bg-transparent group-hover:bg-ink-faint",
+        )}
+      />
       <span className="truncate">{label}</span>
     </Link>
   )
