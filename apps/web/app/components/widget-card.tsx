@@ -3,7 +3,7 @@ import { useFetcher } from "react-router"
 
 import type { Routine, Widget, WidgetSize } from "@bulletin/schema"
 import { GRID_MAX_COLS, GRID_MAX_ROWS, routineHost } from "@bulletin/schema"
-import { Check, Copy, Maximize2, RefreshCw, X } from "lucide-react"
+import { Check, Copy, Maximize2, Pencil, RefreshCw, X } from "lucide-react"
 
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
@@ -49,6 +49,8 @@ export interface WidgetCardProps {
   onFired?: () => void
   /** Edit mode: drag to move, corner handle to resize, × to remove. */
   editing?: boolean
+  /** Open the routine editor for this card (edit-mode title bar pencil). */
+  onEdit?: () => void
   /** This card's active drag, if it is the one being dragged. */
   drag?: GridDrag | null
   onDragStart?: (kind: DragKind, event: React.PointerEvent) => void
@@ -81,6 +83,7 @@ export function WidgetCard({
   pendingFiredAt = null,
   onFired,
   editing = false,
+  onEdit,
   drag = null,
   onDragStart,
   onMove,
@@ -212,9 +215,22 @@ export function WidgetCard({
             <span className="truncate font-mono text-ink-dim">
               {routine.slug}
             </span>
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("routine.edit", { name: routine.name })}
+                title={t("routine.edit", { name: routine.name })}
+                className="ml-auto size-5 shrink-0 text-ink-dim hover:bg-bg3 hover:text-foreground pointer-coarse:size-7"
+                onClick={() => onEdit()}
+              >
+                <Pencil />
+              </Button>
+            )}
             <span
               className={cn(
-                "ml-auto shrink-0 pr-1 font-mono tabular-nums",
+                "shrink-0 pr-1 font-mono tabular-nums",
+                onEdit ? "" : "ml-auto",
                 resizing ? "text-primary" : "text-ink-dim",
               )}
             >

@@ -3,7 +3,7 @@ import { Await, useFetcher, useNavigate, useRevalidator } from "react-router"
 
 import type { DashboardFile, Routine, WidgetSize } from "@bulletin/schema"
 import { dashboardPath, GRID_MAX_COLS } from "@bulletin/schema"
-import { Plus, Trash2 } from "lucide-react"
+import { Pencil, Plus, Trash2 } from "lucide-react"
 
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
 import { DashboardShell } from "./dashboard-shell.tsx"
@@ -87,6 +87,7 @@ export function DashboardBoard({
 
   const [editing, setEditing] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deletingRoutine, setDeletingRoutine] = useState<string | null>(null)
@@ -253,6 +254,22 @@ export function DashboardBoard({
     [update],
   )
 
+  // Replace a routine's config in place (slug is fixed, so it still matches
+  // the widget that references it). Routines are repo-shared, so this changes
+  // it on every dashboard that places it — same reach as deleteRoutine.
+  const updateRoutine = useCallback(
+    (next: Routine) => {
+      update((current) => {
+        const i = current.routines.routines.findIndex(
+          (r) => r.slug === next.slug,
+        )
+        if (i >= 0) current.routines.routines[i] = next
+        return current
+      })
+    },
+    [update],
+  )
+
   const setGrid = useCallback(
     (patch: Partial<typeof dashboard.grid>) => {
       update((current) => {
@@ -336,6 +353,7 @@ export function DashboardBoard({
               markFired(widget.routine, data[widget.routine]?.sha ?? null)
             }
             editing={editing}
+            onEdit={() => setEditingRoutine(routine)}
             drag={drag?.slug === widget.routine ? drag : null}
             onDragStart={(kind, event) =>
               startDrag(widget.routine, kind, event)
@@ -470,6 +488,16 @@ export function DashboardBoard({
                   <Button
                     size="icon-xs"
                     variant="ghost"
+                    aria-label={t("offgrid.edit", { name: routine.name })}
+                    title={t("offgrid.edit", { name: routine.name })}
+                    className="size-6 rounded-none text-ink-dim hover:bg-bg3 hover:text-foreground"
+                    onClick={() => setEditingRoutine(routine)}
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
                     aria-label={t("offgrid.delete", { name: routine.name })}
                     title={t("offgrid.delete", { name: routine.name })}
                     className="mr-0.5 size-6 rounded-l-none text-ink-dim hover:bg-destructive/10 hover:text-destructive"
@@ -482,15 +510,37 @@ export function DashboardBoard({
             </div>
           </section>
         )}
+
+        {/* View mode: a quiet pointer that repo-shared routines exist but
+            aren't placed here — the only cue, since the parking lot itself is
+            edit-only. Silent when everything's placed. */}
+        {unplaced.length > 0 && !editing && dashboard.widgets.length > 0 && (
+          <p className="mt-6 font-mono text-xs text-ink-faint">
+            <button
+              type="button"
+              className="underline decoration-dotted underline-offset-2 outline-none hover:text-ink-dim focus-visible:text-ink-dim"
+              onClick={() => setEditing(true)}
+            >
+              {t("offgrid.viewHint", { n: unplaced.length })}
+            </button>
+          </p>
+        )}
       </DashboardShell>
 
       <AddRoutineDialog
-        open={adding}
-        onOpenChange={setAdding}
+        open={adding || editingRoutine != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAdding(false)
+            setEditingRoutine(null)
+          }
+        }}
         skills={view.skills}
         columns={columns}
         existingSlugs={routines.routines.map((r) => r.slug)}
         onAdd={addRoutine}
+        editRoutine={editingRoutine}
+        onEdit={updateRoutine}
         runner={view.scope === "team" ? login : undefined}
       />
       {draft && (

@@ -33,18 +33,32 @@ const skills: DiscoveredSkill[] = [
   },
 ]
 
+const editable: Routine = {
+  slug: "repo-pulse",
+  name: "Repo Pulse",
+  skill: "repo-pulse",
+  schedule: "0 */4 * * *",
+  instructions: "Only the Form-Factory org repos.",
+  enabled: true,
+}
+
 export default function DevDialog() {
-  const [open, setOpen] = useState(true)
+  const [mode, setMode] = useState<"add" | "edit" | null>("add")
   return (
-    <div className="grid min-h-svh place-items-center bg-background p-8">
-      <Button onClick={() => setOpen(true)}>Open</Button>
+    <div className="grid min-h-svh place-content-center gap-3 bg-background p-8">
+      <Button onClick={() => setMode("add")}>Open add</Button>
+      <Button variant="outline" onClick={() => setMode("edit")}>
+        Open edit
+      </Button>
       <AddRoutineDialog
-        open={open}
-        onOpenChange={setOpen}
+        open={mode != null}
+        onOpenChange={(open) => setMode(open ? mode : null)}
         skills={skills}
         columns={4}
-        existingSlugs={["daily-plan"]}
-        onAdd={(_routine: Routine, _size: WidgetSize) => setOpen(false)}
+        existingSlugs={["daily-plan", "repo-pulse"]}
+        onAdd={(_routine: Routine, _size: WidgetSize) => setMode(null)}
+        editRoutine={mode === "edit" ? editable : null}
+        onEdit={(_routine: Routine) => setMode(null)}
       />
     </div>
   )

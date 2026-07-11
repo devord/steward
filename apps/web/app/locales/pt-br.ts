@@ -32,7 +32,7 @@ export const ptBR: Messages = {
 
   "header.unsynced": "Mudanças não sincronizadas",
   "header.addRoutine": "Adicionar rotina",
-  "header.editLayout": "Editar layout",
+  "header.editLayout": "Editar",
   "header.done": "Pronto",
   "header.settings": "Ajustes",
   "header.signOut": "Sair",
@@ -55,11 +55,14 @@ export const ptBR: Messages = {
   "offgrid.hint":
     "Estas rotinas vivem no routines.yaml compartilhado deste repo mas não estão neste painel — coloque uma, ou exclua-a do repo.",
   "offgrid.delete": "Excluir {name} do repo",
+  "offgrid.edit": "Editar {name}",
+  "offgrid.viewHint": "{n} fora deste painel — Editar para colocar",
 
   "routine.deleteTitle": "Excluir {name}?",
   "routine.deleteBody":
     "Remove a rotina do routines.yaml no próximo sync. Rotinas são compartilhadas por todos os painéis deste repo, então ela some de todos.",
   "routine.deleteConfirm": "Excluir rotina",
+  "routine.edit": "Editar {name}",
 
   "grid.columnsLabel": "Colunas",
   "grid.width": "Largura",
@@ -99,6 +102,7 @@ export const ptBR: Messages = {
   "newDash.exists": "Esse painel já existe no repo",
 
   "board.deleteDashboard": "Excluir painel",
+  "board.menu": "Opções do painel",
   "board.deleteTitle": "Excluir este painel?",
   "board.deleteBody":
     "Remove {path} de {repo}. As rotinas continuam rodando — só este layout some.",
@@ -175,6 +179,9 @@ export const ptBR: Messages = {
   "dialog.title": "Adicionar uma rotina",
   "dialog.description":
     "Descreva o que o widget mostra; uma rotina o mantém fresco num agendamento ou sob demanda.",
+  "dialog.editTitle": "Editar rotina",
+  "dialog.editDescription":
+    "Mude como esta rotina roda. O slug é fixo — exclua e adicione de novo para renomear. Posição e tamanho são definidos na grade.",
   "dialog.prompt": "O que este widget deve mostrar?",
   "dialog.promptPlaceholder":
     "PRs abertos nos nossos repos, agrupados por revisor…",
@@ -211,6 +218,7 @@ export const ptBR: Messages = {
     "O recurso na nuvem roda na conta Claude de {login} — depois do commit, rode pnpm routines:sync contra o repo do time",
   "dialog.cancel": "Cancelar",
   "dialog.add": "Adicionar ao rascunho",
+  "dialog.save": "Salvar mudanças",
 
   "sync.title": "Sincronizar mudanças",
   "sync.description":

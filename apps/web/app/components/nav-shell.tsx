@@ -24,6 +24,10 @@ export interface ShellNav {
   login: string
   /** GitHub display name for the account menu; falls back to the login. */
   displayName?: string | null
+  /** Board-lifecycle delete for the active board, surfaced in the rail's
+      per-board menu. Absent on chrome pages (settings) and on the one board
+      that can't be deleted (the personal default). */
+  onDeleteDashboard?: () => void
 }
 
 /**
