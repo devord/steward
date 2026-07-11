@@ -60,6 +60,13 @@ An artifact MUST:
    and run time twice.
 5. **Degrade gracefully** when data is missing — an empty state is part of
    the artifact, not an error.
+6. **Type at a readable floor.** The artifact is the content that glows, so
+   it never reads smaller than the chrome around it: body/data text at
+   **14px**, section labels at **12px** (the absolute floor — nothing
+   smaller, no faint sub-12px uppercase eyebrow). Earn hierarchy with weight,
+   color, and the palette accents, not by shrinking type. The 1×1 tier leans
+   on its KPI number; detail tiers carry the 14px body. (Type sizes are baked
+   into each published file — a rescale only lands when the routine reruns.)
 
 ## Addressing & freshness
 

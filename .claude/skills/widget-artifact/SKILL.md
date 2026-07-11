@@ -76,10 +76,15 @@ whichever side drifted:
 ```
 
 Conventions on top: page background `--color-bg1` (matches the widget
-card), body text `--color-ink` at 13px, section headings 10px uppercase
-mono in `--color-ink-faint`, accents from the named colors — orange for
+card), body/data text `--color-ink` at **14px** (the readable floor — the
+artifact is the content that glows, so it never reads smaller than the
+chrome body around it; **nothing below 12px**), section labels **12px** mono
+`--color-ink-dim` (readable, not a faint 10px eyebrow — earn hierarchy with
+weight and color, and drop the label entirely when the section is
+self-evident), accents from the named colors — orange for
 priorities/primary, aqua for times, yellow for warnings/carry-overs, red
-only for genuinely bad states.
+only for genuinely bad states. At the 1×1 tier the KPI number carries the
+glance; detail tiers get the 14px body.
 
 ## Reference
 
