@@ -77,7 +77,7 @@ describe("WidgetCard empty states", () => {
     await expect.poll(() => hasText("pnpm routine r")).toBe(true)
   })
 
-  it("disables the update button while a run is pending", async () => {
+  it("drops the update button while a run is in flight", async () => {
     await renderCard(
       <WidgetCard
         widget={widget}
@@ -90,16 +90,13 @@ describe("WidgetCard empty states", () => {
         pendingFiredAt={Date.now()}
       />,
     )
-    await expect
-      .poll(() =>
-        document
-          .querySelector('button[aria-label^="Update"]')
-          ?.hasAttribute("disabled"),
-      )
-      .toBe(true)
+    // A run in flight can't be re-fired, and the "Running" readout already owns
+    // the state — the re-run control steps aside rather than sit there disabled.
+    await expect.poll(() => hasText("Running")).toBe(true)
+    expect(document.querySelector('button[aria-label^="Update"]')).toBeNull()
   })
 
-  it("shows a single spinner while running — the header's, not the button's", async () => {
+  it("shows one calm run indicator while running — a pulse dot, no spinner", async () => {
     await renderCard(
       <WidgetCard
         widget={widget}
@@ -112,13 +109,11 @@ describe("WidgetCard empty states", () => {
         pendingFiredAt={Date.now()}
       />,
     )
-    // The "Running" label owns the only spinner; the Update button stays a
-    // static, disabled icon so the card never shows two spinners at once.
+    // The run status is a single breathing dot, not a spinner, and the refresh
+    // arrow (the re-run action) is gone — the card never shows two run glyphs.
     await expect.poll(() => hasText("Running")).toBe(true)
-    expect(document.querySelectorAll(".animate-spin")).toHaveLength(1)
-    const buttonIcon = document
-      .querySelector('button[aria-label^="Update"]')
-      ?.querySelector("svg")
-    expect(buttonIcon?.classList.contains("animate-spin")).toBe(false)
+    expect(document.querySelectorAll(".run-pulse")).toHaveLength(1)
+    expect(document.querySelectorAll(".animate-spin")).toHaveLength(0)
+    expect(document.querySelector('button[aria-label^="Update"]')).toBeNull()
   })
 })
