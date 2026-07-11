@@ -14,7 +14,7 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
-import { type BoardScope, boardHref } from "../lib/board.ts"
+import { type BoardScope, boardHref, DEFAULT_DASHBOARD } from "../lib/board.ts"
 import { useT } from "../lib/i18n.tsx"
 
 /**
@@ -38,7 +38,7 @@ export function DashboardSidebar({
   teamDashboards,
   login,
   displayName,
-  onDeleteDashboard,
+  onDeleteBoard,
   onNavigate,
 }: {
   dataRepo: string
@@ -48,9 +48,11 @@ export function DashboardSidebar({
   teamDashboards: string[] | null
   login: string
   displayName?: string | null
-  /** Delete for the active board — renders its per-board menu when present
-      (absent on the personal default and on chrome pages). */
-  onDeleteDashboard?: () => void
+  /** Delete a board by scope+slug — the handler behind every board's per-board
+      menu, so a board is actionable without first switching to it. Absent on
+      chrome pages (no board actions there); the personal default board is never
+      offered a menu (it must always exist). */
+  onDeleteBoard?: (scope: BoardScope, slug: string) => void
   /** Fired when a board link is followed — lets the mobile drawer close. */
   onNavigate?: () => void
 }) {
@@ -79,13 +81,18 @@ export function DashboardSidebar({
         <NavGroup label={t("switcher.personal")}>
           {personalDashboards.map((slug) => {
             const active = scope === "personal" && dashboardSlug === slug
+            // Every personal board is deletable but the default — it backs `/`.
             return (
               <NavItem
                 key={`personal:${slug}`}
                 to={boardHref("personal", slug)}
                 label={slug}
                 active={active}
-                onDelete={active ? onDeleteDashboard : undefined}
+                onDelete={
+                  onDeleteBoard && slug !== DEFAULT_DASHBOARD
+                    ? () => onDeleteBoard("personal", slug)
+                    : undefined
+                }
                 onNavigate={onNavigate}
               />
             )
@@ -102,7 +109,11 @@ export function DashboardSidebar({
                   to={boardHref("team", slug)}
                   label={slug}
                   active={active}
-                  onDelete={active ? onDeleteDashboard : undefined}
+                  onDelete={
+                    onDeleteBoard
+                      ? () => onDeleteBoard("team", slug)
+                      : undefined
+                  }
                   onNavigate={onNavigate}
                 />
               )
@@ -184,10 +195,13 @@ function NavGroup({
  * ("you are here"); inactive rows leave the rail unbroken. Active also fills and
  * lifts to full ink.
  *
- * When `onDelete` is set (the active, deletable board) the row grows a trailing
- * `⋯` menu — board-lifecycle actions live here, beside the board they act on,
- * rather than in the layout-edit toolbar. The Link is a sibling of the menu
- * button (never its parent) so no interactive control nests inside the anchor.
+ * When `onDelete` is set (every deletable board — all but the personal default)
+ * the row carries a trailing `⋯` menu: board-lifecycle actions live here, beside
+ * the board they act on, so any board is actionable without switching to it
+ * first. The menu rests quiet — a faint glyph, no hover gate — and brightens as
+ * the pointer nears (row, then button): present enough to find, dim enough to
+ * recede against the board names. The Link is a sibling of the menu button
+ * (never its parent) so no interactive control nests inside the anchor.
  */
 function NavItem({
   to,
@@ -234,7 +248,7 @@ function NavItem({
                 variant="ghost"
                 size="icon-xs"
                 aria-label={t("board.menu")}
-                className="absolute right-1 size-6 text-ink-dim opacity-0 transition-opacity hover:bg-sidebar-accent hover:text-foreground focus-visible:opacity-100 group-hover/nav:opacity-100 aria-expanded:opacity-100 pointer-coarse:opacity-100"
+                className="absolute right-1 size-6 text-ink-faint transition-colors group-hover/nav:text-ink-dim hover:bg-sidebar-accent hover:text-foreground focus-visible:text-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-foreground"
               />
             }
           >

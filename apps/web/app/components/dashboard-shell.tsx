@@ -11,9 +11,10 @@ import { useT } from "../lib/i18n.tsx"
  * mobile drawer, sticky header) with the board-scoped actions dropped into its
  * toolbar. Splitting navigation (the rail) from board actions (the toolbar) is
  * what unclutters the old single-row header — account and board-switching live
- * in the rail, leaving the toolbar to Sync / Add / Edit only. Deleting the
- * board is board-lifecycle, not layout: it lives in the rail's per-board menu
- * (passed down as `nav.onDeleteDashboard`), not in this toolbar.
+ * in the rail, leaving the toolbar to Sync / Add / Edit only. Deleting a board
+ * is board-lifecycle, not layout: it lives in the rail's per-board menu (passed
+ * down as `nav.onDeleteBoard`, keyed by scope+slug so any board is deletable
+ * from its own row, not just the one in view), not in this toolbar.
  *
  * Pure presentation: every mutation is a callback so the board keeps all draft
  * and edit state.
@@ -28,12 +29,11 @@ export function DashboardShell({
   displayName,
   hasDraft,
   editing,
-  deletable,
   wide,
   onSync,
   onAdd,
   onToggleEdit,
-  onDelete,
+  onDeleteBoard,
   children,
 }: {
   dataRepo: string
@@ -45,13 +45,13 @@ export function DashboardShell({
   displayName?: string | null
   hasDraft: boolean
   editing: boolean
-  deletable: boolean
   /** Widen the content cap to fill a large monitor (else a centered width). */
   wide: boolean
   onSync: () => void
   onAdd: () => void
   onToggleEdit: () => void
-  onDelete: () => void
+  /** Delete a board by scope+slug — wired to the rail's per-board menu. */
+  onDeleteBoard: (scope: BoardScope, slug: string) => void
   children: React.ReactNode
 }) {
   const t = useT()
@@ -66,9 +66,9 @@ export function DashboardShell({
         teamDashboards,
         login,
         displayName,
-        // The active board's delete lives in the rail's per-board menu. Only
-        // deletable boards get it — the personal default has no menu action.
-        onDeleteDashboard: deletable ? onDelete : undefined,
+        // Board delete lives in the rail's per-board menu, keyed by scope+slug —
+        // the rail draws a menu on every board but the personal default.
+        onDeleteBoard,
       }}
       // Canvas cap: `wide` fills a large monitor (still bounded so the board
       // stays composed, not stretched edge-to-edge); `fixed` keeps the

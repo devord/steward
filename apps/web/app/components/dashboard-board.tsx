@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { cn } from "~/lib/utils"
-import { DEFAULT_DASHBOARD } from "../lib/board.ts"
+import type { BoardScope } from "../lib/board.ts"
 import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo, DashboardBase } from "../lib/dashboard.server.ts"
 import { removeRoutine, type SyncKind, useDraft } from "../lib/draft.ts"
@@ -65,6 +65,7 @@ export function DashboardBoard({
 }) {
   const t = useT()
   const revalidator = useRevalidator()
+  const navigate = useNavigate()
 
   // One draft per board: two dashboards in the same repo are separate edit
   // surfaces even though they share routines.yaml (ADR-0003/0010).
@@ -90,7 +91,12 @@ export function DashboardBoard({
   const [adding, setAdding] = useState(false)
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null)
   const [syncing, setSyncing] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  // The board the rail's per-board menu is deleting — any board, not only the
+  // one in view; null closes the confirm dialog.
+  const [deleteTarget, setDeleteTarget] = useState<{
+    scope: BoardScope
+    slug: string
+  } | null>(null)
   const [deletingRoutine, setDeletingRoutine] = useState<string | null>(null)
 
   // Client-tracked in-flight runs (ADR-0016: no server-side run state) and
@@ -320,12 +326,6 @@ export function DashboardBoard({
     [applyCommit, revalidator],
   )
 
-  // The personal default board is the one board that must always exist —
-  // it's what `/` renders.
-  const deletable = !(
-    view.scope === "personal" && view.dashboardSlug === DEFAULT_DASHBOARD
-  )
-
   // Routines added in the draft but not yet on the server — the Sync panel
   // hands off their enactment steps after a commit.
   const addedRoutines = draft
@@ -395,7 +395,6 @@ export function DashboardBoard({
         displayName={displayName}
         hasDraft={draft != null}
         editing={editing}
-        deletable={deletable}
         // Canvas cap: `wide` fills a large monitor (still bounded so the board
         // stays composed, not stretched edge-to-edge); `fixed` keeps the
         // comfortable centered reading width.
@@ -403,7 +402,7 @@ export function DashboardBoard({
         onSync={() => setSyncing(true)}
         onAdd={() => setAdding(true)}
         onToggleEdit={() => setEditing((value) => !value)}
-        onDelete={() => setDeleting(true)}
+        onDeleteBoard={(scope, slug) => setDeleteTarget({ scope, slug })}
       >
         {editing && (
           <GridSettings
@@ -570,14 +569,24 @@ export function DashboardBoard({
         onClose={() => setDeletingRoutine(null)}
         onConfirm={deleteRoutine}
       />
-      {deletable && (
-        <DeleteDashboardDialog
-          open={deleting}
-          onOpenChange={setDeleting}
-          view={view}
-          onDeleted={clear}
-        />
-      )}
+      <DeleteDashboardDialog
+        target={deleteTarget}
+        dataRepo={view.dataRepo}
+        activeView={view}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={(deletedActive) => {
+          setDeleteTarget(null)
+          // Deleting the board you're on has nowhere to stay — leave for the
+          // scope's home. Deleting any other board keeps you put; a revalidate
+          // drops it from the rail.
+          if (deletedActive) {
+            clear()
+            void navigate(view.scope === "team" ? "/team" : "/")
+          } else {
+            void revalidator.revalidate()
+          }
+        }}
+      />
     </>
   )
 }
@@ -587,38 +596,56 @@ interface DeleteResult {
   error?: string
 }
 
+/**
+ * Confirm deleting a board — any board the rail offers, not just the one in
+ * view. `target` names it (scope+slug); null keeps the dialog closed. The
+ * fetcher is keyed by target so a prior delete's success can't linger and
+ * auto-fire when the next board's dialog opens (deleting a non-active board
+ * keeps us mounted, unlike the old navigate-away-only flow). The caller decides
+ * what a success means — navigate away for the active board, revalidate for any
+ * other — via {@link onDeleted}.
+ */
 function DeleteDashboardDialog({
-  open,
-  onOpenChange,
-  view,
+  target,
+  dataRepo,
+  activeView,
+  onClose,
   onDeleted,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  view: DashboardBase
-  onDeleted: () => void
+  target: { scope: BoardScope; slug: string } | null
+  dataRepo: string
+  /** The board in view — so a success can tell "deleted the one I'm on". */
+  activeView: DashboardBase
+  onClose: () => void
+  onDeleted: (deletedActive: boolean) => void
 }) {
   const t = useT()
-  const navigate = useNavigate()
-  const fetcher = useFetcher<DeleteResult>()
+  const fetcher = useFetcher<DeleteResult>({
+    key: target
+      ? `board-delete:${target.scope}:${target.slug}`
+      : "board-delete",
+  })
   const busy = fetcher.state !== "idle"
+
+  const deletingActive =
+    target != null &&
+    target.scope === activeView.scope &&
+    target.slug === activeView.dashboardSlug
 
   const deleted = fetcher.data?.ok === true
   useEffect(() => {
-    if (!deleted) return
-    onDeleted()
-    void navigate(view.scope === "team" ? "/team" : "/")
-  }, [deleted, onDeleted, navigate, view.scope])
+    if (deleted) onDeleted(deletingActive)
+  }, [deleted, deletingActive, onDeleted])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={target != null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("board.deleteTitle")}</DialogTitle>
           <DialogDescription>
             {t("board.deleteBody", {
-              path: dashboardPath(view.dashboardSlug),
-              repo: view.dataRepo,
+              path: dashboardPath(target?.slug ?? ""),
+              repo: dataRepo,
             })}
           </DialogDescription>
         </DialogHeader>
@@ -630,18 +657,19 @@ function DeleteDashboardDialog({
           </p>
         )}
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={onClose}>
             {t("dialog.cancel")}
           </Button>
           <Button
             variant="destructive"
             disabled={busy}
             onClick={() => {
+              if (!target) return
               void fetcher.submit(
                 JSON.stringify({
                   intent: "delete",
-                  scope: view.scope,
-                  slug: view.dashboardSlug,
+                  scope: target.scope,
+                  slug: target.slug,
                 }),
                 {
                   method: "post",
