@@ -495,7 +495,7 @@ export function artifactThemeStyle(name: ThemeName): string | null {
 }
 
 /**
- * Frame an artifact for the dashboard grid. Two jobs:
+ * Frame an artifact for the dashboard. Two jobs in every view:
  *
  *  - Hide the artifact's own footer. That slug + generated-at line is the
  *    artifact's standalone chrome (widget-standard §4, for when it's opened
@@ -510,8 +510,55 @@ export function artifactThemeStyle(name: ThemeName): string | null {
 const EMBED_FRAME_STYLE =
   "<style data-bulletin-embed>footer{display:none !important}</style>"
 
-export function frameArtifactHtml(html: string, name: ThemeName): string {
-  return html + EMBED_FRAME_STYLE + (artifactThemeStyle(name) ?? "")
+/**
+ * Tile-only overflow guard (ADR-0019). Board cells never scroll — a tile is
+ * a glance, and a wheel-trapping scrollbar hides rows invisibly — so the
+ * artifact must fit its height tier (widget-standard §2). The frame:
+ *
+ *  - pins the iframe's own scrolling shut (`overflow:hidden`), so a
+ *    non-compliant artifact clips instead of growing a scrollbar;
+ *  - stamps `data-bulletin-tile` on `<html>`, the signal artifacts gate
+ *    their fit-to-height logic on (the raw page and the full view keep
+ *    every row);
+ *  - fades the bottom edge out whenever content still overflows, so
+ *    truncation reads as "there's more — expand", never an ambiguous
+ *    mid-line crop. The fade dissolves into `--color-bg1`, the artifact
+ *    page background, and retints with the theme override for free.
+ */
+const TILE_GUARD_STYLE =
+  "<style data-bulletin-tile-guard>" +
+  "html,body{overflow:hidden !important}" +
+  "#bulletin-tile-fade{position:fixed;left:0;right:0;bottom:0;height:32px;" +
+  "pointer-events:none;opacity:0;transition:opacity .15s;" +
+  "background:linear-gradient(transparent,var(--color-bg1,#282828))}" +
+  "</style>"
+
+const TILE_GUARD_SCRIPT =
+  "<script data-bulletin-tile-guard>(function(){" +
+  'var d=document.documentElement;d.setAttribute("data-bulletin-tile","");' +
+  "function init(){" +
+  'var f=document.createElement("div");f.id="bulletin-tile-fade";' +
+  "document.body.appendChild(f);" +
+  'var check=function(){f.style.opacity=d.scrollHeight>d.clientHeight+1?"1":"0"};' +
+  "new ResizeObserver(check).observe(document.body);" +
+  'addEventListener("resize",check);check()}' +
+  'document.readyState==="loading"?addEventListener("DOMContentLoaded",init):init()' +
+  "})()</script>"
+
+/** Where a framed artifact renders: a board cell, or the full-view lightbox. */
+export type ArtifactView = "tile" | "full"
+
+export function frameArtifactHtml(
+  html: string,
+  name: ThemeName,
+  view: ArtifactView = "tile",
+): string {
+  return (
+    html +
+    EMBED_FRAME_STYLE +
+    (view === "tile" ? TILE_GUARD_STYLE + TILE_GUARD_SCRIPT : "") +
+    (artifactThemeStyle(name) ?? "")
+  )
 }
 
 /**

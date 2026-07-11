@@ -95,6 +95,13 @@ export function WidgetCard({
     () => (artifact?.html ? frameArtifactHtml(artifact.html, theme) : null),
     [artifact?.html, theme],
   )
+  // The lightbox is the full-data surface (ADR-0019): same artifact, framed
+  // without the tile overflow guard so every row is reachable by scrolling.
+  const fullHtml = useMemo(
+    () =>
+      artifact?.html ? frameArtifactHtml(artifact.html, theme, "full") : null,
+    [artifact?.html, theme],
+  )
   const lastRunAt = artifact?.lastRunAt ?? null
   // Manual routines have no cadence to be stale against (ADR-0016).
   const manual = routine.schedule == null
@@ -338,13 +345,13 @@ export function WidgetCard({
           </>
         )}
       </article>
-      {html && (
+      {fullHtml && (
         <WidgetLightbox
           open={expanded}
           onOpenChange={setExpanded}
           name={routine.name}
           slug={routine.slug}
-          html={html}
+          html={fullHtml}
           ranLabel={ranLabel}
           stale={stale}
         />

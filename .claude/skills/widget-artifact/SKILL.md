@@ -27,6 +27,10 @@ respond to the widget's grid size — no JS needed for responsiveness.
      progressively (KPI row → line items → sparkline). Author with
      `min-width`/`min-height` queries that reveal sections, like the
      reference artifact.
+   - **Fit the height at every tier** (ADR-0019): tiles never scroll — the
+     board pins the iframe's overflow shut — so a list that doesn't fit must
+     degrade to fewer items plus a visible `+N more` line, never crop
+     mid-line. Use the fit-to-height snippet below on every unbounded list.
    - **Full view** (`≥ ~900px`): the dashboard lifts the widget into a
      full-screen overlay rendering this same file (no separate full-screen
      variant to author). The widest tier must read like a page — cap the
@@ -86,6 +90,59 @@ priorities/primary, aqua for times, yellow for warnings/carry-overs, red
 only for genuinely bad states. At the 1×1 tier the KPI number carries the
 glance; detail tiers get the 14px body.
 
+## The fit-to-height snippet
+
+The board stamps `data-bulletin-tile` on `<html>` and clips overflow
+(ADR-0019); the raw page and the full-view lightbox carry no stamp and keep
+every row. Mark each unbounded list with `data-fit-list` and inline this —
+it hides trailing items until the page fits and says how many it hid:
+
+```html
+<script>
+  // Fit lists to the tile (widget-standard §2, ADR-0019): tiles never
+  // scroll, so collapse trailing items that overflow into "+N more".
+  // Runs only on the board — the frame stamps data-bulletin-tile.
+  ;(function () {
+    function fit() {
+      if (!document.documentElement.hasAttribute("data-bulletin-tile")) return
+      var doc = document.documentElement
+      // Bottom-most lists give way first — the top of the tile is the glance.
+      var lists = [].slice
+        .call(document.querySelectorAll("[data-fit-list]"))
+        .reverse()
+      lists.forEach(function (list) {
+        var more = list.querySelector("[data-fit-more]")
+        if (!more) {
+          more = document.createElement("li")
+          more.setAttribute("data-fit-more", "")
+          list.appendChild(more)
+        }
+        var items = [].filter.call(list.children, function (el) {
+          return el !== more
+        })
+        items.forEach(function (el) {
+          el.hidden = false
+        })
+        more.hidden = true
+        var hidden = 0
+        while (doc.scrollHeight > doc.clientHeight && hidden < items.length) {
+          items[items.length - ++hidden].hidden = true
+          more.hidden = false
+          more.textContent = "+" + hidden + " more"
+        }
+      })
+    }
+    addEventListener("DOMContentLoaded", fit)
+    addEventListener("resize", fit)
+  })()
+</script>
+```
+
+Style `[data-fit-more]` as a 12px mono `--color-ink-dim` line — it is a
+count, not content. Non-list layouts follow the same rule by other means
+(shorter text via `min-height` queries, clamped paragraphs); what matters
+is that nothing overflows a tile silently.
+
 ## Reference
 
 `docs/samples/daily-plan.html` in the shared repo is the canonical example —
@@ -96,6 +153,9 @@ structure, breakpoint technique, and footer included.
 - [ ] No external request of any kind (grep for `http`, `//`, `url(`)
 - [ ] Renders sensibly at 340×160 (1×1) — the KPI essence, no overflow
 - [ ] Reveals more at 700×310 and full size
+- [ ] Nothing overflows any tile height — unbounded lists carry
+      `data-fit-list` + the fit-to-height snippet, and truncation shows as
+      `+N more`, never a mid-line crop
 - [ ] Full view (~1400×900) reads like a page — content column capped and
       centered, extra height spent on detail, not one giant number
 - [ ] `widget-generated-at` meta + visible footer timestamp
