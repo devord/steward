@@ -3,12 +3,16 @@ import { data, useFetcher } from "react-router"
 import { ArrowLeft, Check } from "lucide-react"
 
 import type { Route } from "./+types/settings"
-import { AppHeader } from "../components/app-header.tsx"
 import {
   AppearanceSettings,
   handleRadioKeydown,
 } from "../components/appearance-settings.tsx"
-import { Wordmark } from "../components/logo.tsx"
+import { NavShell } from "../components/nav-shell.tsx"
+import {
+  listDashboards,
+  resolveDataRepo,
+  resolveTeamRepo,
+} from "../lib/dashboard.server.ts"
 import {
   isLocale,
   LOCALE_OPTIONS,
@@ -17,12 +21,38 @@ import {
   useT,
 } from "../lib/i18n.tsx"
 import { getLocale, localeCookie } from "../lib/locale.server.ts"
+import { requireAuth } from "../lib/session.server.ts"
 import { buttonVariants } from "~/components/ui/button"
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
 
-export function loader({ request }: Route.LoaderArgs) {
-  return { locale: getLocale(request) }
+/**
+ * Settings renders inside the same app frame the boards use (NavShell) so the
+ * rail, account menu, and header stay put across the trip — hence the loader
+ * also fetches the sibling boards the rail lists. No board is current here, so
+ * the rail lights nothing (it reads as "off-board") and the header carries a
+ * plain way back. Boards are best-effort: `listDashboards` already degrades to
+ * null when the repo/dir is missing (pre-setup, reached via the account menu),
+ * and a transient GitHub blip degrades to an empty rail rather than crashing
+ * the one page that must never trap the user — never a redirect.
+ */
+export async function loader({ request }: Route.LoaderArgs) {
+  const auth = await requireAuth(request)
+  const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
+  const teamRepo = resolveTeamRepo()
+  const [personalDashboards, teamDashboards] = await Promise.all([
+    listDashboards(auth.token, dataRepo).catch(() => null),
+    teamRepo
+      ? listDashboards(auth.token, teamRepo).catch(() => null)
+      : Promise.resolve(null),
+  ])
+  return {
+    locale: getLocale(request),
+    login: auth.login,
+    dataRepo,
+    personalDashboards: personalDashboards ?? [],
+    teamDashboards,
+  }
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -36,8 +66,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
  * Device preferences (ADR-0009). Appearance never touches the server —
  * localStorage only. Language is the one server-visible choice (SSR renders
  * in it), persisted as a plain cookie by the action below; the root loader
- * revalidates and the whole app re-renders translated. No auth required:
- * these are browser preferences, not data-repo state.
+ * revalidates and the whole app re-renders translated.
  */
 export async function action({ request }: Route.ActionArgs) {
   const form = await request.formData()
@@ -48,30 +77,38 @@ export async function action({ request }: Route.ActionArgs) {
   return data(null, { headers: { "Set-Cookie": localeCookie(locale) } })
 }
 
-export default function Settings(_props: Route.ComponentProps) {
+export default function Settings({ loaderData }: Route.ComponentProps) {
   const t = useT()
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pb-16 sm:px-6">
-      <AppHeader className="mb-8 gap-x-2">
-        <Wordmark className="text-sm" />
-        <span aria-hidden className="font-mono text-xs text-ink-dim">
-          ·
-        </span>
-        <h1 className="font-mono text-xs text-ink-dim">
-          {t("settings.title")}
-        </h1>
+    <NavShell
+      nav={{
+        dataRepo: loaderData.dataRepo,
+        // No board is current on settings, so pass an empty slug — the rail
+        // then lights nothing, reading as "you're off the board".
+        scope: "personal",
+        dashboardSlug: "",
+        personalDashboards: loaderData.personalDashboards,
+        teamDashboards: loaderData.teamDashboards,
+        login: loaderData.login,
+      }}
+      cap="max-w-3xl"
+      actions={
         <Link
           to="/"
           className={cn(
             buttonVariants({ size: "sm", variant: "ghost" }),
-            "ml-auto text-ink-dim hover:text-foreground",
+            "text-ink-dim hover:text-foreground",
           )}
         >
           <ArrowLeft data-icon="inline-start" />
           {t("settings.back")}
         </Link>
-      </AppHeader>
+      }
+    >
+      <h1 className="mb-8 font-mono text-base text-foreground">
+        {t("settings.title")}
+      </h1>
 
       <main className="flex flex-col gap-10">
         <section aria-labelledby="settings-appearance">
@@ -101,7 +138,7 @@ export default function Settings(_props: Route.ComponentProps) {
           {t("settings.saved")}
         </p>
       </main>
-    </div>
+    </NavShell>
   )
 }
 
