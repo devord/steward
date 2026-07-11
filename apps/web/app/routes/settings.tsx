@@ -49,6 +49,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return {
     locale: getLocale(request),
     login: auth.login,
+    displayName: auth.name ?? null,
     dataRepo,
     personalDashboards: personalDashboards ?? [],
     teamDashboards,
@@ -91,6 +92,7 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
         personalDashboards: loaderData.personalDashboards,
         teamDashboards: loaderData.teamDashboards,
         login: loaderData.login,
+        displayName: loaderData.displayName,
       }}
       cap="max-w-3xl"
       actions={

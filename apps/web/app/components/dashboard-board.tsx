@@ -46,6 +46,7 @@ export function DashboardBoard({
   view,
   artifacts,
   login,
+  displayName,
   now,
   personalDashboards,
   teamDashboards,
@@ -55,6 +56,7 @@ export function DashboardBoard({
       until its artifact resolves. Keyed by routine slug. */
   artifacts: Promise<Record<string, ArtifactInfo>>
   login: string
+  displayName?: string | null
   now: number
   personalDashboards: string[]
   /** null → no team repo configured or no access (switcher hides the group). */
@@ -371,6 +373,7 @@ export function DashboardBoard({
         personalDashboards={personalDashboards}
         teamDashboards={teamDashboards}
         login={login}
+        displayName={displayName}
         hasDraft={draft != null}
         editing={editing}
         deletable={deletable}

@@ -60,13 +60,18 @@ non-default theme.
 - Mono: `ui-monospace, "SF Mono", Menlo` — identifiers (slugs, repo names,
   cron expressions), timestamps, state labels, the wordmark.
 - Rule of thumb: if git or the schema would care about the string, it's
-  mono. Body 14px, secondary labels 13px, metadata and timestamps 12px — the
-  floor, nothing smaller in chrome; section headings 15–16px. No display
-  sizes in chrome.
-- Widget title exception: the `widget-card` tile name is **mono, 14px
-  medium** — a deliberate break from sans-for-names. The name is the board's
-  two-second glance target, so it carries the terminal voice and sits a step
-  above the 12px metadata beside it. State reads as pills in that same mono
+  mono. The scale is set at the foundation by two Tailwind size tokens in
+  `app.css` (`--text-sm`/`--text-xs`), one step above Tailwind's defaults:
+  **body and interactive labels 15px (`text-sm`)** — nav items, buttons,
+  the account name; **secondary labels and metadata 13px (`text-xs`)** — the
+  floor, nothing smaller in chrome, including timestamps and group headings.
+  Section headings 16–18px (`text-base`/`text-lg`). No display sizes in
+  chrome. Nav and other primary controls take body size, never the metadata
+  floor.
+- Widget title exception: the `widget-card` tile name is **mono, `text-sm`
+  (15px) medium** — a deliberate break from sans-for-names. The name is the
+  board's two-second glance target, so it carries the terminal voice and sits
+  a step above the 13px metadata beside it. State reads as pills in that same mono
   voice (`running`/`stale`/`manual`), never prose; a fresh tile carries no
   pill (semantic color only when it means something).
 - Artifacts set their own type, one register bolder than chrome since they

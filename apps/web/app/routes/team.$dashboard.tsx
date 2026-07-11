@@ -48,6 +48,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const artifacts = loadArtifacts(auth.token, ref, view.routines)
   return {
     login: auth.login,
+    displayName: auth.name ?? null,
     now: Date.now(),
     view,
     artifacts,
@@ -64,6 +65,7 @@ export default function TeamDashboard({ loaderData }: Route.ComponentProps) {
       view={loaderData.view}
       artifacts={loaderData.artifacts}
       login={loaderData.login}
+      displayName={loaderData.displayName}
       now={loaderData.now}
       personalDashboards={loaderData.personalDashboards}
       teamDashboards={loaderData.view.dashboards}

@@ -38,6 +38,9 @@ export const en = {
 
   "nav.boards": "Boards",
   "nav.openMenu": "Open navigation",
+  "nav.collapse": "Collapse sidebar",
+  "nav.expand": "Expand sidebar",
+  "nav.resize": "Resize sidebar",
   "account.menu": "Account",
   "account.githubAccount": "GitHub account",
   "account.viewRepo": "View data repo",

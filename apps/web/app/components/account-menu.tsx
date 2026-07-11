@@ -14,27 +14,44 @@ import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
 import { useT } from "../lib/i18n.tsx"
 
+/** Two-letter monogram fallback: initials of a real name, else the login. */
+function initialsFor(name: string | null | undefined, login: string): string {
+  const source = name?.trim() || login
+  const parts = source.split(/\s+/).filter(Boolean)
+  const letters =
+    parts.length > 1
+      ? parts[0][0] + parts[parts.length - 1][0]
+      : source.slice(0, 2)
+  return letters.toUpperCase()
+}
+
 /**
  * The account menu — a GitHub-avatar pill that opens the account-scoped
  * actions that were previously loose in the header: settings, a link out to
  * the data repo, and sign-out. Consolidating them here (the top-right
  * convention) demotes sign-out from a peer of the board actions to where
- * exit actions belong, and finally gives the signed-in identity a real
- * affordance instead of dead text.
+ * exit actions belong, and gives the signed-in identity a real affordance.
  *
- * One component, two shapes: `block` fills the sidebar footer row (login
+ * Identity reads as the person, not the handle: the pill and menu header
+ * show the GitHub display name (sans) when we have it, with the `@login`
+ * (mono, an identifier) as the secondary line. Older sessions with no stored
+ * name fall back to the login alone.
+ *
+ * One component, two shapes: `block` fills the sidebar footer row (identity
  * grows, chevron pins right); the default compact pill sits inline in the
- * pre-board top bars. Sign-out posts to the same `/auth/logout` action the
- * old form did — no client session to clear.
+ * pre-board top bars. Sign-out posts to the same `/auth/logout` action.
  */
 export function AccountMenu({
   login,
+  displayName,
   dataRepo,
   block = false,
   onNavigate,
   className,
 }: {
   login: string
+  /** GitHub display name; null/absent on older sessions → login only. */
+  displayName?: string | null
   /** owner/repo — shows the "View data repo" item when present. */
   dataRepo?: string
   /** Full-width sidebar-footer shape vs. the compact inline pill. */
@@ -45,55 +62,56 @@ export function AccountMenu({
 }) {
   const t = useT()
   const submit = useSubmit()
-  const initials = login.slice(0, 2)
+  const name = displayName?.trim() || null
+  const primary = name ?? login
+  const initials = initialsFor(name, login)
+  const avatarSrc = `https://github.com/${login}.png?size=80`
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={t("account.menu")}
         className={cn(
-          "flex items-center gap-2 rounded-md px-1.5 py-1 font-mono text-xs text-ink-dim outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-sidebar-accent aria-expanded:text-foreground",
+          "flex items-center gap-2 rounded-md px-1.5 py-1 text-sm text-ink-dim outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-sidebar-accent aria-expanded:text-foreground",
           block && "w-full",
           className,
         )}
       >
         <Avatar size="sm">
-          <AvatarImage src={`https://github.com/${login}.png?size=64`} alt="" />
-          <AvatarFallback className="font-mono lowercase">
+          <AvatarImage src={avatarSrc} alt="" />
+          <AvatarFallback className="text-[0.625rem] font-medium">
             {initials}
           </AvatarFallback>
         </Avatar>
         <span
           className={cn(
             "truncate text-left",
+            // A real name is prose (sans); a bare login is an identifier (mono).
+            name ? "font-sans" : "font-mono",
             block ? "flex-1" : "max-w-[16ch]",
           )}
         >
-          {login}
+          {primary}
         </span>
-        <ChevronsUpDown className="ml-auto size-3 shrink-0 text-ink-faint" />
+        <ChevronsUpDown className="ml-auto size-3.5 shrink-0 text-ink-faint" />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" sideOffset={6} className="w-56">
-        {/* Identity header — not an action, so a plain row rather than a
-            menu item; the pill only had room for the login, this carries the
-            "which account am I acting as" answer in full (ADR-0004). */}
-        <div className="flex items-center gap-2 px-1.5 py-1.5">
-          <Avatar size="sm">
-            <AvatarImage
-              src={`https://github.com/${login}.png?size=64`}
-              alt=""
-            />
-            <AvatarFallback className="font-mono lowercase">
+      <DropdownMenuContent align="end" sideOffset={6} className="w-60">
+        {/* Identity header — not an action, so a plain row. Carries the full
+            "which account am I acting as" answer (ADR-0004): name over @login. */}
+        <div className="flex items-center gap-2.5 px-1.5 py-1.5">
+          <Avatar size="default">
+            <AvatarImage src={avatarSrc} alt="" />
+            <AvatarFallback className="text-xs font-medium">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <div className="truncate font-mono text-xs text-foreground">
-              {login}
+            <div className="truncate text-sm font-medium text-foreground">
+              {primary}
             </div>
-            <div className="text-xs text-ink-faint">
-              {t("account.githubAccount")}
+            <div className="truncate font-mono text-xs text-ink-faint">
+              {name ? `@${login}` : t("account.githubAccount")}
             </div>
           </div>
         </div>
