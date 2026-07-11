@@ -28,6 +28,10 @@ import { discoverRoutineSkills } from "./skills.server.ts"
 export interface ArtifactInfo {
   /** null → never published: render the placeholder card (ADR-0002). */
   html: string | null
+  /** Blob SHA of the artifact file, straight from the contents API — it tracks
+      the branch tip immediately, so the client clears a pending run the moment
+      the SHA changes (pending-runs.ts). null → never published or unreachable. */
+  sha: string | null
   /** ISO date of the last publish commit, the "ran Xh ago" footer. */
   lastRunAt: string | null
   /** GitHub couldn't serve this artifact right now (5xx) — the widget
@@ -269,11 +273,13 @@ export async function loadArtifacts(
         body.status === "fulfilled"
           ? {
               html: body.value?.text ?? null,
+              sha: body.value?.sha ?? null,
               lastRunAt: lastRun.status === "fulfilled" ? lastRun.value : null,
               ...(hasTrigger !== undefined ? { hasTrigger } : {}),
             }
           : {
               html: null,
+              sha: null,
               lastRunAt: null,
               unreachable: true,
               ...(hasTrigger !== undefined ? { hasTrigger } : {}),

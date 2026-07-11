@@ -28,6 +28,7 @@ const hasText = (text: string) =>
 
 const artifact = (over: Partial<ArtifactInfo> = {}): ArtifactInfo => ({
   html: null,
+  sha: null,
   lastRunAt: null,
   ...over,
 })
@@ -96,5 +97,28 @@ describe("WidgetCard empty states", () => {
           ?.hasAttribute("disabled"),
       )
       .toBe(true)
+  })
+
+  it("shows a single spinner while running — the header's, not the button's", async () => {
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine()}
+        artifact={artifact({ html: "<h1>live</h1>", hasTrigger: true })}
+        now={Date.now()}
+        scope="personal"
+        dataRepo="o/r"
+        committed
+        pendingFiredAt={Date.now()}
+      />,
+    )
+    // The "Running" label owns the only spinner; the Update button stays a
+    // static, disabled icon so the card never shows two spinners at once.
+    await expect.poll(() => hasText("Running")).toBe(true)
+    expect(document.querySelectorAll(".animate-spin")).toHaveLength(1)
+    const buttonIcon = document
+      .querySelector('button[aria-label^="Update"]')
+      ?.querySelector("svg")
+    expect(buttonIcon?.classList.contains("animate-spin")).toBe(false)
   })
 })

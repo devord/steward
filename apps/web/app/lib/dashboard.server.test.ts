@@ -98,6 +98,7 @@ describe("loadDashboard", () => {
     ])
     expect(view.artifacts["daily-plan"]).toEqual({
       html: "<h1>plan</h1>",
+      sha: expect.stringMatching(/^sha:artifacts:w\/daily-plan\/index\.html:/),
       lastRunAt: "2026-07-09T07:00:00Z",
     })
     // Content-derived SHA (like GitHub's) — keyed on ref+path+content.
@@ -132,6 +133,7 @@ describe("loadDashboard", () => {
 
     expect(view.artifacts["daily-plan"]).toEqual({
       html: null,
+      sha: null,
       lastRunAt: null,
     })
   })
@@ -144,6 +146,7 @@ describe("loadDashboard", () => {
 
     expect(view.artifacts["daily-plan"]).toEqual({
       html: null,
+      sha: null,
       lastRunAt: null,
       unreachable: true,
     })
@@ -175,6 +178,7 @@ describe("loadDashboard", () => {
     // HTML is preserved; only the freshness is missing (not unreachable).
     expect(view.artifacts["daily-plan"]).toEqual({
       html: "<h1>plan</h1>",
+      sha: expect.stringMatching(/^sha:artifacts:w\/daily-plan\/index\.html:/),
       lastRunAt: null,
     })
   })
@@ -197,6 +201,7 @@ describe("loadDashboard", () => {
 
     expect(view.artifacts["daily-plan"]).toEqual({
       html: null,
+      sha: null,
       lastRunAt: null,
       unreachable: true,
     })
@@ -231,6 +236,7 @@ describe("loadDashboard", () => {
 
     expect(view.artifacts["mp"]).toEqual({
       html: null,
+      sha: null,
       lastRunAt: null,
       hasTrigger: true,
     })
@@ -247,6 +253,7 @@ describe("loadDashboard", () => {
 
     expect(view.artifacts["mp"]).toEqual({
       html: null,
+      sha: null,
       lastRunAt: null,
       hasTrigger: false,
     })
@@ -261,7 +268,11 @@ describe("loadDashboard", () => {
 
     const view = await loadDashboard("token", MAIN_BOARD)
 
-    expect(view.artifacts["mp"]).toEqual({ html: null, lastRunAt: null })
+    expect(view.artifacts["mp"]).toEqual({
+      html: null,
+      sha: null,
+      lastRunAt: null,
+    })
     expect(view.artifacts["mp"]?.hasTrigger).toBeUndefined()
   })
 

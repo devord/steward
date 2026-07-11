@@ -1,53 +1,70 @@
 import { describe, expect, it } from "vitest"
 
 import type { ArtifactInfo } from "./dashboard.server.ts"
-import { pendingToClear } from "./pending-runs.ts"
+import { type PendingRun, pendingToClear } from "./pending-runs.ts"
 
 const NOW = Date.parse("2026-07-10T12:00:00Z")
 
-const artifact = (lastRunAt: string | null): ArtifactInfo => ({
-  html: null,
-  lastRunAt,
+const artifact = (sha: string | null): ArtifactInfo => ({
+  html: sha == null ? null : "<h1>plan</h1>",
+  sha,
+  lastRunAt: null,
+})
+
+const run = (firedAt: number, sha: string | null): PendingRun => ({
+  firedAt,
+  sha,
 })
 
 describe("pendingToClear", () => {
-  it("clears a run whose artifact published after it fired", () => {
-    const firedAt = NOW - 2 * 60_000
-    const published = new Date(NOW - 30_000).toISOString()
+  it("clears a run once the artifact SHA changes from the one on file", () => {
+    const fired = run(NOW - 2 * 60_000, "sha-old")
     expect(
-      pendingToClear({ a: firedAt }, { a: artifact(published) }, NOW),
+      pendingToClear({ a: fired }, { a: artifact("sha-new") }, NOW),
     ).toEqual(["a"])
   })
 
-  it("keeps a run whose only artifact predates the fire (skew guard)", () => {
-    const firedAt = NOW - 2 * 60_000
-    // An artifact from well before the fire must not clear the pending mark.
-    const old = new Date(firedAt - 5 * 60_000).toISOString()
-    expect(pendingToClear({ a: firedAt }, { a: artifact(old) }, NOW)).toEqual(
-      [],
+  it("clears a run once a first-ever artifact publishes (null baseline)", () => {
+    const fired = run(NOW - 2 * 60_000, null)
+    expect(pendingToClear({ a: fired }, { a: artifact("sha-1") }, NOW)).toEqual(
+      ["a"],
     )
   })
 
-  it("tolerates minor clock skew — a publish just before the fire still clears", () => {
-    const firedAt = NOW - 2 * 60_000
-    // 30s before the fire: inside the 60s skew window → treated as the new run.
-    const nearlySimultaneous = new Date(firedAt - 30_000).toISOString()
+  it("keeps a run whose artifact SHA is unchanged since it fired", () => {
+    const fired = run(NOW - 2 * 60_000, "sha-same")
     expect(
-      pendingToClear({ a: firedAt }, { a: artifact(nearlySimultaneous) }, NOW),
+      pendingToClear({ a: fired }, { a: artifact("sha-same") }, NOW),
+    ).toEqual([])
+  })
+
+  it("keeps a fresh run that hasn't published yet (still no artifact)", () => {
+    const fired = run(NOW - 60_000, null)
+    expect(pendingToClear({ a: fired }, { a: artifact(null) }, NOW)).toEqual([])
+  })
+
+  it("keeps a run when the artifact hasn't loaded at all this poll", () => {
+    const fired = run(NOW - 60_000, "sha-old")
+    expect(pendingToClear({ a: fired }, {}, NOW)).toEqual([])
+  })
+
+  it("keeps a run when a published artifact flaps to unreachable", () => {
+    // A transient GitHub 5xx nulls the SHA without a real publish — that must
+    // not read as "changed" and clear a run that's still in flight.
+    const fired = run(NOW - 60_000, "sha-old")
+    const unreachable: ArtifactInfo = {
+      html: null,
+      sha: null,
+      lastRunAt: null,
+      unreachable: true,
+    }
+    expect(pendingToClear({ a: fired }, { a: unreachable }, NOW)).toEqual([])
+  })
+
+  it("clears a run that has waited past the timeout with no new artifact", () => {
+    const fired = run(NOW - 11 * 60_000, "sha-old") // > 10min
+    expect(
+      pendingToClear({ a: fired }, { a: artifact("sha-old") }, NOW),
     ).toEqual(["a"])
-  })
-
-  it("clears a run that has waited past the timeout with no artifact", () => {
-    const firedAt = NOW - 11 * 60_000 // > 10min
-    expect(pendingToClear({ a: firedAt }, { a: artifact(null) }, NOW)).toEqual([
-      "a",
-    ])
-  })
-
-  it("keeps a fresh run that hasn't published or timed out", () => {
-    const firedAt = NOW - 60_000
-    expect(pendingToClear({ a: firedAt }, { a: artifact(null) }, NOW)).toEqual(
-      [],
-    )
   })
 })
