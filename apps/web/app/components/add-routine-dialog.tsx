@@ -383,7 +383,7 @@ export function AddRoutineDialog({
                         setSize({ cols, rows: preset.rows })
                       }}
                       className={cn(
-                        "flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-colors hover:bg-muted",
+                        "flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-colors hover:bg-muted",
                         active
                           ? "border-primary bg-muted"
                           : "border-border text-ink-dim",
@@ -401,7 +401,7 @@ export function AddRoutineDialog({
                   aria-pressed={customSize}
                   onClick={() => setCustomSize(true)}
                   className={cn(
-                    "rounded-lg border px-2.5 py-1 text-xs transition-colors hover:bg-muted",
+                    "cursor-pointer rounded-lg border px-2.5 py-1 text-xs transition-colors hover:bg-muted",
                     customSize
                       ? "border-primary bg-muted"
                       : "border-border text-ink-dim",

@@ -72,7 +72,7 @@ export function AccountMenu({
       <DropdownMenuTrigger
         aria-label={t("account.menu")}
         className={cn(
-          "flex items-center gap-2 rounded-md px-1.5 py-1 text-sm text-ink-dim outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-sidebar-accent aria-expanded:text-foreground",
+          "flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-sm text-ink-dim outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-sidebar-accent aria-expanded:text-foreground",
           block && "w-full",
           className,
         )}

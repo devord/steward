@@ -117,7 +117,7 @@ export function DashboardSidebar({
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <LayoutGrid className="size-4 shrink-0 text-ink-faint" />
           {t("switcher.new")}
