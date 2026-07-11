@@ -98,6 +98,37 @@ export function dataRepoExists(token: string, dataRepo: string) {
 }
 
 /**
+ * The shared GitHub-outage degrade: a 503 the root ErrorBoundary renders as a
+ * "back on the next refresh" page instead of the generic crash. `loader`-path
+ * callers throw this whenever a GitHub read can't complete for a transient
+ * reason (ADR: degrade, not crash).
+ */
+function githubOutage503(): never {
+  throw data(
+    "GitHub's API is having trouble right now, so your config couldn't load. The dashboard will be back on the next refresh once GitHub recovers.",
+    { status: 503 },
+  )
+}
+
+/**
+ * repoExists for route loaders: a transient GitHub failure (5xx, rate limit,
+ * network blip, timeout) becomes a 503 refresh page rather than the generic
+ * crash — or a false "repo missing" that would bounce an existing user into
+ * the setup wizard mid-outage. A definitive 404 still returns false.
+ */
+export async function repoExistsOr503(
+  token: string,
+  repo: string,
+): Promise<boolean> {
+  try {
+    return await repoExists(token, repo)
+  } catch (error) {
+    if (error instanceof GitHubError) githubOutage503()
+    throw error
+  }
+}
+
+/**
  * Dashboard slugs in a repo — the data/dashboards/ dir listing is the index
  * (no separate index file to drift). Returns null when the dir, repo, or
  * access is missing so callers can degrade to "no boards here".
@@ -237,12 +268,7 @@ export async function loadDashboardStructureOr503(
   try {
     return await loadDashboardStructure(token, ref)
   } catch (error) {
-    if (error instanceof GitHubError) {
-      throw data(
-        "GitHub's API is having trouble right now, so your config couldn't load. The dashboard will be back on the next refresh once GitHub recovers.",
-        { status: 503 },
-      )
-    }
+    if (error instanceof GitHubError) githubOutage503()
     throw error
   }
 }

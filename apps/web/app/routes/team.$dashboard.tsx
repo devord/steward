@@ -6,10 +6,10 @@ import type { Route } from "./+types/team.$dashboard"
 import { DashboardBoard } from "../components/dashboard-board.tsx"
 import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import {
-  dataRepoExists,
   listDashboards,
   loadArtifacts,
   loadDashboardStructureOr503,
+  repoExistsOr503,
   resolveDataRepo,
   resolveTeamRepo,
 } from "../lib/dashboard.server.ts"
@@ -27,7 +27,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   }
   // Repo missing or no access → `/team` explains and offers the fix; a
   // team URL must never bounce a viewer into the personal /setup wizard.
-  if (!(await dataRepoExists(auth.token, teamRepo))) throw redirect("/team")
+  if (!(await repoExistsOr503(auth.token, teamRepo))) throw redirect("/team")
 
   // The switcher's personal group: best-effort, never blocks a team board
   // (a brand-new member may not even have a personal repo yet).

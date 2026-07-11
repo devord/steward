@@ -19,7 +19,7 @@ interface MockFile {
 /** repo → `${ref}:${path}` → file */
 const repos = new Map<string, Map<string, MockFile>>()
 
-type Endpoint = "contents" | "commits"
+type Endpoint = "contents" | "commits" | "repo"
 
 interface Failure {
   status: number
@@ -149,11 +149,14 @@ function failureResponse(failure: Failure): Response {
 }
 
 export const githubHandlers = [
-  // repoExists probe.
+  // repoExists probe. The failure map keys the probe under the empty path,
+  // so tests can inject a 5xx/network blip on the existence check itself.
   http.get(
     "https://api.github.com/repos/:owner/:repo",
     ({ params, request }) => {
       const repo = `${params.owner}/${params.repo}`
+      const failure = takeFailure(repo, "", "repo")
+      if (failure) return failureResponse(failure)
       if (!repos.has(repo)) return new HttpResponse(null, { status: 404 })
       return json(request, { full_name: repo })
     },

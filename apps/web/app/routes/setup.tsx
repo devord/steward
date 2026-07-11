@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/button"
 import { Link } from "~/components/ui/link"
 import {
   dataRepoExists,
+  repoExistsOr503,
   resolveDataRepo,
   resolveTeamRepo,
 } from "../lib/dashboard.server.ts"
@@ -21,7 +22,7 @@ export function meta(_args: Route.MetaArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
   const auth = await requireAuth(request)
   const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
-  if (await dataRepoExists(auth.token, dataRepo)) throw redirect("/")
+  if (await repoExistsOr503(auth.token, dataRepo)) throw redirect("/")
   // Team boards live in a separate repo and don't depend on this one, so offer
   // the way there when a team is configured — setup isn't a gate on them.
   return { login: auth.login, dataRepo, hasTeam: resolveTeamRepo() != null }
@@ -42,9 +43,11 @@ export async function action({ request }: Route.ActionArgs) {
   )
 
   // Repo generation is asynchronous on GitHub's side; wait for it to be
-  // readable so the redirect doesn't bounce straight back here.
+  // readable so the redirect doesn't bounce straight back here. A transient
+  // read failure mid-propagation is just "not ready yet" — swallow it and
+  // keep polling rather than aborting the whole create.
   for (let i = 0; i < 10; i++) {
-    if (await dataRepoExists(auth.token, dataRepo)) break
+    if (await dataRepoExists(auth.token, dataRepo).catch(() => false)) break
     await new Promise((resolve) => setTimeout(resolve, 1000))
   }
   return redirect("/")
