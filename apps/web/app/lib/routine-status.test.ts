@@ -120,6 +120,24 @@ describe("widgetStatus", () => {
     )
   })
 
+  it("ready-scheduled for a scheduled cloud routine whose trigger exists", () => {
+    expect(
+      widgetStatus(
+        routine({ schedule: "0 8 * * *" }),
+        ctx({ hasTrigger: true }),
+      ).kind,
+    ).toBe("ready-scheduled")
+  })
+
+  it("awaiting for a scheduled cloud routine without a trigger — the cron still fires", () => {
+    expect(
+      widgetStatus(
+        routine({ schedule: "0 8 * * *" }),
+        ctx({ hasTrigger: false }),
+      ).kind,
+    ).toBe("awaiting-first-run")
+  })
+
   it("awaiting for a local routine (no trigger concept)", () => {
     expect(widgetStatus(routine({ host: "local" }), ctx()).kind).toBe(
       "awaiting-first-run",

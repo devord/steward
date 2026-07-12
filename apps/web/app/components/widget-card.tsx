@@ -254,11 +254,15 @@ export function WidgetCard({
               {/* The Update control is a re-run affordance; while a run is in
                   flight it can't fire and the "Running" readout already owns
                   the state, so it steps aside — one run glyph per card, never
-                  a disabled refresh arrow beside the running one. */}
+                  a disabled refresh arrow beside the running one. Same rule
+                  when the empty state shows the run-now button (ready-*):
+                  one affordance per action. */}
               {scope != null &&
                 dataRepo != null &&
                 routine.enabled &&
-                !running && (
+                !running &&
+                status.kind !== "ready-manual" &&
+                status.kind !== "ready-scheduled" && (
                   <UpdateAction
                     routine={routine}
                     scope={scope}
@@ -329,6 +333,7 @@ export function WidgetCard({
             dataRepo={dataRepo}
             login={login}
             now={now}
+            onFired={onFired}
           />
         )}
         {editing && (
@@ -413,6 +418,34 @@ function StatusPill({
 const BAR_ACTION =
   "size-5 shrink-0 text-ink-dim transition-opacity hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:size-7 pointer-coarse:opacity-100"
 
+/** Shared fire plumbing for the run controls (ADR-0016): submit to /run and
+    tell the board when a fire lands so it can start the running state. */
+function useFireRoutine(
+  routine: Routine,
+  scope: BoardScope,
+  onFired?: () => void,
+) {
+  const fetcher = useFetcher<RunResult>()
+
+  // Depend on the fetcher.data object (a fresh response each submit), not a
+  // derived boolean — otherwise a second successful run of the same widget
+  // leaves the boolean at true and the effect never re-runs.
+  useEffect(() => {
+    if (fetcher.data?.ok === true) onFired?.()
+  }, [fetcher.data, onFired])
+
+  return {
+    fire: () => {
+      void fetcher.submit(
+        { scope, slug: routine.slug },
+        { method: "post", action: "/run", encType: "application/json" },
+      )
+    },
+    busy: fetcher.state !== "idle",
+    result: fetcher.data,
+  }
+}
+
 /**
  * The Update control (ADR-0016). Cloud routines fire their runner-owned API
  * trigger server-side (/run) — the server reads the trigger token from the
@@ -436,16 +469,8 @@ function UpdateAction({
   onFired?: () => void
 }) {
   const t = useT()
-  const fetcher = useFetcher<RunResult>()
+  const { fire, busy, result } = useFireRoutine(routine, scope, onFired)
   const [copied, setCopied] = useState(false)
-
-  // Tell the board a fire landed so it can start the pending/running state.
-  // Depend on the fetcher.data object (a fresh response each submit), not a
-  // derived boolean — otherwise a second successful run of the same widget
-  // leaves the boolean at true and the effect never re-runs.
-  useEffect(() => {
-    if (fetcher.data?.ok === true) onFired?.()
-  }, [fetcher.data, onFired])
 
   if (routineHost(routine) === "local") {
     // Works without a bulletin checkout — the raw pointer prompt (ADR-0005);
@@ -479,8 +504,6 @@ function UpdateAction({
     )
   }
 
-  const busy = fetcher.state !== "idle"
-  const result = fetcher.data
   const status =
     result == null
       ? null
@@ -502,13 +525,7 @@ function UpdateAction({
         busy || status != null || forceVisible ? "opacity-100" : "opacity-0",
         result != null && !result.ok && "text-destructive",
       )}
-      onClick={() => {
-        void fetcher.submit(JSON.stringify({ scope, slug: routine.slug }), {
-          method: "post",
-          action: "/run",
-          encType: "application/json",
-        })
-      }}
+      onClick={fire}
     >
       {result?.ok ? (
         <Check />
@@ -522,6 +539,48 @@ function UpdateAction({
         {status ?? ""}
       </span>
     </Button>
+  )
+}
+
+/**
+ * The never-run tile's primary affordance (ADR-0016): a real button that
+ * fires the routine's API trigger, so the user confirms the pipeline works
+ * in a minute instead of waiting on the cron. Rendered only when the
+ * trigger exists (ready-* states) — never a dead end — and it owns the
+ * action: the title-bar refresh icon steps aside while it is shown.
+ */
+function RunNowButton({
+  routine,
+  scope,
+  label,
+  onFired,
+}: {
+  routine: Routine
+  scope: BoardScope
+  label: string
+  onFired?: () => void
+}) {
+  const t = useT()
+  const { fire, busy, result } = useFireRoutine(routine, scope, onFired)
+  const error =
+    result != null && !result.ok
+      ? result.error === "no-trigger"
+        ? t("widget.updateNoTrigger", { slug: routine.slug })
+        : t("widget.updateFailed")
+      : null
+  return (
+    <>
+      <Button disabled={busy} onClick={fire}>
+        <RefreshCw className={cn(busy && "animate-spin")} />
+        {label}
+      </Button>
+      <span
+        role="status"
+        className={cn("text-xs text-destructive", !error && "sr-only")}
+      >
+        {error ?? ""}
+      </span>
+    </>
   )
 }
 
@@ -564,6 +623,7 @@ function WidgetEmptyState({
   dataRepo,
   login,
   now,
+  onFired,
 }: {
   status: WidgetStatus
   routine: Routine
@@ -573,6 +633,8 @@ function WidgetEmptyState({
   dataRepo?: string
   login?: string
   now: number
+  /** Called when the run-now button successfully fires a cloud run. */
+  onFired?: () => void
 }) {
   const t = useT()
   const cmds = setupCommands(routine, dataRepo)
@@ -582,6 +644,7 @@ function WidgetEmptyState({
   let hint: React.ReactNode = null
   let command: string | null = null
   let note: string | null = null
+  let cta: string | null = null
 
   switch (status.kind) {
     case "unreachable":
@@ -604,7 +667,22 @@ function WidgetEmptyState({
       break
     }
     case "ready-manual":
-      hint = t("widget.readyManual")
+      // The trigger exists, so the run affordance is a real button in the
+      // body — not prose pointing at the title-bar icon. Standalone renders
+      // (no scope) can't fire and keep the prose.
+      if (scope != null) cta = t("widget.runNow")
+      else hint = t("widget.readyManual")
+      break
+    case "ready-scheduled":
+      // Enacted and armed: offer the first run now so the user confirms the
+      // pipeline works in a minute instead of waiting on the cron — which
+      // stays the no-cost fallback.
+      if (scope != null) {
+        cta = t("widget.runFirst")
+        note = t("widget.orWaitSchedule", { cron: routine.schedule ?? "" })
+      } else {
+        hint = t("widget.firstRunSchedule", { cron: routine.schedule ?? "" })
+      }
       break
     case "needs-trigger":
       hint = t("widget.needsTriggerHint")
@@ -642,7 +720,15 @@ function WidgetEmptyState({
         />
       )}
       <span className="font-mono text-xs text-ink-dim">{routine.slug}</span>
-      <span className="text-sm text-ink-dim">{hint}</span>
+      {hint && <span className="text-sm text-ink-dim">{hint}</span>}
+      {cta && scope != null && (
+        <RunNowButton
+          routine={routine}
+          scope={scope}
+          label={cta}
+          onFired={onFired}
+        />
+      )}
       {note && <span className="font-mono text-xs text-ink-faint">{note}</span>}
       {command && <CopyableCommand command={command} />}
       {runnerNote && (
