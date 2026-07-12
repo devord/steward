@@ -114,9 +114,16 @@ export function DashboardBoard({
   )
   useEffect(() => {
     let alive = true
-    void artifacts.then((a) => {
-      if (alive) setResolved(a)
-    })
+    artifacts.then(
+      (a) => {
+        if (alive) setResolved(a)
+      },
+      // A rejected stream (the server aborts promises still pending at
+      // streamTimeout) keeps the last resolved artifacts on screen; the next
+      // poll retries with a fresh promise. Without this handler a slow
+      // GitHub moment during a background poll crashed the whole board.
+      () => {},
+    )
     return () => {
       alive = false
     }
@@ -131,6 +138,23 @@ export function DashboardBoard({
     () => new Set(base.routines.routines.map((r) => r.slug)),
     [base.routines],
   )
+
+  // The first-load degrade when the artifact stream dies (server abort at
+  // streamTimeout, a dropped connection): every cell renders its honest
+  // "unreachable" state instead of the crash page — same per-widget state a
+  // GitHub 5xx produces in loadArtifacts, recovered by the next poll.
+  const allUnreachable = useMemo(() => {
+    const map: Record<string, ArtifactInfo> = {}
+    for (const routine of routines.routines) {
+      map[routine.slug] = {
+        html: null,
+        sha: null,
+        lastRunAt: null,
+        unreachable: true,
+      }
+    }
+    return map
+  }, [routines])
 
   const routinesBySlug = new Map(routines.routines.map((r) => [r.slug, r]))
   const placed = new Set(dashboard.widgets.map((w) => w.routine))
@@ -421,7 +445,10 @@ export function DashboardBoard({
               text flips from loading to loaded when the promise resolves. */}
             <p role="status" aria-live="polite" className="sr-only">
               <Suspense fallback={t("board.widgetsLoading")}>
-                <Await resolve={artifacts}>
+                <Await
+                  resolve={artifacts}
+                  errorElement={t("board.widgetsUnreachable")}
+                >
                   {() => t("board.widgetsLoaded")}
                 </Await>
               </Suspense>
@@ -451,7 +478,13 @@ export function DashboardBoard({
                       : [],
                   )}
                 >
-                  <Await resolve={artifacts}>
+                  <Await
+                    resolve={artifacts}
+                    // A dead stream on first load degrades to unreachable
+                    // cells (never the root error page); the poll's next
+                    // revalidation hands this branch a fresh promise.
+                    errorElement={renderCards(allUnreachable)}
+                  >
                     {(awaited) => renderCards(awaited)}
                   </Await>
                 </Suspense>

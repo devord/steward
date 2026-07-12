@@ -109,6 +109,8 @@ export const ptBR: Messages = {
     "O painel acabou de mudar no repo — feche e tente de novo",
   "board.widgetsLoading": "Carregando widgets…",
   "board.widgetsLoaded": "Widgets carregados",
+  "board.widgetsUnreachable":
+    "Os widgets não carregaram — tentando de novo em instantes",
 
   "team.notConfigured":
     "Painéis de time não estão configurados — defina BULLETIN_TEAM_REPO no deploy.",
