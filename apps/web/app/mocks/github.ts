@@ -34,6 +34,63 @@ interface Failure {
 /** `${repo}:${path}` → injected failure for contents/commits requests. */
 const failures = new Map<string, Failure>()
 
+/**
+ * Repo-level metadata the registry endpoints serve (ADR-0023): visibility,
+ * the viewer's permission slice, topics, collaborators. Defaults model the
+ * common case — a private repo the viewer admins, no topics, no listable
+ * collaborators — so file-oriented tests never have to seed metadata.
+ */
+interface MockRepoMeta {
+  private: boolean
+  /** null → GitHub omits the permissions block entirely. */
+  permissions: { admin: boolean; push: boolean } | null
+  topics: string[]
+  /** "forbidden" → the collaborators endpoint answers 403 (viewer lacks
+      push access), exactly GitHub's behavior for plain readers. */
+  collaborators: { login: string; avatar_url: string }[] | "forbidden"
+}
+
+const repoMeta = new Map<string, Partial<MockRepoMeta>>()
+
+const DEFAULT_META: MockRepoMeta = {
+  private: true,
+  permissions: { admin: true, push: true },
+  topics: [],
+  collaborators: [],
+}
+
+function metaFor(repo: string): MockRepoMeta {
+  return { ...DEFAULT_META, ...repoMeta.get(repo) }
+}
+
+/** Seed (merge) registry metadata; also registers the repo as existing. */
+export function seedRepoMeta(repo: string, meta: Partial<MockRepoMeta>) {
+  repoMeta.set(repo, { ...repoMeta.get(repo), ...meta })
+  if (!repos.has(repo)) repos.set(repo, new Map())
+}
+
+function mockRepoExists(repo: string): boolean {
+  return repos.has(repo) || repoMeta.has(repo)
+}
+
+/** Injected failure for the repo search endpoint. */
+let searchFailure: Failure | null = null
+
+export function failSearch({
+  status = 500,
+  times = Infinity,
+  network,
+}: { status?: number; times?: number; network?: boolean } = {}) {
+  searchFailure = { status, times, network }
+}
+
+/** Orgs /user/orgs reports for every token. */
+let userOrgs: string[] = []
+
+export function seedUserOrgs(orgs: string[]) {
+  userOrgs = orgs
+}
+
 /** The slice of a contents-API PUT body the mock reads (base64 content +
     branch + optional expected SHA). */
 const putBodySchema = z.object({
@@ -52,6 +109,9 @@ export const githubStats = { full: 0, conditional: 0 }
 export function resetGitHub() {
   repos.clear()
   failures.clear()
+  repoMeta.clear()
+  searchFailure = null
+  userOrgs = []
   githubStats.full = 0
   githubStats.conditional = 0
 }
@@ -149,17 +209,92 @@ function failureResponse(failure: Failure): Response {
 }
 
 export const githubHandlers = [
-  // repoExists probe. The failure map keys the probe under the empty path,
-  // so tests can inject a 5xx/network blip on the existence check itself.
+  // Repo probe — repoExists and getRepoMeta both read this. The failure map
+  // keys the probe under the empty path, so tests can inject a 5xx/network
+  // blip on the existence/metadata check itself.
   http.get(
     "https://api.github.com/repos/:owner/:repo",
     ({ params, request }) => {
       const repo = `${params.owner}/${params.repo}`
       const failure = takeFailure(repo, "", "repo")
       if (failure) return failureResponse(failure)
-      if (!repos.has(repo)) return new HttpResponse(null, { status: 404 })
-      return json(request, { full_name: repo })
+      if (!mockRepoExists(repo)) return new HttpResponse(null, { status: 404 })
+      const meta = metaFor(repo)
+      return json(request, {
+        full_name: repo,
+        private: meta.private,
+        ...(meta.permissions ? { permissions: meta.permissions } : {}),
+      })
     },
+  ),
+
+  // Repo search — the data-repo registry's discovery call (ADR-0023). Only
+  // the `topic:` qualifier is modeled; results are every existing repo
+  // carrying that topic, in the metadata shape the registry reads.
+  http.get("https://api.github.com/search/repositories", ({ request }) => {
+    if (searchFailure && searchFailure.times > 0) {
+      searchFailure.times -= 1
+      return failureResponse(searchFailure)
+    }
+    const q = new URL(request.url).searchParams.get("q") ?? ""
+    const topic = /topic:([a-z0-9-]+)/.exec(q)?.[1]
+    const names = new Set([...repos.keys(), ...repoMeta.keys()])
+    const items = [...names]
+      .filter((repo) => topic != null && metaFor(repo).topics.includes(topic))
+      .map((repo) => {
+        const meta = metaFor(repo)
+        return {
+          full_name: repo,
+          private: meta.private,
+          ...(meta.permissions ? { permissions: meta.permissions } : {}),
+        }
+      })
+    return json(request, { total_count: items.length, items })
+  }),
+
+  // Topics read + replace — GitHub's PUT swaps the whole set, which is why
+  // addRepoTopic must read-then-union; the mock mirrors that contract.
+  http.get(
+    "https://api.github.com/repos/:owner/:repo/topics",
+    ({ params, request }) => {
+      const repo = `${params.owner}/${params.repo}`
+      if (!mockRepoExists(repo)) return new HttpResponse(null, { status: 404 })
+      return json(request, { names: metaFor(repo).topics })
+    },
+  ),
+  http.put(
+    "https://api.github.com/repos/:owner/:repo/topics",
+    async ({ params, request }) => {
+      const repo = `${params.owner}/${params.repo}`
+      if (!mockRepoExists(repo)) return new HttpResponse(null, { status: 404 })
+      const body = z
+        .object({ names: z.array(z.string()) })
+        .parse(await request.json())
+      seedRepoMeta(repo, { topics: body.names })
+      return HttpResponse.json({ names: body.names })
+    },
+  ),
+
+  // Collaborators — 403 for viewers without push access, like GitHub.
+  http.get(
+    "https://api.github.com/repos/:owner/:repo/collaborators",
+    ({ params, request }) => {
+      const repo = `${params.owner}/${params.repo}`
+      if (!mockRepoExists(repo)) return new HttpResponse(null, { status: 404 })
+      const { collaborators } = metaFor(repo)
+      if (collaborators === "forbidden") {
+        return new HttpResponse(null, { status: 403 })
+      }
+      return json(request, collaborators)
+    },
+  ),
+
+  // The viewer's orgs — owner choices for create-from-template.
+  http.get("https://api.github.com/user/orgs", ({ request }) =>
+    json(
+      request,
+      userOrgs.map((login) => ({ login })),
+    ),
   ),
 
   // Contents API — single file, base64 payload.
