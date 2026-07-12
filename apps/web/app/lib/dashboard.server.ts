@@ -178,6 +178,32 @@ export async function listDashboards(
 }
 
 /**
+ * The rail's team board list, in the three states the sidebar renders:
+ * `null` — team scope unreachable (unconfigured, repo missing or unreadable,
+ * or a GitHub flap): the group is hidden and the new-dashboard dialog stops
+ * offering the team scope. `[]` — the repo exists but holds no boards (git
+ * prunes `data/dashboards/` with the last board file, so the dir listing
+ * 404s even though team scope is alive): the group stays, carrying its
+ * create-first row. Otherwise the board slugs.
+ *
+ * The extra repoExists round-trip runs only on a 404 listing — the one case
+ * where "empty" and "no access" are the same GitHub answer.
+ */
+export async function listTeamDashboards(
+  token: string,
+): Promise<string[] | null> {
+  const teamRepo = resolveTeamRepo()
+  if (!teamRepo) return null
+  try {
+    const dashboards = await listDashboards(token, teamRepo)
+    if (dashboards) return dashboards
+    return (await repoExists(token, teamRepo)) ? [] : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * The board's structure (config from the data repo's main, templates from
  * the data repo + built-ins, sibling boards) — everything but the artifacts.
  * Route loaders await this so redirect/404 decisions stay on the request path.

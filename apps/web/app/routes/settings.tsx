@@ -10,8 +10,8 @@ import {
 import { NavShell } from "../components/nav-shell.tsx"
 import {
   listDashboards,
+  listTeamDashboards,
   resolveDataRepo,
-  resolveTeamRepo,
 } from "../lib/dashboard.server.ts"
 import {
   isLocale,
@@ -39,12 +39,9 @@ import { cn } from "~/lib/utils"
 export async function loader({ request }: Route.LoaderArgs) {
   const auth = await requireAuth(request)
   const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
-  const teamRepo = resolveTeamRepo()
   const [personalDashboards, teamDashboards] = await Promise.all([
     listDashboards(auth.token, dataRepo).catch(() => null),
-    teamRepo
-      ? listDashboards(auth.token, teamRepo).catch(() => null)
-      : Promise.resolve(null),
+    listTeamDashboards(auth.token),
   ])
   return {
     locale: getLocale(request),

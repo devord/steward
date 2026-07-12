@@ -12,12 +12,11 @@ import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import type { AppearanceMode } from "../lib/theme.ts"
 import { useAppearance } from "../lib/use-appearance.ts"
 import {
-  listDashboards,
+  listTeamDashboards,
   loadArtifacts,
   loadDashboardStructureOr503,
   repoExistsOr503,
   resolveDataRepo,
-  resolveTeamRepo,
 } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
 import { getAuth } from "../lib/session.server.ts"
@@ -60,12 +59,9 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
   // The team dashboard list is switcher garnish: no team repo, no access,
   // or a GitHub flap all degrade to "no team section", never an error.
-  const teamRepo = resolveTeamRepo()
   const [view, teamDashboards] = await Promise.all([
     loadDashboardStructureOr503(auth.token, ref),
-    teamRepo
-      ? listDashboards(auth.token, teamRepo).catch(() => null)
-      : Promise.resolve(null),
+    listTeamDashboards(auth.token),
   ])
   // Widget bodies stream in after the chrome + grid paint — returning the
   // promise unawaited defers it (ADR-0002); the board renders skeleton cells

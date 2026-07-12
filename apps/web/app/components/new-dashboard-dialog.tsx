@@ -57,6 +57,13 @@ export function NewDashboardDialog({
   const [slugEdited, setSlugEdited] = useState(false)
   const [slug, setSlug] = useState("")
 
+  // The caller can open the dialog pre-scoped (the rail's empty team group
+  // opens it on "team"), so the scope re-arms from the prop on every open —
+  // the mount-time initial value only covers the first one.
+  useEffect(() => {
+    if (open) setScope(defaultScope)
+  }, [open, defaultScope])
+
   const effectiveScope = canTeam ? scope : "personal"
   const slugValid = slugSchema.safeParse(slug).success
   const slugTaken = takenSlugs[effectiveScope].includes(slug)

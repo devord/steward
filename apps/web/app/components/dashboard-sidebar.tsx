@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import { LayoutGrid, MoreHorizontal, Trash2 } from "lucide-react"
+import { LayoutGrid, MoreHorizontal, Plus, Trash2 } from "lucide-react"
 
 import { AccountMenu } from "./account-menu.tsx"
 import { Wordmark } from "./logo.tsx"
@@ -29,6 +29,13 @@ import { useT } from "../lib/i18n.tsx"
  * one click, the active one reads from across the room, and "new dashboard" is
  * a peer of the boards it joins. The data repo is reachable from the account
  * menu ("View data repo"), so it isn't repeated here.
+ *
+ * The Team group tracks the *scope*, not the boards: `teamDashboards` is null
+ * only when team scope is unreachable (unconfigured, no repo, no access) — an
+ * empty array means the team repo exists with no boards yet (deleting the last
+ * one gets here), and the group stays put with a create-first row in place of
+ * the board list. Hiding it would make team scope disappear from the app the
+ * moment its last board goes.
  */
 export function DashboardSidebar({
   dataRepo,
@@ -57,7 +64,9 @@ export function DashboardSidebar({
   onNavigate?: () => void
 }) {
   const t = useT()
-  const [creating, setCreating] = useState(false)
+  // The scope the new-dashboard dialog opens on, or null while closed — the
+  // empty team group's create-first row opens it pre-scoped to team.
+  const [creating, setCreating] = useState<BoardScope | null>(null)
 
   return (
     <div className="flex h-full flex-col">
@@ -118,6 +127,23 @@ export function DashboardSidebar({
                 />
               )
             })}
+            {teamDashboards.length === 0 && (
+              // The group's only child while the team repo has no boards: the
+              // next action, sitting where the first board will. The plus takes
+              // the rail-node slot the active dot uses, so it reads as "a board
+              // goes here".
+              <button
+                type="button"
+                onClick={() => setCreating("team")}
+                className="relative flex w-full cursor-pointer items-center rounded-md py-1.5 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                <Plus
+                  aria-hidden
+                  className="absolute top-1/2 left-[13px] size-3 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
+                />
+                {t("team.emptyCta")}
+              </button>
+            )}
           </NavGroup>
         )}
 
@@ -127,7 +153,7 @@ export function DashboardSidebar({
 
         <button
           type="button"
-          onClick={() => setCreating(true)}
+          onClick={() => setCreating(scope)}
           className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <LayoutGrid className="size-4 shrink-0 text-ink-faint" />
@@ -146,9 +172,11 @@ export function DashboardSidebar({
       </div>
 
       <NewDashboardDialog
-        open={creating}
-        onOpenChange={setCreating}
-        defaultScope={scope}
+        open={creating !== null}
+        onOpenChange={(open) => {
+          if (!open) setCreating(null)
+        }}
+        defaultScope={creating ?? scope}
         canTeam={teamDashboards != null}
         takenSlugs={{
           personal: personalDashboards,

@@ -102,3 +102,42 @@ describe("DashboardSidebar per-board menu", () => {
     expect(menuButton("team-ops")).toBeNull()
   })
 })
+
+/** The Team group heading — a plain div, so match on exact text. */
+const teamHeading = (): HTMLElement | null =>
+  [...document.querySelectorAll<HTMLElement>("nav div")].find(
+    (el) => el.textContent === "Team",
+  ) ?? null
+
+const createFirstRow = (): HTMLButtonElement | null =>
+  [...document.querySelectorAll("button")].find(
+    (el) => el.textContent?.trim() === "New team dashboard",
+  ) ?? null
+
+describe("DashboardSidebar empty team group", () => {
+  it("keeps the group with a create-first row when the team repo has no boards", async () => {
+    // [] is "team scope alive, zero boards" — the state after deleting the
+    // last team board. The group must not vanish with it.
+    await renderSidebar({ teamDashboards: [] })
+    expect(teamHeading()).not.toBeNull()
+    expect(createFirstRow()).not.toBeNull()
+  })
+
+  it("opens the new-dashboard dialog pre-scoped to team", async () => {
+    await renderSidebar({ teamDashboards: [] })
+    createFirstRow()?.click()
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('[role="dialog"]')).not.toBeNull(),
+    )
+    // The scope field renders (team is still offered) and starts on team.
+    const value = document.querySelector('[data-slot="select-value"]')
+    expect(value?.textContent ?? "").toMatch(/team/i)
+  })
+
+  it("hides the group only when team scope is unreachable (null)", async () => {
+    await renderSidebar({ teamDashboards: null })
+    expect(teamHeading()).toBeNull()
+    expect(createFirstRow()).toBeNull()
+  })
+})
