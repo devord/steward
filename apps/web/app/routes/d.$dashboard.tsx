@@ -6,12 +6,11 @@ import type { Route } from "./+types/d.$dashboard"
 import { DashboardBoard } from "../components/dashboard-board.tsx"
 import { DEFAULT_DASHBOARD } from "../lib/board.ts"
 import {
-  listDashboards,
+  listTeamDashboards,
   loadArtifacts,
   loadDashboardStructureOr503,
   repoExistsOr503,
   resolveDataRepo,
-  resolveTeamRepo,
 } from "../lib/dashboard.server.ts"
 import { requireAuth } from "../lib/session.server.ts"
 
@@ -36,12 +35,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     repo: dataRepo,
     dashboard: params.dashboard,
   }
-  const teamRepo = resolveTeamRepo()
   const [view, teamDashboards] = await Promise.all([
     loadDashboardStructureOr503(auth.token, ref),
-    teamRepo
-      ? listDashboards(auth.token, teamRepo).catch(() => null)
-      : Promise.resolve(null),
+    listTeamDashboards(auth.token),
   ])
   // Unlike `/` (which tolerates a repo predating the dashboards dir), a
   // named board must actually exist — a missing file here is a typo.
