@@ -467,8 +467,8 @@ export function DashboardBoard({
             <h2 className="mb-1 font-mono text-xs text-ink-dim">
               {t("offgrid.title")}
             </h2>
-            <p className="mb-2 max-w-prose text-xs text-ink-dim">
-              {t("offgrid.hint")}
+            <p className="mb-2 text-xs text-ink-dim">
+              <FileLine text={t("offgrid.hint")} file="routines.yaml" />
             </p>
             <div className="flex flex-wrap gap-2">
               {unplaced.map((routine) => (
@@ -845,10 +845,39 @@ function GridSettings({
         )}
       </GridKnob>
 
-      <span className="ml-auto hidden text-ink-dim min-[1100px]:inline">
-        {t("grid.hint")}
+      <span className="ml-auto hidden items-center gap-4 min-[1100px]:flex">
+        {(
+          [
+            ["grid.moveKey", "grid.moveLabel"],
+            ["grid.resizeKey", "grid.resizeLabel"],
+            ["grid.removeKey", "grid.removeLabel"],
+          ] as const
+        ).map(([keyToken, label]) => (
+          <span key={label} className="inline-flex items-center gap-1.5">
+            <kbd className="rounded-sm border border-border-dim bg-bg2 px-1 font-mono text-ink-dim">
+              {t(keyToken)}
+            </kbd>
+            <span className="text-ink-faint">{t(label)}</span>
+          </span>
+        ))}
       </span>
     </div>
+  )
+}
+
+/**
+ * A translated sentence with its `{file}` slot rendered as a mono <code>
+ * element — the locale controls the words around the file name (the same
+ * shape as setup's BranchLine).
+ */
+function FileLine({ text, file }: { text: string; file: string }) {
+  const [before = "", after = ""] = text.split("{file}")
+  return (
+    <>
+      {before}
+      <code className="font-mono">{file}</code>
+      {after}
+    </>
   )
 }
 
@@ -857,7 +886,7 @@ function EmptyDashboard({ onAdd }: { onAdd: () => void }) {
   return (
     <main className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-24 text-center">
       <p className="font-mono text-sm text-ink-dim">{t("empty.fact")}</p>
-      <p className="max-w-sm text-sm text-muted-foreground">
+      <p className="max-w-lg text-balance text-sm text-muted-foreground">
         {t("empty.hint")}
       </p>
       <Button className="mt-3" onClick={onAdd}>

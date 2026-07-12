@@ -53,7 +53,7 @@ export const ptBR: Messages = {
 
   "offgrid.title": "Fora da grade",
   "offgrid.hint":
-    "Estas rotinas vivem no routines.yaml compartilhado deste repo mas não estão neste painel — coloque uma, ou exclua-a do repo.",
+    "No {file} compartilhado deste repo — coloque uma, ou exclua-a do repo.",
   "offgrid.delete": "Excluir {name} do repo",
   "offgrid.edit": "Editar {name}",
   "offgrid.viewHint": "{n} fora deste painel — Editar para colocar",
@@ -72,8 +72,12 @@ export const ptBR: Messages = {
   "grid.densityCompact": "Compacta",
   "grid.densityCozy": "Confortável",
   "grid.densityRoomy": "Espaçosa",
-  "grid.hint":
-    "Arraste para mover · canto para redimensionar · del para remover",
+  "grid.moveKey": "arraste",
+  "grid.moveLabel": "mover",
+  "grid.resizeKey": "canto",
+  "grid.resizeLabel": "redimensionar",
+  "grid.removeKey": "del",
+  "grid.removeLabel": "remover",
 
   "switcher.label": "Painel",
   "switcher.personal": "Pessoal",
