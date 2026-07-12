@@ -7,8 +7,8 @@ import {
 import { data } from "react-router"
 import { z } from "zod"
 
-import { DEFAULT_DASHBOARD } from "../lib/board.ts"
-import { resolveDataRepo, resolveTeamRepo } from "../lib/dashboard.server.ts"
+import { DEFAULT_DASHBOARD } from "../lib/repos.ts"
+import { requireDataRepo } from "../lib/repos.server.ts"
 import {
   deleteFile,
   getFile,
@@ -25,13 +25,14 @@ import { requireAuth } from "../lib/session.server.ts"
 const payloadSchema = z.discriminatedUnion("intent", [
   z.object({
     intent: z.literal("create"),
-    scope: z.enum(["personal", "team"]),
+    /** Which data repo — gated by requireDataRepo (ADR-0023). */
+    repo: z.string(),
     slug: slugSchema,
     name: z.string().min(1).optional(),
   }),
   z.object({
     intent: z.literal("delete"),
-    scope: z.enum(["personal", "team"]),
+    repo: z.string(),
     slug: slugSchema,
   }),
 ])
@@ -51,13 +52,13 @@ export async function action({ request }: { request: Request }) {
   }
   const payload = parsed.data
 
-  const repo =
-    payload.scope === "team"
-      ? resolveTeamRepo()
-      : resolveDataRepo(auth.login, auth.dataRepo)
-  if (!repo) {
-    throw data({ error: "team repo not configured" }, { status: 400 })
-  }
+  const dataRepo = await requireDataRepo(
+    auth.token,
+    auth.login,
+    payload.repo,
+    auth.dataRepo,
+  )
+  const repo = dataRepo.full
   const path = dashboardPath(payload.slug)
 
   if (payload.intent === "create") {
@@ -86,7 +87,8 @@ export async function action({ request }: { request: Request }) {
 
   // delete — routines are untouched: widgets reference routines, not the
   // other way around, so a routine keeps running for other dashboards.
-  if (payload.scope === "personal" && payload.slug === DEFAULT_DASHBOARD) {
+  // Only the home repo's default board is protected: it backs `/`.
+  if (dataRepo.isHome && payload.slug === DEFAULT_DASHBOARD) {
     throw data(
       { error: "cannot delete the default dashboard" },
       { status: 400 },

@@ -61,7 +61,6 @@ describe("WidgetCard empty states", () => {
         routine={routine()}
         artifact={artifact({ hasTrigger: false })}
         now={Date.now()}
-        scope="personal"
         dataRepo="o/r"
         committed
       />,
@@ -76,7 +75,6 @@ describe("WidgetCard empty states", () => {
         routine={routine({ host: "local" })}
         artifact={undefined}
         now={Date.now()}
-        scope="personal"
         dataRepo="o/r"
         committed
       />,
@@ -91,7 +89,6 @@ describe("WidgetCard empty states", () => {
         routine={routine({ schedule: "0 */4 * * *" })}
         artifact={artifact({ hasTrigger: true })}
         now={Date.now()}
-        scope="personal"
         dataRepo="o/r"
         committed
       />,
@@ -111,7 +108,6 @@ describe("WidgetCard empty states", () => {
         routine={routine()}
         artifact={artifact({ hasTrigger: true })}
         now={Date.now()}
-        scope="personal"
         dataRepo="o/r"
         committed
       />,
@@ -120,7 +116,7 @@ describe("WidgetCard empty states", () => {
     expect(document.querySelector('button[aria-label^="Update"]')).toBeNull()
   })
 
-  it("fires /run with the board scope and slug when the CTA is clicked", async () => {
+  it("fires /run with the board's repo and slug when the CTA is clicked", async () => {
     let received: unknown
     let fired = false
     const router = createMemoryRouter([
@@ -132,7 +128,6 @@ describe("WidgetCard empty states", () => {
             routine={routine({ schedule: "0 */4 * * *" })}
             artifact={artifact({ hasTrigger: true })}
             now={Date.now()}
-            scope="personal"
             dataRepo="o/r"
             committed
             onFired={() => {
@@ -153,10 +148,10 @@ describe("WidgetCard empty states", () => {
 
     await screen.getByRole("button", { name: "Run first update" }).click()
 
-    // The action must see the parsed object (scope + slug), and a successful
+    // The action must see the parsed object (repo + slug), and a successful
     // fire reaches the board via onFired — the full useFireRoutine round trip.
     await expect.poll(() => fired).toBe(true)
-    expect(received).toEqual({ scope: "personal", slug: "r" })
+    expect(received).toEqual({ repo: "o/r", slug: "r" })
   })
 
   it("drops the update button while a run is in flight", async () => {
@@ -166,7 +161,6 @@ describe("WidgetCard empty states", () => {
         routine={routine()}
         artifact={artifact({ hasTrigger: true })}
         now={Date.now()}
-        scope="personal"
         dataRepo="o/r"
         committed
         pendingFiredAt={Date.now()}
@@ -185,7 +179,6 @@ describe("WidgetCard empty states", () => {
         routine={routine()}
         artifact={artifact({ html: "<h1>live</h1>", hasTrigger: true })}
         now={Date.now()}
-        scope="personal"
         dataRepo="o/r"
         committed
         pendingFiredAt={Date.now()}
@@ -207,7 +200,6 @@ describe("WidgetCard empty states", () => {
         routine={routine({ enabled: false })}
         artifact={undefined}
         now={Date.now()}
-        scope="personal"
         dataRepo="o/r"
         committed
         onToggleEnabled={() => {
@@ -230,7 +222,6 @@ describe("WidgetCard empty states", () => {
         routine={routine()}
         artifact={artifact({ html: "<h1>live</h1>" })}
         now={Date.now()}
-        scope="personal"
         dataRepo="o/r"
         committed
         editing

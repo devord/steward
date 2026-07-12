@@ -2,6 +2,9 @@ import { type RouteConfig, index, route } from "@react-router/dev/routes"
 
 export default [
   index("routes/home.tsx"),
+  route("r/:owner/:repo/:dashboard", "routes/r.$owner.$repo.$dashboard.tsx"),
+  // Legacy URL shapes, pre-ADR-0023 — permanent redirects to the canonical
+  // `/r/:owner/:repo/:dashboard` space.
   route("d/:dashboard", "routes/d.$dashboard.tsx"),
   route("team", "routes/team.tsx"),
   route("team/:dashboard", "routes/team.$dashboard.tsx"),

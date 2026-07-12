@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select"
-import { type BoardScope, boardHref } from "../lib/board.ts"
+import { boardHref } from "../lib/repos.ts"
 import { useT } from "../lib/i18n.tsx"
 
 interface CreateResult {
@@ -32,50 +32,60 @@ interface CreateResult {
 }
 
 /**
- * Creating a dashboard commits its empty layout file directly (ADR-0010) —
- * the route must exist server-side before it can render, so there is
- * nothing to draft.
+ * Creating a dashboard commits its empty layout file directly — the route
+ * must exist server-side before it can render, so there is nothing to draft.
+ * The repo picker offers every discovered data repo (ADR-0023).
  */
 export function NewDashboardDialog({
   open,
   onOpenChange,
-  defaultScope,
-  canTeam,
+  repos,
+  defaultRepo,
+  homeRepo,
   takenSlugs,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  defaultScope: BoardScope
-  canTeam: boolean
-  takenSlugs: { personal: string[]; team: string[] }
+  /** Every discovered data repo (`owner/name`), home first. */
+  repos: string[]
+  defaultRepo: string
+  /** The viewer's home repo — canonical URL resolution after create. */
+  homeRepo: string
+  /** Board slugs already taken, per repo. */
+  takenSlugs: Record<string, string[]>
 }) {
   const t = useT()
   const navigate = useNavigate()
   const fetcher = useFetcher<CreateResult>()
-  const [scope, setScope] = useState<BoardScope>(defaultScope)
+  const [repo, setRepo] = useState(defaultRepo)
   const [name, setName] = useState("")
   const [slugEdited, setSlugEdited] = useState(false)
   const [slug, setSlug] = useState("")
 
-  // The caller can open the dialog pre-scoped (the rail's empty team group
-  // opens it on "team"), so the scope re-arms from the prop on every open —
-  // the mount-time initial value only covers the first one.
+  // The caller can open the dialog pre-targeted (an empty repo group's
+  // create-first row opens it on that repo), so the repo re-arms from the
+  // prop on every open — the mount-time initial value only covers the first.
   useEffect(() => {
-    if (open) setScope(defaultScope)
-  }, [open, defaultScope])
+    if (open) setRepo(defaultRepo)
+  }, [open, defaultRepo])
 
-  const effectiveScope = canTeam ? scope : "personal"
+  const effectiveRepo = repos.includes(repo) ? repo : (repos[0] ?? "")
   const slugValid = slugSchema.safeParse(slug).success
-  const slugTaken = takenSlugs[effectiveScope].includes(slug)
+  const slugTaken = (takenSlugs[effectiveRepo] ?? []).includes(slug)
   const busy = fetcher.state !== "idle"
-  const canSubmit = name.trim().length > 0 && slugValid && !slugTaken && !busy
+  const canSubmit =
+    name.trim().length > 0 &&
+    slugValid &&
+    !slugTaken &&
+    !busy &&
+    effectiveRepo !== ""
 
   const reset = useCallback(() => {
-    setScope(defaultScope)
+    setRepo(defaultRepo)
     setName("")
     setSlugEdited(false)
     setSlug("")
-  }, [defaultScope])
+  }, [defaultRepo])
 
   // A successful create resets + closes the dialog and navigates to the
   // new board. Every close path must reset, or the next open shows stale
@@ -85,15 +95,23 @@ export function NewDashboardDialog({
     if (!createdSlug || !open) return
     reset()
     onOpenChange(false)
-    void navigate(boardHref(effectiveScope, createdSlug))
-  }, [createdSlug, open, effectiveScope, onOpenChange, navigate, reset])
+    void navigate(boardHref(effectiveRepo, createdSlug, homeRepo))
+  }, [
+    createdSlug,
+    open,
+    effectiveRepo,
+    homeRepo,
+    onOpenChange,
+    navigate,
+    reset,
+  ])
 
   function submit() {
     if (!canSubmit) return
     void fetcher.submit(
       JSON.stringify({
         intent: "create",
-        scope: effectiveScope,
+        repo: effectiveRepo,
         slug,
         name: name.trim(),
       }),
@@ -116,23 +134,30 @@ export function NewDashboardDialog({
         </DialogHeader>
 
         <div className="grid gap-4">
-          {canTeam && (
+          {repos.length > 1 && (
             <div className="grid gap-2">
-              <Label>{t("newDash.scope")}</Label>
+              <Label>{t("newDash.repo")}</Label>
               <Select
-                value={scope}
+                value={effectiveRepo}
                 onValueChange={(next) => {
-                  if (next === "personal" || next === "team") setScope(next)
+                  if (typeof next === "string" && repos.includes(next)) {
+                    setRepo(next)
+                  }
                 }}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full font-mono">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="personal">
-                    {t("newDash.scopePersonal")}
-                  </SelectItem>
-                  <SelectItem value="team">{t("newDash.scopeTeam")}</SelectItem>
+                  {repos.map((option) => (
+                    <SelectItem
+                      key={option}
+                      value={option}
+                      className="font-mono"
+                    >
+                      {option}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

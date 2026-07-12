@@ -14,59 +14,56 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
-import { type BoardScope, boardHref, DEFAULT_DASHBOARD } from "../lib/board.ts"
+import type { SidebarData } from "../lib/dashboard.server.ts"
+import { boardHref, DEFAULT_DASHBOARD } from "../lib/repos.ts"
 import { useT } from "../lib/i18n.tsx"
 
 /**
- * The board navigation rail — brand, the boards grouped by scope, a new-board
- * affordance, and the account menu pinned to the foot. Renders the same inner
- * content in two hosts: the persistent `<aside>` on wide viewports and the
- * mobile drawer (`dashboard-shell.tsx`). It carries no surface, width, or
- * positioning of its own — the host owns the border, background, collapse, and
- * resize — so the two placements can't drift.
+ * The board navigation rail — brand, one group per discovered data repo
+ * (ADR-0023, home first), a new-board affordance, and the account menu pinned
+ * to the foot. Renders the same inner content in two hosts: the persistent
+ * `<aside>` on wide viewports and the mobile drawer (`dashboard-shell.tsx`).
+ * It carries no surface, width, or positioning of its own — the host owns the
+ * border, background, collapse, and resize — so the two placements can't drift.
  *
- * Board switching lives in this always-visible list (ADR-0010): every board is
- * one click, the active one reads from across the room, and "new dashboard" is
- * a peer of the boards it joins. The data repo is reachable from the account
- * menu ("View data repo"), so it isn't repeated here.
+ * Board switching lives in this always-visible list: every board is one click,
+ * the active one reads from across the room, and "new dashboard" is a peer of
+ * the boards it joins.
  *
- * The Team group tracks the *scope*, not the boards: `teamDashboards` is null
- * only when team scope is unreachable (unconfigured, no repo, no access) — an
- * empty array means the team repo exists with no boards yet (deleting the last
- * one gets here), and the group stays put with a create-first row in place of
- * the board list. Hiding it would make team scope disappear from the app the
- * moment its last board goes.
+ * A repo group with no boards keeps a create-first row in place of the board
+ * list — deleting the last board must not make the repo disappear from the app.
  */
 export function DashboardSidebar({
   dataRepo,
-  scope,
+  activeRepo,
   dashboardSlug,
-  personalDashboards,
-  teamDashboards,
+  sidebar,
   login,
   displayName,
   onDeleteBoard,
   onNavigate,
 }: {
   dataRepo: string
-  scope: BoardScope
+  /** The active board's repo; "" on chrome pages (settings). */
+  activeRepo: string
   dashboardSlug: string
-  personalDashboards: string[]
-  teamDashboards: string[] | null
+  sidebar: SidebarData
   login: string
   displayName?: string | null
-  /** Delete a board by scope+slug — the handler behind every board's per-board
+  /** Delete a board by repo+slug — the handler behind every board's per-board
       menu, so a board is actionable without first switching to it. Absent on
-      chrome pages (no board actions there); the personal default board is never
+      chrome pages (no board actions there); the home default board is never
       offered a menu (it must always exist). */
-  onDeleteBoard?: (scope: BoardScope, slug: string) => void
+  onDeleteBoard?: (repo: string, slug: string) => void
   /** Fired when a board link is followed — lets the mobile drawer close. */
   onNavigate?: () => void
 }) {
   const t = useT()
-  // The scope the new-dashboard dialog opens on, or null while closed — the
-  // empty team group's create-first row opens it pre-scoped to team.
-  const [creating, setCreating] = useState<BoardScope | null>(null)
+  // The repo the new-dashboard dialog opens on, or null while closed — an
+  // empty group's create-first row opens it pre-targeted at that repo.
+  const [creating, setCreating] = useState<string | null>(null)
+
+  const homeRepo = sidebar.repos.find((repo) => repo.isHome)?.repo ?? ""
 
   return (
     <div className="flex h-full flex-col">
@@ -87,64 +84,56 @@ export function DashboardSidebar({
         aria-label={t("nav.boards")}
         className="flex-1 space-y-4 overflow-y-auto px-2 py-3"
       >
-        <NavGroup label={t("switcher.personal")}>
-          {personalDashboards.map((slug) => {
-            const active = scope === "personal" && dashboardSlug === slug
-            // Every personal board is deletable but the default — it backs `/`.
-            return (
-              <NavItem
-                key={`personal:${slug}`}
-                to={boardHref("personal", slug)}
-                label={slug}
-                active={active}
-                onDelete={
-                  onDeleteBoard && slug !== DEFAULT_DASHBOARD
-                    ? () => onDeleteBoard("personal", slug)
-                    : undefined
-                }
-                onNavigate={onNavigate}
-              />
-            )
-          })}
-        </NavGroup>
-
-        {teamDashboards && (
-          <NavGroup label={t("switcher.team")}>
-            {teamDashboards.map((slug) => {
-              const active = scope === "team" && dashboardSlug === slug
+        {sidebar.repos.map((group) => (
+          <NavGroup
+            key={group.repo}
+            label={group.isHome ? t("switcher.personal") : group.name}
+          >
+            {group.dashboards.map((slug) => {
+              const active = activeRepo === group.repo && dashboardSlug === slug
+              // Every board is deletable but the home default — it backs `/`.
               return (
                 <NavItem
-                  key={`team:${slug}`}
-                  to={boardHref("team", slug)}
+                  key={`${group.repo}:${slug}`}
+                  to={boardHref(group.repo, slug, homeRepo)}
                   label={slug}
                   active={active}
                   onDelete={
-                    onDeleteBoard
-                      ? () => onDeleteBoard("team", slug)
+                    onDeleteBoard &&
+                    !(group.isHome && slug === DEFAULT_DASHBOARD)
+                      ? () => onDeleteBoard(group.repo, slug)
                       : undefined
                   }
                   onNavigate={onNavigate}
                 />
               )
             })}
-            {teamDashboards.length === 0 && (
-              // The group's only child while the team repo has no boards: the
-              // next action, sitting where the first board will. The plus takes
-              // the rail-node slot the active dot uses, so it reads as "a board
-              // goes here".
+            {group.dashboards.length === 0 && (
+              // The group's only child while the repo has no boards: the
+              // next action, sitting where the first board will. The plus
+              // takes the rail-node slot the active dot uses, so it reads
+              // as "a board goes here".
               <button
                 type="button"
-                onClick={() => setCreating("team")}
+                onClick={() => setCreating(group.repo)}
                 className="relative flex w-full cursor-pointer items-center rounded-md py-1.5 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 <Plus
                   aria-hidden
                   className="absolute top-1/2 left-[13px] size-3 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
                 />
-                {t("team.emptyCta")}
+                {t("switcher.newHere")}
               </button>
             )}
           </NavGroup>
+        ))}
+
+        {/* Discovery degraded (search rate limit, GitHub flap): say quietly
+            that groups may be missing rather than render a confident lie. */}
+        {!sidebar.complete && (
+          <p className="px-2.5 font-mono text-xs text-ink-faint">
+            {t("switcher.incomplete")}
+          </p>
         )}
 
         {/* Hairline setting the create action apart from the boards it makes —
@@ -153,7 +142,7 @@ export function DashboardSidebar({
 
         <button
           type="button"
-          onClick={() => setCreating(scope)}
+          onClick={() => setCreating(activeRepo || homeRepo)}
           className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <LayoutGrid className="size-4 shrink-0 text-ink-faint" />
@@ -176,19 +165,19 @@ export function DashboardSidebar({
         onOpenChange={(open) => {
           if (!open) setCreating(null)
         }}
-        defaultScope={creating ?? scope}
-        canTeam={teamDashboards != null}
-        takenSlugs={{
-          personal: personalDashboards,
-          team: teamDashboards ?? [],
-        }}
+        repos={sidebar.repos.map((repo) => repo.repo)}
+        defaultRepo={creating ?? activeRepo ?? homeRepo}
+        homeRepo={homeRepo}
+        takenSlugs={Object.fromEntries(
+          sidebar.repos.map((repo) => [repo.repo, repo.dashboards]),
+        )}
       />
     </div>
   )
 }
 
 /**
- * A scope heading with its board list threaded on a single hairline spine — a
+ * A repo heading with its board list threaded on a single hairline spine — a
  * tree indent guide (1px, neutral), not a side-stripe: the rail descends from
  * under the heading and runs the height of the group, so the boards read as its
  * children rather than rows floating in space. The active board is an accent
@@ -203,7 +192,7 @@ function NavGroup({
 }) {
   return (
     <div>
-      <div className="mb-1 px-2.5 font-mono text-xs font-medium text-ink-faint">
+      <div className="mb-1 truncate px-2.5 font-mono text-xs font-medium text-ink-faint">
         {label}
       </div>
       <div className="relative flex flex-col gap-0.5">
@@ -223,7 +212,7 @@ function NavGroup({
  * ("you are here"); inactive rows leave the rail unbroken. Active also fills and
  * lifts to full ink.
  *
- * When `onDelete` is set (every deletable board — all but the personal default)
+ * When `onDelete` is set (every deletable board — all but the home default)
  * the row carries a trailing `⋯` menu: board-lifecycle actions live here, beside
  * the board they act on, so any board is actionable without switching to it
  * first. The menu rests quiet — a faint glyph, no hover gate — and brightens as

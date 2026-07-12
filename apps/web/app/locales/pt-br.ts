@@ -83,15 +83,15 @@ export const ptBR: Messages = {
 
   "switcher.label": "Painel",
   "switcher.personal": "Pessoal",
-  "switcher.team": "Time",
   "switcher.new": "Novo painel",
+  "switcher.newHere": "Criar o primeiro painel",
+  "switcher.incomplete":
+    "Alguns repos podem estar faltando — a busca do GitHub falhou",
 
   "newDash.title": "Novo painel",
   "newDash.description":
     "Uma grade nomeada de widgets — o arquivo de layout vive no repo de dados que você escolher.",
-  "newDash.scope": "Onde",
-  "newDash.scopePersonal": "Pessoal — seu repo de dados",
-  "newDash.scopeTeam": "Time — o repo compartilhado do time",
+  "newDash.repo": "Repo de dados",
   "newDash.name": "Nome",
   "newDash.namePlaceholder": "Ops do Time",
   "newDash.slug": "Slug",
@@ -113,22 +113,6 @@ export const ptBR: Messages = {
   "board.widgetsLoaded": "Widgets carregados",
   "board.widgetsUnreachable":
     "Os widgets não carregaram — tentando de novo em instantes",
-
-  "team.notConfigured":
-    "Painéis de time não estão configurados — defina BULLETIN_TEAM_REPO no deploy.",
-  "team.missingTitle": "Criar o repo do time",
-  "team.missingBody":
-    "Painéis de time vivem em um repo de dados compartilhado:",
-  "team.missingCreate": "Criar repo do time",
-  "team.missingDenied":
-    "O GitHub não deixou esta conta criá-lo — peça a um admin da org para criar o repo a partir do template e recarregue.",
-  "team.missingTemplate":
-    "O template do repo de dados não foi encontrado — confira BULLETIN_DATA_REPO_TEMPLATE, ou peça a um admin da org para criar o repo do time à mão.",
-  "team.emptyTitle": "Nenhum painel de time ainda",
-  "team.emptyBody":
-    "Crie o primeiro — todo mundo com acesso ao repo do time vai vê-lo.",
-  "team.emptyCta": "Novo painel de time",
-  "team.back": "Voltar para o seu painel",
 
   "widget.stale": "Atrasado",
   "widget.staleTitle": "Atrasado em relação ao agendamento",
@@ -278,7 +262,6 @@ export const ptBR: Messages = {
   "setup.creating": "Criando…",
   "setup.wrongAccount":
     "Tem certeza de que esse repo já existe? Esta verificação roda ao vivo a cada acesso, então não está desatualizada — o mais provável é que você esteja logado em uma conta do GitHub diferente da dona do repo. Confira o login acima e saia para trocar.",
-  "setup.teamLink": "Ir para os painéis do time",
 
   "settings.title": "Ajustes",
   "settings.back": "Voltar ao painel",

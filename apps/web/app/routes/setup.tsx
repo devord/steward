@@ -3,15 +3,10 @@ import { Form, redirect, useNavigation } from "react-router"
 import type { Route } from "./+types/setup"
 import { AccountBar } from "../components/account-bar.tsx"
 import { Button } from "~/components/ui/button"
-import { Link } from "~/components/ui/link"
-import {
-  dataRepoExists,
-  repoExistsOr503,
-  resolveDataRepo,
-  resolveTeamRepo,
-} from "../lib/dashboard.server.ts"
+import { dataRepoExists, repoExistsOr503 } from "../lib/dashboard.server.ts"
 import { env } from "../lib/env.server.ts"
-import { generateFromTemplate } from "../lib/github.server.ts"
+import { addRepoTopic, generateFromTemplate } from "../lib/github.server.ts"
+import { invalidateRepoCache, resolveHomeRepo } from "../lib/repos.server.ts"
 import { useT } from "../lib/i18n.tsx"
 import { requireAuth } from "../lib/session.server.ts"
 
@@ -21,22 +16,19 @@ export function meta(_args: Route.MetaArgs) {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const auth = await requireAuth(request)
-  const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
+  const dataRepo = resolveHomeRepo(auth.login, auth.dataRepo)
   if (await repoExistsOr503(auth.token, dataRepo)) throw redirect("/")
-  // Team boards live in a separate repo and don't depend on this one, so offer
-  // the way there when a team is configured — setup isn't a gate on them.
   return {
     login: auth.login,
     displayName: auth.name ?? null,
     dataRepo,
-    hasTeam: resolveTeamRepo() != null,
   }
 }
 
 /** First-run wizard: create the private data repo from the template. */
 export async function action({ request }: Route.ActionArgs) {
   const auth = await requireAuth(request)
-  const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
+  const dataRepo = resolveHomeRepo(auth.login, auth.dataRepo)
   const name = dataRepo.split("/")[1]
   if (!name) throw new Response("Bad data repo name", { status: 400 })
 
@@ -55,6 +47,13 @@ export async function action({ request }: Route.ActionArgs) {
     if (await dataRepoExists(auth.token, dataRepo).catch(() => false)) break
     await new Promise((resolve) => setTimeout(resolve, 1000))
   }
+  // Repos generated from a template do NOT inherit its topics — tag it here
+  // or discovery (ADR-0023) would only ever find it by the home convention.
+  // Best-effort: the convention union covers a flaked tag until re-tagged.
+  await addRepoTopic(auth.token, dataRepo, env().DATA_REPO_TOPIC).catch(
+    () => {},
+  )
+  invalidateRepoCache(auth.token)
   return redirect("/")
 }
 
@@ -74,7 +73,7 @@ function BranchLine({ text, branch }: { text: string; branch: string }) {
 }
 
 export default function Setup({ loaderData }: Route.ComponentProps) {
-  const { login, displayName, dataRepo, hasTeam } = loaderData
+  const { login, displayName, dataRepo } = loaderData
   const t = useT()
   const navigation = useNavigation()
   const creating = navigation.state !== "idle"
@@ -113,16 +112,6 @@ export default function Setup({ loaderData }: Route.ComponentProps) {
         <p className="mt-6 max-w-prose text-xs text-ink-faint">
           {t("setup.wrongAccount")}
         </p>
-        {hasTeam && (
-          <p className="mt-8 border-t border-border-dim pt-4 text-sm text-ink-dim">
-            <Link
-              to="/team"
-              className="font-mono text-xs text-ink-dim transition-colors hover:text-foreground"
-            >
-              {t("setup.teamLink")} →
-            </Link>
-          </p>
-        )}
       </main>
     </div>
   )

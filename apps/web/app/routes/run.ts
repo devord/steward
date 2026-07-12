@@ -8,7 +8,7 @@ import {
 import { data } from "react-router"
 import { z } from "zod"
 
-import { resolveDataRepo, resolveTeamRepo } from "../lib/dashboard.server.ts"
+import { requireDataRepo } from "../lib/repos.server.ts"
 import { getFile } from "../lib/github.server.ts"
 import { fireRoutine, RoutineFireError } from "../lib/routines-fire.server.ts"
 import { requireAuth } from "../lib/session.server.ts"
@@ -22,7 +22,8 @@ import { requireAuth } from "../lib/session.server.ts"
  * connectors; the fire body records who asked.
  */
 const payloadSchema = z.object({
-  scope: z.enum(["personal", "team"]),
+  /** Which data repo holds the routine — gated by requireDataRepo (ADR-0023). */
+  repo: z.string(),
   slug: slugSchema,
 })
 
@@ -43,15 +44,14 @@ export async function action({ request }: { request: Request }) {
   if (!parsed.success) {
     throw data({ error: "invalid payload" }, { status: 400 })
   }
-  const { scope, slug } = parsed.data
+  const { repo, slug } = parsed.data
 
-  const dataRepo =
-    scope === "team"
-      ? resolveTeamRepo()
-      : resolveDataRepo(auth.login, auth.dataRepo)
-  if (!dataRepo) {
-    throw data({ error: "team repo not configured" }, { status: 400 })
-  }
+  const { full: dataRepo } = await requireDataRepo(
+    auth.token,
+    auth.login,
+    repo,
+    auth.dataRepo,
+  )
 
   // Only runner-owned cloud routines carry a trigger; the client offers a
   // copy-command fallback for local ones, so reject a crafted local fire.

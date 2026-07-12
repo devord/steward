@@ -2,7 +2,7 @@ import { dashboardPath, slugSchema } from "@bulletin/schema"
 import { data } from "react-router"
 import { z } from "zod"
 
-import { resolveDataRepo, resolveTeamRepo } from "../lib/dashboard.server.ts"
+import { requireDataRepo } from "../lib/repos.server.ts"
 import { performSync } from "../lib/sync.server.ts"
 import { requireAuth } from "../lib/session.server.ts"
 
@@ -20,8 +20,8 @@ const fileChangeSchema = z.object({
 
 const payloadSchema = z.object({
   intent: z.enum(["commit", "pr"]),
-  /** Which repo the sync targets; the server resolves the repo itself. */
-  scope: z.enum(["personal", "team"]),
+  /** Which data repo the sync targets — gated by requireDataRepo (ADR-0023). */
+  repo: z.string(),
   /** Slug-validated so a crafted payload can't path-traverse the repo. */
   dashboardSlug: slugSchema,
   routines: fileChangeSchema.optional(),
@@ -43,13 +43,12 @@ export async function action({ request }: { request: Request }) {
   }
   const payload = parsed.data
 
-  const dataRepo =
-    payload.scope === "team"
-      ? resolveTeamRepo()
-      : resolveDataRepo(auth.login, auth.dataRepo)
-  if (!dataRepo) {
-    throw data({ error: "team repo not configured" }, { status: 400 })
-  }
+  const { full: dataRepo } = await requireDataRepo(
+    auth.token,
+    auth.login,
+    payload.repo,
+    auth.dataRepo,
+  )
 
   const paths = {
     routines: "data/routines.yaml",
