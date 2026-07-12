@@ -52,7 +52,7 @@ export const en = {
 
   "offgrid.title": "Not on the grid",
   "offgrid.hint":
-    "These routines live in this repo's shared routines.yaml but aren't on this board — place one, or delete it from the repo.",
+    "In this repo's shared {file} — place one, or delete it from the repo.",
   "offgrid.delete": "Delete {name} from the repo",
   "offgrid.edit": "Edit {name}",
   "offgrid.viewHint": "{n} not on this board — Edit to place",
@@ -71,7 +71,13 @@ export const en = {
   "grid.densityCompact": "Compact",
   "grid.densityCozy": "Cozy",
   "grid.densityRoomy": "Roomy",
-  "grid.hint": "Drag to move · corner to resize · del to remove",
+  // Edit-mode keymap hint: each *Key renders as a <kbd> chip before its verb.
+  "grid.moveKey": "drag",
+  "grid.moveLabel": "move",
+  "grid.resizeKey": "corner",
+  "grid.resizeLabel": "resize",
+  "grid.removeKey": "del",
+  "grid.removeLabel": "remove",
 
   "switcher.label": "Dashboard",
   "switcher.personal": "Personal",
