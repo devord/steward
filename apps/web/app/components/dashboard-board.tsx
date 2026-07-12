@@ -379,6 +379,9 @@ export function DashboardBoard({
             }
             editing={editing}
             onEdit={() => setEditingRoutine(routine)}
+            onToggleEnabled={() =>
+              updateRoutine({ ...routine, enabled: !routine.enabled })
+            }
             drag={drag?.slug === widget.routine ? drag : null}
             onDragStart={(kind, event) =>
               startDrag(widget.routine, kind, event)

@@ -3,7 +3,16 @@ import { useFetcher } from "react-router"
 
 import type { Routine, Widget, WidgetSize } from "@bulletin/schema"
 import { GRID_MAX_COLS, GRID_MAX_ROWS, routineHost } from "@bulletin/schema"
-import { Check, Copy, Maximize2, Pencil, RefreshCw, X } from "lucide-react"
+import {
+  Check,
+  Copy,
+  Maximize2,
+  Pencil,
+  Power,
+  PowerOff,
+  RefreshCw,
+  X,
+} from "lucide-react"
 
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
@@ -51,6 +60,10 @@ export interface WidgetCardProps {
   editing?: boolean
   /** Open the routine editor for this card (edit-mode title bar pencil). */
   onEdit?: () => void
+  /** Flip the routine's `enabled` flag — powers the edit-mode toggle and the
+      disabled tile's Enable button. A disabled routine never runs (ADR-0016);
+      this is the only in-app way back on (or off). */
+  onToggleEnabled?: () => void
   /** This card's active drag, if it is the one being dragged. */
   drag?: GridDrag | null
   onDragStart?: (kind: DragKind, event: React.PointerEvent) => void
@@ -84,6 +97,7 @@ export function WidgetCard({
   onFired,
   editing = false,
   onEdit,
+  onToggleEnabled,
   drag = null,
   onDragStart,
   onMove,
@@ -215,13 +229,41 @@ export function WidgetCard({
             <span className="truncate font-mono text-ink-dim">
               {routine.slug}
             </span>
+            {onToggleEnabled && (
+              /* Enable/disable lives here because `enabled` isn't a form field
+                 in the editor — the toggle is the only in-app way to flip a
+                 committed routine on or off. A disabled routine never runs, so
+                 the "off" icon stays lit (not hover-only) to read at a glance. */
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t(
+                  routine.enabled ? "routine.disable" : "routine.enable",
+                  { name: routine.name },
+                )}
+                title={t(
+                  routine.enabled ? "routine.disable" : "routine.enable",
+                  { name: routine.name },
+                )}
+                className={cn(
+                  "ml-auto size-5 shrink-0 hover:bg-bg3 hover:text-foreground pointer-coarse:size-7",
+                  routine.enabled ? "text-ink-dim" : "text-primary",
+                )}
+                onClick={() => onToggleEnabled()}
+              >
+                {routine.enabled ? <PowerOff /> : <Power />}
+              </Button>
+            )}
             {onEdit && (
               <Button
                 variant="ghost"
                 size="icon-xs"
                 aria-label={t("routine.edit", { name: routine.name })}
                 title={t("routine.edit", { name: routine.name })}
-                className="ml-auto size-5 shrink-0 text-ink-dim hover:bg-bg3 hover:text-foreground pointer-coarse:size-7"
+                className={cn(
+                  "size-5 shrink-0 text-ink-dim hover:bg-bg3 hover:text-foreground pointer-coarse:size-7",
+                  onToggleEnabled ? "" : "ml-auto",
+                )}
                 onClick={() => onEdit()}
               >
                 <Pencil />
@@ -230,7 +272,7 @@ export function WidgetCard({
             <span
               className={cn(
                 "shrink-0 pr-1 font-mono tabular-nums",
-                onEdit ? "" : "ml-auto",
+                onEdit || onToggleEnabled ? "" : "ml-auto",
                 resizing ? "text-primary" : "text-ink-dim",
               )}
             >
@@ -334,6 +376,7 @@ export function WidgetCard({
             login={login}
             now={now}
             onFired={onFired}
+            onEnable={onToggleEnabled}
           />
         )}
         {editing && (
@@ -624,6 +667,7 @@ function WidgetEmptyState({
   login,
   now,
   onFired,
+  onEnable,
 }: {
   status: WidgetStatus
   routine: Routine
@@ -635,6 +679,8 @@ function WidgetEmptyState({
   now: number
   /** Called when the run-now button successfully fires a cloud run. */
   onFired?: () => void
+  /** Flip the routine back on — the disabled tile's escape hatch. */
+  onEnable?: () => void
 }) {
   const t = useT()
   const cmds = setupCommands(routine, dataRepo)
@@ -721,6 +767,15 @@ function WidgetEmptyState({
       )}
       <span className="font-mono text-xs text-ink-dim">{routine.slug}</span>
       {hint && <span className="text-sm text-ink-dim">{hint}</span>}
+      {/* A disabled tile is otherwise a dead end — offer the way back on
+          right here, so re-enabling doesn't mean hunting through edit mode or
+          hand-editing routines.yaml. */}
+      {status.kind === "disabled" && onEnable && (
+        <Button variant="outline" onClick={() => onEnable()}>
+          <Power />
+          {t("widget.enable")}
+        </Button>
+      )}
       {cta && scope != null && (
         <RunNowButton
           routine={routine}
