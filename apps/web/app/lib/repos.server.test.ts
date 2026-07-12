@@ -41,6 +41,39 @@ describe("listDataRepos", () => {
     expect(listing.repos[2].private).toBe(false)
   })
 
+  it("excludes a stranger's public topic-tagged repo (injection guard)", async () => {
+    // The topic search returns every public repo carrying the tag; a repo
+    // the viewer wasn't granted (public, not owned, no push) must not land
+    // in the rail — otherwise anyone could inject a group into every user.
+    seedRepo(HOME, {})
+    seedRepoMeta("stranger/evil-data", {
+      topics: [TOPIC],
+      private: false,
+      permissions: null,
+    })
+
+    const listing = await listDataRepos("token", LOGIN)
+
+    expect(listing.repos.map((repo) => repo.full)).toEqual([HOME])
+  })
+
+  it("includes a public repo the viewer has push access to (real grant)", async () => {
+    // Push access on a public repo is a deliberate collaborator/org grant,
+    // not mere public read — that repo belongs in the rail.
+    seedRepo(HOME, {})
+    seedRepoMeta("acme/shared-public", {
+      topics: [TOPIC],
+      private: false,
+      permissions: { admin: false, push: true },
+    })
+
+    const listing = await listDataRepos("token", LOGIN)
+
+    expect(listing.repos.map((repo) => repo.full)).toContain(
+      "acme/shared-public",
+    )
+  })
+
   it("dedupes a home repo that also carries the topic", async () => {
     seedRepoMeta(HOME, { topics: [TOPIC] })
 
@@ -136,12 +169,44 @@ describe("requireDataRepo", () => {
     await listDataRepos("token", LOGIN)
     seedRepoMeta("acme/just-shared", { topics: [TOPIC] })
 
+    // The live check verifies and admits it even though the cached listing
+    // (and the search index) don't know it yet.
     const repo = await requireDataRepo("token", LOGIN, "acme/just-shared")
     expect(repo.full).toBe("acme/just-shared")
+  })
 
-    // The live check also dropped the stale listing for the next rail load.
+  it("does not invalidate the cache on the lag fallback (no quota burn)", async () => {
+    // A repo lagging the search index would otherwise defeat the 60s cache
+    // on every page view — the live check must NOT drop the cached listing.
+    seedRepo(HOME, {})
+    seedRepoMeta("acme/just-shared", { topics: [TOPIC] })
+    // Prime a listing that already includes it, then verify a repeat gate
+    // for it doesn't force a re-search: the cached entry keeps serving.
+    await listDataRepos("token", LOGIN)
+    await requireDataRepo("token", LOGIN, "acme/just-shared")
+    // A different repo tagged after priming stays invisible until TTL — proof
+    // the gate didn't invalidate the cache.
+    seedRepoMeta("acme/later", { topics: [TOPIC] })
     const listing = await listDataRepos("token", LOGIN)
-    expect(listing.repos.map((r) => r.full)).toContain("acme/just-shared")
+    expect(listing.repos.map((r) => r.full)).not.toContain("acme/later")
+  })
+
+  it("rejects a stranger's public tagged repo reached by direct link", async () => {
+    // The injection guard applies on the live-verify path too, so a link to
+    // /r/stranger/evil-data can't smuggle an ineligible public repo in.
+    seedRepo(HOME, {})
+    seedRepoMeta("stranger/evil-data", {
+      topics: [TOPIC],
+      private: false,
+      permissions: null,
+    })
+
+    const thrown = (await requireDataRepo(
+      "token",
+      LOGIN,
+      "stranger/evil-data",
+    ).catch((e) => e)) as { init?: { status: number } }
+    expect(thrown.init?.status).toBe(404)
   })
 
   it("accepts the conventional home repo without a topic", async () => {
@@ -160,6 +225,31 @@ describe("requireDataRepo", () => {
       "daniel/some-project",
     ).catch((e) => e)) as { init?: { status: number } }
     expect(thrown.init?.status).toBe(404)
+  })
+
+  it("maps a dead token to the 401 re-auth degrade, not a raw crash", async () => {
+    // A revoked token 401s on the search; the gate must surface the re-auth
+    // Response its action/loader callers expect, never an unhandled throw.
+    seedRepo(HOME, {})
+    failSearch({ status: 401 })
+
+    const thrown = (await requireDataRepo("token", LOGIN, "acme/x").catch(
+      (e) => e,
+    )) as { init?: { status: number } }
+    expect(thrown.init?.status).toBe(401)
+  })
+
+  it("maps a transient live-verify failure to the 503 degrade", async () => {
+    // Prime the cache (search ok, home present), then a 5xx on the live
+    // getRepoMeta for an unknown repo must degrade to 503, not crash.
+    seedRepo(HOME, {})
+    await listDataRepos("token", LOGIN)
+    failPath("acme/flaky", "", { status: 503, endpoint: "repo" })
+
+    const thrown = (await requireDataRepo("token", LOGIN, "acme/flaky").catch(
+      (e) => e,
+    )) as { init?: { status: number } }
+    expect(thrown.init?.status).toBe(503)
   })
 
   it("rejects an invisible repo and a malformed name alike, as 404", async () => {

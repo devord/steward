@@ -28,7 +28,7 @@ import {
   triggerPath,
 } from "@bulletin/schema"
 
-import { ghLogin, inferRepo, routinesFileFor } from "./data-repo.ts"
+import { ghLogin, inferRepo, repoTag, routinesFileFor } from "./data-repo.ts"
 import { promptTriggerToken } from "./trigger-token.ts"
 
 const args = process.argv.slice(2)
@@ -121,7 +121,7 @@ if (shared && routine.runner !== login) {
 }
 // Must mirror routines-sync's cloudName — the trigger targets that resource.
 const cloudName = shared
-  ? `bulletin-${(repo ?? "").split("/")[0]?.toLowerCase() ?? "shared"}-${slug}`
+  ? `bulletin-${repoTag(repo ?? "shared")}-${slug}`
   : `bulletin-${slug}`
 
 if (!routine.enabled) {

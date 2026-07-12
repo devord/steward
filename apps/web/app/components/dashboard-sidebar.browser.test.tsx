@@ -105,10 +105,33 @@ describe("DashboardSidebar per-board menu", () => {
     expect(menuButton("team-ops")).not.toBeNull()
   })
 
-  it("withholds the menu from the home default board", async () => {
-    await renderSidebar()
-    // `main` must always exist (it backs `/`), so it never offers delete.
-    expect(menuButton("main")).toBeNull()
+  it("withholds the menu from every repo's default board, not just home", async () => {
+    // A shared repo's `main` is its owner's default board — deleting it is
+    // cross-user data loss, so no repo's `main` gets a delete menu (matches
+    // the server guard). Give the shared repo a `main` and assert no `main`
+    // row anywhere carries a menu.
+    await renderSidebar({
+      sidebar: {
+        repos: [
+          base.sidebar.repos[0],
+          { ...base.sidebar.repos[1], dashboards: ["main", "ops"] },
+        ],
+        complete: true,
+      },
+    })
+    const mainRows = [...document.querySelectorAll("a")].filter(
+      (a) => a.textContent?.trim() === "main",
+    )
+    expect(mainRows.length).toBe(2)
+    for (const row of mainRows) {
+      expect(
+        row.parentElement?.querySelector(
+          'button[aria-label="Dashboard options"]',
+        ),
+      ).toBeNull()
+    }
+    // The shared repo's non-default board still deletes.
+    expect(menuButton("ops")).not.toBeNull()
   })
 
   it("deletes the board the menu belongs to, not the active one", async () => {

@@ -16,6 +16,14 @@ import { existsSync, mkdirSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 
+/** A repo's full owner+name folded into a cloud-name-safe tag, so two
+    shared repos — even two under the same owner — can't collide as cloud
+    routine names on one Claude account (ADR-0023). Shared by routines-sync
+    and routine-trigger so the sync'd resource and its trigger agree. */
+export function repoTag(repoFull: string): string {
+  return repoFull.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+}
+
 /** `owner/name` of the checkout's origin remote, or null. */
 export function inferRepo(dir: string): string | null {
   try {

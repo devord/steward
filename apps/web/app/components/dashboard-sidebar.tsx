@@ -97,7 +97,8 @@ export function DashboardSidebar({
           <NavGroup key={group.repo} header={<RepoGroupHeader group={group} />}>
             {group.dashboards.map((slug) => {
               const active = activeRepo === group.repo && dashboardSlug === slug
-              // Every board is deletable but the home default — it backs `/`.
+              // Every repo's `main` is its default board (server-protected in
+              // all repos) — so no delete menu on any `main`.
               return (
                 <NavItem
                   key={`${group.repo}:${slug}`}
@@ -105,8 +106,7 @@ export function DashboardSidebar({
                   label={slug}
                   active={active}
                   onDelete={
-                    onDeleteBoard &&
-                    !(group.isHome && slug === DEFAULT_DASHBOARD)
+                    onDeleteBoard && slug !== DEFAULT_DASHBOARD
                       ? () => onDeleteBoard(group.repo, slug)
                       : undefined
                   }
