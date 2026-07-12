@@ -52,7 +52,6 @@ import {
 } from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import { createInterface } from "node:readline/promises"
 
 import {
   type Routine,
@@ -501,7 +500,6 @@ if (missingTriggers.length > 0) {
         " terminal to paste them, or use `pnpm routine:trigger <slug>`.",
     )
   } else {
-    const rl = createInterface({ input: process.stdin, output: process.stdout })
     console.log(
       "\nAPI triggers are research preview: create the trigger and mint its" +
         "\ntoken in the Claude web UI (shown once), then paste both here —" +
@@ -512,9 +510,8 @@ if (missingTriggers.length > 0) {
         "\n`pnpm routine:trigger <slug>`).\n",
     )
     for (const routine of missingTriggers) {
-      await promptTriggerToken(rl, routine.slug, dataRepoDir)
+      promptTriggerToken(routine.slug, dataRepoDir)
     }
-    rl.close()
   }
 }
 

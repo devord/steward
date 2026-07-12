@@ -6,17 +6,36 @@
  * data/triggers/<slug>.json, where repo read access is exactly the
  * entitlement to fire. Used by routines-sync (manual cloud routines during
  * --apply) and routine-trigger (any cloud routine, on demand).
+ *
+ * Both prompts read the terminal directly through a short-lived `/bin/sh`
+ * child rather than a Node readline interface. Mixing the two — a readline
+ * question followed by a child that inherits stdin — leaves readline holding
+ * the tty in flowing/raw mode, so the child's `read` never sees the pasted
+ * bytes and the prompt appears frozen. Reading both via the shell keeps a
+ * single consumer of stdin.
  */
 import { execFileSync } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
-import type { Interface } from "node:readline/promises"
 
 import { triggerFileSchema, triggerPath } from "@bulletin/schema"
 
+/** Prompt on the cooked tty with echo on — for non-secret input. */
+export function question(query: string): string {
+  return execFileSync(
+    "/bin/sh",
+    [
+      "-c",
+      `printf '%s' "$1" >&2; read -r line; printf '%s' "$line"`,
+      "sh",
+      query,
+    ],
+    { stdio: ["inherit", "pipe", "inherit"], encoding: "utf8" },
+  )
+}
+
 /** A prompt with the echo disabled (stty -echo) — the trigger token is a
-    real secret (ADR-0016) and must not land in scrollback or recordings.
-    Reads the terminal directly so the readline interface stays usable. */
+    real secret (ADR-0016) and must not land in scrollback or recordings. */
 export function questionMasked(query: string): string {
   return execFileSync(
     "/bin/sh",
@@ -34,12 +53,8 @@ export function questionMasked(query: string): string {
  * Ask for one routine's cloud id + trigger token and commit the pair to the
  * data repo as data/triggers/<slug>.json (ADR-0016). Empty input skips.
  */
-export async function promptTriggerToken(
-  rl: Interface,
-  slug: string,
-  dataRepoDir: string,
-): Promise<void> {
-  const id = (await rl.question(`${slug} — cloud routine id: `)).trim()
+export function promptTriggerToken(slug: string, dataRepoDir: string): void {
+  const id = question(`${slug} — cloud routine id: `).trim()
   if (!id) {
     console.log(`  skipped ${slug}`)
     return

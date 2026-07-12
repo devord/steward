@@ -20,7 +20,6 @@
  */
 import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
-import { createInterface } from "node:readline/promises"
 
 import {
   type Routine,
@@ -147,6 +146,4 @@ if (existsSync(path.join(dataRepoDir, triggerPath(slug)))) {
   )
 }
 
-const rl = createInterface({ input: process.stdin, output: process.stdout })
-await promptTriggerToken(rl, slug, dataRepoDir)
-rl.close()
+promptTriggerToken(slug, dataRepoDir)
