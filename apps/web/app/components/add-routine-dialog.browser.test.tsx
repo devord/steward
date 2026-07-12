@@ -40,7 +40,7 @@ const repoPulseTemplate: DiscoveredTemplate = {
       },
     ],
   },
-  source: "team",
+  source: "repo",
 }
 
 const hasText = (text: string) =>

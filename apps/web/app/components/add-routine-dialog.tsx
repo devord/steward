@@ -519,11 +519,9 @@ export function AddRoutineDialog({
                       key={entry.id}
                       id={entry.id}
                       badge={t(
-                        entry.source === "private"
-                          ? "dialog.sourcePrivate"
-                          : entry.source === "team"
-                            ? "dialog.sourceTeam"
-                            : "dialog.sourceBuiltin",
+                        entry.source === "repo"
+                          ? "dialog.sourceRepo"
+                          : "dialog.sourceBuiltin",
                       )}
                       description={entry.widget.artifact}
                       selected={entry.id === templateId}

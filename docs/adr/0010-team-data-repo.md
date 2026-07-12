@@ -1,5 +1,9 @@
 # Team dashboards: one org data repo, shared routine pool, N layouts
 
+> **Superseded by ADR-0023**: the single `BULLETIN_TEAM_REPO` became N
+> topic-discovered data repos; the runner rule and per-repo layouts
+> described here carry over, generalized.
+
 Personal dashboards stay one-per-user in `<login>/bulletin-data-<login>`
 (ADR-0001). Team dashboards add exactly one new place for state: a single
 **org-owned team data repo** (env `BULLETIN_TEAM_REPO`, e.g.

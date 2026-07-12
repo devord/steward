@@ -33,10 +33,10 @@ routines file, stop and report; never fall through to the network steps
 below.
 
 Otherwise: when the prompt carries an ``in `<owner/repo>` `` clause, that
-repo IS the data repo — team routines name the shared team repo this way
-(ADR-0010). Without the clause, the data repo is personal:
-`bulletin-data-<login>` for the account you run as (ADR-0001). In order of
-preference:
+repo IS the data repo — every prompt names its repo now that a user can
+have many data repos (ADR-0023). Legacy prompts without the clause resolve
+to the home repo: `bulletin-data-<login>` for the account you run as
+(ADR-0001). In order of preference:
 
 1. The current working directory, if it contains `data/routines.yaml` —
    and, when the prompt names a repo, its `origin` remote matches it.

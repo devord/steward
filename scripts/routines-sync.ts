@@ -6,11 +6,12 @@
  * (cron, API trigger, or launchd calendar), and — for cloud routines — the
  * source repos and MCP connector allowlist the run needs (ADR-0018).
  *
- * Works for a personal data repo and for the shared team repo (ADR-0010):
- * team runs are classified by the target repo differing from
- * `<login>/bulletin-data-<login>`. In team mode only entries whose `runner`
- * matches the signed-in login are enacted — each teammate owns the cloud
- * resources for the routines they created — and prompts carry the repo.
+ * Works for the home data repo and for any shared one (ADR-0023): a repo is
+ * shared iff it differs from `<login>/bulletin-data-<login>`. In a shared
+ * repo only entries whose `runner` matches the signed-in login are enacted —
+ * each collaborator owns the cloud resources for the routines they run.
+ * Every pointer prompt names its repo explicitly: with N data repos "the"
+ * data repo is ambiguous.
  *
  * Per routine, by host × schedule (ADR-0012/0016):
  *   - cloud + schedule  → a scheduled cloud routine (as before);
@@ -109,47 +110,51 @@ const repo = repoArg ?? inferRepo(path.dirname(file))
 const login = ghLogin()
 
 // Fail closed: with a known target repo but no gh login we cannot tell
-// personal from team mode — guessing personal would sync a team file's
-// every entry as unclaused personal schedules under the wrong ownership.
+// home from shared — guessing home would sync a shared file's every entry
+// under the wrong ownership, ignoring runner claims.
 if (repo != null && login == null) {
   console.error(
     `routines-sync: can't determine the gh login (is \`gh\` authenticated?),\n` +
-      `so ${repo} can't be classified as personal or team. Run \`gh auth login\`.`,
+      `so ${repo} can't be classified as home or shared. Run \`gh auth login\`.`,
   )
   process.exit(1)
 }
 
-// Team mode: the target repo is not the signed-in user's own data repo.
-// The naming convention mirrors the app's resolveDataRepo (ADR-0001).
-const teamMode =
+// Shared: the target repo is not the signed-in user's own home data repo.
+// The naming convention mirrors the app's resolveHomeRepo (ADR-0001/0023).
+const shared =
   repo != null && login != null && repo !== `${login}/bulletin-data-${login}`
 
-if (teamMode) {
-  console.log(`# team repo: ${repo} (runner: ${login})\n`)
-}
-
-/** The stable pointer prompt — created once, never edited (ADR-0005).
-    Team prompts carry the repo so the dispatcher targets it (ADR-0010). */
-function pointerPrompt(routine: Routine): string {
-  return teamMode
-    ? `Run the bulletin routine \`${routine.slug}\` in \`${repo}\` — follow the run-routine skill.`
-    : `Run the bulletin routine \`${routine.slug}\` — follow the run-routine skill.`
-}
-
-/** Cloud routine name; the bulletin- prefix marks ownership for cleanup. */
-function cloudName(routine: Routine): string {
-  return teamMode ? `bulletin-team-${routine.slug}` : `bulletin-${routine.slug}`
+if (shared) {
+  console.log(`# shared repo: ${repo} (runner: ${login})\n`)
 }
 
 /**
- * The data repo to attach as a source. Normally `repo` (the --repo flag or
- * the checkout's inferred origin); when the origin can't be inferred, fall
- * back to the personal-repo convention `<login>/bulletin-data-<login>`
- * (ADR-0001), the same name run-routine resolves at runtime. Null only when
- * neither is known — a `gh`-less run against a remote-less checkout.
+ * The data repo to attach as a source and name in prompts. Normally `repo`
+ * (the --repo flag or the checkout's inferred origin); when the origin
+ * can't be inferred, fall back to the home-repo convention
+ * `<login>/bulletin-data-<login>` (ADR-0001), the same name run-routine
+ * resolves at runtime. Null only when neither is known — a `gh`-less run
+ * against a remote-less checkout.
  */
 const dataRepo =
   repo ?? (login != null ? `${login}/bulletin-data-${login}` : null)
+
+/** The stable pointer prompt — created once, never edited (ADR-0005).
+    Always names the repo: with N data repos (ADR-0023) an unclaused
+    prompt is ambiguous, so every command is explicit. */
+function pointerPrompt(routine: Routine): string {
+  return `Run the bulletin routine \`${routine.slug}\` in \`${dataRepo ?? "(unknown repo)"}\` — follow the run-routine skill.`
+}
+
+/** Cloud routine name; the bulletin- prefix marks ownership for cleanup,
+    and shared repos carry their owner so two repos' slugs can't collide
+    on one Claude account. */
+function cloudName(routine: Routine): string {
+  if (!shared) return `bulletin-${routine.slug}`
+  const owner = (repo ?? "").split("/")[0]?.toLowerCase() ?? "shared"
+  return `bulletin-${owner}-${routine.slug}`
+}
 
 /**
  * Source repos to attach to this routine's cloud run (ADR-0018): the
@@ -171,10 +176,10 @@ function orNone(values: string[]): string {
   return values.length > 0 ? values.join(", ") : "(none)"
 }
 
-// In team mode each teammate syncs only the routines they run — otherwise
-// every sync would duplicate every schedule onto every account.
+// In a shared repo each collaborator syncs only the routines they run —
+// otherwise every sync would duplicate every schedule onto every account.
 let mine = routines
-if (teamMode) {
+if (shared) {
   const skipped = routines.filter((routine) => routine.runner !== login)
   mine = routines.filter((routine) => routine.runner === login)
   for (const routine of skipped) {
@@ -209,13 +214,11 @@ function hasTrigger(routine: Routine): boolean {
 
 // --- Cloud half -------------------------------------------------------------
 
-const orphanRule = teamMode
-  ? `# Routines named bulletin-team-* whose prompt targets \`${repo}\` and are
-# not listed here are orphans and should be deleted. Never touch routines
-# whose prompt names a different repo, or has no repo clause.`
-  : `# Routines named bulletin-* whose prompt has NO "in \`<owner/repo>\`"
-# clause and are not listed here are orphans and should be deleted. Never
-# touch routines whose prompt names a repo — those belong to team syncs.`
+const orphanRule = `# Routines named bulletin-* whose prompt targets \`${dataRepo}\` and are
+# not listed here are orphans and should be deleted — including legacy ones
+# whose prompt has no "in \`<owner/repo>\`" clause when this is the home
+# repo. Never touch routines whose prompt names a different repo — those
+# belong to other repos' syncs.`
 
 const cloudPlan = [
   "# Bulletin routines — desired cloud state",

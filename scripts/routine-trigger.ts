@@ -104,13 +104,14 @@ const login = ghLogin()
 if (repo != null && login == null) {
   console.error(
     `routine-trigger: can't determine the gh login (is \`gh\` authenticated?),\n` +
-      `so ${repo} can't be classified as personal or team. Run \`gh auth login\`.`,
+      `so ${repo} can't be classified as home or shared. Run \`gh auth login\`.`,
   )
   process.exit(1)
 }
-const teamMode =
+// Shared repo: not the viewer's home repo (ADR-0023) — runner rule applies.
+const shared =
   repo != null && login != null && repo !== `${login}/bulletin-data-${login}`
-if (teamMode && routine.runner !== login) {
+if (shared && routine.runner !== login) {
   console.error(
     `routine-trigger: ${slug} runs as ${routine.runner ?? "(no runner set)"}` +
       " — the cloud resource is theirs, so only they can mint its trigger" +
@@ -118,7 +119,10 @@ if (teamMode && routine.runner !== login) {
   )
   process.exit(1)
 }
-const cloudName = teamMode ? `bulletin-team-${slug}` : `bulletin-${slug}`
+// Must mirror routines-sync's cloudName — the trigger targets that resource.
+const cloudName = shared
+  ? `bulletin-${(repo ?? "").split("/")[0]?.toLowerCase() ?? "shared"}-${slug}`
+  : `bulletin-${slug}`
 
 if (!routine.enabled) {
   console.warn(`# ${slug} is disabled — the trigger will sit unused.\n`)
