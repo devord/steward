@@ -21,7 +21,7 @@ import {
 } from "~/components/ui/select"
 import { cn } from "~/lib/utils"
 import { handleRadioKeydown } from "./appearance-settings.tsx"
-import { DEFAULT_DASHBOARD, parseRepo } from "../lib/repos.ts"
+import { parseRepo } from "../lib/repos.ts"
 import { useT } from "../lib/i18n.tsx"
 import type { DataRepoOwners, DataRepoResult } from "../routes/data-repos.ts"
 
@@ -81,15 +81,18 @@ export function AddDataRepoDialog({
   }, [])
 
   const busy = submit.state !== "idle"
-  const created = submit.data?.ok === true ? submit.data.repo : undefined
+  const created = submit.data?.ok === true ? submit.data : undefined
   useEffect(() => {
     if (!created || !open) return
     reset()
     onOpenChange(false)
     onNavigate?.()
-    // A fresh template repo always carries the default board; a registered
-    // repo may not — its group's create-first row handles that from `/`.
-    void navigate(`/r/${created}/${DEFAULT_DASHBOARD}`)
+    // Land on the repo's real first board. A registered repo may have no
+    // `main` (or no boards at all) — then go home, where the new group's
+    // create-first row waits, rather than 404 on a guessed slug.
+    void navigate(
+      created.dashboard ? `/r/${created.repo}/${created.dashboard}` : "/",
+    )
   }, [created, open, onOpenChange, onNavigate, navigate, reset])
 
   const existingRef = parseRepo(existing.trim())

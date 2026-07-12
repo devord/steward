@@ -62,7 +62,7 @@ import {
   triggerPath,
 } from "@bulletin/schema"
 
-import { ghLogin, inferRepo, routinesFileFor } from "./data-repo.ts"
+import { ghLogin, inferRepo, repoTag, routinesFileFor } from "./data-repo.ts"
 import { cronToLaunchd, launchdPlist, plistRepo } from "./launchd.ts"
 import { promptTriggerToken } from "./trigger-token.ts"
 
@@ -148,12 +148,11 @@ function pointerPrompt(routine: Routine): string {
 }
 
 /** Cloud routine name; the bulletin- prefix marks ownership for cleanup,
-    and shared repos carry their owner so two repos' slugs can't collide
-    on one Claude account. */
+    and shared repos carry their full repo tag (owner AND name) so no two
+    repos' slugs can collide on one Claude account. */
 function cloudName(routine: Routine): string {
   if (!shared) return `bulletin-${routine.slug}`
-  const owner = (repo ?? "").split("/")[0]?.toLowerCase() ?? "shared"
-  return `bulletin-${owner}-${routine.slug}`
+  return `bulletin-${repoTag(repo ?? "shared")}-${routine.slug}`
 }
 
 /**

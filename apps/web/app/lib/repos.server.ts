@@ -74,6 +74,46 @@ function toDataRepo(meta: RepoMeta, home: string): DataRepo | null {
 }
 
 /**
+ * Whether a topic-tagged repo is one the viewer was *deliberately* granted,
+ * not just any public repo carrying the topic. The topic search returns
+ * every public repo with the tag, so without this a stranger could tag a
+ * public repo and have it appear in every user's rail (and pass the /r
+ * gate). A repo qualifies iff it is private (private + readable = a real
+ * grant), the viewer owns it (their own public data repo, tagged by them),
+ * or the viewer has push access (a collaborator/org grant beyond public
+ * read). The home repo bypasses this — it is always the viewer's own.
+ */
+function isEligible(meta: RepoMeta, login: string): boolean {
+  return (
+    meta.private ||
+    parseRepo(meta.full)?.owner === login ||
+    meta.permissions?.push === true
+  )
+}
+
+/**
+ * Map a GitHub read failure onto the loader/action degrade contract, same
+ * as dashboard.server.ts (kept here to avoid an import cycle): a dead token
+ * (401) becomes the re-auth page, every other GitHubError the 503 refresh
+ * page. Non-GitHub errors re-throw to the generic boundary.
+ */
+function degradeGitHubError(error: unknown): never {
+  if (error instanceof GitHubError) {
+    if (error.status === 401) {
+      throw data(
+        "Your GitHub session has expired or was revoked. Sign out and sign in again to reconnect.",
+        { status: 401 },
+      )
+    }
+    throw data(
+      "GitHub's API is having trouble right now. This will recover on the next refresh.",
+      { status: 503 },
+    )
+  }
+  throw error
+}
+
+/**
  * Every data repo the viewer can see: topic search ∪ {home repo}. The union
  * covers the two ways search alone would lie — index lag on a repo tagged
  * seconds ago, and home repos created before topic support. A dead token
@@ -132,6 +172,9 @@ export async function listDataRepos(
   if (searched.status === "fulfilled") {
     for (const meta of searched.value) {
       if (repos.has(meta.full)) continue
+      // Skip public repos the viewer wasn't actually granted — otherwise a
+      // stranger's topic-tagged public repo lands in the rail.
+      if (!isEligible(meta, login)) continue
       const repo = toDataRepo(meta, home)
       if (repo) repos.set(repo.full, repo)
     }
@@ -174,24 +217,39 @@ export async function requireDataRepo(
 ): Promise<DataRepo> {
   const ref = parseRepo(repoFull)
   if (!ref) throw data("Not a data repo.", { status: 404 })
-
-  const listing = await listDataRepos(token, login, override)
-  const known = listing.repos.find((repo) => repo.full === ref.full)
-  if (known) return known
-
   const home = resolveHomeRepo(login, override)
-  const meta = await getRepoMeta(token, ref.full)
-  if (!meta) throw data("Not a data repo.", { status: 404 })
-  if (ref.full !== home) {
-    const topics = await getRepoTopics(token, ref.full)
-    if (!topics?.includes(env().DATA_REPO_TOPIC)) {
-      throw data("Not a data repo.", { status: 404 })
+
+  try {
+    const listing = await listDataRepos(token, login, override)
+    const known = listing.repos.find((repo) => repo.full === ref.full)
+    if (known) return known
+
+    // Not in the (possibly search-lagged) set — verify live. A repo counts
+    // only if it's the home repo, or it's readable, topic-tagged, AND a
+    // deliberate grant (isEligible) — the same guard discovery applies, so
+    // a link to a stranger's tagged public repo 404s here too.
+    const meta = await getRepoMeta(token, ref.full)
+    if (!meta) throw data("Not a data repo.", { status: 404 })
+    if (ref.full !== home) {
+      if (!isEligible(meta, login)) {
+        throw data("Not a data repo.", { status: 404 })
+      }
+      const topics = await getRepoTopics(token, ref.full)
+      if (!topics?.includes(env().DATA_REPO_TOPIC)) {
+        throw data("Not a data repo.", { status: 404 })
+      }
     }
+    // NB: no cache invalidation here — a repo lagging the search index
+    // would otherwise defeat the 60s cache on every page view and burn
+    // search quota. create/register own invalidation; the union covers lag.
+    const repo = toDataRepo(meta, home)
+    if (!repo) throw data("Not a data repo.", { status: 404 })
+    return repo
+  } catch (error) {
+    // A thrown data() Response (our 404) passes through; a raw GitHubError
+    // (dead token, outage, rate-limit) becomes the re-auth/503 degrade so
+    // action and loader callers never crash to the generic boundary.
+    if (error instanceof GitHubError) degradeGitHubError(error)
+    throw error
   }
-  // Freshly visible (created/registered inside the cache window): drop the
-  // stale listing so the rail picks it up on the next load.
-  invalidateRepoCache(token)
-  const repo = toDataRepo(meta, home)
-  if (!repo) throw data("Not a data repo.", { status: 404 })
-  return repo
 }

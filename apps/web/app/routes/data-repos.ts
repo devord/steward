@@ -2,6 +2,7 @@ import { data } from "react-router"
 import { z } from "zod"
 
 import { env } from "../lib/env.server.ts"
+import { listDashboards } from "../lib/dashboard.server.ts"
 import {
   addRepoTopic,
   generateFromTemplate,
@@ -11,8 +12,8 @@ import {
   listUserOrgs,
   repoExists,
 } from "../lib/github.server.ts"
+import { DEFAULT_DASHBOARD, parseRepo } from "../lib/repos.ts"
 import { invalidateRepoCache } from "../lib/repos.server.ts"
-import { parseRepo } from "../lib/repos.ts"
 import { requireAuth } from "../lib/session.server.ts"
 
 /**
@@ -57,7 +58,14 @@ const payloadSchema = z.discriminatedUnion("intent", [
 ])
 
 export type DataRepoResult =
-  | { ok: true; repo: string }
+  | {
+      ok: true
+      repo: string
+      /** The board to open — the repo's actual first dashboard, or `main`
+          for a freshly created template repo. null → no boards yet: the
+          client lands on `/` where the new group's create-first row waits. */
+      dashboard: string | null
+    }
   | {
       ok: false
       error: "denied" | "template" | "exists" | "missing" | "not-data-repo"
@@ -113,7 +121,12 @@ export async function action({ request }: { request: Request }) {
     }
     await addRepoTopic(auth.token, full, env().DATA_REPO_TOPIC).catch(() => {})
     invalidateRepoCache(auth.token)
-    return { ok: true, repo: full } satisfies DataRepoResult
+    // Template repos always ship a `main` board.
+    return {
+      ok: true,
+      repo: full,
+      dashboard: DEFAULT_DASHBOARD,
+    } satisfies DataRepoResult
   }
 
   // register — the repo must exist, be readable, and actually be a data
@@ -147,5 +160,14 @@ export async function action({ request }: { request: Request }) {
     throw error
   }
   invalidateRepoCache(auth.token)
-  return { ok: true, repo: ref.full } satisfies DataRepoResult
+  // Registered repos carry whatever boards they already have (a data repo
+  // needn't have `main`) — land on the first, or `/` when it has none yet.
+  const dashboards = await listDashboards(auth.token, ref.full).catch(
+    () => null,
+  )
+  return {
+    ok: true,
+    repo: ref.full,
+    dashboard: dashboards?.[0] ?? null,
+  } satisfies DataRepoResult
 }

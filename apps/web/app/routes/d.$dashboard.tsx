@@ -18,5 +18,5 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     throw data("not found", { status: 404 })
   }
   const home = resolveHomeRepo(auth.login, auth.dataRepo)
-  throw redirect(boardHref(home, params.dashboard, home), 301)
+  throw redirect(boardHref(home, params.dashboard, home))
 }

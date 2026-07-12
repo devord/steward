@@ -80,6 +80,15 @@ export async function action({ request }: { request: Request }) {
       if (error instanceof GitHubError && error.status === 422) {
         return data({ ok: false as const, error: "exists" }, { status: 409 })
       }
+      // A read-only collaborator can reach a shared repo but not write it —
+      // GitHub answers 403 (or 404 on some private repos). Surface it as a
+      // clean "denied", not a 500 crash page.
+      if (
+        error instanceof GitHubError &&
+        (error.status === 403 || error.status === 404)
+      ) {
+        return data({ ok: false as const, error: "denied" }, { status: 403 })
+      }
       throw error
     }
     return { ok: true as const, slug: payload.slug }
@@ -87,8 +96,10 @@ export async function action({ request }: { request: Request }) {
 
   // delete — routines are untouched: widgets reference routines, not the
   // other way around, so a routine keeps running for other dashboards.
-  // Only the home repo's default board is protected: it backs `/`.
-  if (dataRepo.isHome && payload.slug === DEFAULT_DASHBOARD) {
+  // Every repo's `main` is its default board (it backs `/` for the home
+  // repo, and is the /r/:owner/:repo landing for every other) — protect it
+  // in ALL repos, so a collaborator can't delete another user's default.
+  if (payload.slug === DEFAULT_DASHBOARD) {
     throw data(
       { error: "cannot delete the default dashboard" },
       { status: 400 },
@@ -113,6 +124,10 @@ export async function action({ request }: { request: Request }) {
       (error.status === 409 || error.status === 422)
     ) {
       return data({ ok: false as const, error: "conflict" }, { status: 409 })
+    }
+    // Read-only collaborator on a shared repo: a clean "denied", not a 500.
+    if (error instanceof GitHubError && error.status === 403) {
+      return data({ ok: false as const, error: "denied" }, { status: 403 })
     }
     throw error
   }

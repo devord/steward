@@ -18,7 +18,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     auth.dataRepo,
   ).catch(() => ({ repos: [] }))
   const shared = repos.filter((repo) => repo.isShared)
-  if (shared.length !== 1) throw redirect("/", 301)
+  if (shared.length !== 1) throw redirect("/")
   const home = resolveHomeRepo(auth.login, auth.dataRepo)
-  throw redirect(boardHref(shared[0].full, DEFAULT_DASHBOARD, home), 301)
+  throw redirect(boardHref(shared[0].full, DEFAULT_DASHBOARD, home))
 }

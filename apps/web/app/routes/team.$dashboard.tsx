@@ -14,7 +14,7 @@ import { requireAuth } from "../lib/session.server.ts"
 export async function loader({ request, params }: Route.LoaderArgs) {
   const auth = await requireAuth(request)
   if (!slugSchema.safeParse(params.dashboard).success) {
-    throw redirect("/", 301)
+    throw redirect("/")
   }
   const { repos } = await listDataRepos(
     auth.token,
@@ -22,7 +22,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     auth.dataRepo,
   ).catch(() => ({ repos: [] }))
   const shared = repos.filter((repo) => repo.isShared)
-  if (shared.length !== 1) throw redirect("/", 301)
+  if (shared.length !== 1) throw redirect("/")
   const home = resolveHomeRepo(auth.login, auth.dataRepo)
-  throw redirect(boardHref(shared[0].full, params.dashboard, home), 301)
+  throw redirect(boardHref(shared[0].full, params.dashboard, home))
 }
