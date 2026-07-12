@@ -28,9 +28,12 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { cn } from "~/lib/utils"
-import type { BoardScope } from "../lib/board.ts"
 import { cssVars } from "../lib/css.ts"
-import type { ArtifactInfo, DashboardBase } from "../lib/dashboard.server.ts"
+import type {
+  ArtifactInfo,
+  DashboardBase,
+  SidebarData,
+} from "../lib/dashboard.server.ts"
 import { removeRoutine, type SyncKind, useDraft } from "../lib/draft.ts"
 import { useT } from "../lib/i18n.tsx"
 import { usePendingRuns } from "../lib/pending-runs.ts"
@@ -39,9 +42,10 @@ import { useGridDrag } from "../lib/use-grid-drag.ts"
 import { usePollRevalidate } from "../lib/use-poll-revalidate.ts"
 
 /**
- * One board — personal or team (ADR-0010) — extracted from the home route
- * so every board route renders the identical grid, draft, and sync flow.
- * Which repo and layout file it edits is entirely decided by `view`.
+ * One board — in any discovered data repo (ADR-0023) — extracted from the
+ * home route so every board route renders the identical grid, draft, and
+ * sync flow. Which repo and layout file it edits is entirely decided by
+ * `view`.
  */
 export function DashboardBoard({
   view,
@@ -49,8 +53,7 @@ export function DashboardBoard({
   login,
   displayName,
   now,
-  personalDashboards,
-  teamDashboards,
+  sidebar,
 }: {
   view: DashboardBase
   /** Streams in after the structure (ADR-0002): each cell shows a skeleton
@@ -59,9 +62,8 @@ export function DashboardBoard({
   login: string
   displayName?: string | null
   now: number
-  personalDashboards: string[]
-  /** null → no team repo configured or no access (switcher hides the group). */
-  teamDashboards: string[] | null
+  /** Every discovered repo with its boards — the rail's groups. */
+  sidebar: SidebarData
 }) {
   const t = useT()
   const revalidator = useRevalidator()
@@ -94,7 +96,7 @@ export function DashboardBoard({
   // The board the rail's per-board menu is deleting — any board, not only the
   // one in view; null closes the confirm dialog.
   const [deleteTarget, setDeleteTarget] = useState<{
-    scope: BoardScope
+    repo: string
     slug: string
   } | null>(null)
   const [deletingRoutine, setDeletingRoutine] = useState<string | null>(null)
@@ -369,7 +371,7 @@ export function DashboardBoard({
             artifact={data[widget.routine]}
             now={now}
             columns={columns}
-            scope={view.scope}
+            shared={view.isShared}
             dataRepo={view.dataRepo}
             login={login}
             committed={committedSlugs.has(widget.routine)}
@@ -414,10 +416,8 @@ export function DashboardBoard({
     <>
       <DashboardShell
         dataRepo={view.dataRepo}
-        scope={view.scope}
         dashboardSlug={view.dashboardSlug}
-        personalDashboards={personalDashboards}
-        teamDashboards={teamDashboards}
+        sidebar={sidebar}
         login={login}
         displayName={displayName}
         hasDraft={draft != null}
@@ -429,7 +429,7 @@ export function DashboardBoard({
         onSync={() => setSyncing(true)}
         onAdd={() => setAdding(true)}
         onToggleEdit={() => setEditing((value) => !value)}
-        onDeleteBoard={(scope, slug) => setDeleteTarget({ scope, slug })}
+        onDeleteBoard={(repo, slug) => setDeleteTarget({ repo, slug })}
       >
         {editing && (
           <GridSettings
@@ -577,13 +577,12 @@ export function DashboardBoard({
         onAdd={addRoutine}
         editRoutine={editingRoutine}
         onEdit={updateRoutine}
-        runner={view.scope === "team" ? login : undefined}
+        runner={view.isShared ? login : undefined}
       />
       {draft && (
         <SyncPanel
           open={syncing}
           onOpenChange={setSyncing}
-          scope={view.scope}
           dashboardSlug={view.dashboardSlug}
           dataRepo={view.dataRepo}
           draft={draft}
@@ -608,17 +607,16 @@ export function DashboardBoard({
       />
       <DeleteDashboardDialog
         target={deleteTarget}
-        dataRepo={view.dataRepo}
         activeView={view}
         onClose={() => setDeleteTarget(null)}
         onDeleted={(deletedActive) => {
           setDeleteTarget(null)
-          // Deleting the board you're on has nowhere to stay — leave for the
-          // scope's home. Deleting any other board keeps you put; a revalidate
+          // Deleting the board you're on has nowhere to stay — leave for
+          // home. Deleting any other board keeps you put; a revalidate
           // drops it from the rail.
           if (deletedActive) {
             clear()
-            void navigate(view.scope === "team" ? "/team" : "/")
+            void navigate("/")
           } else {
             void revalidator.revalidate()
           }
@@ -635,7 +633,7 @@ interface DeleteResult {
 
 /**
  * Confirm deleting a board — any board the rail offers, not just the one in
- * view. `target` names it (scope+slug); null keeps the dialog closed. The
+ * view. `target` names it (repo+slug); null keeps the dialog closed. The
  * fetcher is keyed by target so a prior delete's success can't linger and
  * auto-fire when the next board's dialog opens (deleting a non-active board
  * keeps us mounted, unlike the old navigate-away-only flow). The caller decides
@@ -644,13 +642,11 @@ interface DeleteResult {
  */
 function DeleteDashboardDialog({
   target,
-  dataRepo,
   activeView,
   onClose,
   onDeleted,
 }: {
-  target: { scope: BoardScope; slug: string } | null
-  dataRepo: string
+  target: { repo: string; slug: string } | null
   /** The board in view — so a success can tell "deleted the one I'm on". */
   activeView: DashboardBase
   onClose: () => void
@@ -658,15 +654,13 @@ function DeleteDashboardDialog({
 }) {
   const t = useT()
   const fetcher = useFetcher<DeleteResult>({
-    key: target
-      ? `board-delete:${target.scope}:${target.slug}`
-      : "board-delete",
+    key: target ? `board-delete:${target.repo}:${target.slug}` : "board-delete",
   })
   const busy = fetcher.state !== "idle"
 
   const deletingActive =
     target != null &&
-    target.scope === activeView.scope &&
+    target.repo === activeView.dataRepo &&
     target.slug === activeView.dashboardSlug
 
   const deleted = fetcher.data?.ok === true
@@ -685,7 +679,7 @@ function DeleteDashboardDialog({
               // so `dashboardPath` is never handed an empty, non-kebab slug it
               // would reject — the body is only ever read while a target is set.
               path: target ? dashboardPath(target.slug) : "",
-              repo: dataRepo,
+              repo: target?.repo ?? "",
             })}
           </DialogDescription>
         </DialogHeader>
@@ -708,7 +702,7 @@ function DeleteDashboardDialog({
               void fetcher.submit(
                 JSON.stringify({
                   intent: "delete",
-                  scope: target.scope,
+                  repo: target.repo,
                   slug: target.slug,
                 }),
                 {

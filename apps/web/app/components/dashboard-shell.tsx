@@ -3,7 +3,7 @@ import { CalendarPlus, Check, PencilRuler } from "lucide-react"
 import { NavShell } from "./nav-shell.tsx"
 import { Button } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
-import type { BoardScope } from "../lib/board.ts"
+import type { SidebarData } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
 
 /**
@@ -21,10 +21,8 @@ import { useT } from "../lib/i18n.tsx"
  */
 export function DashboardShell({
   dataRepo,
-  scope,
   dashboardSlug,
-  personalDashboards,
-  teamDashboards,
+  sidebar,
   login,
   displayName,
   hasDraft,
@@ -37,10 +35,8 @@ export function DashboardShell({
   children,
 }: {
   dataRepo: string
-  scope: BoardScope
   dashboardSlug: string
-  personalDashboards: string[]
-  teamDashboards: string[] | null
+  sidebar: SidebarData
   login: string
   displayName?: string | null
   hasDraft: boolean
@@ -50,8 +46,8 @@ export function DashboardShell({
   onSync: () => void
   onAdd: () => void
   onToggleEdit: () => void
-  /** Delete a board by scope+slug — wired to the rail's per-board menu. */
-  onDeleteBoard: (scope: BoardScope, slug: string) => void
+  /** Delete a board by repo+slug — wired to the rail's per-board menu. */
+  onDeleteBoard: (repo: string, slug: string) => void
   children: React.ReactNode
 }) {
   const t = useT()
@@ -60,14 +56,13 @@ export function DashboardShell({
     <NavShell
       nav={{
         dataRepo,
-        scope,
+        activeRepo: dataRepo,
         dashboardSlug,
-        personalDashboards,
-        teamDashboards,
+        sidebar,
         login,
         displayName,
-        // Board delete lives in the rail's per-board menu, keyed by scope+slug —
-        // the rail draws a menu on every board but the personal default.
+        // Board delete lives in the rail's per-board menu, keyed by repo+slug —
+        // the rail draws a menu on every board but the home default.
         onDeleteBoard,
       }}
       // Canvas cap: `wide` fills a large monitor (still bounded so the board

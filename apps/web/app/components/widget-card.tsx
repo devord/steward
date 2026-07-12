@@ -17,7 +17,6 @@ import {
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
-import type { BoardScope } from "../lib/board.ts"
 import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
@@ -41,11 +40,14 @@ export interface WidgetCardProps {
   /** The board's column count — bounds keyboard resize (defaults to the
       grid ceiling for standalone renders like tests). */
   columns?: number
-  /** Which board this card sits on — enables the Update action (ADR-0016).
-      Standalone renders (tests) omit both and get no Update control. */
-  scope?: BoardScope
+  /** Which data repo this card's board lives in — enables the Update action
+      (ADR-0016). Standalone renders (tests) omit it and get no Update
+      control. */
   dataRepo?: string
-  /** The signed-in login — team boards note when a routine's runner differs. */
+  /** The board's repo isn't the viewer's home repo — shared-repo cards note
+      when a routine's runner differs from the viewer (ADR-0023). */
+  shared?: boolean
+  /** The signed-in login — shared boards note when a routine's runner differs. */
   login?: string
   /** Is the routine synced (on the server), not just added in the draft?
       Drives the "in your draft — sync it" empty state. Defaults true for
@@ -89,8 +91,8 @@ export function WidgetCard({
   artifact,
   now,
   columns = GRID_MAX_COLS,
-  scope,
   dataRepo,
+  shared = false,
   login,
   committed = true,
   pendingFiredAt = null,
@@ -299,15 +301,13 @@ export function WidgetCard({
                   a disabled refresh arrow beside the running one. Same rule
                   when the empty state shows the run-now button (ready-*):
                   one affordance per action. */}
-              {scope != null &&
-                dataRepo != null &&
+              {dataRepo != null &&
                 routine.enabled &&
                 !running &&
                 status.kind !== "ready-manual" &&
                 status.kind !== "ready-scheduled" && (
                   <UpdateAction
                     routine={routine}
-                    scope={scope}
                     dataRepo={dataRepo}
                     onFired={onFired}
                     forceVisible={status.kind !== "live"}
@@ -371,7 +371,7 @@ export function WidgetCard({
           <WidgetEmptyState
             status={status}
             routine={routine}
-            scope={scope}
+            shared={shared}
             dataRepo={dataRepo}
             login={login}
             now={now}
@@ -465,7 +465,7 @@ const BAR_ACTION =
     tell the board when a fire lands so it can start the running state. */
 function useFireRoutine(
   routine: Routine,
-  scope: BoardScope,
+  dataRepo: string,
   onFired?: () => void,
 ) {
   const fetcher = useFetcher<RunResult>()
@@ -480,7 +480,7 @@ function useFireRoutine(
   return {
     fire: () => {
       void fetcher.submit(
-        { scope, slug: routine.slug },
+        { repo: dataRepo, slug: routine.slug },
         { method: "post", action: "/run", encType: "application/json" },
       )
     },
@@ -498,13 +498,11 @@ function useFireRoutine(
  */
 function UpdateAction({
   routine,
-  scope,
   dataRepo,
   forceVisible = false,
   onFired,
 }: {
   routine: Routine
-  scope: BoardScope
   dataRepo: string
   /** Keep the button visible (not hover-only) — for tiles with no artifact
       or a missing trigger, where it's the primary affordance. */
@@ -512,14 +510,14 @@ function UpdateAction({
   onFired?: () => void
 }) {
   const t = useT()
-  const { fire, busy, result } = useFireRoutine(routine, scope, onFired)
+  const { fire, busy, result } = useFireRoutine(routine, dataRepo, onFired)
   const [copied, setCopied] = useState(false)
 
   if (routineHost(routine) === "local") {
-    // Works without a bulletin checkout — the raw pointer prompt (ADR-0005);
-    // team boards carry the repo clause (ADR-0010).
-    const clause = scope === "team" ? ` in \`${dataRepo}\`` : ""
-    const command = `claude "Run the bulletin routine \`${routine.slug}\`${clause} — follow the run-routine skill."`
+    // Works without a bulletin checkout — the raw pointer prompt (ADR-0005).
+    // Always name the repo: with N data repos (ADR-0023) "the" data repo is
+    // ambiguous, so every command is explicit.
+    const command = `claude "Run the bulletin routine \`${routine.slug}\` in \`${dataRepo}\` — follow the run-routine skill."`
     const label = copied
       ? t("widget.copied")
       : t("widget.copyCommand", { name: routine.name })
@@ -594,17 +592,17 @@ function UpdateAction({
  */
 function RunNowButton({
   routine,
-  scope,
+  dataRepo,
   label,
   onFired,
 }: {
   routine: Routine
-  scope: BoardScope
+  dataRepo: string
   label: string
   onFired?: () => void
 }) {
   const t = useT()
-  const { fire, busy, result } = useFireRoutine(routine, scope, onFired)
+  const { fire, busy, result } = useFireRoutine(routine, dataRepo, onFired)
   const error =
     result != null && !result.ok
       ? result.error === "no-trigger"
@@ -662,7 +660,7 @@ export function CopyableCommand({ command }: { command: string }) {
 function WidgetEmptyState({
   status,
   routine,
-  scope,
+  shared = false,
   dataRepo,
   login,
   now,
@@ -671,9 +669,11 @@ function WidgetEmptyState({
 }: {
   status: WidgetStatus
   routine: Routine
-  scope?: BoardScope
+  /** The board's repo isn't the viewer's home repo (ADR-0023). */
+  shared?: boolean
   /** Repo slug of the board's data repo — makes setup commands
-      copy-pasteable (`--repo` instead of a --file placeholder). */
+      copy-pasteable (`--repo` instead of a --file placeholder). Absent on
+      standalone renders (tests), which can't fire runs. */
   dataRepo?: string
   login?: string
   now: number
@@ -715,15 +715,15 @@ function WidgetEmptyState({
     case "ready-manual":
       // The trigger exists, so the run affordance is a real button in the
       // body — not prose pointing at the title-bar icon. Standalone renders
-      // (no scope) can't fire and keep the prose.
-      if (scope != null) cta = t("widget.runNow")
+      // (no repo) can't fire and keep the prose.
+      if (dataRepo != null) cta = t("widget.runNow")
       else hint = t("widget.readyManual")
       break
     case "ready-scheduled":
       // Enacted and armed: offer the first run now so the user confirms the
       // pipeline works in a minute instead of waiting on the cron — which
       // stays the no-cost fallback.
-      if (scope != null) {
+      if (dataRepo != null) {
         cta = t("widget.runFirst")
         note = t("widget.orWaitSchedule", { cron: routine.schedule ?? "" })
       } else {
@@ -748,9 +748,9 @@ function WidgetEmptyState({
       }
   }
 
-  // Team boards: the cloud resource belongs to the runner, so name who must act.
+  // Shared boards: the cloud resource belongs to the runner, so name who must act.
   const runnerNote =
-    scope === "team" &&
+    shared &&
     routine.runner != null &&
     login != null &&
     routine.runner !== login
@@ -776,10 +776,10 @@ function WidgetEmptyState({
           {t("widget.enable")}
         </Button>
       )}
-      {cta && scope != null && (
+      {cta && dataRepo != null && (
         <RunNowButton
           routine={routine}
-          scope={scope}
+          dataRepo={dataRepo}
           label={cta}
           onFired={onFired}
         />

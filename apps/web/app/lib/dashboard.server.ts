@@ -12,9 +12,7 @@ import {
 
 import { data } from "react-router"
 
-import type { BoardScope } from "./board.ts"
 import type { DiscoveredTemplate } from "./templates.ts"
-import { env } from "./env.server.ts"
 import {
   getFile,
   getLastCommitDate,
@@ -22,6 +20,7 @@ import {
   listDirectory,
   repoExists,
 } from "./github.server.ts"
+import { listDataRepos } from "./repos.server.ts"
 import { discoverTemplates } from "./templates.server.ts"
 
 export interface ArtifactInfo {
@@ -43,13 +42,15 @@ export interface ArtifactInfo {
 }
 
 /**
- * Which board a request targets. `repo` is always derived server-side from
- * the session login or BULLETIN_TEAM_REPO — never from client input — so a
- * request can only ever reach repos the resolution rules name (ADR-0010).
+ * Which board a request targets. `repo` always passes the registry gate
+ * (requireDataRepo, ADR-0023) before it gets here — a client-supplied repo
+ * can only ever be a topic-tagged data repo the viewer's token can read.
  */
 export interface BoardRef {
-  scope: BoardScope
   repo: string
+  /** Not the viewer's home repo — an org repo or another user's repo shared
+      with them. Drives the runner rule and the template-source badge. */
+  shared: boolean
   /** Dashboard slug; the layout file is data/dashboards/<slug>.yaml. */
   dashboard: string
 }
@@ -64,7 +65,8 @@ export interface BoardRef {
  */
 export interface DashboardBase {
   dataRepo: string
-  scope: BoardScope
+  /** Mirrors {@link BoardRef.shared} for the client (runner rule, badges). */
+  isShared: boolean
   dashboardSlug: string
   /** Display name from the layout file; UI falls back to the slug. */
   dashboardName: string | null
@@ -85,15 +87,6 @@ export interface DashboardView extends DashboardBase {
   /** Keyed by routine slug. The client joins these with the draft config,
       so a draft that reshapes the grid still finds its artifacts. */
   artifacts: Record<string, ArtifactInfo>
-}
-
-export function resolveDataRepo(login: string, override?: string): string {
-  return override ?? `${login}/${env().BULLETIN_DATA_REPO_PREFIX}${login}`
-}
-
-/** The org-owned team data repo (ADR-0010), or null when not configured. */
-export function resolveTeamRepo(): string | null {
-  return env().BULLETIN_TEAM_REPO ?? null
 }
 
 export function dataRepoExists(token: string, dataRepo: string) {
@@ -176,29 +169,66 @@ export async function listDashboards(
     .sort()
 }
 
+/** One rail group: a data repo and its boards. */
+export interface SidebarRepo {
+  /** `owner/name`. */
+  repo: string
+  /** Short repo name — the group label. */
+  name: string
+  isHome: boolean
+  /** null → visibility unknown (metadata degraded); UI omits the badge. */
+  private: boolean | null
+  /** Board slugs. `[]` — the repo is alive with no boards yet (git prunes
+      `data/dashboards/` with the last file): the group stays, carrying its
+      create-first row. */
+  dashboards: string[]
+}
+
+export interface SidebarData {
+  repos: SidebarRepo[]
+  /** false → discovery degraded: groups may be missing. The rail renders a
+      quiet notice, never an error. */
+  complete: boolean
+}
+
 /**
- * The rail's team board list, in the three states the sidebar renders:
- * `null` — team scope unreachable (unconfigured, repo missing or unreadable,
- * or a GitHub flap): the group is hidden and the new-dashboard dialog stops
- * offering the team scope. `[]` — the repo exists but holds no boards (git
- * prunes `data/dashboards/` with the last board file, so the dir listing
- * 404s even though team scope is alive): the group stays, carrying its
- * create-first row. Otherwise the board slugs.
- *
- * The extra repoExists round-trip runs only on a 404 listing — the one case
- * where "empty" and "no access" are the same GitHub answer.
+ * Everything the rail lists: every discovered data repo (ADR-0023) with its
+ * boards, home first. Each repo's board listing is failure-isolated — one
+ * flaky repo degrades to its own empty group, never the whole rail.
  */
-export async function listTeamDashboards(
+export async function loadSidebar(
   token: string,
-): Promise<string[] | null> {
-  const teamRepo = resolveTeamRepo()
-  if (!teamRepo) return null
+  login: string,
+  override?: string,
+): Promise<SidebarData> {
+  const listing = await listDataRepos(token, login, override)
+  const repos = await Promise.all(
+    listing.repos.map(async (repo) => ({
+      repo: repo.full,
+      name: repo.name,
+      isHome: repo.isHome,
+      private: repo.private,
+      dashboards:
+        (await listDashboards(token, repo.full).catch(() => null)) ?? [],
+    })),
+  )
+  return { repos, complete: listing.complete }
+}
+
+/**
+ * loadSidebar for route loaders: a dead token degrades to the 401 re-auth
+ * page, a transient GitHub failure to the 503 refresh page — same contract
+ * as loadDashboardStructureOr503.
+ */
+export async function loadSidebarOr503(
+  token: string,
+  login: string,
+  override?: string,
+): Promise<SidebarData> {
   try {
-    const dashboards = await listDashboards(token, teamRepo)
-    if (dashboards) return dashboards
-    return (await repoExists(token, teamRepo)) ? [] : null
-  } catch {
-    return null
+    return await loadSidebar(token, login, override)
+  } catch (error) {
+    degradeGitHubError(error)
   }
 }
 
@@ -219,10 +249,10 @@ export async function loadDashboardStructure(
     getFile(token, ref.repo, "data/routines.yaml", "main"),
     getFile(token, ref.repo, dashboardPath(ref.dashboard), "main"),
     // The board's own repo — its templates shadow same-named built-ins.
-    // On a team board that repo is shared, hence the team badge.
+    // On a shared repo's board those templates are shared, hence the badge.
     discoverTemplates(token, {
       repo: ref.repo,
-      source: ref.scope === "team" ? "team" : "private",
+      source: ref.shared ? "team" : "private",
     }),
     listDashboards(token, ref.repo),
   ])
@@ -237,7 +267,7 @@ export async function loadDashboardStructure(
 
   return {
     dataRepo: ref.repo,
-    scope: ref.scope,
+    isShared: ref.shared,
     dashboardSlug: ref.dashboard,
     dashboardName: dashboard.name ?? null,
     routines,

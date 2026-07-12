@@ -83,15 +83,14 @@ export const en = {
 
   "switcher.label": "Dashboard",
   "switcher.personal": "Personal",
-  "switcher.team": "Team",
   "switcher.new": "New dashboard",
+  "switcher.newHere": "Create the first dashboard",
+  "switcher.incomplete": "Some repos may be missing — GitHub search flaked",
 
   "newDash.title": "New dashboard",
   "newDash.description":
     "A named grid of widgets — its layout file lives in the data repo you pick.",
-  "newDash.scope": "Where",
-  "newDash.scopePersonal": "Personal — your data repo",
-  "newDash.scopeTeam": "Team — the shared team repo",
+  "newDash.repo": "Data repo",
   "newDash.name": "Name",
   "newDash.namePlaceholder": "Team Ops",
   "newDash.slug": "Slug",
@@ -112,21 +111,6 @@ export const en = {
   "board.widgetsLoading": "Loading widgets…",
   "board.widgetsLoaded": "Widgets loaded",
   "board.widgetsUnreachable": "Widgets couldn't load — retrying shortly",
-
-  "team.notConfigured":
-    "Team dashboards aren't configured — set BULLETIN_TEAM_REPO on the deployment.",
-  "team.missingTitle": "Create the team repo",
-  "team.missingBody": "Team dashboards live in one shared data repo:",
-  "team.missingCreate": "Create team repo",
-  "team.missingDenied":
-    "GitHub wouldn't let this account create it — ask an org admin to create the repo from the template, then reload.",
-  "team.missingTemplate":
-    "The data-repo template couldn't be found — check BULLETIN_DATA_REPO_TEMPLATE, or ask an org admin to create the team repo by hand.",
-  "team.emptyTitle": "No team dashboards yet",
-  "team.emptyBody":
-    "Create the first one — everyone with access to the team repo will see it.",
-  "team.emptyCta": "New team dashboard",
-  "team.back": "Back to your board",
 
   "widget.stale": "Stale",
   "widget.staleTitle": "Overdue relative to its schedule",
@@ -273,7 +257,6 @@ export const en = {
   "setup.creating": "Creating…",
   "setup.wrongAccount":
     "Sure this repo already exists? This check runs live each time, so it's not stale — you're most likely signed in as a different GitHub account than the one that owns it. Check the login above and sign out to switch.",
-  "setup.teamLink": "Go to team boards",
 
   "settings.title": "Settings",
   "settings.back": "Back to the board",

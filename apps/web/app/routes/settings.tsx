@@ -8,11 +8,8 @@ import {
   handleRadioKeydown,
 } from "../components/appearance-settings.tsx"
 import { NavShell } from "../components/nav-shell.tsx"
-import {
-  listDashboards,
-  listTeamDashboards,
-  resolveDataRepo,
-} from "../lib/dashboard.server.ts"
+import { loadSidebar } from "../lib/dashboard.server.ts"
+import { resolveHomeRepo } from "../lib/repos.server.ts"
 import {
   isLocale,
   LOCALE_OPTIONS,
@@ -38,18 +35,20 @@ import { cn } from "~/lib/utils"
  */
 export async function loader({ request }: Route.LoaderArgs) {
   const auth = await requireAuth(request)
-  const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
-  const [personalDashboards, teamDashboards] = await Promise.all([
-    listDashboards(auth.token, dataRepo).catch(() => null),
-    listTeamDashboards(auth.token),
-  ])
+  const dataRepo = resolveHomeRepo(auth.login, auth.dataRepo)
+  // Best-effort: a transient GitHub blip degrades to an empty rail rather
+  // than crashing the one page that must never trap the user.
+  const sidebar = await loadSidebar(
+    auth.token,
+    auth.login,
+    auth.dataRepo,
+  ).catch(() => ({ repos: [], complete: false }))
   return {
     locale: getLocale(request),
     login: auth.login,
     displayName: auth.name ?? null,
     dataRepo,
-    personalDashboards: personalDashboards ?? [],
-    teamDashboards,
+    sidebar,
   }
 }
 
@@ -82,12 +81,11 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
     <NavShell
       nav={{
         dataRepo: loaderData.dataRepo,
-        // No board is current on settings, so pass an empty slug — the rail
-        // then lights nothing, reading as "you're off the board".
-        scope: "personal",
+        // No board is current on settings, so pass an empty repo+slug — the
+        // rail then lights nothing, reading as "you're off the board".
+        activeRepo: "",
         dashboardSlug: "",
-        personalDashboards: loaderData.personalDashboards,
-        teamDashboards: loaderData.teamDashboards,
+        sidebar: loaderData.sidebar,
         login: loaderData.login,
         displayName: loaderData.displayName,
       }}

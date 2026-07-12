@@ -5,14 +5,34 @@ import { render } from "vitest-browser-react"
 import "../app.css"
 import { DashboardSidebar } from "./dashboard-sidebar.tsx"
 
+const HOME_REPO = "alice/bulletin-data"
+const SHARED_REPO = "acme/bulletin-team"
+
 const base = {
-  dataRepo: "alice/bulletin-data",
-  scope: "personal" as const,
+  dataRepo: HOME_REPO,
+  activeRepo: HOME_REPO,
   // `main` is the active board — so `test` and `team-ops` are *not* active,
   // which is exactly the case the per-board menu has to cover.
   dashboardSlug: "main",
-  personalDashboards: ["main", "test"],
-  teamDashboards: ["team-ops"],
+  sidebar: {
+    repos: [
+      {
+        repo: HOME_REPO,
+        name: "bulletin-data",
+        isHome: true,
+        private: true,
+        dashboards: ["main", "test"],
+      },
+      {
+        repo: SHARED_REPO,
+        name: "bulletin-team",
+        isHome: false,
+        private: true,
+        dashboards: ["team-ops"],
+      },
+    ],
+    complete: true,
+  },
   login: "alice",
   displayName: "Alice",
 }
@@ -51,7 +71,7 @@ const requireMenuItem = (label: string): HTMLElement => {
 async function renderSidebar(
   over: Partial<Parameters<typeof DashboardSidebar>[0]> = {},
 ) {
-  const onDeleteBoard = vi.fn<(scope: string, slug: string) => void>()
+  const onDeleteBoard = vi.fn<(repo: string, slug: string) => void>()
   // AccountMenu's sign-out uses useSubmit, which needs a data router.
   const router = createMemoryRouter([
     {
@@ -74,11 +94,11 @@ describe("DashboardSidebar per-board menu", () => {
     const inactive = requireMenuButton("test")
     expect(getComputedStyle(inactive).opacity).toBe("1")
 
-    // Team boards are all deletable too.
+    // Shared repos' boards are all deletable too.
     expect(menuButton("team-ops")).not.toBeNull()
   })
 
-  it("withholds the menu from the personal default board", async () => {
+  it("withholds the menu from the home default board", async () => {
     await renderSidebar()
     // `main` must always exist (it backs `/`), so it never offers delete.
     expect(menuButton("main")).toBeNull()
@@ -92,8 +112,8 @@ describe("DashboardSidebar per-board menu", () => {
     requireMenuItem("Delete dashboard").click()
 
     expect(onDeleteBoard).toHaveBeenCalledTimes(1)
-    // The row's own scope+slug, even though `main` is the active board.
-    expect(onDeleteBoard).toHaveBeenCalledWith("personal", "test")
+    // The row's own repo+slug, even though `main` is the active board.
+    expect(onDeleteBoard).toHaveBeenCalledWith(HOME_REPO, "test")
   })
 
   it("renders no board menus on chrome pages (no delete handler)", async () => {
@@ -103,41 +123,69 @@ describe("DashboardSidebar per-board menu", () => {
   })
 })
 
-/** The Team group heading — a plain div, so match on exact text. */
-const teamHeading = (): HTMLElement | null =>
+/** A repo group heading — a plain div, so match on exact text. */
+const groupHeading = (label: string): HTMLElement | null =>
   [...document.querySelectorAll<HTMLElement>("nav div")].find(
-    (el) => el.textContent === "Team",
+    (el) => el.textContent === label,
   ) ?? null
 
 const createFirstRow = (): HTMLButtonElement | null =>
   [...document.querySelectorAll("button")].find(
-    (el) => el.textContent?.trim() === "New team dashboard",
+    (el) => el.textContent?.trim() === "Create the first dashboard",
   ) ?? null
 
-describe("DashboardSidebar empty team group", () => {
-  it("keeps the group with a create-first row when the team repo has no boards", async () => {
-    // [] is "team scope alive, zero boards" — the state after deleting the
-    // last team board. The group must not vanish with it.
-    await renderSidebar({ teamDashboards: [] })
-    expect(teamHeading()).not.toBeNull()
+describe("DashboardSidebar repo groups", () => {
+  it("renders one group per discovered repo, home labeled Personal", async () => {
+    await renderSidebar()
+    expect(groupHeading("Personal")).not.toBeNull()
+    expect(groupHeading("bulletin-team")).not.toBeNull()
+  })
+
+  it("keeps an empty repo's group with a create-first row", async () => {
+    // [] is "repo alive, zero boards" — the state after deleting the last
+    // board. The group must not vanish with it.
+    await renderSidebar({
+      sidebar: {
+        repos: [
+          base.sidebar.repos[0],
+          { ...base.sidebar.repos[1], dashboards: [] },
+        ],
+        complete: true,
+      },
+    })
+    expect(groupHeading("bulletin-team")).not.toBeNull()
     expect(createFirstRow()).not.toBeNull()
   })
 
-  it("opens the new-dashboard dialog pre-scoped to team", async () => {
-    await renderSidebar({ teamDashboards: [] })
+  it("opens the new-dashboard dialog pre-targeted at the empty repo", async () => {
+    await renderSidebar({
+      sidebar: {
+        repos: [
+          base.sidebar.repos[0],
+          { ...base.sidebar.repos[1], dashboards: [] },
+        ],
+        complete: true,
+      },
+    })
     createFirstRow()?.click()
 
     await vi.waitFor(() =>
       expect(document.querySelector('[role="dialog"]')).not.toBeNull(),
     )
-    // The scope field renders (team is still offered) and starts on team.
+    // The repo field renders (two repos are offered) and starts on the
+    // empty repo the row belongs to.
     const value = document.querySelector('[data-slot="select-value"]')
-    expect(value?.textContent ?? "").toMatch(/team/i)
+    expect(value?.textContent ?? "").toContain(SHARED_REPO)
   })
 
-  it("hides the group only when team scope is unreachable (null)", async () => {
-    await renderSidebar({ teamDashboards: null })
-    expect(teamHeading()).toBeNull()
-    expect(createFirstRow()).toBeNull()
+  it("notes when discovery degraded instead of hiding it", async () => {
+    await renderSidebar({
+      sidebar: { repos: [base.sidebar.repos[0]], complete: false },
+    })
+    expect(
+      [...document.querySelectorAll("nav p")].some((el) =>
+        (el.textContent ?? "").includes("may be missing"),
+      ),
+    ).toBe(true)
   })
 })

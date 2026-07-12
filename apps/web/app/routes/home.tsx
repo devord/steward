@@ -8,16 +8,16 @@ import { DashboardBoard } from "../components/dashboard-board.tsx"
 import { Wordmark } from "../components/logo.tsx"
 import { buttonVariants } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
-import { DEFAULT_DASHBOARD } from "../lib/board.ts"
+import { DEFAULT_DASHBOARD } from "../lib/repos.ts"
 import type { AppearanceMode } from "../lib/theme.ts"
 import { useAppearance } from "../lib/use-appearance.ts"
 import {
-  listTeamDashboards,
   loadArtifacts,
   loadDashboardStructureOr503,
+  loadSidebarOr503,
   repoExistsOr503,
-  resolveDataRepo,
 } from "../lib/dashboard.server.ts"
+import { resolveHomeRepo } from "../lib/repos.server.ts"
 import { useT } from "../lib/i18n.tsx"
 import { getAuth } from "../lib/session.server.ts"
 
@@ -49,19 +49,13 @@ export async function loader({ request }: Route.LoaderArgs) {
   const auth = await getAuth(request)
   if (!auth) return { kind: "anonymous" as const, origin }
 
-  const dataRepo = resolveDataRepo(auth.login, auth.dataRepo)
+  const dataRepo = resolveHomeRepo(auth.login, auth.dataRepo)
   if (!(await repoExistsOr503(auth.token, dataRepo))) throw redirect("/setup")
 
-  const ref = {
-    scope: "personal" as const,
-    repo: dataRepo,
-    dashboard: DEFAULT_DASHBOARD,
-  }
-  // The team dashboard list is switcher garnish: no team repo, no access,
-  // or a GitHub flap all degrade to "no team section", never an error.
-  const [view, teamDashboards] = await Promise.all([
+  const ref = { repo: dataRepo, shared: false, dashboard: DEFAULT_DASHBOARD }
+  const [view, sidebar] = await Promise.all([
     loadDashboardStructureOr503(auth.token, ref),
-    listTeamDashboards(auth.token),
+    loadSidebarOr503(auth.token, auth.login, auth.dataRepo),
   ])
   // Widget bodies stream in after the chrome + grid paint — returning the
   // promise unawaited defers it (ADR-0002); the board renders skeleton cells
@@ -75,7 +69,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     now: Date.now(),
     view,
     artifacts,
-    teamDashboards,
+    sidebar,
   }
 }
 
@@ -91,8 +85,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       login={loaderData.login}
       displayName={loaderData.displayName}
       now={loaderData.now}
-      personalDashboards={loaderData.view.dashboards}
-      teamDashboards={loaderData.teamDashboards}
+      sidebar={loaderData.sidebar}
     />
   )
 }

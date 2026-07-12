@@ -1,11 +1,12 @@
 /**
- * Repo addressing for the N-data-repo model (ADR-0023): every board lives in
- * some data repo the viewer can read; which repos those are is discovered by
- * GitHub topic, and sharing is repo permissions — nothing else. Shared by
- * server loaders and client navigation.
+ * Repo + board addressing for the N-data-repo model (ADR-0023): every board
+ * lives in some data repo the viewer can read; which repos those are is
+ * discovered by GitHub topic, and sharing is repo permissions — nothing
+ * else. Shared by server loaders and client navigation.
  */
 
-import { DEFAULT_DASHBOARD } from "./board.ts"
+/** Slug of the board `/` renders; every data repo starts with it. */
+export const DEFAULT_DASHBOARD = "main"
 
 export interface RepoRef {
   owner: string
@@ -29,13 +30,6 @@ export interface DataRepo extends RepoRef {
   viewerIsAdmin: boolean | null
 }
 
-/** Which board a request targets. */
-export interface RepoBoardRef {
-  repo: RepoRef
-  /** Dashboard slug; the layout file is data/dashboards/<slug>.yaml. */
-  dashboard: string
-}
-
 const REPO_RE = /^([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+)$/
 
 /** Parse `owner/name`; null when it isn't a plausible GitHub repo. */
@@ -51,9 +45,11 @@ export function parseRepo(full: string): RepoRef | null {
  * every other board — any repo, any slug — lives under the one canonical
  * `/r/:owner/:repo/:dashboard` shape.
  */
-export function repoBoardHref(ref: RepoBoardRef, homeRepo: string): string {
-  if (ref.repo.full === homeRepo && ref.dashboard === DEFAULT_DASHBOARD) {
-    return "/"
-  }
-  return `/r/${ref.repo.owner}/${ref.repo.name}/${ref.dashboard}`
+export function boardHref(
+  repo: string,
+  dashboard: string,
+  homeRepo: string,
+): string {
+  if (repo === homeRepo && dashboard === DEFAULT_DASHBOARD) return "/"
+  return `/r/${repo}/${dashboard}`
 }

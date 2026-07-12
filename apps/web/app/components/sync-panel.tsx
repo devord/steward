@@ -61,7 +61,6 @@ interface SyncResult {
 export function SyncPanel({
   open,
   onOpenChange,
-  scope,
   dashboardSlug,
   dataRepo,
   draft,
@@ -76,12 +75,10 @@ export function SyncPanel({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Which repo and layout file the sync targets (ADR-0010). */
-  scope: "personal" | "team"
   dashboardSlug: string
-  /** Repo slug of the data repo — makes the next-steps commands
-      copy-pasteable (`--repo` instead of a --file placeholder). */
-  dataRepo?: string
+  /** Which data repo the sync targets (ADR-0023) — also makes the next-steps
+      commands copy-pasteable (`--repo` instead of a --file placeholder). */
+  dataRepo: string
   draft: Draft
   baseFiles: { routines: string | null; dashboard: string | null }
   /** SHAs the server currently sees — differs from draft.baseShas when the
@@ -186,7 +183,7 @@ export function SyncPanel({
   function submit() {
     const payload: Record<string, unknown> = {
       intent: asPr ? "pr" : "commit",
-      scope,
+      repo: dataRepo,
       dashboardSlug,
     }
     for (const change of changes) {

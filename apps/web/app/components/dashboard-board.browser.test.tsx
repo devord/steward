@@ -9,7 +9,7 @@ import type { ArtifactInfo, DashboardBase } from "../lib/dashboard.server.ts"
 function view(): DashboardBase {
   return {
     dataRepo: "alice/bulletin-alice",
-    scope: "personal",
+    isShared: false,
     dashboardSlug: "main",
     dashboardName: null,
     routines: {
@@ -53,8 +53,25 @@ async function renderBoard(
           login="alice"
           displayName="Alice"
           now={Date.now()}
-          personalDashboards={["main"]}
-          teamDashboards={["team-ops"]}
+          sidebar={{
+            repos: [
+              {
+                repo: "alice/bulletin-alice",
+                name: "bulletin-alice",
+                isHome: true,
+                private: true,
+                dashboards: ["main"],
+              },
+              {
+                repo: "acme/bulletin-team",
+                name: "bulletin-team",
+                isHome: false,
+                private: true,
+                dashboards: ["team-ops"],
+              },
+            ],
+            complete: true,
+          }}
         />
       ),
     },

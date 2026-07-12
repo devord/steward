@@ -8,26 +8,28 @@ import { Button } from "~/components/ui/button"
 import { Link } from "~/components/ui/link"
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet"
 import { cn } from "~/lib/utils"
-import type { BoardScope } from "../lib/board.ts"
+import type { SidebarData } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
 import { useSidebarCollapsed, useSidebarWidth } from "../lib/sidebar-panel.ts"
 
 /** The navigation the rail renders — the boards, the account, the repo home. */
 export interface ShellNav {
+  /** The account menu's "View data repo" target — the active board's repo,
+      or the home repo on chrome pages. */
   dataRepo: string
-  scope: BoardScope
-  /** The active board's slug; "" on chrome pages (settings) where no board is
-      current, so the rail lights nothing and reads as "off-board". */
+  /** The active board's repo+slug; "" on chrome pages (settings) where no
+      board is current, so the rail lights nothing and reads as "off-board". */
+  activeRepo: string
   dashboardSlug: string
-  personalDashboards: string[]
-  teamDashboards: string[] | null
+  /** Every discovered data repo with its boards (ADR-0023), home first. */
+  sidebar: SidebarData
   login: string
   /** GitHub display name for the account menu; falls back to the login. */
   displayName?: string | null
-  /** Board-lifecycle delete by scope+slug, wired to each board's per-board menu
+  /** Board-lifecycle delete by repo+slug, wired to each board's per-board menu
       in the rail. Absent on chrome pages (settings); the rail itself withholds
-      the menu from the one board that can't be deleted (the personal default). */
-  onDeleteBoard?: (scope: BoardScope, slug: string) => void
+      the menu from the one board that can't be deleted (the home default). */
+  onDeleteBoard?: (repo: string, slug: string) => void
 }
 
 /**

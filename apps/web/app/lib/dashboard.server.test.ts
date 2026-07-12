@@ -10,8 +10,8 @@ import { GitHubError } from "./github.server.ts"
 
 const DATA_REPO = "daniel/bulletin-data-daniel"
 const MAIN_BOARD = {
-  scope: "personal",
   repo: DATA_REPO,
+  shared: false,
   dashboard: "main",
 } as const
 
@@ -95,7 +95,7 @@ describe("loadDashboard", () => {
     // Content-derived SHA (like GitHub's) — keyed on ref+path+content.
     expect(view.baseShas.routines).toMatch(/^sha:main:data\/routines\.yaml:/)
     expect(view.baseFiles.dashboard).toBe(DASHBOARD_YAML)
-    expect(view.scope).toBe("personal")
+    expect(view.isShared).toBe(false)
     expect(view.dashboardSlug).toBe("main")
     expect(view.dashboards).toEqual(["main"])
   })
