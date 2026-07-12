@@ -4,7 +4,7 @@ import { render } from "vitest-browser-react"
 
 import "../app.css"
 import { DashboardBoard } from "./dashboard-board.tsx"
-import type { DashboardBase } from "../lib/dashboard.server.ts"
+import type { ArtifactInfo, DashboardBase } from "../lib/dashboard.server.ts"
 
 function view(): DashboardBase {
   return {
@@ -40,14 +40,16 @@ function view(): DashboardBase {
   }
 }
 
-async function renderBoard() {
+async function renderBoard(
+  artifacts: Promise<Record<string, ArtifactInfo>> = Promise.resolve({}),
+) {
   const router = createMemoryRouter([
     {
       path: "/",
       element: (
         <DashboardBoard
           view={view()}
-          artifacts={Promise.resolve({})}
+          artifacts={artifacts}
           login="alice"
           displayName="Alice"
           now={Date.now()}
@@ -76,5 +78,24 @@ describe("DashboardBoard", () => {
       .toBe(true)
     // The delete confirmation only mounts its content once a board is targeted.
     expect(document.body.textContent).not.toContain("Delete this dashboard?")
+  })
+
+  // Regression: the streamed artifacts promise rejects whenever the server
+  // aborts it (react-router kills promises still pending at streamTimeout —
+  // a cold instance + slow GitHub reads did it every few minutes). Unhandled,
+  // the rejection threw from <Await> into the root error boundary and
+  // replaced the whole board with "An unexpected error occurred."
+  it("degrades to unreachable cells when the artifact stream dies", async () => {
+    // Reject only after mount so the rejection exercises the subscribed
+    // handlers (Await + the resolve effect), like a real aborted stream.
+    await renderBoard(
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Server Timeout")), 10),
+      ),
+    )
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("GitHub unreachable — retries on next refresh")
+    expect(document.body.textContent).toContain("Daily")
   })
 })

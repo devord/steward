@@ -109,6 +109,7 @@ export const en = {
     "The dashboard changed in the repo just now — close and retry",
   "board.widgetsLoading": "Loading widgets…",
   "board.widgetsLoaded": "Widgets loaded",
+  "board.widgetsUnreachable": "Widgets couldn't load — retrying shortly",
 
   "team.notConfigured":
     "Team dashboards aren't configured — set BULLETIN_TEAM_REPO on the deployment.",
