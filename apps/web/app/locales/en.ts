@@ -135,7 +135,7 @@ export const en = {
   "widget.updateShort": "Update",
   "widget.updateRequested": "Run requested — refresh in a minute",
   "widget.updateNoTrigger":
-    "No API trigger for this routine — set one up with pnpm routines:sync",
+    "No API trigger for this routine — set one up with pnpm routine:trigger {slug}",
   "widget.updateFailed": "The run request failed — try again",
   "widget.copyCommand": "Copy the terminal command that runs {name}",
   "widget.copied": "Command copied — run it from your Bulletin checkout",

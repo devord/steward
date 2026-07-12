@@ -63,6 +63,7 @@ export function SyncPanel({
   onOpenChange,
   scope,
   dashboardSlug,
+  dataRepo,
   draft,
   baseFiles,
   serverShas,
@@ -78,6 +79,9 @@ export function SyncPanel({
   /** Which repo and layout file the sync targets (ADR-0010). */
   scope: "personal" | "team"
   dashboardSlug: string
+  /** Repo slug of the data repo — makes the next-steps commands
+      copy-pasteable (`--repo` instead of a --file placeholder). */
+  dataRepo?: string
   draft: Draft
   baseFiles: { routines: string | null; dashboard: string | null }
   /** SHAs the server currently sees — differs from draft.baseShas when the
@@ -208,6 +212,7 @@ export function SyncPanel({
         {showNextSteps ? (
           <NextSteps
             addedRoutines={addedRoutines}
+            dataRepo={dataRepo}
             onDone={() => onSynced(fetcher.data?.newShas ?? {})}
           />
         ) : synced && fetcher.data?.prUrl ? (
@@ -329,17 +334,19 @@ export function SyncPanel({
  */
 function NextSteps({
   addedRoutines,
+  dataRepo,
   onDone,
 }: {
   addedRoutines: Routine[]
+  dataRepo?: string
   onDone: () => void
 }) {
   const t = useT()
   const enactCommand = addedRoutines
-    .map((routine) => setupCommands(routine).enact)
+    .map((routine) => setupCommands(routine, dataRepo).enact)
     .find((command): command is string => command != null)
   const runCommands = addedRoutines
-    .map((routine) => setupCommands(routine).runOnce)
+    .map((routine) => setupCommands(routine, dataRepo).runOnce)
     .filter((command): command is string => command != null)
 
   return (

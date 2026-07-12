@@ -22,6 +22,10 @@
  *     the identical pointer prompt via headless `claude -p`;
  *   - local + manual    → nothing to enact: run it interactively
  *     (`pnpm routine <slug>`, ADR-0017).
+ * Every cloud routine can carry an API trigger — for manual ones it is the
+ * only way to run, for scheduled ones it powers the app's Update button
+ * between crons — so --apply prompts for every missing token in one sitting
+ * (skippable; `pnpm routine:trigger <slug>` mints one later).
  *
  * Cloud routine state has no public read API — it's managed by Claude
  * Code's schedule tooling. So this script:
@@ -30,8 +34,12 @@
  *     the launchd plists (deleting orphans), and prompts for missing
  *     trigger tokens.
  *
- * Usage: pnpm routines:sync [--file <path/to/routines.yaml>]
- *                           [--repo <owner/repo>] [--apply]
+ * Usage: pnpm routines:sync [--repo <owner/repo>]
+ *                           [--file <path/to/routines.yaml>] [--apply]
+ *
+ * --repo without --file (the copy-pasteable form the app shows) uses a
+ * script-managed clone under ~/.cache/bulletin/repos/; --file targets a
+ * checkout you manage; neither means "run from a data-repo checkout".
  */
 import { execFileSync } from "node:child_process"
 import {
@@ -51,11 +59,12 @@ import {
   cloudSources,
   parseRoutinesFile,
   routineHost,
-  triggerFileSchema,
   triggerPath,
 } from "@bulletin/schema"
 
+import { ghLogin, inferRepo, routinesFileFor } from "./data-repo.ts"
 import { cronToLaunchd, launchdPlist, plistRepo } from "./launchd.ts"
+import { promptTriggerToken } from "./trigger-token.ts"
 
 /**
  * Where the contract skills (run-routine, widget-artifact, publish-widget)
@@ -67,15 +76,18 @@ const CONTRACT_REPO = "Form-Factory/bulletin"
 const args = process.argv.slice(2)
 const apply = args.includes("--apply")
 const fileFlag = args.indexOf("--file")
-const file =
-  fileFlag !== -1 && args[fileFlag + 1]
-    ? path.resolve(args[fileFlag + 1])
-    : path.resolve("data", "routines.yaml")
+const repoFlag = args.indexOf("--repo")
+const repoArg = repoFlag !== -1 ? (args[repoFlag + 1] ?? null) : null
+const file = routinesFileFor(
+  fileFlag !== -1 ? (args[fileFlag + 1] ?? null) : null,
+  repoArg,
+)
 
 if (!existsSync(file)) {
   console.error(
     `routines-sync: ${file} not found.\n` +
-      "Run from a data-repo checkout, or pass --file <path/to/routines.yaml>.",
+      "Run from a data-repo checkout, or pass --repo <owner/repo> or" +
+      " --file <path/to/routines.yaml>.",
   )
   process.exit(1)
 }
@@ -94,36 +106,7 @@ try {
   process.exit(1)
 }
 
-/** `owner/name` of the checkout's origin remote, or null. */
-function inferRepo(dir: string): string | null {
-  try {
-    const url = execFileSync(
-      "git",
-      ["-C", dir, "remote", "get-url", "origin"],
-      { encoding: "utf8" },
-    ).trim()
-    const match = /github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?$/.exec(url)
-    return match ? `${match[1]}/${match[2]}` : null
-  } catch {
-    return null
-  }
-}
-
-function ghLogin(): string | null {
-  try {
-    return execFileSync("gh", ["api", "user", "--jq", ".login"], {
-      encoding: "utf8",
-    }).trim()
-  } catch {
-    return null
-  }
-}
-
-const repoFlag = args.indexOf("--repo")
-const repo =
-  repoFlag !== -1 && args[repoFlag + 1]
-    ? args[repoFlag + 1]
-    : inferRepo(path.dirname(file))
+const repo = repoArg ?? inferRepo(path.dirname(file))
 const login = ghLogin()
 
 // Fail closed: with a known target repo but no gh login we cannot tell
@@ -253,6 +236,7 @@ const cloudPlan = [
     `  prompt:     ${pointerPrompt(routine)}`,
     `  repos:      ${orNone(sourcesFor(routine))}`,
     `  connectors: ${orNone(connectorsFor(routine))}`,
+    `  trigger:    ${triggerPath(routine.slug)} ${hasTrigger(routine) ? "(token present)" : "(no token — the app's Update button won't work; see below)"}`,
     "",
   ]),
   ...cloudManual.flatMap((routine) => [
@@ -375,14 +359,21 @@ for (const routine of localManual) {
 }
 if (localManual.length > 0) console.log("")
 
+// Every cloud routine wants a trigger: manual ones can't run without it,
+// scheduled ones need it for the app's Update button — so set it up at
+// enact time rather than as a later chore.
+const missingTriggers = [...cloudScheduled, ...cloudManual].filter(
+  (routine) => !hasTrigger(routine),
+)
+
 if (!apply) {
-  const missing = cloudManual.filter((routine) => !hasTrigger(routine))
-  if (missing.length > 0) {
+  if (missingTriggers.length > 0) {
     console.log(
       "# Missing API-trigger tokens (create the trigger in the Claude web",
-      "\n# UI, then re-run with --apply to paste + commit them):",
+      "\n# UI, then re-run with --apply — or run `pnpm routine:trigger",
+      "\n# <slug>` any time — to paste + commit them):",
     )
-    for (const routine of missing) {
+    for (const routine of missingTriggers) {
       console.log(`#   ${routine.slug} → ${triggerPath(routine.slug)}`)
     }
     console.log("")
@@ -502,29 +493,12 @@ if (plistPlans.length > 0 || orphanPlists.length > 0) {
 
 // --- Apply: missing trigger tokens (ADR-0016) ----------------------------------
 
-/** A prompt with the echo disabled (stty -echo) — the trigger token is a
-    real secret (ADR-0016) and must not land in scrollback or recordings.
-    Reads the terminal directly so the readline interface stays usable. */
-function questionMasked(query: string): string {
-  return execFileSync(
-    "/bin/sh",
-    [
-      "-c",
-      `printf '%s' "$1" >&2; stty -echo; trap 'stty echo' EXIT; read -r line; printf '\\n' >&2; printf '%s' "$line"`,
-      "sh",
-      query,
-    ],
-    { stdio: ["inherit", "pipe", "inherit"], encoding: "utf8" },
-  )
-}
-
-const missingTriggers = cloudManual.filter((routine) => !hasTrigger(routine))
 if (missingTriggers.length > 0) {
   if (!process.stdin.isTTY) {
     console.error(
-      "routines-sync: manual cloud routines are missing trigger tokens" +
+      "routines-sync: cloud routines are missing trigger tokens" +
         ` (${missingTriggers.map((r) => r.slug).join(", ")}) — re-run in a` +
-        " terminal to paste them.",
+        " terminal to paste them, or use `pnpm routine:trigger <slug>`.",
     )
   } else {
     const rl = createInterface({ input: process.stdin, output: process.stdout })
@@ -532,48 +506,13 @@ if (missingTriggers.length > 0) {
       "\nAPI triggers are research preview: create the trigger and mint its" +
         "\ntoken in the Claude web UI (shown once), then paste both here —" +
         "\nthey are committed to the data repo, where repo read access is" +
-        "\nexactly the entitlement to fire (ADR-0016). Leave empty to skip.\n",
+        "\nexactly the entitlement to fire (ADR-0016). Manual routines can't" +
+        "\nrun without one; scheduled routines need one only for the app's" +
+        "\nUpdate button. Leave empty to skip (mint later with" +
+        "\n`pnpm routine:trigger <slug>`).\n",
     )
     for (const routine of missingTriggers) {
-      const id = (
-        await rl.question(`${routine.slug} — cloud routine id: `)
-      ).trim()
-      if (!id) {
-        console.log(`  skipped ${routine.slug}`)
-        continue
-      }
-      const token = questionMasked(`${routine.slug} — trigger token: `).trim()
-      if (!token) {
-        console.log(`  skipped ${routine.slug}`)
-        continue
-      }
-      const relPath = triggerPath(routine.slug)
-      const absPath = path.join(dataRepoDir, relPath)
-      mkdirSync(path.dirname(absPath), { recursive: true })
-      writeFileSync(
-        absPath,
-        JSON.stringify(
-          triggerFileSchema.parse({ routine: id, token }),
-          null,
-          2,
-        ) + "\n",
-      )
-      try {
-        execFileSync("git", ["-C", dataRepoDir, "add", relPath])
-        execFileSync("git", [
-          "-C",
-          dataRepoDir,
-          "commit",
-          "-m",
-          `config: add API trigger for ${routine.slug}`,
-        ])
-        execFileSync("git", ["-C", dataRepoDir, "push"], { stdio: "pipe" })
-        console.log(`  committed + pushed ${relPath}`)
-      } catch {
-        console.error(
-          `  wrote ${relPath} but the commit/push failed — commit it by hand.`,
-        )
-      }
+      await promptTriggerToken(rl, routine.slug, dataRepoDir)
     }
     rl.close()
   }

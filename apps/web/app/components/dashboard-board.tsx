@@ -549,6 +549,7 @@ export function DashboardBoard({
           onOpenChange={setSyncing}
           scope={view.scope}
           dashboardSlug={view.dashboardSlug}
+          dataRepo={view.dataRepo}
           draft={draft}
           baseFiles={base.baseFiles}
           serverShas={base.baseShas}
