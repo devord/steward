@@ -15,6 +15,14 @@ const envSchema = z.object({
     .string()
     .regex(/^[^/]+\/[^/]+$/)
     .optional(),
+  /** GitHub topic that marks a repo as a data repo. Discovery lists every
+      topic-tagged repo the viewer's token can read — sharing is repo
+      permissions, nothing else. Overridable so dev/staging can use a
+      scratch topic without surfacing production repos. */
+  DATA_REPO_TOPIC: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]*$/)
+    .default("steward-data"),
 })
 
 export type Env = z.infer<typeof envSchema>

@@ -197,6 +197,150 @@ export async function listUserRepos(token: string): Promise<string[]> {
   return pages.flat().map((repo) => repo.full_name)
 }
 
+const permissionsSchema = z
+  .object({ admin: z.boolean(), push: z.boolean() })
+  .optional()
+
+const repoMetaSchema = z.object({
+  full_name: z.string(),
+  private: z.boolean(),
+  permissions: permissionsSchema,
+})
+
+export interface RepoMeta {
+  full: string
+  private: boolean
+  permissions?: { admin: boolean; push: boolean }
+}
+
+function toRepoMeta(raw: z.infer<typeof repoMetaSchema>): RepoMeta {
+  return {
+    full: raw.full_name,
+    private: raw.private,
+    ...(raw.permissions ? { permissions: raw.permissions } : {}),
+  }
+}
+
+/**
+ * Repo visibility + the viewer's permission slice, or null for a definitive
+ * 404 (absent, or private and invisible to this token). Transient failures
+ * re-throw so callers degrade instead of misreading an outage as "gone".
+ */
+export async function getRepoMeta(
+  token: string,
+  repo: string,
+): Promise<RepoMeta | null> {
+  const res = await gh(token, `/repos/${repo}`)
+  if (res.status === 404) return null
+  if (!res.ok) {
+    throw new GitHubError(res.status, `${repo} → ${res.status}`)
+  }
+  return toRepoMeta(repoMetaSchema.parse(await res.json()))
+}
+
+const searchSchema = z.object({ items: z.array(repoMetaSchema) })
+
+/**
+ * Every repo the token can see carrying `topic` — the data-repo registry
+ * (ADR-0023). The search API's scoping *is* the sharing model: results are
+ * exactly the tagged repos the viewer can read. One page of 100 covers any
+ * plausible registry; search has its own 30 req/min quota, so the caller
+ * caches (repos.server.ts) and the ETag store turns repeats into 304s.
+ */
+export async function searchReposByTopic(
+  token: string,
+  topic: string,
+): Promise<RepoMeta[]> {
+  const query = encodeURIComponent(`topic:${topic}`)
+  const result = await ghJson(
+    token,
+    `/search/repositories?q=${query}&per_page=100`,
+    searchSchema,
+  )
+  return result.items.map(toRepoMeta)
+}
+
+const collaboratorsSchema = z.array(
+  z.object({ login: z.string(), avatar_url: z.string() }),
+)
+
+export interface Collaborator {
+  login: string
+  avatarUrl: string
+}
+
+/**
+ * Who has access to a repo — the sidebar's avatar stack. Strictly
+ * best-effort: GitHub requires push access to list collaborators, so a
+ * plain reader gets a 403; any failure (403, 404, outage) returns null and
+ * the UI simply omits the stack. Never throws.
+ */
+export async function listCollaborators(
+  token: string,
+  repo: string,
+  limit = 6,
+): Promise<Collaborator[] | null> {
+  try {
+    const res = await gh(
+      token,
+      `/repos/${repo}/collaborators?per_page=${limit}`,
+    )
+    if (!res.ok) return null
+    const parsed = collaboratorsSchema.safeParse(await res.json())
+    if (!parsed.success) return null
+    return parsed.data.map(({ login, avatar_url }) => ({
+      login,
+      avatarUrl: avatar_url,
+    }))
+  } catch {
+    return null
+  }
+}
+
+const topicsSchema = z.object({ names: z.array(z.string()) })
+
+/**
+ * A repo's topics, or null for 404 — how requireDataRepo verifies a repo
+ * missed by search lag really is a tagged data repo (ADR-0023).
+ */
+export async function getRepoTopics(
+  token: string,
+  repo: string,
+): Promise<string[] | null> {
+  const res = await gh(token, `/repos/${repo}/topics`)
+  if (res.status === 404) return null
+  if (!res.ok) {
+    throw new GitHubError(res.status, `${repo} topics → ${res.status}`)
+  }
+  return topicsSchema.parse(await res.json()).names
+}
+
+/**
+ * Tag a repo as a data repo. The topics PUT *replaces* the whole set, so
+ * read-then-union — losing a repo's unrelated topics would be user-visible
+ * vandalism. Idempotent: tagging a tagged repo is a no-op write.
+ */
+export async function addRepoTopic(
+  token: string,
+  repo: string,
+  topic: string,
+): Promise<void> {
+  const existing = (await getRepoTopics(token, repo)) ?? []
+  if (existing.includes(topic)) return
+  await ghJson(token, `/repos/${repo}/topics`, z.unknown(), {
+    method: "PUT",
+    body: JSON.stringify({ names: [...existing, topic] }),
+  })
+}
+
+const orgsSchema = z.array(z.object({ login: z.string() }))
+
+/** Orgs the viewer belongs to — owner choices for create-from-template. */
+export async function listUserOrgs(token: string): Promise<string[]> {
+  const orgs = await ghJson(token, "/user/orgs?per_page=100", orgsSchema)
+  return orgs.map((org) => org.login)
+}
+
 const contentsSchema = z.object({ content: z.string(), sha: z.string() })
 
 export interface RepoFile {

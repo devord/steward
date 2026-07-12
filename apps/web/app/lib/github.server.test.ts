@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest"
 
-import { failPath, githubStats, seedRepo } from "../mocks/github.ts"
-import { getFile, GitHubError, repoExists } from "./github.server.ts"
+import {
+  failPath,
+  githubStats,
+  seedRepo,
+  seedRepoMeta,
+} from "../mocks/github.ts"
+import {
+  addRepoTopic,
+  getFile,
+  getRepoTopics,
+  GitHubError,
+  listCollaborators,
+  repoExists,
+} from "./github.server.ts"
 
 const REPO = "daniel/bulletin-data-daniel"
 const PATH = "data/routines.yaml"
@@ -76,5 +88,47 @@ describe("repoExists", () => {
     const error = await repoExists("token", REPO).catch((e) => e)
     expect(error).toBeInstanceOf(GitHubError)
     expect((error as GitHubError).status).toBe(503)
+  })
+})
+
+describe("addRepoTopic", () => {
+  it("unions with existing topics — the PUT replaces the whole set", async () => {
+    // Losing a repo's unrelated topics would be user-visible vandalism.
+    seedRepoMeta(REPO, { topics: ["internal-tools"] })
+
+    await addRepoTopic("token", REPO, "steward-data")
+
+    expect(await getRepoTopics("token", REPO)).toEqual([
+      "internal-tools",
+      "steward-data",
+    ])
+  })
+
+  it("is a no-op when the topic is already present", async () => {
+    seedRepoMeta(REPO, { topics: ["steward-data"] })
+    await addRepoTopic("token", REPO, "steward-data")
+    expect(await getRepoTopics("token", REPO)).toEqual(["steward-data"])
+  })
+})
+
+describe("listCollaborators", () => {
+  it("lists collaborators for a repo the viewer can administer", async () => {
+    seedRepoMeta(REPO, {
+      collaborators: [
+        { login: "daniel", avatar_url: "https://avatars.test/daniel" },
+        { login: "ana", avatar_url: "https://avatars.test/ana" },
+      ],
+    })
+
+    expect(await listCollaborators("token", REPO)).toEqual([
+      { login: "daniel", avatarUrl: "https://avatars.test/daniel" },
+      { login: "ana", avatarUrl: "https://avatars.test/ana" },
+    ])
+  })
+
+  it("returns null — never throws — when the viewer lacks push access", async () => {
+    // GitHub answers 403 for plain readers; the UI just omits the stack.
+    seedRepoMeta(REPO, { collaborators: "forbidden" })
+    expect(await listCollaborators("token", REPO)).toBeNull()
   })
 })
