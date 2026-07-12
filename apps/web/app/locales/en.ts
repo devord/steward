@@ -62,6 +62,8 @@ export const en = {
     "Removes the routine from routines.yaml when you next sync. Routines are shared across every dashboard in this repo, so it disappears from all of them.",
   "routine.deleteConfirm": "Delete routine",
   "routine.edit": "Edit {name}",
+  "routine.enable": "Enable {name}",
+  "routine.disable": "Disable {name}",
 
   "grid.columnsLabel": "Columns",
   "grid.width": "Width",
@@ -142,6 +144,7 @@ export const en = {
   "widget.copied": "Command copied — run it from your Bulletin checkout",
   "widget.unreachable": "GitHub unreachable — retries on next refresh",
   "widget.disabled": "Routine disabled",
+  "widget.enable": "Enable",
   "widget.running": "Running",
   "widget.runningSince": "Running — started {ago}",
   "widget.draftHint": "In your draft — sync to commit it",

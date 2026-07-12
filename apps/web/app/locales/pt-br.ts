@@ -63,6 +63,8 @@ export const ptBR: Messages = {
     "Remove a rotina do routines.yaml no próximo sync. Rotinas são compartilhadas por todos os painéis deste repo, então ela some de todos.",
   "routine.deleteConfirm": "Excluir rotina",
   "routine.edit": "Editar {name}",
+  "routine.enable": "Ativar {name}",
+  "routine.disable": "Desativar {name}",
 
   "grid.columnsLabel": "Colunas",
   "grid.width": "Largura",
@@ -146,6 +148,7 @@ export const ptBR: Messages = {
   "widget.unreachable":
     "GitHub inacessível — tentará novamente na próxima atualização",
   "widget.disabled": "Rotina desativada",
+  "widget.enable": "Ativar",
   "widget.running": "Rodando",
   "widget.runningSince": "Rodando — começou {ago}",
   "widget.draftHint": "No seu rascunho — sincronize para commitar",

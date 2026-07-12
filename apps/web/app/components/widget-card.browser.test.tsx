@@ -198,4 +198,53 @@ describe("WidgetCard empty states", () => {
     expect(document.querySelectorAll(".animate-spin")).toHaveLength(0)
     expect(document.querySelector('button[aria-label^="Update"]')).toBeNull()
   })
+
+  it("offers an Enable button on a disabled tile — not a dead end", async () => {
+    let toggled = false
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine({ enabled: false })}
+        artifact={undefined}
+        now={Date.now()}
+        scope="personal"
+        dataRepo="o/r"
+        committed
+        onToggleEnabled={() => {
+          toggled = true
+        }}
+      />,
+    )
+    await expect.poll(() => hasText("Routine disabled")).toBe(true)
+    const enable = document.querySelector<HTMLButtonElement>("button")
+    expect(enable?.textContent).toContain("Enable")
+    enable?.click()
+    await expect.poll(() => toggled).toBe(true)
+  })
+
+  it("toggles enabled from the edit-mode title bar", async () => {
+    let toggled = false
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine()}
+        artifact={artifact({ html: "<h1>live</h1>" })}
+        now={Date.now()}
+        scope="personal"
+        dataRepo="o/r"
+        committed
+        editing
+        onToggleEnabled={() => {
+          toggled = true
+        }}
+      />,
+    )
+    // Enabled routine → the control offers to turn it off.
+    const btn = document.querySelector<HTMLButtonElement>(
+      'button[aria-label^="Disable"]',
+    )
+    await expect.poll(() => btn != null).toBe(true)
+    btn?.click()
+    await expect.poll(() => toggled).toBe(true)
+  })
 })
