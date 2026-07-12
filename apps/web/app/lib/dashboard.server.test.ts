@@ -81,7 +81,7 @@ describe("loadDashboard", () => {
     // The data repo's daily-plan shadows the bundled built-in of the same
     // name; repo-pulse arrives as a built-in with no repo seeded at all.
     expect(view.templates.map((t) => [t.id, t.source])).toEqual([
-      ["daily-plan", "private"],
+      ["daily-plan", "repo"],
       ["repo-pulse", "builtin"],
     ])
     expect(view.artifacts["daily-plan"]).toEqual({

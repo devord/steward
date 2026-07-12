@@ -1,6 +1,6 @@
 import { parseRoutineTemplate } from "@bulletin/schema"
 
-import type { DiscoveredTemplate, TemplateSource } from "./templates.ts"
+import type { DiscoveredTemplate } from "./templates.ts"
 import { getFile, listTreePaths } from "./github.server.ts"
 
 /**
@@ -31,14 +31,9 @@ const builtins: DiscoveredTemplate[] = Object.entries(builtinFiles).flatMap(
   },
 )
 
-export interface TemplateSourceRef {
-  repo: string
-  source: TemplateSource
-}
-
 async function discoverFrom(
   token: string,
-  { repo, source }: TemplateSourceRef,
+  repo: string,
 ): Promise<DiscoveredTemplate[]> {
   const paths = await listTreePaths(token, repo)
   if (!paths) return []
@@ -55,7 +50,7 @@ async function discoverFrom(
         const file = await getFile(token, repo, path)
         if (!file) return null
         const template = parseRoutineTemplate(id, file.text)
-        return template ? { ...template, source } : null
+        return template ? { ...template, source: "repo" as const } : null
       } catch {
         return null
       }
@@ -65,14 +60,15 @@ async function discoverFrom(
 }
 
 /**
- * The picker's templates: the board's data repo first (private/team —
- * its templates shadow same-named built-ins), then the bundled built-ins
- * (ADR-0021). A data repo that can't be read degrades to built-ins only:
- * discovery inherits the viewer's permissions.
+ * The picker's templates: the board's own data repo first — its templates
+ * are scoped to that repo's boards and shadow same-named built-ins — then
+ * the bundled built-ins, available everywhere (ADR-0021/0023). A data repo
+ * that can't be read degrades to built-ins only: discovery inherits the
+ * viewer's permissions.
  */
 export async function discoverTemplates(
   token: string,
-  dataRepo: TemplateSourceRef,
+  dataRepo: string,
 ): Promise<DiscoveredTemplate[]> {
   const own = await discoverFrom(token, dataRepo).catch(() => [])
   const seen = new Set(own.map((template) => template.id))

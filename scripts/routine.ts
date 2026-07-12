@@ -70,12 +70,12 @@ if (!dataRepoDir) {
   process.exit(1)
 }
 
-// Same clause rule as routines:sync (ADR-0010): team prompts carry the
-// repo; personal ones stay unclaused so the dispatcher resolves the
-// runner's own data repo.
-const teamMode = repo != null && personalRepo != null && repo !== personalRepo
+// Same clause rule as routines:sync (ADR-0023): every prompt names its
+// repo — with N data repos "the" data repo is ambiguous. Falls back to the
+// home-repo convention when no repo could be inferred.
+const promptRepo = repo ?? personalRepo
 const verb = dry ? "Dry-run" : "Run"
-const clause = teamMode ? ` in \`${repo}\`` : ""
+const clause = promptRepo ? ` in \`${promptRepo}\`` : ""
 const prompt = `${verb} the bulletin routine \`${slug}\`${clause} — follow the run-routine skill.`
 
 // The session's cwd is the data repo, where the contract skills don't

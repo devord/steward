@@ -265,12 +265,9 @@ export async function loadDashboardStructure(
     // (ADR-0003).
     getFile(token, ref.repo, "data/routines.yaml", "main"),
     getFile(token, ref.repo, dashboardPath(ref.dashboard), "main"),
-    // The board's own repo — its templates shadow same-named built-ins.
-    // On a shared repo's board those templates are shared, hence the badge.
-    discoverTemplates(token, {
-      repo: ref.repo,
-      source: ref.shared ? "team" : "private",
-    }),
+    // The board's own repo — its templates are scoped to this repo's
+    // boards and shadow same-named built-ins (ADR-0023).
+    discoverTemplates(token, ref.repo),
     listDashboards(token, ref.repo),
   ])
 

@@ -49,7 +49,7 @@ const templates: DiscoveredTemplate[] = [
       ],
       connectors: ["GitHub"],
     },
-    source: "team",
+    source: "repo",
   },
 ]
 

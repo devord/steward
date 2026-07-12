@@ -1,8 +1,8 @@
 # Bulletin
 
-The domain glossary for Bulletin: **dashboards** (personal and
-team-shared) of **widgets**, each rendering an **artifact** that a
-scheduled **routine** regenerates — reports that update themselves. Architecture decisions live in [`docs/adr/`](./docs/adr/);
+The domain glossary for Bulletin: **dashboards** (in any of a user's data
+repos, private or shared) of **widgets**, each rendering an **artifact**
+that a scheduled **routine** regenerates — reports that update themselves. Architecture decisions live in [`docs/adr/`](./docs/adr/);
 the artifact authoring contract in [`docs/widget-standard.md`](./docs/widget-standard.md).
 
 ## Language
@@ -32,8 +32,9 @@ questions before authoring) are necessarily `local` + manual.
 **Dashboard**:
 A named grid of widgets — one layout file per dashboard at
 `data/dashboards/<slug>.yaml` in a data repo (optional `name:` for
-display). The directory listing is the index. `main` is the personal
-default `/` renders; team dashboards live at `/team/<slug>` (ADR-0010).
+display). The directory listing is the index. The home repo's `main` is
+the default `/` renders; every other board lives at
+`/r/<owner>/<repo>/<slug>` (ADR-0023).
 _Avoid_: board, view, page
 
 **Widget**:
@@ -60,29 +61,44 @@ ADR-0021). Team- or user-specific templates live in the narrowest data
 repo all their users can read (ADR-0014/0021), never here. Team-visible;
 never contains user data.
 
-**Data repo** (`bulletin-data-<login>`):
-One private repo per user, created from the template by the app's first-run
-wizard. `main` holds config (`data/routines.yaml`,
-`data/dashboards/*.yaml`), private routine templates
-(`templates/routines/`, ADR-0021), and any API-trigger tokens (ADR-0016);
-the orphan `artifacts`
-branch holds published artifacts. Privacy is enforced by GitHub repo
-boundaries — there is no other access control (ADR-0001).
+**Data repo**:
+A repo holding one routine pool, its dashboards, and its templates —
+a user can have any number (ADR-0023). `main` holds config
+(`data/routines.yaml`, `data/dashboards/*.yaml`), the repo's routine
+templates (`templates/routines/`, ADR-0021), and any API-trigger tokens
+(ADR-0016); the orphan `artifacts` branch holds published artifacts.
+Discovered by the `steward-data` GitHub **topic**: every tagged repo the
+viewer's token can read appears in the app. Access is GitHub repo
+permissions — there is no other access control (ADR-0001/0023).
 _Avoid_: user repo, config repo
 
-**Team repo** (`BULLETIN_TEAM_REPO`, e.g. `bulletin-data-team`):
-The one org-owned data repo team dashboards live in — same layout as a
-personal data repo, shared routine pool, multiple dashboards (ADR-0010).
-Org permissions are the access control: everyone who can read it sees all
-team routines, layouts, and artifacts.
-_Avoid_: org repo, shared data repo
+**Home repo** (`bulletin-data-<login>`):
+The one data repo resolved by naming convention rather than topic — one
+private repo per user, created from the template by the first-run wizard.
+Anchors `/`, the setup wizard, and the top of the rail (ADR-0001/0023).
+_Avoid_: personal repo (a home repo is one of possibly many private ones)
+
+**Shared (data) repo**:
+Any data repo that isn't the viewer's home repo — an org's, or another
+user's shared with them. Whoever can read it sees all its routines,
+layouts, and artifacts; local/cloud enactment follows the runner rule.
+Different shared repos may belong to entirely different circles of people
+(ADR-0023, superseding ADR-0010's single team repo).
+_Avoid_: team repo (legacy — implies there is exactly one)
+
+**Topic** (`steward-data`, env `DATA_REPO_TOPIC`):
+The GitHub topic marking a repo as a data repo — the whole registry is a
+topic search with the viewer's token (ADR-0023). Create paths tag new
+repos explicitly (template generation doesn't copy topics); registering
+an existing repo is adding the tag.
 
 **Runner**:
 The GitHub login whose Claude account owns a routine's cloud resource —
 its schedule and its API trigger; the canonical executor of scheduled and
-manual cloud runs alike (`runner:` in `routines.yaml`, ADR-0010/0016).
-Meaningful in the team repo — each teammate's `routines:sync` enacts only
-their own entries; personal pools leave it unset (the owner is the runner).
+manual cloud runs alike (`runner:` in `routines.yaml`, ADR-0016/0023).
+Meaningful in shared repos — each collaborator's `routines:sync` enacts
+only their own entries; home pools leave it unset (the owner is the
+runner).
 
 **Routine template**:
 A parameterized routine definition the wizard instantiates: a plain
