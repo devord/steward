@@ -85,8 +85,43 @@ export const ptBR: Messages = {
   "switcher.personal": "Pessoal",
   "switcher.new": "Novo painel",
   "switcher.newHere": "Criar o primeiro painel",
+  "switcher.addRepo": "Adicionar repo de dados",
   "switcher.incomplete":
     "Alguns repos podem estar faltando — a busca do GitHub falhou",
+
+  "repo.private": "Repo privado",
+  "repo.public": "Repo público",
+  "repo.collaborators": "{n} pessoas têm acesso a {repo}",
+  "repo.manageAccess": "Gerenciar acesso a {repo} no GitHub",
+  "repo.viewOnGitHub": "Ver {repo} no GitHub",
+
+  "addRepo.title": "Adicionar um repo de dados",
+  "addRepo.description":
+    "Cada repo de dados tem suas próprias rotinas, painéis e templates. Quem pode ler o repo no GitHub vê os painéis dele aqui.",
+  "addRepo.mode": "Como",
+  "addRepo.modeCreate": "Criar novo",
+  "addRepo.modeCreateHint": "Um repo privado a partir do template",
+  "addRepo.modeRegister": "Registrar existente",
+  "addRepo.modeRegisterHint": "Marcar um repo de dados que você já tem",
+  "addRepo.owner": "Dono",
+  "addRepo.name": "Nome",
+  "addRepo.createHint":
+    "Escolha uma org para compartilhar com as pessoas dela — o acesso ao repo é o único controle de acesso.",
+  "addRepo.existing": "Repositório",
+  "addRepo.registerHint":
+    "Precisa de data/routines.yaml na main, e acesso de push para marcá-lo.",
+  "addRepo.alreadyKnown": "Já está na sua barra",
+  "addRepo.create": "Criar repo",
+  "addRepo.register": "Registrar",
+  "addRepo.working": "Trabalhando…",
+  "addRepo.errDenied":
+    "O GitHub não permitiu com esta conta — podem faltar permissões na org ou aprovação do OAuth app.",
+  "addRepo.errTemplate":
+    "O template do repo de dados não foi encontrado — confira a configuração do deploy.",
+  "addRepo.errExists": "Já existe um repo com esse nome lá.",
+  "addRepo.errMissing": "Repo não existe — ou esta conta não pode vê-lo.",
+  "addRepo.errNotDataRepo":
+    "Esse repo não tem data/routines.yaml — crie um a partir do template, ou adicione o arquivo antes.",
 
   "newDash.title": "Novo painel",
   "newDash.description":

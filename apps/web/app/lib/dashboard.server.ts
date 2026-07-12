@@ -14,9 +14,11 @@ import { data } from "react-router"
 
 import type { DiscoveredTemplate } from "./templates.ts"
 import {
+  type Collaborator,
   getFile,
   getLastCommitDate,
   GitHubError,
+  listCollaborators,
   listDirectory,
   repoExists,
 } from "./github.server.ts"
@@ -178,6 +180,13 @@ export interface SidebarRepo {
   isHome: boolean
   /** null → visibility unknown (metadata degraded); UI omits the badge. */
   private: boolean | null
+  /** Who has access — the group header's avatar stack. null → not listable
+      (the viewer lacks push access, or the call flaked): stack omitted.
+      Access control itself is GitHub's; this is a mirror, never a gate. */
+  collaborators: Collaborator[] | null
+  /** Gates where the header's external link lands: repo access settings
+      for admins, the repo page otherwise. null → unknown. */
+  viewerIsAdmin: boolean | null
   /** Board slugs. `[]` — the repo is alive with no boards yet (git prunes
       `data/dashboards/` with the last file): the group stays, carrying its
       create-first row. */
@@ -203,14 +212,22 @@ export async function loadSidebar(
 ): Promise<SidebarData> {
   const listing = await listDataRepos(token, login, override)
   const repos = await Promise.all(
-    listing.repos.map(async (repo) => ({
-      repo: repo.full,
-      name: repo.name,
-      isHome: repo.isHome,
-      private: repo.private,
-      dashboards:
-        (await listDashboards(token, repo.full).catch(() => null)) ?? [],
-    })),
+    listing.repos.map(async (repo) => {
+      const [dashboards, collaborators] = await Promise.all([
+        listDashboards(token, repo.full).catch(() => null),
+        // Best-effort by contract (403 for plain readers → null).
+        listCollaborators(token, repo.full),
+      ])
+      return {
+        repo: repo.full,
+        name: repo.name,
+        isHome: repo.isHome,
+        private: repo.private,
+        collaborators,
+        viewerIsAdmin: repo.viewerIsAdmin,
+        dashboards: dashboards ?? [],
+      }
+    }),
   )
   return { repos, complete: listing.complete }
 }

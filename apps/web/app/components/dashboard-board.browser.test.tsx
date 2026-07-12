@@ -60,6 +60,8 @@ async function renderBoard(
                 name: "bulletin-alice",
                 isHome: true,
                 private: true,
+                collaborators: null,
+                viewerIsAdmin: true,
                 dashboards: ["main"],
               },
               {
@@ -67,6 +69,8 @@ async function renderBoard(
                 name: "bulletin-team",
                 isHome: false,
                 private: true,
+                collaborators: null,
+                viewerIsAdmin: null,
                 dashboards: ["team-ops"],
               },
             ],

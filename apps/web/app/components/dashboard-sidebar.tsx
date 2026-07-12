@@ -1,10 +1,18 @@
 import { useState } from "react"
 
-import { LayoutGrid, MoreHorizontal, Plus, Trash2 } from "lucide-react"
+import {
+  FolderGit2,
+  LayoutGrid,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+} from "lucide-react"
 
 import { AccountMenu } from "./account-menu.tsx"
+import { AddDataRepoDialog } from "./add-data-repo-dialog.tsx"
 import { Wordmark } from "./logo.tsx"
 import { NewDashboardDialog } from "./new-dashboard-dialog.tsx"
+import { RepoGroupHeader } from "./repo-group-header.tsx"
 import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
@@ -62,6 +70,7 @@ export function DashboardSidebar({
   // The repo the new-dashboard dialog opens on, or null while closed — an
   // empty group's create-first row opens it pre-targeted at that repo.
   const [creating, setCreating] = useState<string | null>(null)
+  const [addingRepo, setAddingRepo] = useState(false)
 
   const homeRepo = sidebar.repos.find((repo) => repo.isHome)?.repo ?? ""
 
@@ -85,10 +94,7 @@ export function DashboardSidebar({
         className="flex-1 space-y-4 overflow-y-auto px-2 py-3"
       >
         {sidebar.repos.map((group) => (
-          <NavGroup
-            key={group.repo}
-            label={group.isHome ? t("switcher.personal") : group.name}
-          >
+          <NavGroup key={group.repo} header={<RepoGroupHeader group={group} />}>
             {group.dashboards.map((slug) => {
               const active = activeRepo === group.repo && dashboardSlug === slug
               // Every board is deletable but the home default — it backs `/`.
@@ -148,6 +154,14 @@ export function DashboardSidebar({
           <LayoutGrid className="size-4 shrink-0 text-ink-faint" />
           {t("switcher.new")}
         </button>
+        <button
+          type="button"
+          onClick={() => setAddingRepo(true)}
+          className="!mt-0.5 flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <FolderGit2 className="size-4 shrink-0 text-ink-faint" />
+          {t("switcher.addRepo")}
+        </button>
       </nav>
 
       <div className="shrink-0 border-t border-border-dim p-2">
@@ -172,6 +186,12 @@ export function DashboardSidebar({
           sidebar.repos.map((repo) => [repo.repo, repo.dashboards]),
         )}
       />
+      <AddDataRepoDialog
+        open={addingRepo}
+        onOpenChange={setAddingRepo}
+        known={sidebar.repos.map((repo) => repo.repo)}
+        onNavigate={onNavigate}
+      />
     </div>
   )
 }
@@ -184,17 +204,15 @@ export function DashboardSidebar({
  * node sitting on the rail (see {@link NavItem}).
  */
 function NavGroup({
-  label,
+  header,
   children,
 }: {
-  label: string
+  header: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <div>
-      <div className="mb-1 truncate px-2.5 font-mono text-xs font-medium text-ink-faint">
-        {label}
-      </div>
+      {header}
       <div className="relative flex flex-col gap-0.5">
         <span
           aria-hidden

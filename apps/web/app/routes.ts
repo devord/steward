@@ -13,6 +13,7 @@ export default [
   route("dev-dialog", "routes/dev-dialog.tsx"),
   route("sync", "routes/sync.ts"),
   route("repos", "routes/repos.ts"),
+  route("data-repos", "routes/data-repos.ts"),
   route("run", "routes/run.ts"),
   route("dashboards", "routes/dashboards.ts"),
   route("auth/login", "routes/auth.login.ts"),
