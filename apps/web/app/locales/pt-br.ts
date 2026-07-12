@@ -152,6 +152,9 @@ export const ptBR: Messages = {
   "widget.awaitEnact": "Commitado — ative no seu checkout do Bulletin:",
   "widget.awaitLocalManual": "Roda na sua máquina — rode quando precisar:",
   "widget.readyManual": "Pronto — aperte atualizar para rodar",
+  "widget.runNow": "Rodar agora",
+  "widget.runFirst": "Rodar primeira atualização",
+  "widget.orWaitSchedule": "ou aguarde o agendamento ({cron})",
   "widget.firstRunSchedule":
     "A primeira execução acontece no agendamento ({cron})",
   "widget.runnerNote":

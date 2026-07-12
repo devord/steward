@@ -4,7 +4,6 @@ import {
   dashboardFileSchema,
   dashboardPath,
   DASHBOARDS_DIR,
-  isManual,
   parseDashboardFile,
   parseRoutinesFile,
   routineHost,
@@ -272,10 +271,11 @@ export async function loadArtifacts(
     routines.routines.map(async (routine) => {
       const { slug } = routine
       const path = `w/${slug}/index.html`
-      // A manual cloud routine's update button fires an API trigger — the
-      // tile needs to know whether that trigger exists (ADR-0016) to tell
-      // "press update" from "set it up first". Only those routines carry one.
-      const wantsTrigger = routineHost(routine) === "cloud" && isManual(routine)
+      // A cloud routine's run-now controls fire an API trigger — the tile
+      // needs to know whether that trigger exists (ADR-0016) to tell "run it
+      // now" from "set it up first". Manual routines can't run without one;
+      // scheduled ones use it for the first-run and Update affordances.
+      const wantsTrigger = routineHost(routine) === "cloud"
       // Body and freshness are fetched independently so a commits-API hiccup
       // never discards artifact HTML that loaded fine. And every per-widget
       // failure is isolated — HTTP 5xx, a network drop, an abort/timeout — so

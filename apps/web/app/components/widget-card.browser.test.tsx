@@ -84,6 +84,81 @@ describe("WidgetCard empty states", () => {
     await expect.poll(() => hasText("pnpm routine r")).toBe(true)
   })
 
+  it("offers the first run for a scheduled routine whose trigger exists", async () => {
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine({ schedule: "0 */4 * * *" })}
+        artifact={artifact({ hasTrigger: true })}
+        now={Date.now()}
+        scope="personal"
+        dataRepo="o/r"
+        committed
+      />,
+    )
+    // A real button in the body owns the action — the title-bar refresh icon
+    // steps aside (one affordance per action) — and the cron stays visible
+    // as the no-cost fallback.
+    await expect.poll(() => hasText("Run first update")).toBe(true)
+    expect(hasText("or wait for its schedule (0 */4 * * *)")).toBe(true)
+    expect(document.querySelector('button[aria-label^="Update"]')).toBeNull()
+  })
+
+  it("offers run-now for a manual routine whose trigger exists", async () => {
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine()}
+        artifact={artifact({ hasTrigger: true })}
+        now={Date.now()}
+        scope="personal"
+        dataRepo="o/r"
+        committed
+      />,
+    )
+    await expect.poll(() => hasText("Run now")).toBe(true)
+    expect(document.querySelector('button[aria-label^="Update"]')).toBeNull()
+  })
+
+  it("fires /run with the board scope and slug when the CTA is clicked", async () => {
+    let received: unknown
+    let fired = false
+    const router = createMemoryRouter([
+      {
+        path: "/",
+        element: (
+          <WidgetCard
+            widget={widget}
+            routine={routine({ schedule: "0 */4 * * *" })}
+            artifact={artifact({ hasTrigger: true })}
+            now={Date.now()}
+            scope="personal"
+            dataRepo="o/r"
+            committed
+            onFired={() => {
+              fired = true
+            }}
+          />
+        ),
+      },
+      {
+        path: "/run",
+        action: async ({ request }) => {
+          received = await request.json()
+          return { ok: true }
+        },
+      },
+    ])
+    const screen = await render(<RouterProvider router={router} />)
+
+    await screen.getByRole("button", { name: "Run first update" }).click()
+
+    // The action must see the parsed object (scope + slug), and a successful
+    // fire reaches the board via onFired — the full useFireRoutine round trip.
+    await expect.poll(() => fired).toBe(true)
+    expect(received).toEqual({ scope: "personal", slug: "r" })
+  })
+
   it("drops the update button while a run is in flight", async () => {
     await renderCard(
       <WidgetCard

@@ -88,6 +88,9 @@ describe("loadDashboard", () => {
       html: "<h1>plan</h1>",
       sha: expect.stringMatching(/^sha:artifacts:w\/daily-plan\/index\.html:/),
       lastRunAt: "2026-07-09T07:00:00Z",
+      // Scheduled cloud routines carry trigger state too — the tile's
+      // run-now affordances need it (ADR-0016).
+      hasTrigger: false,
     })
     // Content-derived SHA (like GitHub's) — keyed on ref+path+content.
     expect(view.baseShas.routines).toMatch(/^sha:main:data\/routines\.yaml:/)
@@ -126,6 +129,7 @@ describe("loadDashboard", () => {
       html: null,
       sha: null,
       lastRunAt: null,
+      hasTrigger: false,
     })
   })
 
@@ -140,6 +144,7 @@ describe("loadDashboard", () => {
       sha: null,
       lastRunAt: null,
       unreachable: true,
+      hasTrigger: false,
     })
     // The rest of the view is intact.
     expect(view.routines.routines).toHaveLength(1)
@@ -171,6 +176,7 @@ describe("loadDashboard", () => {
       html: "<h1>plan</h1>",
       sha: expect.stringMatching(/^sha:artifacts:w\/daily-plan\/index\.html:/),
       lastRunAt: null,
+      hasTrigger: false,
     })
   })
 
@@ -195,6 +201,7 @@ describe("loadDashboard", () => {
       sha: null,
       lastRunAt: null,
       unreachable: true,
+      hasTrigger: false,
     })
     expect(view.routines.routines).toHaveLength(1)
   })

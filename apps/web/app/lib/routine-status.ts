@@ -11,9 +11,11 @@ import { cronIntervalMs } from "./time.ts"
  *
  * The chain: draft (added, not committed) → committed but not enacted
  * (needs-trigger for a manual cloud routine without its API trigger, or
- * awaiting-first-run otherwise) → running (a fire is in flight) → live (has an
- * artifact), possibly stale. `disabled`/`unreachable` are orthogonal terminal
- * states.
+ * awaiting-first-run otherwise) → ready (the API trigger exists, so the tile
+ * can offer a real run-now button: ready-manual, or ready-scheduled for a
+ * cron routine that hasn't had its first run) → running (a fire is in
+ * flight) → live (has an artifact), possibly stale. `disabled`/`unreachable`
+ * are orthogonal terminal states.
  */
 export type WidgetStatus =
   | { kind: "draft" }
@@ -21,6 +23,7 @@ export type WidgetStatus =
   | { kind: "unreachable" }
   | { kind: "needs-trigger" }
   | { kind: "ready-manual" }
+  | { kind: "ready-scheduled" }
   | { kind: "awaiting-first-run" }
   | { kind: "running"; firedAt: number }
   | { kind: "live"; stale: boolean }
@@ -69,11 +72,18 @@ export function widgetStatus(
   if (!ctx.committed) return { kind: "draft" }
   if (!routine.enabled) return { kind: "disabled" }
   if (ctx.artifact?.unreachable) return { kind: "unreachable" }
-  if (routineHost(routine) === "cloud" && isManual(routine)) {
-    // A manual cloud routine's update button only works once its API trigger
-    // exists; until then, point at the command that creates it.
-    if (ctx.hasTrigger === false) return { kind: "needs-trigger" }
-    if (ctx.hasTrigger === true) return { kind: "ready-manual" }
+  if (routineHost(routine) === "cloud") {
+    if (isManual(routine)) {
+      // A manual cloud routine's update button only works once its API
+      // trigger exists; until then, point at the command that creates it.
+      if (ctx.hasTrigger === false) return { kind: "needs-trigger" }
+      if (ctx.hasTrigger === true) return { kind: "ready-manual" }
+    } else if (ctx.hasTrigger === true) {
+      // A scheduled routine with its trigger can fire right now — offer the
+      // first run instead of leaving the user waiting on the cron. Without a
+      // trigger it still runs on schedule, so that stays awaiting-first-run.
+      return { kind: "ready-scheduled" }
+    }
   }
   return { kind: "awaiting-first-run" }
 }
