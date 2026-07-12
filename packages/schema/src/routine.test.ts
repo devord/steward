@@ -115,14 +115,14 @@ describe("routinesFileSchema", () => {
           name: "Repo Pulse",
           template: "repo-pulse",
           params: {
-            repos: ["Form-Factory/bulletin", "Form-Factory/plugins"],
+            repos: ["devord/steward", "devord/plugins"],
             lens: "reviews",
           },
         },
       ],
     })
     expect(parsed.routines[0]?.params).toEqual({
-      repos: ["Form-Factory/bulletin", "Form-Factory/plugins"],
+      repos: ["devord/steward", "devord/plugins"],
       lens: "reviews",
     })
   })
@@ -150,12 +150,12 @@ describe("routinesFileSchema", () => {
           name: "Repo Pulse",
           template: "repo-pulse",
           schedule: "0 */4 * * *",
-          repos: ["Form-Factory/plugins"],
+          repos: ["devord/plugins"],
           connectors: ["GitHub"],
         },
       ],
     })
-    expect(parsed.routines[0]?.repos).toEqual(["Form-Factory/plugins"])
+    expect(parsed.routines[0]?.repos).toEqual(["devord/plugins"])
     expect(parsed.routines[0]?.connectors).toEqual(["GitHub"])
   })
 
@@ -175,22 +175,16 @@ describe("routinesFileSchema", () => {
 })
 
 describe("cloudSources", () => {
-  const base = [
-    "Form-Factory/bulletin",
-    "danielmoraes/bulletin-data-danielmoraes",
-  ]
+  const base = ["devord/steward", "danielmoraes/steward-data-danielmoraes"]
 
   it("unions declared extras onto the base, base first", () => {
     const routine = routineSchema.parse({
       slug: "repo-pulse",
       name: "Repo Pulse",
       template: "repo-pulse",
-      repos: ["Form-Factory/plugins"],
+      repos: ["devord/plugins"],
     })
-    expect(cloudSources(routine, base)).toEqual([
-      ...base,
-      "Form-Factory/plugins",
-    ])
+    expect(cloudSources(routine, base)).toEqual([...base, "devord/plugins"])
   })
 
   it("de-duplicates a repo already in the base", () => {
@@ -198,7 +192,7 @@ describe("cloudSources", () => {
       slug: "daily-plan",
       name: "Daily Plan",
       template: "daily-plan",
-      repos: ["Form-Factory/bulletin"],
+      repos: ["devord/steward"],
     })
     expect(cloudSources(routine, base)).toEqual(base)
   })

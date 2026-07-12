@@ -1,4 +1,4 @@
-import type { Widget } from "@bulletin/schema"
+import type { Widget } from "@steward/schema"
 import { describe, expect, it } from "vitest"
 
 import { collides, findFreeSlot } from "./placement.ts"

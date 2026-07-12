@@ -11,7 +11,7 @@ import { githubHandlers, resetGitHub } from "./github.ts"
 process.env.GITHUB_CLIENT_ID = "test-client-id"
 process.env.GITHUB_CLIENT_SECRET = "test-client-secret"
 process.env.SESSION_SECRET = "0".repeat(64)
-process.env.BULLETIN_DATA_REPO_TEMPLATE = "form-factory/bulletin-template"
+process.env.STEWARD_DATA_REPO_TEMPLATE = "devord/steward-data-template"
 
 export const server = setupServer(...githubHandlers)
 

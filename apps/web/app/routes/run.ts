@@ -4,7 +4,7 @@ import {
   slugSchema,
   triggerFileSchema,
   triggerPath,
-} from "@bulletin/schema"
+} from "@steward/schema"
 import { data } from "react-router"
 import { z } from "zod"
 

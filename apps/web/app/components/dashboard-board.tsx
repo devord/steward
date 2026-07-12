@@ -2,8 +2,8 @@ import type { ReactNode } from "react"
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { Await, useFetcher, useNavigate, useRevalidator } from "react-router"
 
-import type { DashboardFile, Routine, WidgetSize } from "@bulletin/schema"
-import { dashboardPath, GRID_MAX_COLS } from "@bulletin/schema"
+import type { DashboardFile, Routine, WidgetSize } from "@steward/schema"
+import { dashboardPath, GRID_MAX_COLS } from "@steward/schema"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"

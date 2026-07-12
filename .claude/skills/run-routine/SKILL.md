@@ -1,12 +1,12 @@
 ---
 name: run-routine
 description: >-
-  The bulletin dispatcher (ADR-0005): every run enters here — scheduled,
+  The steward dispatcher (ADR-0005): every run enters here — scheduled,
   manual, or dry. Given a routine slug, resolve it in the data repo's
   data/routines.yaml, execute that routine's template with its
   instructions and params, enforce the widget standard, and
-  publish the artifact. Use when a prompt says "Run the bulletin routine
-  <slug>" or "Dry-run the bulletin routine <slug>".
+  publish the artifact. Use when a prompt says "Run the steward routine
+  <slug>" or "Dry-run the steward routine <slug>".
 ---
 
 # run-routine
@@ -14,12 +14,14 @@ description: >-
 You were invoked by a pointer prompt of one of these forms (ADR-0005,
 ADR-0010, ADR-0017):
 
-- _"Run the bulletin routine `<slug>` — follow the `run-routine` skill."_
-- _"Run the bulletin routine `<slug>` in `<owner/repo>` — follow the
+- _"Run the steward routine `<slug>` — follow the `run-routine` skill."_
+- _"Run the steward routine `<slug>` in `<owner/repo>` — follow the
   `run-routine` skill."_
 - Either form starting with **"Dry-run"** instead of "Run" — a dry run
   (ADR-0017). **Decide this first**: dry mode changes step 1 (local tree
   only, no remotes) and step 3 (no plugin install/clone) — see § Dry runs.
+- Legacy: "Run the bulletin routine …" (the pre-rename phrase, ADR-0024)
+  still dispatches here during migration — treat it identically.
 
 The prompt is deliberately stable; everything that can change lives in the
 data repo's YAML.
@@ -35,15 +37,15 @@ below.
 Otherwise: when the prompt carries an ``in `<owner/repo>` `` clause, that
 repo IS the data repo — every prompt names its repo now that a user can
 have many data repos (ADR-0023). Legacy prompts without the clause resolve
-to the home repo: `bulletin-data-<login>` for the account you run as
+to the home repo: `steward-data-<login>` for the account you run as
 (ADR-0001). In order of preference:
 
 1. The current working directory, if it contains `data/routines.yaml` —
    and, when the prompt names a repo, its `origin` remote matches it.
-2. A sibling checkout (e.g. `~/bulletin-data-*` or a repo mounted into the
+2. A sibling checkout (e.g. `~/steward-data-*` or a repo mounted into the
    cloud environment), same remote check.
 3. Clone it: `gh repo clone <owner/repo>` — for personal runs that is
-   `<login>/bulletin-data-<login>` (get `<login>` from
+   `<login>/steward-data-<login>` (get `<login>` from
    `gh api user --jq .login`).
 
 If the repo is unreachable (or you cannot push to it), stop and report —
@@ -70,7 +72,7 @@ Every routine names a `template:` (ADR-0022; freeform routines name the
 `custom` built-in). Resolve `templates/routines/<template>.md`, in order:
 
 1. the **data repo** checkout (a private or team template);
-2. the **bulletin checkout** — the repo this very skill lives in, so it
+2. the **steward checkout** — the repo this very skill lives in, so it
    is always present where you are (built-in templates ship next to the
    dispatcher).
 

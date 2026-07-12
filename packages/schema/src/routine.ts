@@ -28,7 +28,7 @@ export const routineSchema = z.object({
   name: z.string().min(1),
   /**
    * Routine template id — `templates/routines/<id>.md` in the data repo
-   * (private/team) or the bulletin repo (built-in), resolved by the
+   * (private/team) or the steward repo (built-in), resolved by the
    * run-routine dispatcher, hard-failing on a bad reference (ADR-0021).
    * Required: a freeform routine names the `custom` built-in, whose
    * whole procedure is "follow `instructions`" (ADR-0022).

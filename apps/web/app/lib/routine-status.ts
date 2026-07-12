@@ -1,5 +1,5 @@
-import type { Routine } from "@bulletin/schema"
-import { isManual, routineHost } from "@bulletin/schema"
+import type { Routine } from "@steward/schema"
+import { isManual, routineHost } from "@steward/schema"
 
 import type { ArtifactInfo } from "./dashboard.server.ts"
 import { cronIntervalMs } from "./time.ts"
@@ -102,9 +102,9 @@ export function setupCommands(
   trigger: string | null
 } {
   const local = routineHost(routine) === "local"
-  // Runs from the bulletin checkout (ADR-0014), which has no data/ dir. With
+  // Runs from the steward checkout (ADR-0014), which has no data/ dir. With
   // the repo slug known, --repo makes the line copy-pasteable — the script
-  // maintains its own clone under ~/.cache/bulletin/. Standalone renders
+  // maintains its own clone under ~/.cache/steward/. Standalone renders
   // don't know the slug and fall back to a --file placeholder.
   const target =
     dataRepo != null

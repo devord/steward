@@ -1,4 +1,4 @@
-import type { Widget } from "@bulletin/schema"
+import type { Widget } from "@steward/schema"
 
 import { Skeleton } from "~/components/ui/skeleton"
 import { cssVars } from "../lib/css.ts"

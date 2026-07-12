@@ -1,5 +1,5 @@
 {
-  "name": "@bulletin/web",
+  "name": "@steward/web",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
-    "@bulletin/schema": "workspace:*",
     "@fontsource-variable/geist": "^5.2.9",
     "@react-router/node": "^8.1.0",
     "@react-router/serve": "^8.1.0",
+    "@steward/schema": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "isbot": "^5.1.30",

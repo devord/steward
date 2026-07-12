@@ -5,8 +5,8 @@ import { render } from "vitest-browser-react"
 import "../app.css"
 import { DashboardSidebar } from "./dashboard-sidebar.tsx"
 
-const HOME_REPO = "alice/bulletin-data"
-const SHARED_REPO = "acme/bulletin-team"
+const HOME_REPO = "alice/steward-data"
+const SHARED_REPO = "acme/steward-team"
 
 const base = {
   dataRepo: HOME_REPO,
@@ -18,7 +18,7 @@ const base = {
     repos: [
       {
         repo: HOME_REPO,
-        name: "bulletin-data",
+        name: "steward-data",
         isHome: true,
         private: true,
         collaborators: null,
@@ -27,7 +27,7 @@ const base = {
       },
       {
         repo: SHARED_REPO,
-        name: "bulletin-team",
+        name: "steward-team",
         isHome: false,
         private: false,
         collaborators: [
@@ -166,7 +166,7 @@ describe("DashboardSidebar repo groups", () => {
   it("renders one group per discovered repo, home labeled Personal", async () => {
     await renderSidebar()
     expect(groupHeader(HOME_REPO)?.textContent).toContain("Personal")
-    expect(groupHeader(SHARED_REPO)?.textContent).toContain("bulletin-team")
+    expect(groupHeader(SHARED_REPO)?.textContent).toContain("steward-team")
   })
 
   it("carries repo identity: visibility badge, avatar stack, GitHub link", async () => {

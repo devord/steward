@@ -20,13 +20,13 @@ catalog-freshness check; seed `data/*.yaml` in `templates/data-repo/`.
 ## M2 — Auth + data-repo bootstrap + read-only dashboard ✅
 
 GitHub OAuth (ADR-0004), session cookie, first-run wizard creating
-`bulletin-data-<login>` from the template. Loaders fetch catalog/contracts
+`steward-data-<login>` from the template. Loaders fetch catalog/contracts
 from the shared repo and config + artifacts from the user's data repo. Grid
 renders widgets in sandboxed `srcdoc` iframes; "ran Xh ago" footers from
 commit history; placeholder for never-published. Sample artifact at
 `docs/samples/daily-plan.html` — hand-push it per the template README to
 prove the render path.
-**Risk retired 2026-07-09:** deployed to Vercel (project `bulletin`,
+**Risk retired 2026-07-09:** deployed to Vercel (project `steward`,
 production `READY` from `main`, OAuth env vars live); the RR7 peer concern
 didn't bite.
 
@@ -56,7 +56,7 @@ external/PIN-gated artifact sharing (second publish target), artifact
 version browsing (free from git history), `instructionsFile:` for
 long-form routine guidance, dashboard rename (today: delete + recreate),
 dashboard display names in the switcher (today: slugs). "Run now" and the
-`bulletin apply` CLI graduated into M6 (ADR-0016/0017).
+`steward apply` CLI graduated into M6 (ADR-0016/0017).
 
 ## M6 — Hosts, manual runs, prompt-first ✅ (code)
 

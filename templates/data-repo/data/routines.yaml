@@ -1,6 +1,6 @@
-# Bulletin routines — the source of truth for what runs and when.
+# Steward routines — the source of truth for what runs and when.
 # Each routine has a slug, a name, and a `template:` — a routine template
-# by id, from bulletin's built-ins or this repo's templates/routines/
+# by id, from steward's built-ins or this repo's templates/routines/
 # (ADR-0021/0022). The `custom` built-in runs your `instructions` as the
 # whole brief. Optional fields:
 #   instructions: guidance for the template's run — for `custom`, the
@@ -12,7 +12,7 @@
 #   host:     cloud (default) or local — local runs on your machine and is
 #             the only host that can read local data (ADR-0012)
 #   repos:    extra source repos (owner/repo) a CLOUD run needs beyond the
-#             two always attached — the bulletin app repo (contract skills
+#             two always attached — the steward app repo (contract skills
 #             + built-in templates) and this data repo. A cloud run reaches
 #             only attached repos; repos a template watches via a params
 #             list are attached by the app automatically (ADR-0018/0020).
@@ -22,11 +22,11 @@
 #             connectors rather than your whole account's set (ADR-0018).
 #             Ignored for local runs (they inherit the machine's servers).
 # Enact schedules and triggers with `pnpm routines:sync`. Edit via the
-# Bulletin app or by hand.
+# Steward app or by hand.
 routines:
   - slug: daily-plan
     name: Daily Plan
-    template: daily-plan # a bulletin built-in (templates/routines/)
+    template: daily-plan # a steward built-in (templates/routines/)
     schedule: "0 8 * * *"
     # It reads your calendar, so allow just that connector — nothing else:
     connectors: [Google_Calendar]

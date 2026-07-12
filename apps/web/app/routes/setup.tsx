@@ -11,7 +11,7 @@ import { useT } from "../lib/i18n.tsx"
 import { requireAuth } from "../lib/session.server.ts"
 
 export function meta(_args: Route.MetaArgs) {
-  return [{ title: "Bulletin — Set up" }]
+  return [{ title: "Steward — Set up" }]
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -34,7 +34,7 @@ export async function action({ request }: Route.ActionArgs) {
 
   await generateFromTemplate(
     auth.token,
-    env().BULLETIN_DATA_REPO_TEMPLATE,
+    env().STEWARD_DATA_REPO_TEMPLATE,
     auth.login,
     name,
   )

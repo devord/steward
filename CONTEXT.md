@@ -1,6 +1,6 @@
-# Bulletin
+# Steward
 
-The domain glossary for Bulletin: **dashboards** (in any of a user's data
+The domain glossary for Steward: **dashboards** (in any of a user's data
 repos, private or shared) of **widgets**, each rendering an **artifact**
 that a scheduled **routine** regenerates — reports that update themselves. Architecture decisions live in [`docs/adr/`](./docs/adr/);
 the artifact authoring contract in [`docs/widget-standard.md`](./docs/widget-standard.md).
@@ -53,7 +53,7 @@ the thing a widget renders. Addressed by convention, never by URL:
 tokens, media-query responsive).
 _Avoid_: report, page, output file
 
-**Shared repo** (`bulletin`):
+**Shared repo** (`steward`):
 This repository — the product. The web app, `packages/schema`, the contract
 skills (`run-routine`, `widget-artifact`, `publish-widget`), the data-repo
 template, and the built-in routine templates (`templates/routines/`,
@@ -72,7 +72,7 @@ viewer's token can read appears in the app. Access is GitHub repo
 permissions — there is no other access control (ADR-0001/0023).
 _Avoid_: user repo, config repo
 
-**Home repo** (`bulletin-data-<login>`):
+**Home repo** (`steward-data-<login>`):
 The one data repo resolved by naming convention rather than topic — one
 private repo per user, created from the template by the first-run wizard.
 Anchors `/`, the setup wizard, and the top of the rail (ADR-0001/0023).

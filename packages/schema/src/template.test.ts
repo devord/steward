@@ -59,7 +59,7 @@ describe("widgetMetaSchema", () => {
 
 const TEMPLATE_MD = `---
 name: daily-plan
-description: Produce today's working plan as a bulletin widget artifact.
+description: Produce today's working plan as a steward widget artifact.
 widget:
   artifact: "Today's plan: top 3 priorities, time blocks, and carry-overs"
   sizes:

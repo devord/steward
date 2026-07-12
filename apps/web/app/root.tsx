@@ -157,7 +157,7 @@ function ErrorChrome() {
     <AppHeader className="gap-x-2.5">
       <Link
         to="/"
-        aria-label="Bulletin"
+        aria-label="Steward"
         className="-mx-1 inline-flex items-center rounded-md px-1 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <Wordmark className="text-sm" />

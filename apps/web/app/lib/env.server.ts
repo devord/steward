@@ -7,8 +7,8 @@ const envSchema = z.object({
   /** Cookie-signing secret; generate with `openssl rand -hex 32`. */
   SESSION_SECRET: z.string().min(32),
   /** `owner/name` of the data-repo template. */
-  BULLETIN_DATA_REPO_TEMPLATE: z.string().regex(/^[^/]+\/[^/]+$/),
-  BULLETIN_DATA_REPO_PREFIX: z.string().default("bulletin-data-"),
+  STEWARD_DATA_REPO_TEMPLATE: z.string().regex(/^[^/]+\/[^/]+$/),
+  STEWARD_DATA_REPO_PREFIX: z.string().default("steward-data-"),
   /** GitHub topic that marks a repo as a data repo. Discovery lists every
       topic-tagged repo the viewer's token can read — sharing is repo
       permissions, nothing else. Overridable so dev/staging can use a

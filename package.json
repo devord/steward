@@ -1,5 +1,5 @@
 {
-  "name": "bulletin",
+  "name": "steward",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,13 +7,13 @@
     "test": "turbo run test",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck && tsc -p scripts",
-    "dev": "pnpm --filter @bulletin/web dev",
+    "dev": "pnpm --filter @steward/web dev",
     "routine": "node scripts/routine.ts",
     "routine:trigger": "node scripts/routine-trigger.ts",
     "routines:sync": "node scripts/routines-sync.ts"
   },
   "devDependencies": {
-    "@bulletin/schema": "workspace:*",
+    "@steward/schema": "workspace:*",
     "@types/node": "catalog:",
     "lefthook": "^1.13.0",
     "turbo": "^2.10.4",

@@ -1,4 +1,4 @@
-# Bulletin
+# Steward
 
 Dashboard of living widgets: each widget renders an HTML artifact kept fresh
 by a scheduled Claude Code routine. Monorepo — web app in `apps/`, shared

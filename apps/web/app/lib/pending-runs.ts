@@ -17,7 +17,7 @@ import type { ArtifactInfo } from "./dashboard.server.ts"
  */
 const PENDING_TIMEOUT_MS = 10 * 60_000
 
-const PREFIX = "bulletin:pending-run:"
+const PREFIX = "steward:pending-run:"
 
 /** What we remember about an in-flight run: when it fired and the artifact
     SHA at that moment (null → nothing published yet), so a later load can tell

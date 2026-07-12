@@ -1,6 +1,6 @@
 # Design
 
-Visual system for Bulletin's app chrome. The palette is law: the theme
+Visual system for Steward's app chrome. The palette is law: the theme
 registry in `apps/web/app/lib/theme.ts` is the single source of every hex
 (ADR-0009); `app.css` only aliases its runtime vars, the shadcn semantic
 tokens alias those in turn (ADR-0008), and the `widget-artifact` skill
@@ -83,7 +83,7 @@ non-default theme.
 
 The logo is a mini dashboard grid on a gruvbox tile: two widgets
 (`ink-dim`, legible not faint) and one tall orange block — the wordmark's
-trailing cursor (`bulletin▮`) placed as the last widget on the board. One
+trailing cursor (`steward▮`) placed as the last widget on the board. One
 drawing, several mirrors that must stay geometrically in sync; the fills
 differ by surface (context below), but never the geometry.
 
@@ -111,7 +111,7 @@ where it turns to mush).
   — the PWA/Android adaptive icon, so launchers build a real adaptive tile
   instead of masking apple-touch into a flat squircle. Linked from
   `root.tsx`; `theme_color`/`background_color` are the dark `#1d2021`.
-- `apps/web/public/wordmark-{dark,light}.svg` — the mark + `bulletin`
+- `apps/web/public/wordmark-{dark,light}.svg` — the mark + `steward`
   lockup for the README, swapped by `prefers-color-scheme` in a `<picture>`.
   These are a document context (a light or dark page), so they keep the
   theme pair; widgets are the palette's `ink-dim` for legibility.
@@ -171,14 +171,14 @@ the fact and the next action in one line each — no cheerleading.
 
 The product name splits on **who sets the type**. Where we render the
 lockup — the `Wordmark`/`Logo` components, the README SVGs — it is the
-lowercase logotype **`bulletin`**. Everywhere a string is handed off to the
+lowercase logotype **`steward`**. Everywhere a string is handed off to the
 system or a reader — page `<title>`s, `manifest` name/`short_name`, OG/
-Twitter meta, `aria-label`s, and all prose ("from your Bulletin checkout")
-— it is the capitalized product noun **`Bulletin`**. Lowercase in a
+Twitter meta, `aria-label`s, and all prose ("from your Steward checkout")
+— it is the capitalized product noun **`Steward`**. Lowercase in a
 system-rendered label or mid-sentence reads as a typo, not a logotype, so it
 stays confined to the marks we draw. Identifiers keep lowercase for the usual
-machine-string reason (`@bulletin/schema`, `bulletin-data-*`, cookies, storage
-keys, the `Run the bulletin routine` command).
+machine-string reason (`@steward/schema`, `steward-data-*`, cookies, storage
+keys, the `Run the steward routine` command).
 
 ## Language
 

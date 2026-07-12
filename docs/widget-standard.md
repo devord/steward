@@ -18,7 +18,7 @@ relies on it when rendering. Grid bounds are encoded in
   `<iframe srcdoc={artifactHtml} sandbox="allow-scripts">` — scripts allowed,
   **no** `allow-same-origin`, and the sandbox has no network.
 - **Tiles never scroll** (ADR-0019). The frame pins `overflow: hidden`
-  inside the tile iframe and stamps `data-bulletin-tile` on the artifact's
+  inside the tile iframe and stamps `data-steward-tile` on the artifact's
   `<html>`; if content overflows anyway, the frame fades the bottom edge out
   so the truncation is visible ("there's more — expand"), never an ambiguous
   mid-line crop. The full view scrolls freely — that's where every row lives.
@@ -42,7 +42,7 @@ An artifact MUST:
      tiles never scroll and the frame clips overflow (ADR-0019), so content
      that doesn't fit must degrade to fewer items plus a visible `+N more`
      line — silent cropping is a contract violation. Gate the fit-to-height
-     measurement on `html[data-bulletin-tile]` (the board's stamp) so the raw
+     measurement on `html[data-steward-tile]` (the board's stamp) so the raw
      page and the full view keep every row; the `widget-artifact` skill
      carries the reference snippet.
    - **Full view** (`≥ ~900 px` wide): the dashboard can lift any widget into

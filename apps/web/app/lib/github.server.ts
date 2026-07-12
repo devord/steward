@@ -522,7 +522,7 @@ export async function generateFromTemplate(
       owner,
       name,
       private: true,
-      description: "Bulletin data repo — config on main, artifacts branch",
+      description: "Steward data repo — config on main, artifacts branch",
     }),
   })
 }

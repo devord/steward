@@ -27,7 +27,7 @@ describe("negotiateLocale", () => {
 describe("getLocale", () => {
   it("prefers a valid cookie over the header", () => {
     const req = request({
-      Cookie: "bulletin_locale=pt-BR",
+      Cookie: "steward_locale=pt-BR",
       "Accept-Language": "en",
     })
     expect(getLocale(req)).toBe("pt-BR")
@@ -35,7 +35,7 @@ describe("getLocale", () => {
 
   it("survives a malformed cookie value and falls back to the header", () => {
     const req = request({
-      Cookie: "bulletin_locale=%",
+      Cookie: "steward_locale=%",
       "Accept-Language": "pt",
     })
     expect(getLocale(req)).toBe("pt-BR")

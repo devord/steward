@@ -1,7 +1,7 @@
 ---
 name: publish-widget
 description: >-
-  Publish a bulletin widget artifact: commit the HTML file to
+  Publish a steward widget artifact: commit the HTML file to
   w/<slug>/index.html on the data repo's orphan artifacts branch and push
   (ADR-0002). Publishing is a git push — no upload, no CDN. Use as the last
   step of every routine run.
@@ -22,7 +22,7 @@ local file instead of a push — the live widget must never see a test run:
 ```bash
 set -euo pipefail   # a failed copy must fail the run, not open stale output
 printf '%s' "$SLUG" | LC_ALL=C grep -Eqx '[a-z0-9]+(-[a-z0-9]+)*' || { echo "bad slug: $SLUG" >&2; exit 1; }
-OUT="${TMPDIR:-/tmp}/bulletin-dry/$SLUG.html"
+OUT="${TMPDIR:-/tmp}/steward-dry/$SLUG.html"
 mkdir -p "$(dirname "$OUT")"
 cp "$ARTIFACT_FILE" "$OUT.tmp" && mv "$OUT.tmp" "$OUT"
 open "$OUT" 2>/dev/null || xdg-open "$OUT" 2>/dev/null || true

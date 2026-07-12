@@ -6,7 +6,7 @@ import { server } from "../mocks/setup-node.ts"
 import { getFile } from "./github.server.ts"
 import { performSync } from "./sync.server.ts"
 
-const REPO = "daniel/bulletin-data-daniel"
+const REPO = "daniel/steward-data-daniel"
 const ROUTINES = "routines:\n  - slug: a\n    name: A\n    instructions: x\n"
 const DASHBOARD = "grid:\n  columns: 4\n  rowHeight: 150\nwidgets: []\n"
 

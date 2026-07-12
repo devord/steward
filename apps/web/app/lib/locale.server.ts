@@ -6,7 +6,7 @@ import { DEFAULT_LOCALE, isLocale, type Locale, matchLocale } from "./i18n.tsx"
  * A plain cookie, not the auth session — language is a device preference
  * and must work for anonymous visitors too.
  */
-const LOCALE_COOKIE = "bulletin_locale"
+const LOCALE_COOKIE = "steward_locale"
 
 /**
  * The best supported locale in an Accept-Language header, honoring

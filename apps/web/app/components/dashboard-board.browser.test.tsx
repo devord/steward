@@ -8,7 +8,7 @@ import type { ArtifactInfo, DashboardBase } from "../lib/dashboard.server.ts"
 
 function view(): DashboardBase {
   return {
-    dataRepo: "alice/bulletin-alice",
+    dataRepo: "alice/steward-alice",
     isShared: false,
     dashboardSlug: "main",
     dashboardName: null,
@@ -56,8 +56,8 @@ async function renderBoard(
           sidebar={{
             repos: [
               {
-                repo: "alice/bulletin-alice",
-                name: "bulletin-alice",
+                repo: "alice/steward-alice",
+                name: "steward-alice",
                 isHome: true,
                 private: true,
                 collaborators: null,
@@ -65,8 +65,8 @@ async function renderBoard(
                 dashboards: ["main"],
               },
               {
-                repo: "acme/bulletin-team",
-                name: "bulletin-team",
+                repo: "acme/steward-team",
+                name: "steward-team",
                 isHome: false,
                 private: true,
                 collaborators: null,

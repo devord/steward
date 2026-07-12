@@ -7,7 +7,7 @@ import {
   parseRoutinesFile,
   serializeDashboardFile,
   serializeRoutinesFile,
-} from "@bulletin/schema"
+} from "@steward/schema"
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { Button } from "~/components/ui/button"
@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog"
-import type { Routine } from "@bulletin/schema"
+import type { Routine } from "@steward/schema"
 
 import { Label } from "~/components/ui/label"
 import { type DiffLine, diffLines } from "../lib/diff.ts"

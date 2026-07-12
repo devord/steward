@@ -1,4 +1,4 @@
-# Bulletin dashboard layout — which widgets show where. One file per
+# Steward dashboard layout — which widgets show where. One file per
 # dashboard in data/dashboards/; the filename is the dashboard's slug
 # (`main` is the default board the app opens).
 # Grid: `columns` on desktop (up to 6), ~`rowHeight`px row unit, `width`

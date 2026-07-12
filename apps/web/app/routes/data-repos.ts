@@ -39,7 +39,7 @@ export async function loader({ request }: { request: Request }) {
   return {
     login: auth.login,
     orgs,
-    prefix: env().BULLETIN_DATA_REPO_PREFIX,
+    prefix: env().STEWARD_DATA_REPO_PREFIX,
   } satisfies DataRepoOwners
 }
 
@@ -91,7 +91,7 @@ export async function action({ request }: { request: Request }) {
     try {
       await generateFromTemplate(
         auth.token,
-        env().BULLETIN_DATA_REPO_TEMPLATE,
+        env().STEWARD_DATA_REPO_TEMPLATE,
         payload.owner,
         payload.name,
       )

@@ -7,10 +7,10 @@ product
 ## Users
 
 Daniel and, later, the Form Factory team — developers who live in
-terminals, editors, and GitHub. They open Bulletin a few times a day for a
+terminals, editors, and GitHub. They open Steward a few times a day for a
 glance, not a session: "what's my plan, what needs my review, is anything
 stale?" Ambient context: a dark editor, a wall of monospace, dozens of tabs.
-Bulletin is the calm one.
+Steward is the calm one.
 
 ## Product Purpose
 

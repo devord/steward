@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { useFetcher } from "react-router"
 
-import type { Routine, Widget, WidgetSize } from "@bulletin/schema"
-import { GRID_MAX_COLS, GRID_MAX_ROWS, routineHost } from "@bulletin/schema"
+import type { Routine, Widget, WidgetSize } from "@steward/schema"
+import { GRID_MAX_COLS, GRID_MAX_ROWS, routineHost } from "@steward/schema"
 import {
   Check,
   Copy,
@@ -514,10 +514,10 @@ function UpdateAction({
   const [copied, setCopied] = useState(false)
 
   if (routineHost(routine) === "local") {
-    // Works without a bulletin checkout — the raw pointer prompt (ADR-0005).
+    // Works without a steward checkout — the raw pointer prompt (ADR-0005).
     // Always name the repo: with N data repos (ADR-0023) "the" data repo is
     // ambiguous, so every command is explicit.
-    const command = `claude "Run the bulletin routine \`${routine.slug}\` in \`${dataRepo}\` — follow the run-routine skill."`
+    const command = `claude "Run the steward routine \`${routine.slug}\` in \`${dataRepo}\` — follow the run-routine skill."`
     const label = copied
       ? t("widget.copied")
       : t("widget.copyCommand", { name: routine.name })

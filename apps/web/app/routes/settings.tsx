@@ -54,8 +54,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export function meta({ loaderData }: Route.MetaArgs) {
   const title = loaderData
-    ? `Bulletin — ${translate(loaderData.locale, "settings.title")}`
-    : "Bulletin — Settings"
+    ? `Steward — ${translate(loaderData.locale, "settings.title")}`
+    : "Steward — Settings"
   return [{ title }]
 }
 

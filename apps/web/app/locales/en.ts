@@ -160,7 +160,7 @@ export const en = {
     "No API trigger for this routine — set one up with pnpm routine:trigger {slug}",
   "widget.updateFailed": "The run request failed — try again",
   "widget.copyCommand": "Copy the terminal command that runs {name}",
-  "widget.copied": "Command copied — run it from your Bulletin checkout",
+  "widget.copied": "Command copied — run it from your Steward checkout",
   "widget.unreachable": "GitHub unreachable — retries on next refresh",
   "widget.disabled": "Routine disabled",
   "widget.enable": "Enable",
@@ -168,8 +168,8 @@ export const en = {
   "widget.runningSince": "Running — started {ago}",
   "widget.draftHint": "In your draft — sync to commit it",
   "widget.needsTriggerHint":
-    "Needs an API trigger before update works — from your Bulletin checkout:",
-  "widget.awaitEnact": "Committed — enact it from your Bulletin checkout:",
+    "Needs an API trigger before update works — from your Steward checkout:",
+  "widget.awaitEnact": "Committed — enact it from your Steward checkout:",
   "widget.awaitLocalManual": "Runs on your machine — run it when you need it:",
   "widget.readyManual": "Ready — press update to run it",
   "widget.runNow": "Run now",
@@ -268,7 +268,7 @@ export const en = {
   "sync.takeServer": "Take server version",
   "sync.nextSteps": "Committed — next, enact your new routines",
   "sync.nextStepsBody":
-    "Saved to the repo, but a routine only runs once it's enacted. From your Bulletin checkout:",
+    "Saved to the repo, but a routine only runs once it's enacted. From your Steward checkout:",
   "sync.done": "Done",
   "sync.asPr": "Open a PR instead",
   "sync.discard": "Discard draft",
@@ -279,7 +279,7 @@ export const en = {
   "setup.title": "Create your dashboard repo",
   "setup.hi1": "Hi",
   "setup.hi2":
-    "— Bulletin keeps everything it knows about you in one private GitHub repo:",
+    "— Steward keeps everything it knows about you in one private GitHub repo:",
   // {branch} is replaced with a <code>-styled branch name at render time,
   // so each locale controls the article and word order around it.
   "setup.bulletMain":

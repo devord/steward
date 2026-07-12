@@ -30,7 +30,7 @@ export interface RepoListing {
 
 /** The viewer's home repo — naming convention, or the session override. */
 export function resolveHomeRepo(login: string, override?: string): string {
-  return override ?? `${login}/${env().BULLETIN_DATA_REPO_PREFIX}${login}`
+  return override ?? `${login}/${env().STEWARD_DATA_REPO_PREFIX}${login}`
 }
 
 /**

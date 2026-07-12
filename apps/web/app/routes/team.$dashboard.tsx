@@ -1,6 +1,6 @@
 import { redirect } from "react-router"
 
-import { slugSchema } from "@bulletin/schema"
+import { slugSchema } from "@steward/schema"
 
 import type { Route } from "./+types/team.$dashboard"
 import { boardHref } from "../lib/repos.ts"

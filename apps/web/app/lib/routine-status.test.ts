@@ -1,4 +1,4 @@
-import type { Routine } from "@bulletin/schema"
+import type { Routine } from "@steward/schema"
 import { describe, expect, it } from "vitest"
 
 import type { ArtifactInfo } from "./dashboard.server.ts"
@@ -160,12 +160,12 @@ describe("setupCommands", () => {
     expect(
       setupCommands(
         routine({ schedule: "0 8 * * *" }),
-        "alice/bulletin-data-alice",
+        "alice/steward-data-alice",
       ),
     ).toEqual({
-      enact: "pnpm routines:sync --apply --repo alice/bulletin-data-alice",
+      enact: "pnpm routines:sync --apply --repo alice/steward-data-alice",
       runOnce: null,
-      trigger: "pnpm routine:trigger r --repo alice/bulletin-data-alice",
+      trigger: "pnpm routine:trigger r --repo alice/steward-data-alice",
     })
   })
 

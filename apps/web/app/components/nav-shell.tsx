@@ -193,7 +193,7 @@ export function NavShell({
                 always below lg, and on desktop only while collapsed. */}
             <Link
               to="/"
-              aria-label="Bulletin"
+              aria-label="Steward"
               className={cn(
                 "-mx-1 mr-1 inline-flex items-center rounded-md px-1 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
                 !collapsed && "lg:hidden",
