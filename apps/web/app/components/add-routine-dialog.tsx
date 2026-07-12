@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import type { ReactNode } from "react"
 
 import type {
   Routine,
@@ -485,7 +486,7 @@ export function AddRoutineDialog({
           >
             {step === "intent" ? (
               // Template is the step's one question (ADR-0022): the custom
-              // card leads, selected by default with the prompt right under
+              // card leads, selected by default with the prompt nested inside
               // it, so opening the dialog and typing stays the on-ramp.
               <div className="grid gap-2">
                 <Label>{t("dialog.template")}</Label>
@@ -496,23 +497,23 @@ export function AddRoutineDialog({
                     description={t("dialog.customCard")}
                     selected={isCustom}
                     onPick={() => setTemplateId(null)}
-                  />
-                  {isCustom && (
-                    <Textarea
-                      id="routine-prompt"
-                      // The on-ramp: open the dialog and type. Custom is
-                      // preselected, so the prompt takes initial focus.
-                      autoFocus
-                      aria-label={t("dialog.prompt")}
-                      value={instructions}
-                      onChange={(event) => setInstructions(event.target.value)}
-                      placeholder={t("dialog.promptPlaceholder")}
-                      rows={3}
-                      // The textarea belongs to the selected custom card
-                      // above it; the gap-1.5 list rhythm reads them as one.
-                      className="mb-1.5"
-                    />
-                  )}
+                  >
+                    {isCustom && (
+                      <Textarea
+                        id="routine-prompt"
+                        // The on-ramp: open the dialog and type. Custom is
+                        // preselected, so the prompt takes initial focus.
+                        autoFocus
+                        aria-label={t("dialog.prompt")}
+                        value={instructions}
+                        onChange={(event) =>
+                          setInstructions(event.target.value)
+                        }
+                        placeholder={t("dialog.promptPlaceholder")}
+                        rows={3}
+                      />
+                    )}
+                  </TemplateCard>
                   {templates.map((entry) => (
                     <TemplateCard
                       key={entry.id}
@@ -836,7 +837,9 @@ export function AddRoutineDialog({
  * and params surface where they act (the grid and the configure step),
  * never as pre-pick metadata. The `custom` built-in renders through the
  * same card, synthesized by the wizard (it has no `widget:` block to
- * discover).
+ * discover) — its prompt nests inside the card as `children`, under a
+ * hairline, so the card's one border owns both and the field never reads
+ * as a sibling list item.
  */
 function TemplateCard({
   id,
@@ -844,6 +847,7 @@ function TemplateCard({
   description,
   selected,
   onPick,
+  children,
 }: {
   id: string
   /** Translated source label (Built-in / Team / Private). */
@@ -851,39 +855,52 @@ function TemplateCard({
   description: string
   selected: boolean
   onPick: () => void
+  /** Rendered inside the card below a hairline — the custom card's prompt. */
+  children?: ReactNode
 }) {
   return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onPick}
+    <div
       className={cn(
-        "flex cursor-pointer items-start justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
-        selected ? "border-primary bg-muted" : "border-border",
+        "rounded-lg border text-sm transition-colors",
+        // Hover lives on the container: with nothing nested the header
+        // button fills it, and the selected card is already bg-muted.
+        selected ? "border-primary bg-muted" : "border-border hover:bg-muted",
       )}
     >
-      <span className="min-w-0">
-        <span className="flex items-center gap-2">
-          <span className="font-mono text-xs text-primary">{id}</span>
-          <Badge
-            variant="secondary"
-            className="h-[18px] px-1.5 font-mono text-xs text-ink-dim"
-          >
-            {badge}
-          </Badge>
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={onPick}
+        className="flex w-full cursor-pointer items-start justify-between gap-2 rounded-lg px-3 py-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <span className="min-w-0">
+          <span className="flex items-center gap-2">
+            <span className="font-mono text-xs text-primary">{id}</span>
+            <Badge
+              variant="secondary"
+              className="h-[18px] px-1.5 font-mono text-xs text-ink-dim"
+            >
+              {badge}
+            </Badge>
+          </span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            {description}
+          </span>
         </span>
-        <span className="mt-0.5 block text-xs text-muted-foreground">
-          {description}
-        </span>
-      </span>
-      <CheckIcon
-        aria-hidden
-        className={cn(
-          "mt-0.5 size-4 shrink-0 text-primary transition-opacity duration-100",
-          selected ? "opacity-100" : "opacity-0",
-        )}
-      />
-    </button>
+        <CheckIcon
+          aria-hidden
+          className={cn(
+            "mt-0.5 size-4 shrink-0 text-primary transition-opacity duration-100",
+            selected ? "opacity-100" : "opacity-0",
+          )}
+        />
+      </button>
+      {children && (
+        <div className="border-t border-border-dim px-3 pt-2.5 pb-3">
+          {children}
+        </div>
+      )}
+    </div>
   )
 }
 
