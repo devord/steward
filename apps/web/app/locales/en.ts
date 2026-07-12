@@ -85,7 +85,42 @@ export const en = {
   "switcher.personal": "Personal",
   "switcher.new": "New dashboard",
   "switcher.newHere": "Create the first dashboard",
+  "switcher.addRepo": "Add data repo",
   "switcher.incomplete": "Some repos may be missing — GitHub search flaked",
+
+  "repo.private": "Private repo",
+  "repo.public": "Public repo",
+  "repo.collaborators": "{n} people have access to {repo}",
+  "repo.manageAccess": "Manage access to {repo} on GitHub",
+  "repo.viewOnGitHub": "View {repo} on GitHub",
+
+  "addRepo.title": "Add a data repo",
+  "addRepo.description":
+    "Each data repo holds its own routines, dashboards, and templates. Whoever can read the repo on GitHub sees its boards here.",
+  "addRepo.mode": "How",
+  "addRepo.modeCreate": "Create new",
+  "addRepo.modeCreateHint": "A private repo from the template",
+  "addRepo.modeRegister": "Register existing",
+  "addRepo.modeRegisterHint": "Tag a data repo you already have",
+  "addRepo.owner": "Owner",
+  "addRepo.name": "Name",
+  "addRepo.createHint":
+    "Pick an org to share with its people — repo access is the only access control.",
+  "addRepo.existing": "Repository",
+  "addRepo.registerHint":
+    "Needs data/routines.yaml on main, and push access to tag it.",
+  "addRepo.alreadyKnown": "Already in your rail",
+  "addRepo.create": "Create repo",
+  "addRepo.register": "Register",
+  "addRepo.working": "Working…",
+  "addRepo.errDenied":
+    "GitHub wouldn't allow it with this account — org permissions or OAuth app approval may be missing.",
+  "addRepo.errTemplate":
+    "The data-repo template couldn't be found — check the deployment's template setting.",
+  "addRepo.errExists": "A repo with that name already exists there.",
+  "addRepo.errMissing": "No such repo — or this account can't see it.",
+  "addRepo.errNotDataRepo":
+    "That repo has no data/routines.yaml — create one from the template instead, or add the file first.",
 
   "newDash.title": "New dashboard",
   "newDash.description":

@@ -21,13 +21,20 @@ const base = {
         name: "bulletin-data",
         isHome: true,
         private: true,
+        collaborators: null,
+        viewerIsAdmin: true,
         dashboards: ["main", "test"],
       },
       {
         repo: SHARED_REPO,
         name: "bulletin-team",
         isHome: false,
-        private: true,
+        private: false,
+        collaborators: [
+          { login: "alice", avatarUrl: "https://avatars.test/alice" },
+          { login: "bob", avatarUrl: "https://avatars.test/bob" },
+        ],
+        viewerIsAdmin: false,
         dashboards: ["team-ops"],
       },
     ],
@@ -123,11 +130,9 @@ describe("DashboardSidebar per-board menu", () => {
   })
 })
 
-/** A repo group heading — a plain div, so match on exact text. */
-const groupHeading = (label: string): HTMLElement | null =>
-  [...document.querySelectorAll<HTMLElement>("nav div")].find(
-    (el) => el.textContent === label,
-  ) ?? null
+/** A repo group header — carries its repo as the tooltip. */
+const groupHeader = (repo: string): HTMLElement | null =>
+  document.querySelector<HTMLElement>(`nav div[title="${repo}"]`)
 
 const createFirstRow = (): HTMLButtonElement | null =>
   [...document.querySelectorAll("button")].find(
@@ -137,8 +142,32 @@ const createFirstRow = (): HTMLButtonElement | null =>
 describe("DashboardSidebar repo groups", () => {
   it("renders one group per discovered repo, home labeled Personal", async () => {
     await renderSidebar()
-    expect(groupHeading("Personal")).not.toBeNull()
-    expect(groupHeading("bulletin-team")).not.toBeNull()
+    expect(groupHeader(HOME_REPO)?.textContent).toContain("Personal")
+    expect(groupHeader(SHARED_REPO)?.textContent).toContain("bulletin-team")
+  })
+
+  it("carries repo identity: visibility badge, avatar stack, GitHub link", async () => {
+    await renderSidebar()
+
+    // Home: private lock; the viewer admins it, so the link goes to the
+    // access-settings page.
+    const home = groupHeader(HOME_REPO)
+    expect(home?.querySelector('[data-testid="repo-private"]')).not.toBeNull()
+    expect(
+      home?.querySelector(
+        `a[href="https://github.com/${HOME_REPO}/settings/access"]`,
+      ),
+    ).not.toBeNull()
+    // Solo repo (collaborators null) — no avatar stack.
+    expect(home?.querySelector('[data-slot="avatar-group"]')).toBeNull()
+
+    // Shared: public globe, two collaborators, plain-repo link (no admin).
+    const shared = groupHeader(SHARED_REPO)
+    expect(shared?.querySelector('[data-testid="repo-public"]')).not.toBeNull()
+    expect(shared?.querySelector('[data-slot="avatar-group"]')).not.toBeNull()
+    expect(
+      shared?.querySelector(`a[href="https://github.com/${SHARED_REPO}"]`),
+    ).not.toBeNull()
   })
 
   it("keeps an empty repo's group with a create-first row", async () => {
@@ -153,7 +182,7 @@ describe("DashboardSidebar repo groups", () => {
         complete: true,
       },
     })
-    expect(groupHeading("bulletin-team")).not.toBeNull()
+    expect(groupHeader(SHARED_REPO)).not.toBeNull()
     expect(createFirstRow()).not.toBeNull()
   })
 
