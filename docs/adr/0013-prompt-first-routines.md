@@ -1,5 +1,9 @@
 # Prompt-first routines: the skill is optional
 
+> Amended by ADR-0021 (skills became routine templates) and ADR-0022
+> (`template:` is required; prompt-only lives on as the `custom` built-in
+> template). The prompt-first wizard UX below still stands.
+
 A routine's content logic doesn't have to be a skill. `skill:` in
 `routines.yaml` becomes **optional**; a routine is valid with only
 `instructions:`. The dispatcher's behavior:

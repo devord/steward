@@ -16,6 +16,7 @@ const routines = (slugs: string[]): RoutinesFile => ({
   routines: slugs.map((slug) => ({
     slug,
     name: slug.toUpperCase(),
+    template: "custom",
     enabled: true,
     instructions: `do ${slug}`,
   })),

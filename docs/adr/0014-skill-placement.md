@@ -1,5 +1,10 @@
 # Skills live in the narrowest repo all their users can read
 
+> Amended by ADR-0021: content skills became **routine templates**
+> (`templates/routines/<id>.md`), the plugins tier is retired, and
+> resolution moved to the dispatcher. The readership rule and the
+> contract-skill placement below still stand.
+
 Routine skills are content; the bulletin repo is the platform. Mixing them
 couples every private or team-specific report to the product's history and
 visibility. The rule: **a skill lives in the narrowest repo that all its

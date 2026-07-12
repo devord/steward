@@ -17,10 +17,11 @@
 
 Bulletin has no database and no artifact host. GitHub is both:
 
-- **This repo (shared):** the web app, the schemas, and the contract
-  skills. Content skills live in the narrowest repo their users can read —
-  the team's plugins repo or a data repo (ADR-0014). Team-visible; never
-  holds user data.
+- **This repo (shared):** the web app, the schemas, the contract skills,
+  and the built-in routine templates (`templates/routines/`, ADR-0021).
+  Team- or private-specific templates live in the narrowest data repo
+  their users can read (ADR-0014/0021). Team-visible; never holds user
+  data.
 - **Your data repo (`bulletin-data-<login>`, private):** created for you from
   a template on first sign-in. `main` holds your config
   (`data/routines.yaml`, `data/dashboard.yaml`); the `artifacts` branch holds
@@ -30,7 +31,7 @@ Bulletin has no database and no artifact host. GitHub is both:
 The loop, end to end:
 
 1. **You add a routine** in the UI: describe what the widget should show
-   (optionally accelerated by a discovered skill), name it (the slug fixes
+   (or start from a template and fill in its settings), name it (the slug fixes
    the artifact address forever), pick a widget size, a schedule — or
    manual — and a host. Edits accumulate as a local draft; **Sync** commits
    them to your data repo (or opens a PR if you prefer review).
@@ -41,7 +42,7 @@ The loop, end to end:
    Everything the run actually does is versioned in the repos, so the
    cloud routine's prompt is created once and never edited — the only
    thing `routines:sync` ever touches on an existing resource is its cron.
-3. **The routine publishes** — the skill produces a self-contained,
+3. **The routine publishes** — the run produces a self-contained,
    responsive HTML artifact (see
    [docs/widget-standard.md](./docs/widget-standard.md)) and pushes it to
    your `artifacts` branch. Publishing _is_ the git push.
@@ -88,12 +89,13 @@ pnpm build                   # production build
 
 Workspace layout:
 
-| Path              | What                                                                    |
-| ----------------- | ----------------------------------------------------------------------- |
-| `apps/web`        | React Router v8 app (framework mode, SSR, Tailwind 4)                   |
-| `packages/schema` | zod schemas for routines/dashboards/skills — buildless, source-exported |
-| `.claude/skills`  | agent skills incl. the routine contracts (M4)                           |
-| `docs/`           | ADRs, widget standard, roadmap                                          |
+| Path              | What                                                                       |
+| ----------------- | -------------------------------------------------------------------------- |
+| `apps/web`        | React Router v8 app (framework mode, SSR, Tailwind 4)                      |
+| `packages/schema` | zod schemas for routines/dashboards/templates — buildless, source-exported |
+| `.claude/skills`  | the contract skills (run-routine, widget-artifact, publish-widget)         |
+| `templates/`      | the data-repo template and the built-in routine templates (ADR-0021)       |
+| `docs/`           | ADRs, widget standard, roadmap                                             |
 
 Conventions: formatting and lint rules live in the root `vite.config.ts`
 (Vite+); don't hand-format, run `pnpm check --fix`. Commits to `main` go

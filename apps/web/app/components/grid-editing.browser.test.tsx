@@ -69,7 +69,7 @@ function routine(slug: string): Routine {
   return {
     slug,
     name: slug,
-    skill: slug,
+    template: slug,
     schedule: "0 * * * *",
     enabled: true,
   }

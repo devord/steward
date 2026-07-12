@@ -10,6 +10,7 @@ function routine(over: Partial<Routine> = {}): Routine {
   return {
     slug: "r",
     name: "R",
+    template: "custom",
     enabled: true,
     instructions: "do it",
     ...over,

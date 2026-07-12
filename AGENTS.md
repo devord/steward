@@ -20,10 +20,10 @@ Read when relevant:
   rendering widgets.
 - `docs/roadmap.md` — milestone status.
 - Skills: only the contract skills live here (`run-routine`,
-  `widget-artifact`, `publish-widget`); content skills belong in the plugins
-  repo or a data repo (ADR-0014), discovered live via their `widget:`
-  frontmatter (ADR-0015). `.claude/skills/react-router` is vendored — don't
-  edit.
+  `widget-artifact`, `publish-widget`). Content is **routine templates** —
+  `templates/routines/<id>.md` here (built-in) or in a data repo
+  (team/private), discovered via their `widget:` frontmatter
+  (ADR-0015/0021). `.claude/skills/react-router` is vendored — don't edit.
 
 ## Plan Mode
 

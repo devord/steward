@@ -17,63 +17,77 @@ export const repoRefSchema = z
  */
 export const routineHostSchema = z.enum(["cloud", "local"])
 
-export const routineSchema = z
-  .object({
-    slug: slugSchema,
-    name: z.string().min(1),
-    /**
-     * Skill name, resolved by Claude Code in the run environment
-     * (ADR-0014). Absent → a prompt-only routine: the dispatcher runs
-     * `instructions` directly under the contract skills (ADR-0013).
-     */
-    skill: z.string().min(1).optional(),
-    /**
-     * Cron expression (5-field). Absent → manual-only: updated via the
-     * app's Update button (cloud API trigger) or an interactive CLI run
-     * (ADR-0016). Structural validation lives in routines:sync.
-     */
-    schedule: z.string().min(1).optional(),
-    host: routineHostSchema.optional(),
-    /**
-     * Per-routine guidance passed to the skill by the run-routine
-     * dispatcher — or, with no `skill:`, the routine's whole content brief.
-     * Lives here (not in the cloud routine's prompt) so edits are versioned
-     * and never require touching the cloud resource. Non-empty when present:
-     * a blank prompt would satisfy the skill-or-instructions refine below
-     * while giving the dispatcher nothing to run.
-     */
-    instructions: z.string().min(1).optional(),
-    /**
-     * GitHub login of the account whose Claude account owns this routine's
-     * cloud resource — schedule and API trigger alike (ADR-0010/0016).
-     * Meaningful in a team repo, where routines:sync only enacts entries
-     * whose runner matches the syncing user; personal pools leave it unset.
-     */
-    runner: z.string().min(1).optional(),
-    /**
-     * Extra source repos a cloud run needs, beyond the two routines:sync
-     * always attaches: the contract repo (run-routine/widget-artifact/
-     * publish-widget) and this data repo. A cloud session can only reach
-     * repos attached as sources — cross-owner adds are refused at runtime —
-     * so a routine whose `skill:` is a plugin skill must list the plugin
-     * repo here (e.g. `Form-Factory/plugins`) (ADR-0018). Cloud-only: local
-     * runs read the machine's checkouts.
-     */
-    repos: z.array(repoRefSchema).optional(),
-    /**
-     * MCP connector allowlist for a cloud run, by the connector's account
-     * name (e.g. `GitHub`, `Google_Calendar`). Absent or empty → no
-     * connectors: the run gets none rather than inheriting the account's
-     * full set (ADR-0018). Cloud-only: local runs inherit the machine's MCP
-     * servers.
-     */
-    connectors: z.array(z.string().min(1)).optional(),
-    enabled: z.boolean().default(true),
-  })
-  .refine((routine) => routine.skill != null || routine.instructions != null, {
-    message: "a routine needs a skill, instructions, or both",
-    path: ["instructions"],
-  })
+/** `min(1)` alone admits whitespace; absent is the honest blank. */
+const nonBlank = z
+  .string()
+  .min(1)
+  .refine((text) => text.trim().length > 0, "must not be blank")
+
+export const routineSchema = z.object({
+  slug: slugSchema,
+  name: z.string().min(1),
+  /**
+   * Routine template id — `templates/routines/<id>.md` in the data repo
+   * (private/team) or the bulletin repo (built-in), resolved by the
+   * run-routine dispatcher, hard-failing on a bad reference (ADR-0021).
+   * Required: a freeform routine names the `custom` built-in, whose
+   * whole procedure is "follow `instructions`" (ADR-0022).
+   */
+  template: z.string().min(1),
+  /**
+   * Cron expression (5-field). Absent → manual-only: updated via the
+   * app's Update button (cloud API trigger) or an interactive CLI run
+   * (ADR-0016). Structural validation lives in routines:sync.
+   */
+  schedule: z.string().min(1).optional(),
+  host: routineHostSchema.optional(),
+  /**
+   * Per-routine guidance passed to the template by the run-routine
+   * dispatcher — for the `custom` template, the whole content brief
+   * (ADR-0022). Lives here (not in the cloud routine's prompt) so edits
+   * are versioned and never require touching the cloud resource.
+   * Non-empty when present: absent is the honest "no guidance".
+   */
+  instructions: nonBlank.optional(),
+  /**
+   * Answers to the template's declared `widget.params` (ADR-0020), keyed
+   * by param key: a string for `string`/`select` params, a list for
+   * `repos` params. Passed to the template by the run-routine dispatcher
+   * alongside `instructions`. Untyped here on purpose — the param
+   * contract lives in the template's frontmatter, which this file can't
+   * see.
+   */
+  params: z
+    .record(z.string().min(1), z.union([nonBlank, z.array(nonBlank).min(1)]))
+    .optional(),
+  /**
+   * GitHub login of the account whose Claude account owns this routine's
+   * cloud resource — schedule and API trigger alike (ADR-0010/0016).
+   * Meaningful in a team repo, where routines:sync only enacts entries
+   * whose runner matches the syncing user; personal pools leave it unset.
+   */
+  runner: z.string().min(1).optional(),
+  /**
+   * Extra source repos a cloud run needs, beyond the two routines:sync
+   * always attaches: the contract repo (contract skills + built-in
+   * templates, ADR-0021) and this data repo. A cloud session can only
+   * reach repos attached as sources — cross-owner adds are refused at
+   * runtime — so anything else the run reads (e.g. repos a template
+   * watches) must be listed here; the wizard mirrors `repos`-type param
+   * answers in automatically (ADR-0018/0020). Cloud-only: local runs
+   * read the machine's checkouts.
+   */
+  repos: z.array(repoRefSchema).optional(),
+  /**
+   * MCP connector allowlist for a cloud run, by the connector's account
+   * name (e.g. `GitHub`, `Google_Calendar`). Absent or empty → no
+   * connectors: the run gets none rather than inheriting the account's
+   * full set (ADR-0018). Cloud-only: local runs inherit the machine's MCP
+   * servers.
+   */
+  connectors: z.array(z.string().min(1)).optional(),
+  enabled: z.boolean().default(true),
+})
 
 /** Shape of data/routines.yaml in a user's data repo. */
 export const routinesFileSchema = z.object({

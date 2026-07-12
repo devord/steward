@@ -14,7 +14,14 @@ const widget: Widget = {
 }
 
 function routine(over: Partial<Routine> = {}): Routine {
-  return { slug: "r", name: "R", enabled: true, instructions: "x", ...over }
+  return {
+    slug: "r",
+    name: "R",
+    template: "custom",
+    enabled: true,
+    instructions: "x",
+    ...over,
+  }
 }
 
 /** UpdateAction calls useFetcher, which needs a data router in context. */

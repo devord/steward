@@ -9,7 +9,6 @@ import {
 import { GitHubError } from "./github.server.ts"
 
 const DATA_REPO = "daniel/bulletin-data-daniel"
-const PLUGINS_REPO = "form-factory/plugins" // matches setup-node env
 const MAIN_BOARD = {
   scope: "personal",
   repo: DATA_REPO,
@@ -19,7 +18,7 @@ const MAIN_BOARD = {
 const ROUTINES_YAML = `routines:
   - slug: daily-plan
     name: daily plan
-    skill: daily-plan
+    template: daily-plan
     schedule: "0 7 * * *"
     enabled: true
 `
@@ -33,7 +32,7 @@ widgets:
     size: { cols: 2, rows: 2 }
 `
 
-const DAILY_PLAN_SKILL_MD = `---
+const DAILY_PLAN_TEMPLATE_MD = `---
 name: daily-plan
 description: today's working plan
 widget:
@@ -46,33 +45,20 @@ widget:
 # daily-plan
 `
 
-const REPO_PULSE_SKILL_MD = `---
-name: repo-pulse
-description: repository activity digest
-widget:
-  artifact: open PRs, new issues, CI status
----
-
-# repo-pulse
-`
-
 function seedConfig() {
   seedRepo(DATA_REPO, {
     "data/routines.yaml": ROUTINES_YAML,
     "data/dashboards/main.yaml": DASHBOARD_YAML,
-    // A private skill, discovered live from the data repo (ADR-0015).
-    ".claude/skills/daily-plan/SKILL.md": DAILY_PLAN_SKILL_MD,
+    // A private template, discovered live from the data repo (ADR-0021);
+    // it shadows the same-named built-in.
+    "templates/routines/daily-plan.md": DAILY_PLAN_TEMPLATE_MD,
     // No widget: block — must never reach the picker.
-    ".claude/skills/helper/SKILL.md": "---\ndescription: not a widget\n---\n",
-  })
-  // A shared skill in the plugins-marketplace layout (<plugin>/skills/).
-  seedRepo(PLUGINS_REPO, {
-    "bulletin/skills/repo-pulse/SKILL.md": REPO_PULSE_SKILL_MD,
+    "templates/routines/helper.md": "---\ndescription: not a widget\n---\n",
   })
 }
 
 describe("loadDashboard", () => {
-  it("assembles config, discovered skills, and artifacts in one view", async () => {
+  it("assembles config, discovered templates, and artifacts in one view", async () => {
     seedConfig()
     seedRepo(
       DATA_REPO,
@@ -92,9 +78,11 @@ describe("loadDashboard", () => {
       routine: "daily-plan",
       size: { cols: 2, rows: 2 },
     })
-    expect(view.skills.map((skill) => [skill.id, skill.source])).toEqual([
+    // The data repo's daily-plan shadows the bundled built-in of the same
+    // name; repo-pulse arrives as a built-in with no repo seeded at all.
+    expect(view.templates.map((t) => [t.id, t.source])).toEqual([
       ["daily-plan", "private"],
-      ["repo-pulse", "team"],
+      ["repo-pulse", "builtin"],
     ])
     expect(view.artifacts["daily-plan"]).toEqual({
       html: "<h1>plan</h1>",
@@ -110,7 +98,6 @@ describe("loadDashboard", () => {
   })
 
   it("falls back to empty defaults when the repo has no config yet", async () => {
-    // No plugins repo seeded either — discovery degrades to no entries.
     seedRepo(DATA_REPO, {})
 
     const view = await loadDashboard("token", MAIN_BOARD)
@@ -122,7 +109,11 @@ describe("loadDashboard", () => {
       width: "fixed",
     })
     expect(view.dashboard.widgets).toEqual([])
-    expect(view.skills).toEqual([])
+    // Built-ins ship in the bundle — they're there even with no config.
+    expect(view.templates.map((t) => [t.id, t.source])).toEqual([
+      ["daily-plan", "builtin"],
+      ["repo-pulse", "builtin"],
+    ])
     expect(view.baseShas).toEqual({ routines: null, dashboard: null })
   })
 
@@ -227,7 +218,7 @@ describe("loadDashboard", () => {
   it("reports hasTrigger true for a manual cloud routine with a trigger file", async () => {
     seedRepo(DATA_REPO, {
       "data/routines.yaml":
-        "routines:\n  - slug: mp\n    name: meeting prep\n    instructions: x\n",
+        "routines:\n  - slug: mp\n    name: meeting prep\n    template: custom\n    instructions: x\n",
       "data/dashboards/main.yaml": DASHBOARD_YAML,
       "data/triggers/mp.json": '{"routine":"rt_1","token":"tok"}',
     })
@@ -245,7 +236,7 @@ describe("loadDashboard", () => {
   it("reports hasTrigger false for a manual cloud routine with no trigger file", async () => {
     seedRepo(DATA_REPO, {
       "data/routines.yaml":
-        "routines:\n  - slug: mp\n    name: meeting prep\n    instructions: x\n",
+        "routines:\n  - slug: mp\n    name: meeting prep\n    template: custom\n    instructions: x\n",
       "data/dashboards/main.yaml": DASHBOARD_YAML,
     })
 
@@ -262,7 +253,7 @@ describe("loadDashboard", () => {
   it("skips the trigger check for a local routine (hasTrigger absent)", async () => {
     seedRepo(DATA_REPO, {
       "data/routines.yaml":
-        "routines:\n  - slug: mp\n    name: meeting prep\n    host: local\n    instructions: x\n",
+        "routines:\n  - slug: mp\n    name: meeting prep\n    template: custom\n    host: local\n    instructions: x\n",
       "data/dashboards/main.yaml": DASHBOARD_YAML,
     })
 

@@ -1,18 +1,22 @@
 # Bulletin routines — the source of truth for what runs and when.
-# Each routine has a slug, a name, and `instructions` (the prompt the
-# run-routine dispatcher executes). Optional fields:
-#   skill:    a routine skill by name — from this repo's .claude/skills/
-#             (private) or an installed plugin (shared); omit for a
-#             prompt-only routine (ADR-0013)
+# Each routine has a slug, a name, and a `template:` — a routine template
+# by id, from bulletin's built-ins or this repo's templates/routines/
+# (ADR-0021/0022). The `custom` built-in runs your `instructions` as the
+# whole brief. Optional fields:
+#   instructions: guidance for the template's run — for `custom`, the
+#             entire content brief
+#   params:   answers to the template's declared inputs (ADR-0020) — a
+#             string, or a list for repos-type params
 #   schedule: 5-field cron; omit for a manual routine, updated from the
 #             widget's update button or `pnpm routine <slug>` (ADR-0016)
 #   host:     cloud (default) or local — local runs on your machine and is
 #             the only host that can read local data (ADR-0012)
 #   repos:    extra source repos (owner/repo) a CLOUD run needs beyond the
-#             two always attached — the bulletin app repo (contract skills)
-#             and this data repo. A cloud run reaches only attached repos,
-#             so a `skill:` from a plugin repo must list it here, e.g.
-#             `Form-Factory/plugins` (ADR-0018). Ignored for local runs.
+#             two always attached — the bulletin app repo (contract skills
+#             + built-in templates) and this data repo. A cloud run reaches
+#             only attached repos; repos a template watches via a params
+#             list are attached by the app automatically (ADR-0018/0020).
+#             Ignored for local runs.
 #   connectors: MCP connector allowlist for a CLOUD run, by account name
 #             (e.g. GitHub, Google_Calendar). Omit → none: the run gets no
 #             connectors rather than your whole account's set (ADR-0018).
@@ -22,9 +26,8 @@
 routines:
   - slug: daily-plan
     name: Daily Plan
-    skill: daily-plan # the private-skill example in .claude/skills/
+    template: daily-plan # a bulletin built-in (templates/routines/)
     schedule: "0 8 * * *"
-    # This skill lives in THIS data repo (already attached), so no `repos:`.
     # It reads your calendar, so allow just that connector — nothing else:
     connectors: [Google_Calendar]
     instructions: |
@@ -32,9 +35,10 @@ routines:
     enabled: false
   - slug: meeting-prep
     name: Meeting Prep
-    # Prompt-only, manual, local: no skill, no schedule — run it from a
-    # terminal (`pnpm routine meeting-prep`) right before you need it, and
-    # it can see anything on your machine.
+    # Freeform (the custom template), manual, local: no schedule — run it
+    # from a terminal (`pnpm routine meeting-prep`) right before you need
+    # it, and it can see anything on your machine.
+    template: custom
     host: local
     instructions: |
       Replace me: summarize today's calendar and the open threads that

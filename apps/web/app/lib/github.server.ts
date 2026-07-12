@@ -175,6 +175,28 @@ export function getAuthedUser(token: string): Promise<GitHubUser> {
   return ghJson(token, "/user", userSchema)
 }
 
+const repoListSchema = z.array(z.object({ full_name: z.string() }))
+
+/**
+ * The viewer's repos (owned + collaborator + org), most recently pushed
+ * first — the suggestion pool for the wizard's repo typeahead (ADR-0020).
+ * Two pages ≈ 200 repos: recent activity is what people pick from; anything
+ * beyond that is still reachable by typing the full owner/repo. Both pages
+ * are ETag-cached like every other GET here.
+ */
+export async function listUserRepos(token: string): Promise<string[]> {
+  const pages = await Promise.all(
+    [1, 2].map((page) =>
+      ghJson(
+        token,
+        `/user/repos?per_page=100&sort=pushed&page=${page}`,
+        repoListSchema,
+      ),
+    ),
+  )
+  return pages.flat().map((repo) => repo.full_name)
+}
+
 const contentsSchema = z.object({ content: z.string(), sha: z.string() })
 
 export interface RepoFile {

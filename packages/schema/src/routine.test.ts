@@ -17,7 +17,7 @@ describe("routinesFileSchema", () => {
         {
           slug: "daily-plan",
           name: "Daily Plan",
-          skill: "daily-plan",
+          template: "daily-plan",
           schedule: "0 8 * * *",
         },
       ],
@@ -31,7 +31,7 @@ describe("routinesFileSchema", () => {
         {
           slug: "repo-pulse",
           name: "Repo Pulse",
-          skill: "repo-pulse",
+          template: "repo-pulse",
           schedule: "0 */4 * * *",
           runner: "dmoraes",
         },
@@ -46,7 +46,7 @@ describe("routinesFileSchema", () => {
         {
           slug: "Daily Plan",
           name: "Daily Plan",
-          skill: "daily-plan",
+          template: "daily-plan",
           schedule: "0 8 * * *",
         },
       ],
@@ -54,18 +54,19 @@ describe("routinesFileSchema", () => {
     expect(result.success).toBe(false)
   })
 
-  it("accepts a prompt-only manual routine (ADR-0013/0016)", () => {
+  it("accepts a freeform manual routine via the custom template (ADR-0022/0016)", () => {
     const parsed = routinesFileSchema.parse({
       routines: [
         {
           slug: "retro-notes",
           name: "Retro Notes",
+          template: "custom",
           instructions: "Summarize this week's retro action items.",
         },
       ],
     })
     const routine = parsed.routines[0]
-    expect(routine?.skill).toBeUndefined()
+    expect(routine?.template).toBe("custom")
     expect(routine && isManual(routine)).toBe(true)
     expect(routine && routineHost(routine)).toBe("cloud")
   })
@@ -76,7 +77,7 @@ describe("routinesFileSchema", () => {
         {
           slug: "time-tracking",
           name: "Time Tracking",
-          skill: "time-track",
+          template: "time-track",
           host: "local",
         },
       ],
@@ -85,18 +86,60 @@ describe("routinesFileSchema", () => {
     expect(routine && routineHost(routine)).toBe("local")
   })
 
-  it("rejects a routine with neither skill nor instructions", () => {
-    const result = routinesFileSchema.safeParse({
-      routines: [{ slug: "empty", name: "Empty", schedule: "0 8 * * *" }],
-    })
-    expect(result.success).toBe(false)
+  it("rejects a routine without a template — instructions alone aren't one (ADR-0022)", () => {
+    for (const routine of [
+      { slug: "empty", name: "Empty", schedule: "0 8 * * *" },
+      { slug: "empty", name: "Empty", instructions: "do the thing" },
+    ]) {
+      const result = routinesFileSchema.safeParse({ routines: [routine] })
+      expect(result.success).toBe(false)
+    }
   })
 
-  it("rejects blank instructions as the only content source", () => {
-    const result = routinesFileSchema.safeParse({
-      routines: [{ slug: "empty", name: "Empty", instructions: "" }],
+  it("rejects blank instructions — absent beats blank", () => {
+    for (const instructions of ["", "   ", " \n "]) {
+      const result = routinesFileSchema.safeParse({
+        routines: [
+          { slug: "empty", name: "Empty", template: "custom", instructions },
+        ],
+      })
+      expect(result.success).toBe(false)
+    }
+  })
+
+  it("parses template params as strings or string lists (ADR-0020)", () => {
+    const parsed = routinesFileSchema.parse({
+      routines: [
+        {
+          slug: "repo-pulse",
+          name: "Repo Pulse",
+          template: "repo-pulse",
+          params: {
+            repos: ["Form-Factory/bulletin", "Form-Factory/plugins"],
+            lens: "reviews",
+          },
+        },
+      ],
     })
-    expect(result.success).toBe(false)
+    expect(parsed.routines[0]?.params).toEqual({
+      repos: ["Form-Factory/bulletin", "Form-Factory/plugins"],
+      lens: "reviews",
+    })
+  })
+
+  it("rejects empty param values — absent beats blank", () => {
+    for (const params of [
+      { repos: [] },
+      { lens: "" },
+      { lens: "   " },
+      { repos: [""] },
+      { repos: ["  "] },
+    ]) {
+      const result = routinesFileSchema.safeParse({
+        routines: [{ slug: "x", name: "X", template: "s", params }],
+      })
+      expect(result.success).toBe(false)
+    }
   })
 
   it("parses cloud repos and connectors (ADR-0018)", () => {
@@ -105,7 +148,7 @@ describe("routinesFileSchema", () => {
         {
           slug: "repo-pulse",
           name: "Repo Pulse",
-          skill: "repo-pulse",
+          template: "repo-pulse",
           schedule: "0 */4 * * *",
           repos: ["Form-Factory/plugins"],
           connectors: ["GitHub"],
@@ -122,7 +165,7 @@ describe("routinesFileSchema", () => {
         {
           slug: "repo-pulse",
           name: "Repo Pulse",
-          skill: "repo-pulse",
+          template: "repo-pulse",
           repos: ["just-a-name"],
         },
       ],
@@ -141,7 +184,7 @@ describe("cloudSources", () => {
     const routine = routineSchema.parse({
       slug: "repo-pulse",
       name: "Repo Pulse",
-      skill: "repo-pulse",
+      template: "repo-pulse",
       repos: ["Form-Factory/plugins"],
     })
     expect(cloudSources(routine, base)).toEqual([
@@ -154,7 +197,7 @@ describe("cloudSources", () => {
     const routine = routineSchema.parse({
       slug: "daily-plan",
       name: "Daily Plan",
-      skill: "daily-plan",
+      template: "daily-plan",
       repos: ["Form-Factory/bulletin"],
     })
     expect(cloudSources(routine, base)).toEqual(base)
@@ -164,7 +207,7 @@ describe("cloudSources", () => {
     const routine = routineSchema.parse({
       slug: "daily-plan",
       name: "Daily Plan",
-      skill: "daily-plan",
+      template: "daily-plan",
     })
     expect(cloudSources(routine, base)).toEqual(base)
   })

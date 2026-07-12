@@ -2,14 +2,15 @@
 name: daily-plan
 description: >-
   Produce today's working plan as a bulletin widget artifact: top priorities,
-  scheduled blocks, and carry-overs. Run by the run-routine dispatcher on a
-  morning schedule; not meant for interactive invocation.
+  scheduled blocks, and carry-overs. Executed by the run-routine dispatcher
+  on a morning schedule (ADR-0021).
 widget:
   artifact: "Today's plan: top 3 priorities, time blocks, and carry-overs"
   sizes:
     default: { cols: 2, rows: 2 }
     min: { cols: 1, rows: 1 }
   schedule: "0 8 * * *"
+  connectors: [Google_Calendar]
 ---
 
 # Daily plan

@@ -14,7 +14,7 @@ import {
 import { data } from "react-router"
 
 import type { BoardScope } from "./board.ts"
-import type { DiscoveredSkill } from "./skills.ts"
+import type { DiscoveredTemplate } from "./templates.ts"
 import { env } from "./env.server.ts"
 import {
   getFile,
@@ -23,7 +23,7 @@ import {
   listDirectory,
   repoExists,
 } from "./github.server.ts"
-import { discoverRoutineSkills } from "./skills.server.ts"
+import { discoverTemplates } from "./templates.server.ts"
 
 export interface ArtifactInfo {
   /** null → never published: render the placeholder card (ADR-0002). */
@@ -57,7 +57,7 @@ export interface BoardRef {
 
 /**
  * Everything a board needs to render its chrome and grid *except* the widget
- * artifacts — routines, layout, discovered skills, sibling boards. Fast
+ * artifacts — routines, layout, discovered templates, sibling boards. Fast
  * enough to await
  * on the request path (a handful of GitHub reads), so redirects and 404s stay
  * in the loader. The artifacts, many more round trips, stream in after
@@ -71,9 +71,9 @@ export interface DashboardBase {
   dashboardName: string | null
   routines: RoutinesFile
   dashboard: DashboardFile
-  /** Routine-capable skills for the add-routine picker, read live from the
-      board's data repo and the plugins repo (ADR-0015). */
-  skills: DiscoveredSkill[]
+  /** Routine templates for the add-routine picker — the board's data repo
+      read live, plus the bundled built-ins (ADR-0021). */
+  templates: DiscoveredTemplate[]
   /** Sibling dashboards in the same repo, for the switcher. */
   dashboards: string[]
   /** Base blob SHAs config was loaded at — drafts key off these (ADR-0003). */
@@ -178,27 +178,27 @@ export async function listDashboards(
 }
 
 /**
- * The board's structure (config from the data repo's main, skills discovered
- * live across source repos, sibling boards) — everything but the artifacts.
+ * The board's structure (config from the data repo's main, templates from
+ * the data repo + built-ins, sibling boards) — everything but the artifacts.
  * Route loaders await this so redirect/404 decisions stay on the request path.
  */
 export async function loadDashboardStructure(
   token: string,
   ref: BoardRef,
 ): Promise<DashboardBase> {
-  const plugins = env().BULLETIN_PLUGINS_REPO
-  const [routinesRaw, dashboardRaw, skills, dashboards] = await Promise.all([
+  const [routinesRaw, dashboardRaw, templates, dashboards] = await Promise.all([
     // Pin the ref so the loader and /sync read the *same* ETag-cache entry:
-    // reading with no ref keys a separate entry that can hold a different SHA
-    // for the same file, which surfaced as a false "base moved" (ADR-0003).
+    // reading with no ref keys a separate entry that can hold a different
+    // SHA for the same file, which surfaced as a false "base moved"
+    // (ADR-0003).
     getFile(token, ref.repo, "data/routines.yaml", "main"),
     getFile(token, ref.repo, dashboardPath(ref.dashboard), "main"),
-    discoverRoutineSkills(token, [
-      // The board's own repo first — its skills shadow same-named shared
-      // ones. On a team board that repo is shared, hence the team badge.
-      { repo: ref.repo, source: ref.scope === "team" ? "team" : "private" },
-      ...(plugins ? [{ repo: plugins, source: "team" as const }] : []),
-    ]),
+    // The board's own repo — its templates shadow same-named built-ins.
+    // On a team board that repo is shared, hence the team badge.
+    discoverTemplates(token, {
+      repo: ref.repo,
+      source: ref.scope === "team" ? "team" : "private",
+    }),
     listDashboards(token, ref.repo),
   ])
 
@@ -217,7 +217,7 @@ export async function loadDashboardStructure(
     dashboardName: dashboard.name ?? null,
     routines,
     dashboard,
-    skills,
+    templates,
     dashboards: dashboards ?? [ref.dashboard],
     baseShas: {
       routines: routinesRaw?.sha ?? null,

@@ -10,11 +10,11 @@ itself stores nothing (ADR-0001).
   runs, on what schedule or on demand) and one grid layout per dashboard
   under [`data/dashboards/`](./data/dashboards/) (`main.yaml` is the
   default board; add a file to add a dashboard).
-- [`.claude/skills/`](./.claude/skills/) holds your **private routine
-  skills** (ADR-0014) — `daily-plan` ships as the worked example. A skill
-  with a `widget:` frontmatter block shows up in the app's add-routine
-  picker, badged "private" (ADR-0015); shared skills come from the team's
-  plugins repo instead.
+- `templates/routines/<id>.md` files are your **private routine
+  templates** (ADR-0021): frontmatter with a `widget:` block (artifact
+  line, sizes, schedule, params), body = the authoring procedure. They
+  show up in the app's add-routine picker badged "private", alongside
+  Bulletin's built-ins — a same-named private template wins.
 - `data/triggers/<slug>.json` holds the API-trigger token for a manual
   cloud routine (ADR-0016) — trigger-only scoped, committed on purpose:
   everyone who can read this repo is exactly the set entitled to trigger.

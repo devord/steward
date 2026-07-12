@@ -9,6 +9,7 @@ export default [
   route("setup", "routes/setup.tsx"),
   route("dev-dialog", "routes/dev-dialog.tsx"),
   route("sync", "routes/sync.ts"),
+  route("repos", "routes/repos.ts"),
   route("run", "routes/run.ts"),
   route("dashboards", "routes/dashboards.ts"),
   route("auth/login", "routes/auth.login.ts"),

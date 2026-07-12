@@ -535,7 +535,7 @@ export function DashboardBoard({
             setEditingRoutine(null)
           }
         }}
-        skills={view.skills}
+        templates={view.templates}
         columns={columns}
         existingSlugs={routines.routines.map((r) => r.slug)}
         onAdd={addRoutine}
