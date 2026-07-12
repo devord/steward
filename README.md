@@ -63,16 +63,21 @@ Prerequisites: a GitHub account; Claude Code (for routines to run).
 2. First run: accept the **"create your dashboard repo"** wizard — it
    generates private `bulletin-data-<you>` from the template.
 3. **Add a routine** (prompt → name → size → schedule/host) and **Sync**.
-4. **Enact it** once, from your bulletin checkout, pointing `--file` at your
-   data-repo checkout:
-   `pnpm routines:sync --apply --file <path-to-data-repo>/data/routines.yaml`.
-   It creates the cloud routine or launchd agent (and walks you through the
-   API trigger for manual cloud routines); it reconciles drift on every later
-   run.
-5. Widgets refresh on their own from then on. Stale or never-run widgets say
+4. **Enact it** once, from your bulletin checkout — the widget card shows the
+   exact copy-pasteable line:
+   `pnpm routines:sync --apply --repo <owner>/bulletin-data-<owner>`.
+   With `--repo` the script keeps its own clone of the data repo under
+   `~/.cache/bulletin/` (pass `--file <path>/data/routines.yaml` to use a
+   checkout you manage instead). It creates the cloud routine or launchd
+   agent, walks you through the API trigger for every cloud routine (manual
+   ones need it to run at all; scheduled ones need it for the Update
+   button), and reconciles drift on every later run.
+5. Missed or skipped a trigger? Mint one any time with
+   `pnpm routine:trigger <slug> --repo <owner>/bulletin-data-<owner>`.
+6. Widgets refresh on their own from then on. Stale or never-run widgets say
    so on the card.
 
-(Steps 1–5 describe the target UX; see the roadmap for what's live today.)
+(Steps 1–6 describe the target UX; see the roadmap for what's live today.)
 
 ## Development
 

@@ -133,6 +133,21 @@ describe("setupCommands", () => {
       enact:
         "pnpm routines:sync --apply --file <path-to-data-repo>/data/routines.yaml",
       runOnce: null,
+      trigger:
+        "pnpm routine:trigger r --file <path-to-data-repo>/data/routines.yaml",
+    })
+  })
+
+  it("a known repo slug makes the commands copy-pasteable via --repo", () => {
+    expect(
+      setupCommands(
+        routine({ schedule: "0 8 * * *" }),
+        "alice/bulletin-data-alice",
+      ),
+    ).toEqual({
+      enact: "pnpm routines:sync --apply --repo alice/bulletin-data-alice",
+      runOnce: null,
+      trigger: "pnpm routine:trigger r --repo alice/bulletin-data-alice",
     })
   })
 
@@ -143,6 +158,7 @@ describe("setupCommands", () => {
       enact:
         "pnpm routines:sync --apply --file <path-to-data-repo>/data/routines.yaml",
       runOnce: "pnpm routine r",
+      trigger: null,
     })
   })
 
@@ -150,6 +166,7 @@ describe("setupCommands", () => {
     expect(setupCommands(routine({ host: "local" }))).toEqual({
       enact: null,
       runOnce: "pnpm routine r",
+      trigger: null,
     })
   })
 })

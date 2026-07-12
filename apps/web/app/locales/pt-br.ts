@@ -136,7 +136,7 @@ export const ptBR: Messages = {
   "widget.updateShort": "Atualizar",
   "widget.updateRequested": "Execução solicitada — atualize em um minuto",
   "widget.updateNoTrigger":
-    "Sem gatilho de API para esta rotina — configure com pnpm routines:sync",
+    "Sem gatilho de API para esta rotina — configure com pnpm routine:trigger {slug}",
   "widget.updateFailed": "A solicitação falhou — tente de novo",
   "widget.copyCommand": "Copiar o comando de terminal que roda {name}",
   "widget.copied":

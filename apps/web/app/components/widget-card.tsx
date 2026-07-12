@@ -326,6 +326,7 @@ export function WidgetCard({
             status={status}
             routine={routine}
             scope={scope}
+            dataRepo={dataRepo}
             login={login}
             now={now}
           />
@@ -486,7 +487,7 @@ function UpdateAction({
       : result.ok
         ? t("widget.updateRequested")
         : result.error === "no-trigger"
-          ? t("widget.updateNoTrigger")
+          ? t("widget.updateNoTrigger", { slug: routine.slug })
           : t("widget.updateFailed")
   const label = status ?? t("widget.update", { name: routine.name })
   return (
@@ -560,17 +561,21 @@ function WidgetEmptyState({
   status,
   routine,
   scope,
+  dataRepo,
   login,
   now,
 }: {
   status: WidgetStatus
   routine: Routine
   scope?: BoardScope
+  /** Repo slug of the board's data repo — makes setup commands
+      copy-pasteable (`--repo` instead of a --file placeholder). */
+  dataRepo?: string
   login?: string
   now: number
 }) {
   const t = useT()
-  const cmds = setupCommands(routine)
+  const cmds = setupCommands(routine, dataRepo)
   const local = routineHost(routine) === "local"
   const manual = routine.schedule == null
 

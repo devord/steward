@@ -80,22 +80,33 @@ export function widgetStatus(
 
 /** Terminal steps to activate a routine that isn't live yet, host-specific.
     `enact` runs routines:sync (creates the cloud routine / API trigger /
-    launchd plist); `runOnce` runs a local routine on demand. */
-export function setupCommands(routine: Routine): {
+    launchd plist); `runOnce` runs a local routine on demand; `trigger` mints
+    a cloud routine's on-demand API trigger (ADR-0016) — the only path for
+    scheduled ones, whose enactment never asks for a token. */
+export function setupCommands(
+  routine: Routine,
+  dataRepo?: string,
+): {
   enact: string | null
   runOnce: string | null
+  trigger: string | null
 } {
   const local = routineHost(routine) === "local"
+  // Runs from the bulletin checkout (ADR-0014), which has no data/ dir. With
+  // the repo slug known, --repo makes the line copy-pasteable — the script
+  // maintains its own clone under ~/.cache/bulletin/. Standalone renders
+  // don't know the slug and fall back to a --file placeholder.
+  const target =
+    dataRepo != null
+      ? `--repo ${dataRepo}`
+      : "--file <path-to-data-repo>/data/routines.yaml"
   return {
-    // Runs from the bulletin checkout (ADR-0014), which has no data/ dir, so
-    // --file must point at the data-repo checkout's routines.yaml. The web app
-    // knows the data repo's slug but not where it's cloned locally, so the
-    // path is a placeholder the user fills in.
     // Manual local routines have nothing to enact — you just run them.
     enact:
       local && isManual(routine)
         ? null
-        : "pnpm routines:sync --apply --file <path-to-data-repo>/data/routines.yaml",
+        : `pnpm routines:sync --apply ${target}`,
     runOnce: local ? `pnpm routine ${routine.slug}` : null,
+    trigger: local ? null : `pnpm routine:trigger ${routine.slug} ${target}`,
   }
 }

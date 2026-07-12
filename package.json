@@ -9,6 +9,7 @@
     "typecheck": "turbo run typecheck && tsc -p scripts",
     "dev": "pnpm --filter @bulletin/web dev",
     "routine": "node scripts/routine.ts",
+    "routine:trigger": "node scripts/routine-trigger.ts",
     "routines:sync": "node scripts/routines-sync.ts"
   },
   "devDependencies": {
