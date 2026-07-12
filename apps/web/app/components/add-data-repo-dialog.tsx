@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog"
 import { Input } from "~/components/ui/input"
+import { RepoCombobox } from "./repo-combobox.tsx"
 import { Label } from "~/components/ui/label"
 import {
   Select,
@@ -224,13 +225,12 @@ export function AddDataRepoDialog({
               <Label htmlFor="data-repo-existing">
                 {t("addRepo.existing")}
               </Label>
-              <Input
+              <RepoCombobox
                 id="data-repo-existing"
                 value={existing}
-                onChange={(event) => setExisting(event.target.value)}
+                onChange={setExisting}
                 placeholder="owner/repo"
-                aria-invalid={alreadyKnown}
-                className="font-mono"
+                invalid={alreadyKnown}
               />
               {alreadyKnown ? (
                 <p className="text-xs text-destructive">
