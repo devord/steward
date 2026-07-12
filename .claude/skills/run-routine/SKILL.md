@@ -3,8 +3,8 @@ name: run-routine
 description: >-
   The bulletin dispatcher (ADR-0005): every run enters here — scheduled,
   manual, or dry. Given a routine slug, resolve it in the data repo's
-  data/routines.yaml, execute that routine's skill (or its bare
-  instructions) with its instructions, enforce the widget standard, and
+  data/routines.yaml, execute that routine's template with its
+  instructions and params, enforce the widget standard, and
   publish the artifact. Use when a prompt says "Run the bulletin routine
   <slug>" or "Dry-run the bulletin routine <slug>".
 ---
@@ -66,26 +66,28 @@ prompt. Then:
 
 ## 3. Produce the content
 
-Two shapes of routine (ADR-0013):
+Every routine names a `template:` (ADR-0022; freeform routines name the
+`custom` built-in). Resolve `templates/routines/<template>.md`, in order:
 
-- **`skill:` present** — invoke that skill, passing the routine's
-  `instructions:` as the user's standing guidance (the skill treats it as
-  configuration, not conversation). Skills resolve through your normal
-  skill resolution: the data repo's own `.claude/skills/` and installed
-  plugins (ADR-0014). If the named skill does not resolve, first try
-  installing the team's plugins repo (`Form-Factory/plugins`) — or clone
-  it and read the skill from `<plugin>/skills/<name>/` directly. **On a
-  dry run skip that install/clone entirely** — only locally-present
-  skills count (ADR-0017). Still unresolved → **hard-fail loudly**: stop,
-  report the bad `skill:` reference and where you looked. That error
-  surface is the point of the structured field — never improvise a
-  missing skill's job.
-- **`skill:` absent** — a prompt-only routine: execute `instructions:`
-  directly as the content brief. The contract holds either way; a prompt
-  is a degenerate skill.
+1. the **data repo** checkout (a private or team template);
+2. the **bulletin checkout** — the repo this very skill lives in, so it
+   is always present where you are (built-in templates ship next to the
+   dispatcher).
+
+Neither file exists → **hard-fail loudly**: stop, report the bad
+`template:` reference and where you looked. That error surface is the
+point of the structured field — never improvise a missing template's job.
+
+Then follow the template's body, passing the routine's `instructions:` as
+the user's standing guidance (configuration, not conversation) **and its
+`params:` map verbatim** (ADR-0020) — structured answers to the inputs
+the template declares in its `widget:` frontmatter (e.g. repo-pulse's
+repositories to watch). Params win over prose: if `instructions:` and a
+param disagree, the param is authoritative. A param the template doesn't
+recognize is ignored, not an error.
 
 While executing, keep the routine's `slug` authoritative: the artifact
-path is derived from it, never from the skill name.
+path is derived from it, never from the template name.
 
 ## 4. Author and publish
 
@@ -96,21 +98,20 @@ generated-at meta + footer, graceful empty state). Then publish it with the
 
 ## Dry runs (ADR-0017)
 
-A "Dry-run …" prompt changes exactly two behaviors — routine skills never
-know they are being dry-run:
+A "Dry-run …" prompt changes exactly two behaviors — routine templates
+never know they are being dry-run:
 
-- **In**: resolve `data/routines.yaml` and skills from the **local working
+- **In**: resolve `data/routines.yaml` and templates from the **local working
   tree, dirty state included** — the cwd checkout is authoritative; no
-  remote matching, no push-access requirement, no fetch, no clone, no
-  plugin install (steps 1 and 3 above carry the specifics). What's being
-  edited is what runs.
+  remote matching, no push-access requirement, no fetch, no clone (steps 1
+  and 3 above carry the specifics). What's being edited is what runs.
 - **Out**: tell `publish-widget` this is a dry run — it writes the
   artifact to a local file and opens it in the browser. Nothing is
   committed or pushed; the live widget never sees a test run.
 
 ## 5. Report
 
-One short summary: routine, skill (or "prompt-only"), data gathered (or
+One short summary: routine, template, data gathered (or
 "no live data"), publish commit SHA (or the local file path on a dry run).
 A run that gathered nothing still publishes an artifact with an explicit
 empty state — staleness on the dashboard is the failure signal, not a

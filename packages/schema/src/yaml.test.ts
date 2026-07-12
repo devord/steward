@@ -9,7 +9,7 @@ import {
 const ROUTINES_YAML = `routines:
   - slug: daily-plan
     name: Daily Plan
-    skill: daily-plan
+    template: daily-plan
     schedule: "0 8 * * *"
     instructions: |
       Focus on the bulletin project.

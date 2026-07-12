@@ -1,0 +1,80 @@
+import { parseRoutineTemplate } from "@bulletin/schema"
+
+import type { DiscoveredTemplate, TemplateSource } from "./templates.ts"
+import { getFile, listTreePaths } from "./github.server.ts"
+
+/**
+ * Routine-template discovery (ADR-0015/0021): built-ins ship in the app
+ * bundle (they live in this very repo), and the board's data repo is read
+ * live — one tree listing plus a frontmatter fetch per candidate, all
+ * ETag-cached by the GitHub client, so repeat wizard opens cost only 304s.
+ */
+
+/** `templates/routines/<id>.md` — the one placement rule (ADR-0021). */
+const TEMPLATE_MD = /^templates\/routines\/([a-z0-9-]+)\.md$/
+
+// Built-in templates, inlined at build time from this repo's
+// templates/routines/ — no API call, no env var, no access check, and the
+// picker's built-ins always match the deployed app version.
+const builtinFiles = import.meta.glob("../../../../templates/routines/*.md", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+})
+
+const builtins: DiscoveredTemplate[] = Object.entries(builtinFiles).flatMap(
+  ([path, text]) => {
+    const id = /([a-z0-9-]+)\.md$/.exec(path)?.[1]
+    const template =
+      id && typeof text === "string" ? parseRoutineTemplate(id, text) : null
+    return template ? [{ ...template, source: "builtin" as const }] : []
+  },
+)
+
+export interface TemplateSourceRef {
+  repo: string
+  source: TemplateSource
+}
+
+async function discoverFrom(
+  token: string,
+  { repo, source }: TemplateSourceRef,
+): Promise<DiscoveredTemplate[]> {
+  const paths = await listTreePaths(token, repo)
+  if (!paths) return []
+  const candidates = paths.flatMap((path) => {
+    const id = TEMPLATE_MD.exec(path)?.[1]
+    return id ? [{ id, path }] : []
+  })
+  const templates = await Promise.all(
+    candidates.map(async ({ id, path }) => {
+      // Per-candidate isolation: one flaky file read (a transient 5xx
+      // surfacing as a GitHubError) must not reject the whole batch and
+      // hide the repo's other templates.
+      try {
+        const file = await getFile(token, repo, path)
+        if (!file) return null
+        const template = parseRoutineTemplate(id, file.text)
+        return template ? { ...template, source } : null
+      } catch {
+        return null
+      }
+    }),
+  )
+  return templates.filter((template) => template != null)
+}
+
+/**
+ * The picker's templates: the board's data repo first (private/team —
+ * its templates shadow same-named built-ins), then the bundled built-ins
+ * (ADR-0021). A data repo that can't be read degrades to built-ins only:
+ * discovery inherits the viewer's permissions.
+ */
+export async function discoverTemplates(
+  token: string,
+  dataRepo: TemplateSourceRef,
+): Promise<DiscoveredTemplate[]> {
+  const own = await discoverFrom(token, dataRepo).catch(() => [])
+  const seen = new Set(own.map((template) => template.id))
+  return [...own, ...builtins.filter((template) => !seen.has(template.id))]
+}

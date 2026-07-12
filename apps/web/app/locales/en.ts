@@ -47,7 +47,7 @@ export const en = {
 
   "empty.fact": "The grid is empty",
   "empty.hint":
-    "A routine runs a skill on a schedule and publishes one widget here.",
+    "A routine publishes one widget here, on a schedule or on demand.",
   "empty.cta": "Add your first routine",
 
   "offgrid.title": "Not on the grid",
@@ -72,13 +72,6 @@ export const en = {
   "grid.densityCozy": "Cozy",
   "grid.densityRoomy": "Roomy",
   "grid.hint": "Drag to move · corner to resize · del to remove",
-
-  "size.small": "Small",
-  "size.medium": "Medium",
-  "size.wide": "Wide",
-  "size.tall": "Tall",
-  "size.hero": "Hero",
-  "size.custom": "Custom",
 
   "switcher.label": "Dashboard",
   "switcher.personal": "Personal",
@@ -177,15 +170,15 @@ export const en = {
     "Change how this routine runs. Its slug is fixed — delete and re-add to rename it. Placement and size are set on the grid.",
   "dialog.prompt": "What should this widget show?",
   "dialog.promptPlaceholder": "Open PRs across our repos, grouped by reviewer…",
-  "dialog.skill": "Skill",
-  "dialog.skillHint": "(Optional — picking one pre-fills size and schedule)",
+  "dialog.template": "Template",
+  "dialog.customCard": "Describe it yourself — your description is the brief",
   "dialog.sourcePrivate": "Private",
   "dialog.sourceTeam": "Team",
+  "dialog.sourceBuiltin": "Built-in",
   "dialog.name": "Name",
   "dialog.namePlaceholder": "Daily Plan",
   "dialog.slug": "Slug",
   "dialog.slugTaken": "Already used by another routine",
-  "dialog.size": "Widget size",
   "dialog.schedule": "Schedule",
   "dialog.suggested": "Suggested — {cron}",
   "dialog.customCron": "Custom cron…",
@@ -210,6 +203,25 @@ export const en = {
   "dialog.cancel": "Cancel",
   "dialog.add": "Add to draft",
   "dialog.save": "Save changes",
+  "dialog.next": "Next",
+  "dialog.back": "Back",
+  "dialog.stepLabel": "Step {n} of 2",
+  "dialog.customHint": "runs your description as written",
+  "dialog.promote": "Save as template",
+  "dialog.promoteHint":
+    "Copy and run from your data repo checkout — Claude generalizes this routine into templates/routines/ and points it there",
+  "dialog.required": "Required",
+  "dialog.advanced": "Advanced",
+  "dialog.extraRepos": "Extra source repos",
+  "dialog.extraReposHint":
+    "Repos the cloud run can read beyond the contract and data repos — repos a template watches are attached automatically",
+  "dialog.connectors": "Connectors",
+  "dialog.connectorsHint":
+    "MCP connectors the run may use, by account name — it gets none unless listed",
+  "dialog.repoEmpty": "Type owner/repo — suggestions come from your repos",
+  "dialog.connectorEmpty": "Type a connector's account name",
+  "dialog.addToken": 'Add "{value}"',
+  "dialog.removeToken": "Remove {value}",
 
   "sync.title": "Sync changes",
   "sync.description":

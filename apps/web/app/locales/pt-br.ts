@@ -48,7 +48,7 @@ export const ptBR: Messages = {
 
   "empty.fact": "A grade está vazia",
   "empty.hint":
-    "Uma rotina executa uma skill num agendamento e publica um widget aqui.",
+    "Uma rotina publica um widget aqui, num agendamento ou sob demanda.",
   "empty.cta": "Adicione sua primeira rotina",
 
   "offgrid.title": "Fora da grade",
@@ -74,13 +74,6 @@ export const ptBR: Messages = {
   "grid.densityRoomy": "Espaçosa",
   "grid.hint":
     "Arraste para mover · canto para redimensionar · del para remover",
-
-  "size.small": "Pequeno",
-  "size.medium": "Médio",
-  "size.wide": "Largo",
-  "size.tall": "Alto",
-  "size.hero": "Destaque",
-  "size.custom": "Personalizado",
 
   "switcher.label": "Painel",
   "switcher.personal": "Pessoal",
@@ -185,16 +178,15 @@ export const ptBR: Messages = {
   "dialog.prompt": "O que este widget deve mostrar?",
   "dialog.promptPlaceholder":
     "PRs abertos nos nossos repos, agrupados por revisor…",
-  "dialog.skill": "Skill",
-  "dialog.skillHint":
-    "(Opcional — escolher uma preenche tamanho e agendamento)",
-  "dialog.sourcePrivate": "Privada",
+  "dialog.template": "Template",
+  "dialog.customCard": "Descreva você mesmo — sua descrição é o brief",
+  "dialog.sourcePrivate": "Privado",
   "dialog.sourceTeam": "Time",
+  "dialog.sourceBuiltin": "Nativo",
   "dialog.name": "Nome",
   "dialog.namePlaceholder": "Plano do Dia",
   "dialog.slug": "Slug",
   "dialog.slugTaken": "Já usado por outra rotina",
-  "dialog.size": "Tamanho do widget",
   "dialog.schedule": "Agendamento",
   "dialog.suggested": "Sugerido — {cron}",
   "dialog.customCron": "Cron personalizado…",
@@ -219,6 +211,25 @@ export const ptBR: Messages = {
   "dialog.cancel": "Cancelar",
   "dialog.add": "Adicionar ao rascunho",
   "dialog.save": "Salvar mudanças",
+  "dialog.next": "Avançar",
+  "dialog.back": "Voltar",
+  "dialog.stepLabel": "Etapa {n} de 2",
+  "dialog.customHint": "executa sua descrição como está escrita",
+  "dialog.promote": "Salvar como template",
+  "dialog.promoteHint":
+    "Copie e rode a partir do seu checkout do repo de dados — o Claude generaliza esta rotina em templates/routines/ e a aponta para lá",
+  "dialog.required": "Obrigatório",
+  "dialog.advanced": "Avançado",
+  "dialog.extraRepos": "Repos extras de origem",
+  "dialog.extraReposHint":
+    "Repos que a execução na nuvem pode ler além dos repos de contrato e de dados — repos que um template observa são anexados automaticamente",
+  "dialog.connectors": "Connectors",
+  "dialog.connectorsHint":
+    "Connectors MCP que a execução pode usar, pelo nome da conta — ela não recebe nenhum a menos que listado",
+  "dialog.repoEmpty": "Digite owner/repo — sugestões vêm dos seus repos",
+  "dialog.connectorEmpty": "Digite o nome de conta de um connector",
+  "dialog.addToken": 'Adicionar "{value}"',
+  "dialog.removeToken": "Remover {value}",
 
   "sync.title": "Sincronizar mudanças",
   "sync.description":

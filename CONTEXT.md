@@ -8,14 +8,16 @@ the artifact authoring contract in [`docs/widget-standard.md`](./docs/widget-sta
 ## Language
 
 **Routine**:
-A unit of work: "produce this widget's artifact from this skill or prompt,
-on this schedule or on demand." Defined declaratively in a data repo's
-`data/routines.yaml` (slug, name, instructions; optional skill, schedule,
-host, runner, enabled) — the repo's routine pool. Executed by Claude Code
-on its **host**, always via the same stable pointer prompt at the
-`run-routine` skill (ADR-0005). No `skill:` = prompt-only (ADR-0013); no
-`schedule:` = **manual** — updated via the Update button or an interactive
-CLI run, staleness badge suppressed (ADR-0016).
+A unit of work: "produce this widget's artifact from this template, on
+this schedule or on demand." Defined declaratively in a data repo's
+`data/routines.yaml` (slug, name, template; optional instructions,
+params, schedule, host, runner, enabled) — the repo's routine pool.
+Executed by Claude Code on its **host**, always via the same stable
+pointer prompt at the `run-routine` skill (ADR-0005). Every routine
+names a `template:` — freeform ones name the `custom` built-in, whose
+whole brief is the routine's `instructions` (ADR-0022); no `schedule:` =
+**manual** — updated via the Update button or an interactive CLI run,
+staleness badge suppressed (ADR-0016).
 _Avoid_: job, cron, automation, workflow
 
 **Host** (`host: cloud | local`, default `cloud`):
@@ -52,17 +54,18 @@ _Avoid_: report, page, output file
 
 **Shared repo** (`bulletin`):
 This repository — the product. The web app, `packages/schema`, the contract
-skills (`run-routine`, `widget-artifact`, `publish-widget`), and the
-data-repo template. Contract skills only — content skills live in the
-narrowest repo all their users can read: the plugins repo (shared) or a
-data repo (private), never here (ADR-0014). Team-visible; never contains
-user data.
+skills (`run-routine`, `widget-artifact`, `publish-widget`), the data-repo
+template, and the built-in routine templates (`templates/routines/`,
+ADR-0021). Team- or user-specific templates live in the narrowest data
+repo all their users can read (ADR-0014/0021), never here. Team-visible;
+never contains user data.
 
 **Data repo** (`bulletin-data-<login>`):
 One private repo per user, created from the template by the app's first-run
 wizard. `main` holds config (`data/routines.yaml`,
-`data/dashboards/*.yaml`), private routine skills (`.claude/skills/`,
-ADR-0014), and any API-trigger tokens (ADR-0016); the orphan `artifacts`
+`data/dashboards/*.yaml`), private routine templates
+(`templates/routines/`, ADR-0021), and any API-trigger tokens (ADR-0016);
+the orphan `artifacts`
 branch holds published artifacts. Privacy is enforced by GitHub repo
 boundaries — there is no other access control (ADR-0001).
 _Avoid_: user repo, config repo
@@ -81,12 +84,31 @@ manual cloud runs alike (`runner:` in `routines.yaml`, ADR-0010/0016).
 Meaningful in the team repo — each teammate's `routines:sync` enacts only
 their own entries; personal pools leave it unset (the owner is the runner).
 
-**Skill discovery**:
-How the add-routine picker finds routine-capable skills: live `SKILL.md`
-frontmatter reads via the contents API from the plugins repo and the
-viewer's data repo — no generated catalog (ADR-0015, superseding
-ADR-0006). A skill opts in with a `widget:` block (artifact description,
-supported sizes, suggested schedule); skills without one never appear.
+**Routine template**:
+A parameterized routine definition the wizard instantiates: a plain
+markdown file at `templates/routines/<id>.md` — frontmatter (`name`,
+`description`, the `widget:` block: artifact line, sizes, schedule,
+params, suggested connectors), body = the authoring procedure the
+dispatcher follows (ADR-0021, replacing content skills). Lives in the
+narrowest repo all its users can read: this repo (**built-in**, shipped
+in the app bundle), the team data repo (**team**), or a personal data
+repo (**private**). The picker discovers data-repo templates live via
+the contents API (ADR-0015); files without a `widget:` block never
+appear (deliberately so for the `custom` built-in — the wizard's prompt
+field is its input); a data-repo template shadows a same-named built-in.
+Templates are authored in Claude Code sessions, never in the app — the
+app's writable surface stays routines.yaml + layouts (ADR-0022).
+_Avoid_: skill (that's the contract tier), recipe, preset, blueprint
+
+**Param**:
+An input a template declares in its `widget:` frontmatter (`key`,
+`label`, `type: string | select | repos`, `required`) that the
+add-routine wizard renders as a form field; the answers live on the
+routine as a structured `params:` map the dispatcher passes to the
+template alongside `instructions` (ADR-0020). `repos`-type answers are
+also unioned into the routine's `repos:` so the cloud run can read what
+the template watches.
+_Avoid_: argument, option, setting
 
 **Dry run**:
 A routine run for testing: same pointer prompt with a dry clause. The
@@ -116,10 +138,10 @@ no CDN, no external host (ADR-0002).
 
 **Dispatcher** (`run-routine` skill):
 The single entry point every run goes through: resolve the slug in
-`data/routines.yaml`, execute that routine's skill (hard-failing on a bad
-reference) or its bare `instructions`, enforce the widget standard,
-publish. Keeps the cloud routine's prompt down to one stable line
-(ADR-0005).
+`data/routines.yaml`, execute that routine's template (hard-failing on a
+bad reference, ADR-0021/0022) with its `instructions` and `params`,
+enforce the widget standard, publish. Keeps the cloud routine's prompt
+down to one stable line (ADR-0005).
 
 ## How a widget stays fresh
 
@@ -127,8 +149,8 @@ publish. Keeps the cloud routine's prompt down to one stable line
    clicks Update (the app fires the runner's API trigger server-side), or
    someone runs the routine in a terminal (`pnpm routine <slug>`) — every
    path is the same pointer prompt (ADR-0005/0012/0016).
-2. `run-routine` reads `data/routines.yaml`, runs the routine's skill or
-   prompt, and authors the artifact per the widget standard.
+2. `run-routine` reads `data/routines.yaml`, follows the routine's
+   template or prompt, and authors the artifact per the widget standard.
 3. `publish-widget` commits it to `w/<slug>/index.html` on the `artifacts`
    branch and pushes.
 4. The dashboard (authed with the viewer's GitHub token) fetches the file via

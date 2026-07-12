@@ -4,11 +4,11 @@ import type { Routine, WidgetSize } from "@bulletin/schema"
 
 import { AddRoutineDialog } from "../components/add-routine-dialog.tsx"
 import { Button } from "~/components/ui/button"
-import type { DiscoveredSkill } from "../lib/skills.ts"
+import type { DiscoveredTemplate } from "../lib/templates.ts"
 
 // Dev-only harness: iterate on the add-routine wizard without a GitHub
-// session or live skill discovery behind it.
-const skills: DiscoveredSkill[] = [
+// session or live template discovery behind it.
+const templates: DiscoveredTemplate[] = [
   {
     id: "daily-plan",
     name: "daily-plan",
@@ -17,8 +17,19 @@ const skills: DiscoveredSkill[] = [
       artifact: "Today's plan: top 3 priorities, time blocks, and carry-overs",
       sizes: { default: { cols: 2, rows: 2 }, min: { cols: 1, rows: 1 } },
       schedule: "0 8 * * *",
+      params: [
+        {
+          key: "focus",
+          label: "Focus",
+          type: "select",
+          required: false,
+          options: ["deep work", "meetings", "mixed"],
+          hint: "Colors how the plan weighs the calendar",
+        },
+      ],
+      connectors: ["Google_Calendar"],
     },
-    source: "private",
+    source: "builtin",
   },
   {
     id: "repo-pulse",
@@ -28,6 +39,15 @@ const skills: DiscoveredSkill[] = [
       artifact: "Open PRs awaiting review, new issues, and CI status per repo",
       sizes: { default: { cols: 2, rows: 1 }, min: { cols: 1, rows: 1 } },
       schedule: "0 */4 * * *",
+      params: [
+        {
+          key: "repos",
+          label: "Repositories to watch",
+          type: "repos",
+          required: true,
+        },
+      ],
+      connectors: ["GitHub"],
     },
     source: "team",
   },
@@ -36,9 +56,12 @@ const skills: DiscoveredSkill[] = [
 const editable: Routine = {
   slug: "repo-pulse",
   name: "Repo Pulse",
-  skill: "repo-pulse",
+  template: "repo-pulse",
   schedule: "0 */4 * * *",
   instructions: "Only the Form-Factory org repos.",
+  params: { repos: ["Form-Factory/bulletin", "Form-Factory/plugins"] },
+  repos: ["Form-Factory/bulletin", "Form-Factory/plugins", "Form-Factory/kb"],
+  connectors: ["GitHub"],
   enabled: true,
 }
 
@@ -53,7 +76,7 @@ export default function DevDialog() {
       <AddRoutineDialog
         open={mode != null}
         onOpenChange={(open) => setMode(open ? mode : null)}
-        skills={skills}
+        templates={templates}
         columns={4}
         existingSlugs={["daily-plan", "repo-pulse"]}
         onAdd={(_routine: Routine, _size: WidgetSize) => setMode(null)}

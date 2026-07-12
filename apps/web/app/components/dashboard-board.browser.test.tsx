@@ -17,7 +17,7 @@ function view(): DashboardBase {
         {
           slug: "daily",
           name: "Daily",
-          skill: "daily",
+          template: "daily",
           schedule: "0 * * * *",
           enabled: true,
         },
@@ -33,7 +33,7 @@ function view(): DashboardBase {
       ],
       grid: { columns: 4, rowHeight: 150, width: "fixed" },
     },
-    skills: [],
+    templates: [],
     dashboards: ["main"],
     baseShas: { routines: "r1", dashboard: "d1" },
     baseFiles: { routines: "routines: []\n", dashboard: "widgets: []\n" },

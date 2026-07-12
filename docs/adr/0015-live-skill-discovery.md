@@ -2,6 +2,11 @@
 
 Supersedes ADR-0006.
 
+> Amended by ADR-0021: the discovered things are now **routine templates**
+> at `templates/routines/<id>.md` (data repos live via the API, built-ins
+> from the app bundle); the plugins-repo source is retired. The `widget:`
+> frontmatter contract and the live-read approach below still stand.
+
 The generated catalog assumed one source repo. After ADR-0014 skills span
 three — one of them a private data repo a central catalog can't see even in
 principle — and after ADR-0013 the picker it powers is an optional

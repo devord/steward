@@ -6,13 +6,6 @@ const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().min(1),
   /** Cookie-signing secret; generate with `openssl rand -hex 32`. */
   SESSION_SECRET: z.string().min(32),
-  /** `owner/name` of the team's plugins repo — a skill-discovery source
-      for the add-routine picker (ADR-0015). Optional: unset means the
-      picker only sees the viewer's data-repo skills. */
-  BULLETIN_PLUGINS_REPO: z
-    .string()
-    .regex(/^[^/]+\/[^/]+$/)
-    .optional(),
   /** `owner/name` of the data-repo template. */
   BULLETIN_DATA_REPO_TEMPLATE: z.string().regex(/^[^/]+\/[^/]+$/),
   BULLETIN_DATA_REPO_PREFIX: z.string().default("bulletin-data-"),
