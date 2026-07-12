@@ -162,8 +162,7 @@ export const ptBR: Messages = {
     "Sem gatilho de API para esta rotina — configure com pnpm routine:trigger {slug}",
   "widget.updateFailed": "A solicitação falhou — tente de novo",
   "widget.copyCommand": "Copiar o comando de terminal que roda {name}",
-  "widget.copied":
-    "Comando copiado — rode a partir do seu checkout do Bulletin",
+  "widget.copied": "Comando copiado — rode a partir do seu checkout do Steward",
   "widget.unreachable":
     "GitHub inacessível — tentará novamente na próxima atualização",
   "widget.disabled": "Rotina desativada",
@@ -172,8 +171,8 @@ export const ptBR: Messages = {
   "widget.runningSince": "Rodando — começou {ago}",
   "widget.draftHint": "No seu rascunho — sincronize para commitar",
   "widget.needsTriggerHint":
-    "Precisa de um gatilho de API para que a atualização funcione — no seu checkout do Bulletin:",
-  "widget.awaitEnact": "Commitado — ative no seu checkout do Bulletin:",
+    "Precisa de um gatilho de API para que a atualização funcione — no seu checkout do Steward:",
+  "widget.awaitEnact": "Commitado — ative no seu checkout do Steward:",
   "widget.awaitLocalManual": "Roda na sua máquina — rode quando precisar:",
   "widget.readyManual": "Pronto — aperte atualizar para rodar",
   "widget.runNow": "Rodar agora",
@@ -275,7 +274,7 @@ export const ptBR: Messages = {
   "sync.takeServer": "Pegar versão do servidor",
   "sync.nextSteps": "Commitado — agora ative suas novas rotinas",
   "sync.nextStepsBody":
-    "Salvo no repo, mas uma rotina só roda depois de ativada. No seu checkout do Bulletin:",
+    "Salvo no repo, mas uma rotina só roda depois de ativada. No seu checkout do Steward:",
   "sync.done": "Concluído",
   "sync.asPr": "Abrir um PR em vez disso",
   "sync.discard": "Descartar rascunho",
@@ -286,7 +285,7 @@ export const ptBR: Messages = {
   "setup.title": "Crie seu repo do painel",
   "setup.hi1": "Oi",
   "setup.hi2":
-    "— o Bulletin guarda tudo o que sabe sobre você em um repo privado do GitHub:",
+    "— o Steward guarda tudo o que sabe sobre você em um repo privado do GitHub:",
   "setup.bulletMain":
     "{branch} guarda a config — quais rotinas rodam, e o layout da grade",
   "setup.bulletArtifacts": "Um branch {branch} guarda o que elas publicam",

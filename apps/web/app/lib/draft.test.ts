@@ -1,4 +1,4 @@
-import type { DashboardFile, RoutinesFile } from "@bulletin/schema"
+import type { DashboardFile, RoutinesFile } from "@steward/schema"
 import { describe, expect, it } from "vitest"
 
 import {

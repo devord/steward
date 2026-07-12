@@ -12,14 +12,14 @@ const ROUTINES_YAML = `routines:
     template: daily-plan
     schedule: "0 8 * * *"
     instructions: |
-      Focus on the bulletin project.
+      Focus on the steward project.
 `
 
 describe("parseRoutinesFile", () => {
   it("parses YAML and applies schema defaults", () => {
     const parsed = parseRoutinesFile(ROUTINES_YAML)
     expect(parsed.routines[0]?.enabled).toBe(true)
-    expect(parsed.routines[0]?.instructions).toContain("bulletin project")
+    expect(parsed.routines[0]?.instructions).toContain("steward project")
   })
 
   it("rejects YAML that parses but fails the schema", () => {

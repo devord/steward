@@ -16,7 +16,7 @@ import { useT } from "../lib/i18n.tsx"
  * channel a no-same-origin sandbox leaves open — so the key closes the
  * lightbox whether focus sits on the chrome or inside the artifact.
  */
-const CLOSE_MESSAGE = "bulletin:lightbox:close"
+const CLOSE_MESSAGE = "steward:lightbox:close"
 const ESCAPE_BRIDGE = `<script>document.addEventListener("keydown",function(e){if(e.key==="Escape"){e.preventDefault();parent.postMessage(${JSON.stringify(
   CLOSE_MESSAGE,
 )},"*")}})</script>`

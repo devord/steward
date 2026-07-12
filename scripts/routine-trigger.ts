@@ -15,7 +15,7 @@
  *                                    [--file <path/to/routines.yaml>]
  *
  * --repo (the copy-pasteable form the app shows) uses a script-managed
- * clone under ~/.cache/bulletin/repos/; --file targets your own checkout;
+ * clone under ~/.cache/steward/repos/; --file targets your own checkout;
  * neither means "run from a data-repo checkout".
  */
 import { existsSync, readFileSync } from "node:fs"
@@ -26,7 +26,7 @@ import {
   parseRoutinesFile,
   routineHost,
   triggerPath,
-} from "@bulletin/schema"
+} from "@steward/schema"
 
 import { ghLogin, inferRepo, repoTag, routinesFileFor } from "./data-repo.ts"
 import { promptTriggerToken } from "./trigger-token.ts"
@@ -110,7 +110,7 @@ if (repo != null && login == null) {
 }
 // Shared repo: not the viewer's home repo (ADR-0023) — runner rule applies.
 const shared =
-  repo != null && login != null && repo !== `${login}/bulletin-data-${login}`
+  repo != null && login != null && repo !== `${login}/steward-data-${login}`
 if (shared && routine.runner !== login) {
   console.error(
     `routine-trigger: ${slug} runs as ${routine.runner ?? "(no runner set)"}` +
@@ -121,8 +121,8 @@ if (shared && routine.runner !== login) {
 }
 // Must mirror routines-sync's cloudName — the trigger targets that resource.
 const cloudName = shared
-  ? `bulletin-${repoTag(repo ?? "shared")}-${slug}`
-  : `bulletin-${slug}`
+  ? `steward-${repoTag(repo ?? "shared")}-${slug}`
+  : `steward-${slug}`
 
 if (!routine.enabled) {
   console.warn(`# ${slug} is disabled — the trigger will sit unused.\n`)

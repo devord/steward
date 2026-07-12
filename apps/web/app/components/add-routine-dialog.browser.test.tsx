@@ -1,4 +1,4 @@
-import type { Routine, WidgetSize } from "@bulletin/schema"
+import type { Routine, WidgetSize } from "@steward/schema"
 import { describe, expect, it, vi } from "vitest"
 import { render } from "vitest-browser-react"
 
@@ -13,9 +13,9 @@ const editable: Routine = {
   name: "Repo Pulse",
   template: "repo-pulse",
   schedule: "0 */4 * * *",
-  instructions: "Only the Form-Factory org repos.",
-  params: { repos: ["Form-Factory/bulletin", "Form-Factory/plugins"] },
-  repos: ["Form-Factory/bulletin", "Form-Factory/kb"],
+  instructions: "Only the devord org repos.",
+  params: { repos: ["devord/steward", "devord/plugins"] },
+  repos: ["devord/steward", "devord/kb"],
   connectors: ["GitHub"],
   runner: "alice",
   enabled: true,
@@ -219,19 +219,15 @@ describe("AddRoutineDialog edit mode", () => {
     // The repos param renders its answers as chips; the leftover repo shows
     // under Advanced, which auto-opens because it has content.
     expect(hasText("Repositories to watch")).toBe(true)
-    expect(hasText("Form-Factory/bulletin")).toBe(true)
-    expect(hasText("Form-Factory/kb")).toBe(true)
+    expect(hasText("devord/steward")).toBe(true)
+    expect(hasText("devord/kb")).toBe(true)
 
     button("Save changes").click()
     // The param-watched plugins repo, absent from the stored repos:, is
     // unioned in on save (param answers first, Advanced extras after).
     expect(onEdit).toHaveBeenCalledWith({
       ...editable,
-      repos: [
-        "Form-Factory/bulletin",
-        "Form-Factory/plugins",
-        "Form-Factory/kb",
-      ],
+      repos: ["devord/steward", "devord/plugins", "devord/kb"],
     })
   })
 

@@ -3,7 +3,7 @@
  *
  *   pnpm routine <slug>              # manual run → publishes
  *   pnpm routine <slug> --dry        # dry run → local file, opened in browser
- *   pnpm routine <slug> --repo Form-Factory/bulletin-data-team
+ *   pnpm routine <slug> --repo devord/steward-data-team
  *
  * Deliberately dumb: resolve the data-repo checkout, compose the pointer
  * prompt (with the dry clause when --dry), and exec *interactive* claude
@@ -11,15 +11,15 @@
  * dry runs land in front of your eyes. All real logic stays in the
  * contract skills; this is prompt assembly + cwd + exec.
  *
- * Checkout resolution, in order: $BULLETIN_DATA_DIR; the cwd if it holds
- * data/routines.yaml; a sibling of the bulletin repo named after the
- * target repo (`../bulletin-data-<login>` by convention).
+ * Checkout resolution, in order: $STEWARD_DATA_DIR; the cwd if it holds
+ * data/routines.yaml; a sibling of the steward repo named after the
+ * target repo (`../steward-data-<login>` by convention).
  */
 import { execFileSync, spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import path from "node:path"
 
-import { slugSchema } from "@bulletin/schema"
+import { slugSchema } from "@steward/schema"
 
 const args = process.argv.slice(2)
 const dry = args.includes("--dry")
@@ -47,14 +47,14 @@ function ghLogin(): string | null {
 }
 
 const login = ghLogin()
-const personalRepo = login ? `${login}/bulletin-data-${login}` : null
+const personalRepo = login ? `${login}/steward-data-${login}` : null
 const repo = repoArg ?? personalRepo
 
 const root = path.resolve(import.meta.dirname, "..")
 const candidates = [
-  process.env.BULLETIN_DATA_DIR,
+  process.env.STEWARD_DATA_DIR,
   process.cwd(),
-  // Sibling checkout by convention: ~/work/bulletin + ~/work/bulletin-data-x.
+  // Sibling checkout by convention: ~/work/steward + ~/work/steward-data-x.
   repo ? path.resolve(root, "..", repo.split("/")[1] ?? "") : undefined,
 ].filter((dir) => dir != null)
 
@@ -65,7 +65,7 @@ if (!dataRepoDir) {
   console.error(
     `routine: no data-repo checkout found (looked for data/routines.yaml in:\n` +
       candidates.map((dir) => `  ${dir}`).join("\n") +
-      `)\nClone it first (gh repo clone ${repo ?? "<owner/repo>"}), or set BULLETIN_DATA_DIR.`,
+      `)\nClone it first (gh repo clone ${repo ?? "<owner/repo>"}), or set STEWARD_DATA_DIR.`,
   )
   process.exit(1)
 }
@@ -76,10 +76,10 @@ if (!dataRepoDir) {
 const promptRepo = repo ?? personalRepo
 const verb = dry ? "Dry-run" : "Run"
 const clause = promptRepo ? ` in \`${promptRepo}\`` : ""
-const prompt = `${verb} the bulletin routine \`${slug}\`${clause} — follow the run-routine skill.`
+const prompt = `${verb} the steward routine \`${slug}\`${clause} — follow the run-routine skill.`
 
 // The session's cwd is the data repo, where the contract skills don't
-// exist — --add-dir pulls them in from this bulletin checkout (verified:
+// exist — --add-dir pulls them in from this steward checkout (verified:
 // added dirs contribute their project skills). The prompt must come
 // FIRST: --add-dir is variadic and would swallow a trailing positional
 // as another directory, leaving an interactive session with no prompt.

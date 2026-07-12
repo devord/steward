@@ -12,8 +12,8 @@ export const SIDEBAR_MIN_WIDTH = 200
 export const SIDEBAR_MAX_WIDTH = 400
 export const SIDEBAR_DEFAULT_WIDTH = 240
 
-const COLLAPSED_KEY = "bulletin:sidebar:collapsed"
-const WIDTH_KEY = "bulletin:sidebar:width"
+const COLLAPSED_KEY = "steward:sidebar:collapsed"
+const WIDTH_KEY = "steward:sidebar:width"
 
 export function clampWidth(width: number): number {
   return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width))

@@ -3,7 +3,7 @@ import {
   dashboardPath,
   serializeDashboardFile,
   slugSchema,
-} from "@bulletin/schema"
+} from "@steward/schema"
 import { data } from "react-router"
 import { z } from "zod"
 
@@ -73,7 +73,7 @@ export async function action({ request }: { request: Request }) {
       // No sha → create-only; GitHub 422s if the file already exists.
       await putFile(auth.token, repo, path, {
         content: empty,
-        message: `config: create dashboard ${payload.slug} via bulletin`,
+        message: `config: create dashboard ${payload.slug} via steward`,
         branch: "main",
       })
     } catch (error) {
@@ -111,7 +111,7 @@ export async function action({ request }: { request: Request }) {
   }
   try {
     await deleteFile(auth.token, repo, path, {
-      message: `config: delete dashboard ${payload.slug} via bulletin`,
+      message: `config: delete dashboard ${payload.slug} via steward`,
       sha: current.sha,
       branch: "main",
     })

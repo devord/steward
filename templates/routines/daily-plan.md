@@ -1,7 +1,7 @@
 ---
 name: daily-plan
 description: >-
-  Produce today's working plan as a bulletin widget artifact: top priorities,
+  Produce today's working plan as a steward widget artifact: top priorities,
   scheduled blocks, and carry-overs. Executed by the run-routine dispatcher
   on a morning schedule (ADR-0021).
 widget:

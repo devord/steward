@@ -15,7 +15,7 @@ import {
   repoExists,
 } from "./github.server.ts"
 
-const REPO = "daniel/bulletin-data-daniel"
+const REPO = "daniel/steward-data-daniel"
 const PATH = "data/routines.yaml"
 
 describe("gh ETag revalidation", () => {

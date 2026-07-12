@@ -32,7 +32,7 @@ export interface SessionData {
 
 const storage = createCookieSessionStorage<SessionData>({
   cookie: {
-    name: "__bulletin_session",
+    name: "__steward_session",
     httpOnly: true,
     path: "/",
     sameSite: "lax",

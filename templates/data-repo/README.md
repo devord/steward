@@ -1,9 +1,9 @@
-# bulletin-data
+# steward-data
 
-Your private [Bulletin](https://github.com/Form-Factory/bulletin) data repo,
+Your private [Steward](https://github.com/devord/steward) data repo,
 created from the template by the app's first-run wizard — or, for a team,
 the shared team data repo everyone with access can see (ADR-0010).
-Everything Bulletin knows about this dashboard's owner lives here — the app
+Everything Steward knows about this dashboard's owner lives here — the app
 itself stores nothing (ADR-0001).
 
 - `main` holds config: [`data/routines.yaml`](./data/routines.yaml) (what
@@ -14,7 +14,7 @@ itself stores nothing (ADR-0001).
   templates** (ADR-0021): frontmatter with a `widget:` block (artifact
   line, sizes, schedule, params), body = the authoring procedure. They
   show up in the app's add-routine picker badged "private", alongside
-  Bulletin's built-ins — a same-named private template wins.
+  Steward's built-ins — a same-named private template wins.
 - `data/triggers/<slug>.json` holds the API-trigger token for a manual
   cloud routine (ADR-0016) — trigger-only scoped, committed on purpose:
   everyone who can read this repo is exactly the set entitled to trigger.
@@ -22,7 +22,7 @@ itself stores nothing (ADR-0001).
   `w/<slug>/index.html` — written by routines via the `publish-widget`
   skill, never by hand (except once, to prove the render path).
 
-Edit config through the Bulletin app (drafts → Sync panel → commit or PR),
+Edit config through the Steward app (drafts → Sync panel → commit or PR),
 or by hand — it's plain YAML, and the app validates on load.
 
 ## Bootstrapping the artifacts branch

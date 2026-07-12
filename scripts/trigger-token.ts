@@ -18,7 +18,7 @@ import { execFileSync } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
 
-import { triggerFileSchema, triggerPath } from "@bulletin/schema"
+import { triggerFileSchema, triggerPath } from "@steward/schema"
 
 /** Prompt on the cooked tty with echo on — for non-secret input. */
 export function question(query: string): string {

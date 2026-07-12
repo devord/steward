@@ -5,7 +5,7 @@ import { render } from "vitest-browser-react"
 import "../app.css"
 import { AddDataRepoDialog } from "./add-data-repo-dialog.tsx"
 
-const KNOWN = ["alice/bulletin-data-alice"]
+const KNOWN = ["alice/steward-data-alice"]
 
 async function renderDialog() {
   const router = createMemoryRouter([
@@ -18,7 +18,7 @@ async function renderDialog() {
       loader: () => ({
         login: "alice",
         orgs: ["acme"],
-        prefix: "bulletin-data-",
+        prefix: "steward-data-",
       }),
     },
   ])
@@ -39,7 +39,7 @@ describe("AddDataRepoDialog", () => {
     // The owners loader answers async; the name derives from login + prefix.
     await expect
       .poll(() => input("data-repo-name")?.value)
-      .toBe("bulletin-data-alice")
+      .toBe("steward-data-alice")
   })
 
   it("register mode requires a plausible owner/repo and rejects known ones", async () => {
@@ -64,7 +64,7 @@ describe("AddDataRepoDialog", () => {
     expect(submitButton("Register")?.disabled).toBe(true)
 
     // A fresh owner/repo arms the submit.
-    await screen.getByLabelText("Repository").fill("acme/bulletin-data-acme")
+    await screen.getByLabelText("Repository").fill("acme/steward-data-acme")
     await expect.poll(() => submitButton("Register")?.disabled).toBe(false)
   })
 })

@@ -7,7 +7,7 @@ import {
   routinesFileSchema,
   serializeDashboardFile,
   serializeRoutinesFile,
-} from "@bulletin/schema"
+} from "@steward/schema"
 import { z } from "zod"
 
 /**
@@ -36,7 +36,7 @@ export type Draft = z.infer<typeof draftSchema>
 
 /** `boardKey` is `<owner>/<repo>:<dashboard-slug>` — one draft per board. */
 function storageKey(boardKey: string) {
-  return `bulletin:draft:${boardKey}`
+  return `steward:draft:${boardKey}`
 }
 
 function readDraft(boardKey: string): Draft | null {

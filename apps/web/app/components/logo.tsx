@@ -1,8 +1,8 @@
 import { cn } from "~/lib/utils"
 
 /**
- * The Bulletin mark: a mini dashboard grid whose last widget is the
- * wordmark's trailing block cursor (bulletin▮) — the board, still being
+ * The Steward mark: a mini dashboard grid whose last widget is the
+ * wordmark's trailing block cursor (steward▮) — the board, still being
  * written. Mirrored as static SVG in public/favicon.svg and public/og.png;
  * keep the three geometries in sync.
  */
@@ -71,7 +71,7 @@ export function Wordmark({
       )}
     >
       <Logo live={live} className="size-[1.4em]" />
-      bulletin
+      steward
     </span>
   )
 }

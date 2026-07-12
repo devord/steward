@@ -7,7 +7,7 @@
  * source repos and MCP connector allowlist the run needs (ADR-0018).
  *
  * Works for the home data repo and for any shared one (ADR-0023): a repo is
- * shared iff it differs from `<login>/bulletin-data-<login>`. In a shared
+ * shared iff it differs from `<login>/steward-data-<login>`. In a shared
  * repo only entries whose `runner` matches the signed-in login are enacted —
  * each collaborator owns the cloud resources for the routines they run.
  * Every pointer prompt names its repo explicitly: with N data repos "the"
@@ -19,7 +19,7 @@
  *     minted in the web UI (research preview), pasted here once, and
  *     committed to the data repo as data/triggers/<slug>.json;
  *   - local + schedule  → a launchd agent
- *     (~/Library/LaunchAgents/co.formfactory.bulletin.<slug>.plist) firing
+ *     (~/Library/LaunchAgents/org.devord.steward.<slug>.plist) firing
  *     the identical pointer prompt via headless `claude -p`;
  *   - local + manual    → nothing to enact: run it interactively
  *     (`pnpm routine <slug>`, ADR-0017).
@@ -39,7 +39,7 @@
  *                           [--file <path/to/routines.yaml>] [--apply]
  *
  * --repo without --file (the copy-pasteable form the app shows) uses a
- * script-managed clone under ~/.cache/bulletin/repos/; --file targets a
+ * script-managed clone under ~/.cache/steward/repos/; --file targets a
  * checkout you manage; neither means "run from a data-repo checkout".
  */
 import { execFileSync } from "node:child_process"
@@ -60,7 +60,7 @@ import {
   parseRoutinesFile,
   routineHost,
   triggerPath,
-} from "@bulletin/schema"
+} from "@steward/schema"
 
 import { ghLogin, inferRepo, repoTag, routinesFileFor } from "./data-repo.ts"
 import { cronToLaunchd, launchdPlist, plistRepo } from "./launchd.ts"
@@ -71,7 +71,7 @@ import { promptTriggerToken } from "./trigger-token.ts"
  * live — always attached to a cloud run so the pointer prompt resolves,
  * across personal and team repos alike (ADR-0018).
  */
-const CONTRACT_REPO = "Form-Factory/bulletin"
+const CONTRACT_REPO = "devord/steward"
 
 const args = process.argv.slice(2)
 const apply = args.includes("--apply")
@@ -123,7 +123,7 @@ if (repo != null && login == null) {
 // Shared: the target repo is not the signed-in user's own home data repo.
 // The naming convention mirrors the app's resolveHomeRepo (ADR-0001/0023).
 const shared =
-  repo != null && login != null && repo !== `${login}/bulletin-data-${login}`
+  repo != null && login != null && repo !== `${login}/steward-data-${login}`
 
 if (shared) {
   console.log(`# shared repo: ${repo} (runner: ${login})\n`)
@@ -133,26 +133,26 @@ if (shared) {
  * The data repo to attach as a source and name in prompts. Normally `repo`
  * (the --repo flag or the checkout's inferred origin); when the origin
  * can't be inferred, fall back to the home-repo convention
- * `<login>/bulletin-data-<login>` (ADR-0001), the same name run-routine
+ * `<login>/steward-data-<login>` (ADR-0001), the same name run-routine
  * resolves at runtime. Null only when neither is known — a `gh`-less run
  * against a remote-less checkout.
  */
 const dataRepo =
-  repo ?? (login != null ? `${login}/bulletin-data-${login}` : null)
+  repo ?? (login != null ? `${login}/steward-data-${login}` : null)
 
 /** The stable pointer prompt — created once, never edited (ADR-0005).
     Always names the repo: with N data repos (ADR-0023) an unclaused
     prompt is ambiguous, so every command is explicit. */
 function pointerPrompt(routine: Routine): string {
-  return `Run the bulletin routine \`${routine.slug}\` in \`${dataRepo ?? "(unknown repo)"}\` — follow the run-routine skill.`
+  return `Run the steward routine \`${routine.slug}\` in \`${dataRepo ?? "(unknown repo)"}\` — follow the run-routine skill.`
 }
 
-/** Cloud routine name; the bulletin- prefix marks ownership for cleanup,
+/** Cloud routine name; the steward- prefix marks ownership for cleanup,
     and shared repos carry their full repo tag (owner AND name) so no two
     repos' slugs can collide on one Claude account. */
 function cloudName(routine: Routine): string {
-  if (!shared) return `bulletin-${routine.slug}`
-  return `bulletin-${repoTag(repo ?? "shared")}-${routine.slug}`
+  if (!shared) return `steward-${routine.slug}`
+  return `steward-${repoTag(repo ?? "shared")}-${routine.slug}`
 }
 
 /**
@@ -213,14 +213,14 @@ function hasTrigger(routine: Routine): boolean {
 
 // --- Cloud half -------------------------------------------------------------
 
-const orphanRule = `# Routines named bulletin-* whose prompt targets \`${dataRepo}\` and are
+const orphanRule = `# Routines named steward-* whose prompt targets \`${dataRepo}\` and are
 # not listed here are orphans and should be deleted — including legacy ones
 # whose prompt has no "in \`<owner/repo>\`" clause when this is the home
 # repo. Never touch routines whose prompt names a different repo — those
 # belong to other repos' syncs.`
 
 const cloudPlan = [
-  "# Bulletin routines — desired cloud state",
+  "# Steward routines — desired cloud state",
   "#",
   "# One cloud routine per enabled cloud entry. The prompt is a stable",
   "# pointer; instructions edits in routines.yaml need no cloud change. The",
@@ -275,9 +275,9 @@ if (dataRepo == null && cloudScheduled.length + cloudManual.length > 0) {
 
 // --- Local half (launchd, ADR-0012) ------------------------------------------
 
-const LABEL_PREFIX = "co.formfactory.bulletin."
+const LABEL_PREFIX = "org.devord.steward."
 const agentsDir = path.join(os.homedir(), "Library", "LaunchAgents")
-const logsDir = path.join(os.homedir(), "Library", "Logs", "bulletin")
+const logsDir = path.join(os.homedir(), "Library", "Logs", "steward")
 
 interface PlistPlan {
   routine: Routine
@@ -335,7 +335,7 @@ function findOrphanPlists(): string[] {
 
 const orphanPlists = findOrphanPlists()
 
-console.log("# Bulletin routines — desired local state (launchd)")
+console.log("# Steward routines — desired local state (launchd)")
 if (localErrors.length > 0) {
   console.error(localErrors.map((e) => `# ERROR ${e}`).join("\n"))
 }
@@ -418,7 +418,7 @@ const instructions = [
   "   ones). Match on the prompt's repo clause, not just the name.",
   "6. Print a summary table: name, action taken (created/ok/reconciled/",
   "   deleted/needs-web-ui), and what changed (cron/repos/connectors).",
-  "Touch nothing that is not named bulletin-*.",
+  "Touch nothing that is not named steward-*.",
   "",
   cloudPlan.join("\n"),
 ].join("\n")

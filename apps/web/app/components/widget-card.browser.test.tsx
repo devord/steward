@@ -1,4 +1,4 @@
-import type { Routine, Widget } from "@bulletin/schema"
+import type { Routine, Widget } from "@steward/schema"
 import { describe, expect, it } from "vitest"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { render } from "vitest-browser-react"

@@ -17,7 +17,7 @@ import { commitSession, getAuth, getSession } from "../lib/session.server.ts"
 import { cn } from "~/lib/utils"
 
 export function meta(_args: Route.MetaArgs) {
-  return [{ title: "Bulletin — Device sign-in" }]
+  return [{ title: "Steward — Device sign-in" }]
 }
 
 /**

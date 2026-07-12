@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import type { Widget } from "@bulletin/schema"
-import { GRID_MAX_ROWS } from "@bulletin/schema"
+import type { Widget } from "@steward/schema"
+import { GRID_MAX_ROWS } from "@steward/schema"
 
 import { collides, type Rect } from "./placement.ts"
 

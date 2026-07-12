@@ -74,7 +74,7 @@ export async function performSync(
     try {
       const { contentSha } = await putFile(token, repo, change.path, {
         content: change.yaml,
-        message: `config: update ${change.kind} via bulletin`,
+        message: `config: update ${change.kind} via steward`,
         branch,
         sha: currentShas.get(change.kind),
       })
@@ -108,10 +108,10 @@ export async function performSync(
 
   if (intent === "pr") {
     const pull = await createPullRequest(token, repo, {
-      title: "Bulletin config update",
+      title: "Steward config update",
       head: branch,
       base: "main",
-      body: "Config edits made in the Bulletin dashboard.",
+      body: "Config edits made in the Steward dashboard.",
     })
     return { ok: true, prUrl: pull.html_url }
   }

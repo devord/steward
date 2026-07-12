@@ -15,8 +15,8 @@ import {
 } from "./repos.server.ts"
 
 const LOGIN = "daniel"
-// BULLETIN_DATA_REPO_PREFIX default; the rename PR sweeps this with it.
-const HOME = "daniel/bulletin-data-daniel"
+// STEWARD_DATA_REPO_PREFIX default; the rename PR sweeps this with it.
+const HOME = "daniel/steward-data-daniel"
 const TOPIC = "steward-data"
 
 beforeEach(() => __resetRepoCache())

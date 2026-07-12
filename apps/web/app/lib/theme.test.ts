@@ -98,7 +98,7 @@ describe("frameArtifactHtml", () => {
     expect(framed).toContain("footer{display:none !important}")
     // No override block — the tile guard's var(--color-bg1) fallback is the
     // only palette reference the default framing carries.
-    expect(framed).not.toContain("data-bulletin-theme")
+    expect(framed).not.toContain("data-steward-theme")
     // A null override must not stringify into the srcdoc as visible "null".
     expect(framed).not.toContain("null")
   })
@@ -124,16 +124,16 @@ describe("frameArtifactHtml", () => {
     // Tiles never scroll (ADR-0019) — a non-compliant artifact clips…
     expect(tile).toContain("overflow:hidden !important")
     // …visibly: the fade marks truncation instead of a mid-line crop.
-    expect(tile).toContain("bulletin-tile-fade")
+    expect(tile).toContain("steward-tile-fade")
     // The stamp artifacts gate their fit-to-height logic on.
-    expect(tile).toContain('data-bulletin-tile",""')
+    expect(tile).toContain('data-steward-tile",""')
   })
 
   it("leaves the full view scrollable — footer hidden, no tile guard", () => {
     const full = frameArtifactHtml(doc, DEFAULT_THEME, "full")
     expect(full).toContain("footer{display:none !important}")
     expect(full).not.toContain("overflow:hidden")
-    expect(full).not.toContain("data-bulletin-tile")
+    expect(full).not.toContain("data-steward-tile")
   })
 })
 

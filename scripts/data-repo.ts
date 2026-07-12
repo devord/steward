@@ -4,7 +4,7 @@
  *
  *   --file <path/to/routines.yaml>  an existing checkout you manage;
  *   --repo <owner/repo>             a script-managed clone under
- *                                   ~/.cache/bulletin/repos/ — cloned via
+ *                                   ~/.cache/steward/repos/ — cloned via
  *                                   `gh` on first use, fast-forwarded after.
  *
  * The --repo form is what the app's setup cards print: it is copy-pasteable
@@ -60,14 +60,7 @@ export function ensureDataRepoCheckout(repo: string): string {
     console.error(`--repo expects <owner>/<name>, got "${repo}"`)
     process.exit(1)
   }
-  const dir = path.join(
-    os.homedir(),
-    ".cache",
-    "bulletin",
-    "repos",
-    owner,
-    name,
-  )
+  const dir = path.join(os.homedir(), ".cache", "steward", "repos", owner, name)
   if (existsSync(path.join(dir, ".git"))) {
     try {
       execFileSync("git", ["-C", dir, "pull", "--ff-only", "--quiet"], {

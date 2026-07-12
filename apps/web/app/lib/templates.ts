@@ -1,4 +1,4 @@
-import type { RoutineTemplate } from "@bulletin/schema"
+import type { RoutineTemplate } from "@steward/schema"
 
 /** Where a discovered routine template was read from — its picker badge
     (ADR-0021/0023). `builtin` = the product repo's `templates/routines/`,

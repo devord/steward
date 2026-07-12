@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import type { Routine, WidgetSize } from "@bulletin/schema"
+import type { Routine, WidgetSize } from "@steward/schema"
 
 import { AddRoutineDialog } from "../components/add-routine-dialog.tsx"
 import { Button } from "~/components/ui/button"
@@ -58,9 +58,9 @@ const editable: Routine = {
   name: "Repo Pulse",
   template: "repo-pulse",
   schedule: "0 */4 * * *",
-  instructions: "Only the Form-Factory org repos.",
-  params: { repos: ["Form-Factory/bulletin", "Form-Factory/plugins"] },
-  repos: ["Form-Factory/bulletin", "Form-Factory/plugins", "Form-Factory/kb"],
+  instructions: "Only the devord org repos.",
+  params: { repos: ["devord/steward", "devord/plugins"] },
+  repos: ["devord/steward", "devord/plugins", "devord/kb"],
   connectors: ["GitHub"],
   enabled: true,
 }

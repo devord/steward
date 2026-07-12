@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useFetcher, useNavigate } from "react-router"
 
-import { slugSchema } from "@bulletin/schema"
+import { slugSchema } from "@steward/schema"
 
 import { kebab } from "./add-routine-dialog.tsx"
 import { Button } from "~/components/ui/button"

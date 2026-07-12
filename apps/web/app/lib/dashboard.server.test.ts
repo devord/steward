@@ -8,7 +8,7 @@ import {
 } from "./dashboard.server.ts"
 import { GitHubError } from "./github.server.ts"
 
-const DATA_REPO = "daniel/bulletin-data-daniel"
+const DATA_REPO = "daniel/steward-data-daniel"
 const MAIN_BOARD = {
   repo: DATA_REPO,
   shared: false,

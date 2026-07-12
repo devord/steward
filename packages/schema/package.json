@@ -1,5 +1,5 @@
 {
-  "name": "@bulletin/schema",
+  "name": "@steward/schema",
   "private": true,
   "type": "module",
   "exports": {

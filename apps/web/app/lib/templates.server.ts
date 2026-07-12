@@ -1,4 +1,4 @@
-import { parseRoutineTemplate } from "@bulletin/schema"
+import { parseRoutineTemplate } from "@steward/schema"
 
 import type { DiscoveredTemplate } from "./templates.ts"
 import { getFile, listTreePaths } from "./github.server.ts"

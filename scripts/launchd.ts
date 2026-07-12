@@ -133,7 +133,7 @@ function xmlEscape(text: string): string {
  * The launch agent for one scheduled-local routine. The job runs headless
  * `claude -p` with the same stable pointer prompt every host fires
  * (ADR-0005), from the data repo checkout, under a login shell so `claude`
- * and `gh` resolve from the user's PATH. The bulletin-repo comment is the
+ * and `gh` resolve from the user's PATH. The steward-repo comment is the
  * ownership marker orphan cleanup keys on.
  */
 export function launchdPlist(options: {
@@ -141,7 +141,7 @@ export function launchdPlist(options: {
   repo: string
   prompt: string
   cwd: string
-  /** Bulletin checkout added to the session so the contract skills
+  /** Steward checkout added to the session so the contract skills
       resolve — the data-repo cwd doesn't have them (ADR-0014). */
   addDir: string
   logFile: string
@@ -177,7 +177,7 @@ export function launchdPlist(options: {
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- bulletin-repo: ${xmlEscape(options.repo)} — written by pnpm routines:sync; edits are overwritten -->
+<!-- steward-repo: ${xmlEscape(options.repo)} — written by pnpm routines:sync; edits are overwritten -->
 <plist version="1.0">
 <dict>
   <key>Label</key>
@@ -203,5 +203,5 @@ ${scheduleXml}
 
 /** The repo a synced plist belongs to, from its ownership comment. */
 export function plistRepo(plist: string): string | null {
-  return /<!-- bulletin-repo: (.+?) —/.exec(plist)?.[1] ?? null
+  return /<!-- steward-repo: (.+?) —/.exec(plist)?.[1] ?? null
 }

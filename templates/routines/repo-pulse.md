@@ -2,7 +2,7 @@
 name: repo-pulse
 description: >-
   Summarize the recent pulse of a set of GitHub repositories — open PRs
-  awaiting review, freshly opened issues, CI status — as a bulletin widget
+  awaiting review, freshly opened issues, CI status — as a steward widget
   artifact. Executed by the run-routine dispatcher (ADR-0021).
 widget:
   artifact: "Open PRs awaiting review, new issues, and CI status per repo"

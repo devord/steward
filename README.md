@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/wordmark-dark.svg" />
     <source media="(prefers-color-scheme: light)" srcset="apps/web/public/wordmark-light.svg" />
-    <img alt="Bulletin" src="apps/web/public/wordmark-dark.svg" width="280" />
+    <img alt="Steward" src="apps/web/public/wordmark-dark.svg" width="280" />
   </picture>
 </p>
 
@@ -15,14 +15,14 @@
 
 ## How it works
 
-Bulletin has no database and no artifact host. GitHub is both:
+Steward has no database and no artifact host. GitHub is both:
 
 - **This repo (shared):** the web app, the schemas, the contract skills,
   and the built-in routine templates (`templates/routines/`, ADR-0021).
   Team- or private-specific templates live in the narrowest data repo
   their users can read (ADR-0014/0021). Team-visible; never holds user
   data.
-- **Your data repo (`bulletin-data-<login>`, private):** created for you from
+- **Your data repo (`steward-data-<login>`, private):** created for you from
   a template on first sign-in. `main` holds your config
   (`data/routines.yaml`, `data/dashboard.yaml`); the `artifacts` branch holds
   your published artifacts at `w/<slug>/index.html`. Nobody else can read it
@@ -38,7 +38,7 @@ The loop, end to end:
 2. **A run starts** — a Claude cloud routine or local launchd schedule
    fires, someone clicks the widget's update button (manual cloud), or you
    run `pnpm routine <slug>` in a terminal. Every path is one stable line:
-   _"Run the bulletin routine `<slug>` — follow the `run-routine` skill."_
+   _"Run the steward routine `<slug>` — follow the `run-routine` skill."_
    Everything the run actually does is versioned in the repos, so the
    cloud routine's prompt is created once and never edited — the only
    thing `routines:sync` ever touches on an existing resource is its cron.
@@ -61,19 +61,19 @@ Prerequisites: a GitHub account; Claude Code (for routines to run).
 
 1. Open the app and **sign in with GitHub** (scopes: `repo`, `read:user`).
 2. First run: accept the **"create your dashboard repo"** wizard — it
-   generates private `bulletin-data-<you>` from the template.
+   generates private `steward-data-<you>` from the template.
 3. **Add a routine** (prompt → name → size → schedule/host) and **Sync**.
-4. **Enact it** once, from your bulletin checkout — the widget card shows the
+4. **Enact it** once, from your steward checkout — the widget card shows the
    exact copy-pasteable line:
-   `pnpm routines:sync --apply --repo <owner>/bulletin-data-<owner>`.
+   `pnpm routines:sync --apply --repo <owner>/steward-data-<owner>`.
    With `--repo` the script keeps its own clone of the data repo under
-   `~/.cache/bulletin/` (pass `--file <path>/data/routines.yaml` to use a
+   `~/.cache/steward/` (pass `--file <path>/data/routines.yaml` to use a
    checkout you manage instead). It creates the cloud routine or launchd
    agent, walks you through the API trigger for every cloud routine (manual
    ones need it to run at all; scheduled ones need it for the Update
    button), and reconciles drift on every later run.
 5. Missed or skipped a trigger? Mint one any time with
-   `pnpm routine:trigger <slug> --repo <owner>/bulletin-data-<owner>`.
+   `pnpm routine:trigger <slug> --repo <owner>/steward-data-<owner>`.
 6. Widgets refresh on their own from then on. Stale or never-run widgets say
    so on the card.
 

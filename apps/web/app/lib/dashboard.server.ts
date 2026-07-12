@@ -8,7 +8,7 @@ import {
   parseRoutinesFile,
   routineHost,
   triggerPath,
-} from "@bulletin/schema"
+} from "@steward/schema"
 
 import { data } from "react-router"
 

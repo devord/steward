@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
 
-import type { Routine, Widget } from "@bulletin/schema"
+import type { Routine, Widget } from "@steward/schema"
 import { describe, expect, it } from "vitest"
 import { render } from "vitest-browser-react"
 

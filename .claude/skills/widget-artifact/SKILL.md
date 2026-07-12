@@ -2,7 +2,7 @@
 name: widget-artifact
 description: >-
   The artifact authoring contract (docs/widget-standard.md): how to write
-  the single self-contained HTML file a bulletin widget renders. Use
+  the single self-contained HTML file a steward widget renders. Use
   whenever producing or reviewing a widget artifact — routine skills author
   content, this skill dictates the file.
 ---
@@ -92,7 +92,7 @@ glance; detail tiers get the 14px body.
 
 ## The fit-to-height snippet
 
-The board stamps `data-bulletin-tile` on `<html>` and clips overflow
+The board stamps `data-steward-tile` on `<html>` and clips overflow
 (ADR-0019); the raw page and the full-view lightbox carry no stamp and keep
 every row. Mark each unbounded list with `data-fit-list` and inline this —
 it hides trailing items until the page fits and says how many it hid:
@@ -101,10 +101,10 @@ it hides trailing items until the page fits and says how many it hid:
 <script>
   // Fit lists to the tile (widget-standard §2, ADR-0019): tiles never
   // scroll, so collapse trailing items that overflow into "+N more".
-  // Runs only on the board — the frame stamps data-bulletin-tile.
+  // Runs only on the board — the frame stamps data-steward-tile.
   ;(function () {
     function fit() {
-      if (!document.documentElement.hasAttribute("data-bulletin-tile")) return
+      if (!document.documentElement.hasAttribute("data-steward-tile")) return
       var doc = document.documentElement
       // Bottom-most lists give way first — the top of the tile is the glance.
       var lists = [].slice

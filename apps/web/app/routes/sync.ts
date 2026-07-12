@@ -1,4 +1,4 @@
-import { dashboardPath, slugSchema } from "@bulletin/schema"
+import { dashboardPath, slugSchema } from "@steward/schema"
 import { data } from "react-router"
 import { z } from "zod"
 

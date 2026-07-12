@@ -2,7 +2,7 @@
  * The theme registry and appearance model — the one place that knows every
  * palette and resolves which one is active (ADR-0009).
  *
- * Each theme carries the full Bulletin token set (the roles DESIGN.md
+ * Each theme carries the full Steward token set (the roles DESIGN.md
  * defines: surfaces bg…bg3, borders, inks, the accent pair, and the status
  * colors), transcribed from its upstream palette — no invented colors.
  * Gruvbox dark hard remains the canonical default: artifacts are authored
@@ -32,7 +32,7 @@ import { z } from "zod"
 /** A theme's perceptual mode — drives `color-scheme` and the `.dark` class. */
 export type ThemeMode = "dark" | "light"
 
-/** The Bulletin token roles every theme must fill (see DESIGN.md). */
+/** The Steward token roles every theme must fill (see DESIGN.md). */
 export interface ThemeTokens {
   /** Page background. */
   bg: string
@@ -368,9 +368,9 @@ export interface AppearancePrefs {
 }
 
 /** localStorage key for the JSON `AppearancePrefs`. */
-export const APPEARANCE_STORAGE_KEY = "bulletin-appearance"
+export const APPEARANCE_STORAGE_KEY = "steward-appearance"
 /** Custom event fired after a preference write, for same-tab subscribers. */
-export const APPEARANCE_EVENT = "bulletin:appearance"
+export const APPEARANCE_EVENT = "steward:appearance"
 
 /** Fresh default: follow the OS with the gruvbox pair — dark stays dark. */
 export const DEFAULT_APPEARANCE: AppearancePrefs = {
@@ -491,7 +491,7 @@ export function artifactThemeStyle(name: ThemeName): string | null {
     ["--color-red", t.red],
   ]
   const vars = pairs.map(([k, v]) => `${k}:${v} !important`).join(";")
-  return `<style data-bulletin-theme>:root{${vars};color-scheme:${mode}}</style>`
+  return `<style data-steward-theme>:root{${vars};color-scheme:${mode}}</style>`
 }
 
 /**
@@ -508,7 +508,7 @@ export function artifactThemeStyle(name: ThemeName): string | null {
  * keeps it.
  */
 const EMBED_FRAME_STYLE =
-  "<style data-bulletin-embed>footer{display:none !important}</style>"
+  "<style data-steward-embed>footer{display:none !important}</style>"
 
 /**
  * Tile-only overflow guard (ADR-0019). Board cells never scroll — a tile is
@@ -517,7 +517,7 @@ const EMBED_FRAME_STYLE =
  *
  *  - pins the iframe's own scrolling shut (`overflow:hidden`), so a
  *    non-compliant artifact clips instead of growing a scrollbar;
- *  - stamps `data-bulletin-tile` on `<html>`, the signal artifacts gate
+ *  - stamps `data-steward-tile` on `<html>`, the signal artifacts gate
  *    their fit-to-height logic on (the raw page and the full view keep
  *    every row);
  *  - fades the bottom edge out whenever content still overflows, so
@@ -526,18 +526,18 @@ const EMBED_FRAME_STYLE =
  *    page background, and retints with the theme override for free.
  */
 const TILE_GUARD_STYLE =
-  "<style data-bulletin-tile-guard>" +
+  "<style data-steward-tile-guard>" +
   "html,body{overflow:hidden !important}" +
-  "#bulletin-tile-fade{position:fixed;left:0;right:0;bottom:0;height:32px;" +
+  "#steward-tile-fade{position:fixed;left:0;right:0;bottom:0;height:32px;" +
   "pointer-events:none;opacity:0;transition:opacity .15s;" +
   "background:linear-gradient(transparent,var(--color-bg1,#282828))}" +
   "</style>"
 
 const TILE_GUARD_SCRIPT =
-  "<script data-bulletin-tile-guard>(function(){" +
-  'var d=document.documentElement;d.setAttribute("data-bulletin-tile","");' +
+  "<script data-steward-tile-guard>(function(){" +
+  'var d=document.documentElement;d.setAttribute("data-steward-tile","");' +
   "function init(){" +
-  'var f=document.createElement("div");f.id="bulletin-tile-fade";' +
+  'var f=document.createElement("div");f.id="steward-tile-fade";' +
   "document.body.appendChild(f);" +
   'var check=function(){f.style.opacity=d.scrollHeight>d.clientHeight+1?"1":"0"};' +
   "new ResizeObserver(check).observe(document.body);" +

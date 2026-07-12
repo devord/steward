@@ -6,8 +6,8 @@ import type {
   RoutineHost,
   WidgetParam,
   WidgetSize,
-} from "@bulletin/schema"
-import { repoRefSchema, slugSchema } from "@bulletin/schema"
+} from "@steward/schema"
+import { repoRefSchema, slugSchema } from "@steward/schema"
 import { CheckIcon, ChevronRightIcon } from "lucide-react"
 
 import { cn } from "~/lib/utils"
@@ -767,7 +767,7 @@ export function AddRoutineDialog({
                       {t("dialog.promote")}
                     </span>
                     <CopyableCommand
-                      command={`claude "Promote the bulletin routine \`${slug}\` into a routine template: read it in data/routines.yaml, write templates/routines/ with widget: frontmatter (declared params, size/schedule/connector hints; concrete values become params), then point the routine's template: at it."`}
+                      command={`claude "Promote the steward routine \`${slug}\` into a routine template: read it in data/routines.yaml, write templates/routines/ with widget: frontmatter (declared params, size/schedule/connector hints; concrete values become params), then point the routine's template: at it."`}
                     />
                     <p className="text-xs text-muted-foreground">
                       {t("dialog.promoteHint")}

@@ -24,12 +24,12 @@ import { getAuth } from "../lib/session.server.ts"
 export function meta({ loaderData }: Route.MetaArgs) {
   const description = "A dashboard of living widgets, kept fresh by routines."
   return [
-    { title: "Bulletin" },
+    { title: "Steward" },
     { name: "description", content: description },
-    { property: "og:title", content: "Bulletin" },
+    { property: "og:title", content: "Steward" },
     { property: "og:description", content: description },
     { property: "og:type", content: "website" },
-    { property: "og:site_name", content: "Bulletin" },
+    { property: "og:site_name", content: "Steward" },
     // Scrapers need an absolute image URL; when the loader errored there is
     // no origin to build one from, so omit the image rather than emit a
     // relative URL scrapers would resolve against their own domain.
@@ -267,7 +267,7 @@ function DemoBoard() {
         <DemoWidget name="Repo pulse" ago="Ran 14m ago">
           <p className="mb-2.5 font-mono text-xs text-ink-dim">Open PRs</p>
           <div className="space-y-2">
-            <PulseRow label="bulletin" fill="68%" n={4} />
+            <PulseRow label="steward" fill="68%" n={4} />
             <PulseRow label="chat" fill="40%" n={2} />
             <PulseRow label="kb" fill="18%" n={1} />
           </div>

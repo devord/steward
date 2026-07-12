@@ -1,6 +1,6 @@
 import { data, redirect } from "react-router"
 
-import { slugSchema } from "@bulletin/schema"
+import { slugSchema } from "@steward/schema"
 
 import type { Route } from "./+types/r.$owner.$repo.$dashboard"
 import { DashboardBoard } from "../components/dashboard-board.tsx"
@@ -14,7 +14,7 @@ import { requireDataRepo, resolveHomeRepo } from "../lib/repos.server.ts"
 import { requireAuth } from "../lib/session.server.ts"
 
 export function meta({ params }: Route.MetaArgs) {
-  return [{ title: `Bulletin — ${params.repo}/${params.dashboard}` }]
+  return [{ title: `Steward — ${params.repo}/${params.dashboard}` }]
 }
 
 /**
