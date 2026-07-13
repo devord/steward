@@ -433,10 +433,13 @@ export function DashboardBoard({
         ]
       })}
       {drag && (
+        /* Snap-target ghost. Full-grid only: its explicit gridColumn/gridRow
+           mean nothing on the narrow auto-flow grids, where a resize
+           previews on the card itself instead. */
         <div
           aria-hidden
           className={cn(
-            "pointer-events-none z-10 rounded-lg border border-dashed",
+            "pointer-events-none z-10 hidden rounded-lg border border-dashed min-[1100px]:block",
             drag.valid
               ? "border-primary bg-primary/5"
               : "border-red/70 bg-red/10",
