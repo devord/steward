@@ -22,8 +22,9 @@ export interface GridDrag {
   /** Pointer travel since the drag activated. */
   dx: number
   dy: number
-  /** Live pixel size of the card while resizing. */
-  sizePx: { width: number; height: number } | null
+  /** Live pixel size of the card while resizing. `width` is null on the
+      narrow flow grids, where the grid owns the card's width. */
+  sizePx: { width: number | null; height: number } | null
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -60,11 +61,13 @@ export function dragCandidate(
 }
 
 /**
- * Pointer-driven move/resize on the desktop dashboard grid. The dragged
- * card floats with the pointer while a ghost cell previews the snap
- * target; the draft is written once, on drop. Cell math mirrors the
- * .dash-grid geometry (the board's `columns`, 12px gap, fixed row unit), so
- * this only activates on the ≥1100px grid where explicit placement applies.
+ * Pointer-driven move/resize on the dashboard grid. The dragged card
+ * floats with the pointer while a ghost cell previews the snap target;
+ * the draft is written once, on drop. Cell math mirrors the .dash-grid
+ * geometry (12px gap, fixed row unit, columns per breakpoint). Move only
+ * exists on the full ≥1100px grid where explicit col/row placement
+ * applies; on the narrow auto-flow grids resize stays live, rows only —
+ * the flow grid owns each card's column span.
  */
 export function useGridDrag({
   widgets,
@@ -91,17 +94,26 @@ export function useGridDrag({
   const startDrag = useCallback(
     (slug: string, kind: DragKind, event: React.PointerEvent) => {
       if (event.button !== 0 || cleanupRef.current) return
-      // Explicit col/row placement only exists on the full ≥1100px grid.
-      if (!window.matchMedia("(min-width: 1100px)").matches) return
+      // Explicit col/row placement only exists on the full ≥1100px grid;
+      // the narrow grids auto-flow, so a move has nothing to move there.
+      const full = window.matchMedia("(min-width: 1100px)").matches
+      if (!full && kind === "move") return
       const grid = gridRef.current
       const widget = widgetsRef.current.find((w) => w.routine === slug)
       if (!grid || !widget) return
 
       event.preventDefault()
       const origin: Rect = { ...widget.position, ...widget.size }
+      // Rendered column count per .dash-grid's breakpoints (app.css):
+      // the board's own `columns` on the full grid, 2 on tablet, 1 on phone.
+      const gridColumns = full
+        ? columns
+        : window.matchMedia("(min-width: 700px)").matches
+          ? 2
+          : 1
       const cellWidth =
-        (grid.getBoundingClientRect().width - GRID_GAP * (columns - 1)) /
-        columns
+        (grid.getBoundingClientRect().width - GRID_GAP * (gridColumns - 1)) /
+        gridColumns
       const colStep = cellWidth + GRID_GAP
       const rowStep = rowHeight + GRID_GAP
       const startX = event.clientX
@@ -122,10 +134,13 @@ export function useGridDrag({
           active = true
         }
         e.preventDefault()
+        // On the narrow grids only rows resize — the stored `cols` is the
+        // desktop span, which the flow grid clamps for display, so a
+        // horizontal drag there would edit an invisible value.
         const candidate = dragCandidate(
           kind,
           origin,
-          Math.round(dx / colStep),
+          full ? Math.round(dx / colStep) : 0,
           Math.round(dy / rowStep),
           columns,
         )
@@ -139,10 +154,14 @@ export function useGridDrag({
           sizePx:
             kind === "resize"
               ? {
-                  width: Math.max(
-                    cellWidth / 2,
-                    cellWidth * origin.cols + GRID_GAP * (origin.cols - 1) + dx,
-                  ),
+                  width: full
+                    ? Math.max(
+                        cellWidth / 2,
+                        cellWidth * origin.cols +
+                          GRID_GAP * (origin.cols - 1) +
+                          dx,
+                      )
+                    : null,
                   height: Math.max(
                     rowHeight / 2,
                     rowHeight * origin.rows + GRID_GAP * (origin.rows - 1) + dy,

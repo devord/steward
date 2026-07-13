@@ -209,7 +209,7 @@ export function WidgetCard({
           }),
           ...(resizing &&
             drag.sizePx && {
-              width: drag.sizePx.width,
+              ...(drag.sizePx.width != null && { width: drag.sizePx.width }),
               height: drag.sizePx.height,
               zIndex: 20,
             }),
@@ -275,7 +275,13 @@ export function WidgetCard({
               className={cn(
                 "shrink-0 pr-1 font-mono tabular-nums",
                 onEdit || onToggleEnabled ? "" : "ml-auto",
-                resizing ? "text-primary" : "text-ink-dim",
+                // Red while an invalid drop is pending — on the narrow grids
+                // this readout is the only collision signal (no ghost cell).
+                resizing
+                  ? drag.valid
+                    ? "text-primary"
+                    : "text-destructive"
+                  : "text-ink-dim",
               )}
             >
               {shownSize.cols}×{shownSize.rows}
@@ -384,28 +390,38 @@ export function WidgetCard({
             {/* Drag surface: covers the artifact (iframes swallow pointer
               events) but sits under the title bar and resize handle. Remove
               lives in the bar so no control ever floats over the
-              artifact — content stays clean while dragging. */}
+              artifact — content stays clean while dragging. Move only exists
+              on the full ≥1100px grid, so below it the surface keeps
+              touch-action free — a finger on the card must still pan the
+              page in edit mode. */}
             <div
               aria-hidden
               className={cn(
-                "absolute inset-0 z-10 touch-none",
-                drag?.kind === "move" ? "cursor-grabbing" : "cursor-grab",
+                "absolute inset-0 z-10 min-[1100px]:touch-none",
+                drag?.kind === "move"
+                  ? "min-[1100px]:cursor-grabbing"
+                  : "min-[1100px]:cursor-grab",
               )}
               onPointerDown={(event) => onDragStart?.("move", event)}
             />
             {/* Corner resize handle — hidden mid-move so the lifted card is
-              just artifact + footer. */}
+              just artifact + footer. The pointer target is a padded hitbox
+              around the small L-shaped visual so a finger can grab it. */}
             {drag?.kind !== "move" && (
               <div
                 aria-hidden
-                className={cn(
-                  "absolute right-[3px] bottom-[3px] z-30 size-3.5 cursor-nwse-resize touch-none rounded-br-[5px] border-r-2 border-b-2",
-                  resizing
-                    ? "border-primary"
-                    : "border-ink-dim hover:border-primary",
-                )}
+                className="group/resize absolute right-0 bottom-0 z-30 flex cursor-nwse-resize touch-none items-end justify-end p-[3px] pointer-coarse:pt-7 pointer-coarse:pl-7"
                 onPointerDown={(event) => onDragStart?.("resize", event)}
-              />
+              >
+                <div
+                  className={cn(
+                    "size-3.5 rounded-br-[5px] border-r-2 border-b-2",
+                    resizing
+                      ? "border-primary"
+                      : "border-ink-dim group-hover/resize:border-primary",
+                  )}
+                />
+              </div>
             )}
           </>
         )}

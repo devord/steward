@@ -2,6 +2,7 @@ import { useCallback, useState } from "react"
 
 import type { Routine, Widget } from "@steward/schema"
 import { describe, expect, it } from "vitest"
+import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 
 import "../app.css"
@@ -177,6 +178,28 @@ describe("grid drag editing", () => {
     await expect
       .poll(() => placementOf(card("a")))
       .toEqual({ col: 1, row: 1, cols: 3, rows: 2 })
+  })
+
+  it("on a narrow grid, move is inert and resize snaps rows only", async () => {
+    // Below the 700px tablet breakpoint the grid is one auto-flow column:
+    // move has nothing to move, and only the row span is editable.
+    await page.viewport(600, 900)
+    try {
+      await mounted(<GridHarness initial={[widget("a", 1, 1, 2, 1)]} />, 1)
+
+      drag(dragSurface("a"), 100, 162)
+      await expect
+        .poll(() => placementOf(card("a")))
+        .toEqual({ col: 1, row: 1, cols: 2, rows: 1 })
+
+      // dx spans two desktop cells; only dy (one row unit) may land.
+      drag(resizeHandle("a"), 300, 162)
+      await expect
+        .poll(() => placementOf(card("a")))
+        .toEqual({ col: 1, row: 1, cols: 2, rows: 2 })
+    } finally {
+      await page.viewport(1280, 900)
+    }
   })
 
   it("shift+arrow on a focused card resizes from the keyboard", async () => {
