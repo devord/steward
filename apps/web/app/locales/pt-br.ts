@@ -8,8 +8,8 @@ import type { Messages } from "./en.ts"
  */
 export const ptBR: Messages = {
   "landing.tagline":
-    "Um painel de widgets vivos — cada um é um relatório HTML que uma rotina agendada regenera.",
-  "landing.sub": "Relatórios que se atualizam sozinhos.",
+    "Um painel de widgets vivos — rotinas fazem o trabalho por você e reportam aqui.",
+  "landing.sub": "Seus resultados, servidos.",
   "landing.signIn": "Entrar com GitHub",
   "landing.privacy":
     "Tudo vive em um repo privado do GitHub que é seu — o app não guarda nada.",

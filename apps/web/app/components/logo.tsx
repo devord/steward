@@ -1,54 +1,53 @@
 import { cn } from "~/lib/utils"
 
 /**
- * The Steward mark: a mini dashboard grid whose last widget is the
- * wordmark's trailing block cursor (steward▮) — the board, still being
- * written. Mirrored as static SVG in public/favicon.svg and public/og.png;
- * keep the three geometries in sync.
+ * The Steward mark: the bow tie — the butler's uniform in three shapes,
+ * formal service without the food dome. The orange knot is the same block
+ * that ends the wordmark (steward's cursor, dressed up). One geometry at
+ * every size; it reads from 16px favicons to the landing hero. Mirrored as
+ * static SVG in public/favicon.svg and the public/wordmark-*.svg / og.png
+ * lockups; keep the geometries in sync (DESIGN.md § Mark).
  */
 export function Logo({
   className,
   live,
+  display,
 }: {
   className?: string
-  /** Blink the orange cursor block like a terminal caret (landing only). */
+  /** Blink the orange knot like a terminal caret (landing only). */
   live?: boolean
+  /** Hero sizes only: adds the tile's frame stroke (mush below ~32px). */
+  display?: boolean
 }) {
   return (
     <svg viewBox="0 0 64 64" aria-hidden className={cn("shrink-0", className)}>
       <rect width="64" height="64" rx="14" className="fill-bg" />
-      <rect
-        x="1"
-        y="1"
-        width="62"
-        height="62"
-        rx="13"
-        fill="none"
-        strokeWidth="2"
-        className="stroke-border"
+      {display && (
+        <rect
+          x="1"
+          y="1"
+          width="62"
+          height="62"
+          rx="13"
+          fill="none"
+          strokeWidth="2"
+          className="stroke-border"
+        />
+      )}
+      <path
+        d="M10 22 Q10 19.5 12.5 20.5 L26 27 L26 37 L12.5 43.5 Q10 44.5 10 42 Z"
+        className="fill-muted-foreground"
       />
-      <rect
-        x="12"
-        y="12"
-        width="17"
-        height="17"
-        rx="4"
+      <path
+        d="M54 22 Q54 19.5 51.5 20.5 L38 27 L38 37 L51.5 43.5 Q54 44.5 54 42 Z"
         className="fill-muted-foreground"
       />
       <rect
-        x="12"
-        y="35"
-        width="17"
-        height="17"
-        rx="4"
-        className="fill-muted-foreground"
-      />
-      <rect
-        x="35"
-        y="12"
-        width="17"
-        height="40"
-        rx="4"
+        x="26.5"
+        y="25"
+        width="11"
+        height="14"
+        rx="3.5"
         className={cn("fill-primary", live && "logo-cursor")}
       />
     </svg>
@@ -59,9 +58,12 @@ export function Logo({
 export function Wordmark({
   className,
   live,
+  display,
 }: {
   className?: string
   live?: boolean
+  /** Use the framed display tile (hero sizes only). */
+  display?: boolean
 }) {
   return (
     <span
@@ -76,7 +78,11 @@ export function Wordmark({
           center. Drop the mark to meet it. Measured and size-independent: the
           half-leading items-center adds exactly cancels line-height, so this one
           value holds at every font size (text-sm through the landing's text-5xl). */}
-      <Logo live={live} className="size-[1.4em] translate-y-[0.043em]" />
+      <Logo
+        live={live}
+        display={display}
+        className="size-[1.4em] translate-y-[0.043em]"
+      />
       Steward
     </span>
   )
