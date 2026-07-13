@@ -401,9 +401,10 @@
       }
       /* The time grid (any wide surface tall enough to hold the day: the
          raw page, the full view, and board tiles from ~4 rows up): the
-         paper planner. Every 30-minute slot is a labeled ruler row and a
-         rule across the day; blocks are drawn boxes spanning their slots.
-         The strip stays above it — the shape of the day, then the day. */
+         paper planner. Every 30-minute slot is a labeled ruler row;
+         blocks are drawn boxes spanning their slots — the boxes alone
+         structure the day, no lines ruled across it. The strip stays
+         above it — the shape of the day, then the day. */
       @media (min-width: 900px) and (min-height: 600px) {
         .blocks .day li.now {
           display: none;
@@ -421,7 +422,6 @@
         .ruler {
           display: grid;
           grid-auto-rows: var(--slot);
-          border-top: 1px solid transparent;
           border-right: 1px solid var(--color-border-dim);
           padding-right: 8px;
           font-family: var(--font-mono);
@@ -442,27 +442,10 @@
           grid-template-columns: 1fr;
           grid-auto-rows: var(--slot);
           gap: 0;
-          border-top: 1px solid var(--color-border-dim);
-          border-bottom: 1px solid var(--color-border-dim);
-          /* The paper: an hour line plus a fainter half-hour line, ruled
-             across the whole day — visible through free slots and the
-             translucent block washes alike. */
-          background:
-            repeating-linear-gradient(
-              to bottom,
-              transparent 0 calc(var(--slot) * 2 - 1px),
-              var(--color-border-dim) calc(var(--slot) * 2 - 1px)
-                calc(var(--slot) * 2)
-            ),
-            repeating-linear-gradient(
-              to bottom,
-              transparent 0 calc(var(--slot) - 1px),
-              color-mix(in srgb, var(--color-border-dim) 55%, transparent)
-                calc(var(--slot) - 1px) var(--slot)
-            );
         }
         /* A block is a drawn box: tone border + wash, spanning its slots.
-           Free slots stay unboxed so the ruled paper shows through. */
+           Free slots stay unboxed — blank space against the ruler is
+           honest slack. */
         .blocks .day li {
           grid-column: 1;
           grid-row: span var(--s, 1);
@@ -548,7 +531,7 @@
           container-type: size;
         }
         html[data-steward-tile] .blocks .day > * {
-          --slot: max(22px, calc((100cqh - 2px) / var(--slots, 20)));
+          --slot: max(22px, calc(100cqh / var(--slots, 20)));
         }
       }
     </style>

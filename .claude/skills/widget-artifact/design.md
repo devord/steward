@@ -396,16 +396,18 @@ One block list, three renderings (see `docs/samples/daily-plan.html`):
   tiers keep the ledger. Pages get 26px per 30-minute slot; tiles never
   scroll, so there the day flexes to spend exactly the section's height
   (`container-type: size` on the day, children take
-  `--slot: max(22px, calc((100cqh - 2px) / var(--slots)))`, with
+  `--slot: max(22px, calc(100cqh / var(--slots)))`, with
   `--slots` script-set from the block list). A script-built 12px mono
   ruler labels every slot from day start to day end (hours `08:00`
-  ink-dim, half-hours a quiet `:30` ink-faint); an hour rule and a
-  fainter half-hour rule run across the day. A block is a drawn box
-  spanning `--s` grid rows — 1px `color-mix(tone 45%)` border over a
-  `color-mix(tone 12%)` wash, no time key inside the box (the ruler
-  carries the times) — free slots stay unboxed so the ruled paper shows
-  through. `goal:` notes render inline on ≥1h blocks; every block
-  carries a `title` tooltip with its full range, label, and note, so
+  ink-dim, half-hours a quiet `:30` ink-faint); the ruler's hairline
+  right edge is the grid's only ruled line — no hour or half-hour
+  rules across the day, the boxes and the now line alone cross it. A
+  block is a drawn box spanning `--s` grid rows — 1px
+  `color-mix(tone 45%)` border over a `color-mix(tone 12%)` wash, no
+  time key inside the box (the ruler carries the times) — free slots
+  stay unboxed: blank space against the ruler is honest slack. `goal:`
+  notes render inline on ≥1h blocks; every block carries a `title`
+  tooltip with its full range, label, and note, so
   nothing truncated is lost. The now line crosses the grid at the
   current time, its mono chip sitting in the ruler gutter,
   calendar-style; the script measures a ruler row for its position (the
@@ -425,9 +427,11 @@ grid now line, strip tick) on a 30-second timer plus `visibilitychange`
 and `resize`, so an open page tracks the day without a refresh — and
 clear it once the date rolls past the plan's. Past rows are never
 hidden, on any tier — the plan is a record of the day, not a queue;
-passed time recedes, it doesn't disappear. When a tile runs out of
-height the fit-list trims for space, honestly (`+N more`), never by
-pastness. See the script in `docs/samples/daily-plan.html`.
+passed time recedes, it doesn't disappear. Never collapse past rows
+into an `N earlier` line: late in the day that empties the whole
+section. When a tile runs out of height the fit-list trims for space,
+honestly (`+N more`), never by pastness. See the script in
+`docs/samples/daily-plan.html`.
 
 ```css
 .now {
