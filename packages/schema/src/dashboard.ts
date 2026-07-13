@@ -10,7 +10,7 @@ import { slugSchema } from "./routine.ts"
  * full-height feed/agenda/log without letting one cell swallow the board.
  */
 export const GRID_MAX_COLS = 6
-export const GRID_MAX_ROWS = 6
+export const GRID_MAX_ROWS = 12
 
 export const widgetSizeSchema = z.object({
   cols: z.number().int().min(1).max(GRID_MAX_COLS),
