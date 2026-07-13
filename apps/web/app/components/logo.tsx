@@ -70,11 +70,13 @@ export function Wordmark({
         className,
       )}
     >
-      {/* Optical nudge: "Steward" has ascenders (S, t, d) and no descenders, so
-          its visual mass rides above the line box's geometric center that
-          items-center aligns to. This drops the mark ~0.05em to sit its center
-          between the word's x-height and cap-height midlines. */}
-      <Logo live={live} className="size-[1.4em] translate-y-[0.05em]" />
+      {/* Optical nudge: items-center centers the mark on the text's line box,
+          but "Steward" has no descenders (only S/t/d rise), so its ink centroid
+          — the word's visual center of mass — sits ~0.043em below that line-box
+          center. Drop the mark to meet it. Measured and size-independent: the
+          half-leading items-center adds exactly cancels line-height, so this one
+          value holds at every font size (text-sm through the landing's text-5xl). */}
+      <Logo live={live} className="size-[1.4em] translate-y-[0.043em]" />
       Steward
     </span>
   )
