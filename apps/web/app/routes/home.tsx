@@ -7,11 +7,12 @@ import { DEFAULT_DASHBOARD } from "../lib/repos.ts"
 import {
   loadArtifacts,
   loadDashboardStructureOr503,
-  loadSidebarOr503,
   repoExistsOr503,
+  streamSidebar,
 } from "../lib/dashboard.server.ts"
 import { resolveHomeRepo } from "../lib/repos.server.ts"
 import { getAuth } from "../lib/session.server.ts"
+import { streamTemplates } from "../lib/templates.server.ts"
 
 export function meta({ loaderData }: Route.MetaArgs) {
   const description =
@@ -43,17 +44,26 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (!auth) return { kind: "anonymous" as const, origin }
 
   const dataRepo = resolveHomeRepo(auth.login, auth.dataRepo)
-  if (!(await repoExistsOr503(auth.token, dataRepo))) throw redirect("/setup")
+  // The rail streams (ADR-0030): fired before the awaited reads so it loads
+  // alongside them, returned as a promise so it never delays the board paint.
+  const sidebar = streamSidebar(auth.token, auth.login, auth.dataRepo)
 
   const ref = { repo: dataRepo, shared: false, dashboard: DEFAULT_DASHBOARD }
-  const [view, sidebar] = await Promise.all([
+  // The existence gate rides the same parallel wave as the structure reads —
+  // a missing repo just means empty structure results, which the redirect
+  // below discards, so nothing is serialized behind the probe.
+  const [exists, view] = await Promise.all([
+    repoExistsOr503(auth.token, dataRepo),
     loadDashboardStructureOr503(auth.token, ref),
-    loadSidebarOr503(auth.token, auth.login, auth.dataRepo),
   ])
+  if (!exists) throw redirect("/setup")
+
   // Widget bodies stream in after the chrome + grid paint — returning the
   // promise unawaited defers it (ADR-0002); the board renders skeleton cells
-  // until it resolves.
+  // until it resolves. Templates stream the same way (ADR-0030): only the
+  // add-routine picker reads them.
   const artifacts = loadArtifacts(auth.token, ref, view.routines)
+  const templates = streamTemplates(auth.token, dataRepo)
   return {
     kind: "dashboard" as const,
     origin,
@@ -62,6 +72,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     now: Date.now(),
     view,
     artifacts,
+    templates,
     sidebar,
   }
 }
@@ -75,6 +86,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       key={`${loaderData.view.dataRepo}:${loaderData.view.dashboardSlug}`}
       view={loaderData.view}
       artifacts={loaderData.artifacts}
+      templates={loaderData.templates}
       login={loaderData.login}
       displayName={loaderData.displayName}
       now={loaderData.now}

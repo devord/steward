@@ -8,7 +8,10 @@ import { data } from "react-router"
 import { z } from "zod"
 
 import { env } from "../lib/env.server.ts"
-import { listDashboards } from "../lib/dashboard.server.ts"
+import {
+  invalidateSidebarCache,
+  listDashboards,
+} from "../lib/dashboard.server.ts"
 import {
   addRepoTopic,
   deleteFile,
@@ -156,6 +159,9 @@ export async function action({ request }: { request: Request }) {
       }
       throw error
     }
+    // The rail shows display names from the SWR cache (ADR-0030) — drop it
+    // so the rename shows on the very next load.
+    invalidateSidebarCache(auth.token)
     return { ok: true } satisfies RenameRepoResult
   }
 
@@ -194,6 +200,7 @@ export async function action({ request }: { request: Request }) {
     }
     await addRepoTopic(auth.token, full, env().DATA_REPO_TOPIC).catch(() => {})
     invalidateRepoCache(auth.token)
+    invalidateSidebarCache(auth.token)
     // Template repos always ship a `main` board.
     return {
       ok: true,
@@ -233,6 +240,7 @@ export async function action({ request }: { request: Request }) {
     throw error
   }
   invalidateRepoCache(auth.token)
+  invalidateSidebarCache(auth.token)
   // Registered repos carry whatever boards they already have (a data repo
   // needn't have `main`) — land on the first, or `/` when it has none yet.
   const dashboards = await listDashboards(auth.token, ref.full).catch(

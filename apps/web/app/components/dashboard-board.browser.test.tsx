@@ -33,7 +33,6 @@ function view(): DashboardBase {
       ],
       grid: { columns: 4, rowHeight: 150, width: "fixed" },
     },
-    templates: [],
     dashboards: ["main"],
     baseShas: { routines: "r1", dashboard: "d1" },
     baseFiles: { routines: "routines: []\n", dashboard: "widgets: []\n" },
@@ -50,6 +49,7 @@ async function renderBoard(
         <DashboardBoard
           view={view()}
           artifacts={artifacts}
+          templates={[]}
           login="alice"
           displayName="Alice"
           now={Date.now()}

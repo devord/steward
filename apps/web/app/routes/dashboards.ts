@@ -7,6 +7,7 @@ import {
 import { data } from "react-router"
 import { z } from "zod"
 
+import { invalidateSidebarCache } from "../lib/dashboard.server.ts"
 import { DEFAULT_DASHBOARD } from "../lib/repos.ts"
 import { requireDataRepo } from "../lib/repos.server.ts"
 import {
@@ -91,6 +92,9 @@ export async function action({ request }: { request: Request }) {
       }
       throw error
     }
+    // The rail lists boards from the SWR cache (ADR-0030) — drop it so the
+    // new board shows on the very next load.
+    invalidateSidebarCache(auth.token)
     return { ok: true as const, slug: payload.slug }
   }
 
@@ -131,5 +135,7 @@ export async function action({ request }: { request: Request }) {
     }
     throw error
   }
+  // Same as create: the rail must drop the board on the very next load.
+  invalidateSidebarCache(auth.token)
   return { ok: true as const, slug: payload.slug }
 }

@@ -3,7 +3,11 @@ import { Form, redirect, useNavigation } from "react-router"
 import type { Route } from "./+types/setup"
 import { AccountBar } from "../components/account-bar.tsx"
 import { Button } from "~/components/ui/button"
-import { dataRepoExists, repoExistsOr503 } from "../lib/dashboard.server.ts"
+import {
+  dataRepoExists,
+  invalidateSidebarCache,
+  repoExistsOr503,
+} from "../lib/dashboard.server.ts"
 import { env } from "../lib/env.server.ts"
 import { addRepoTopic, generateFromTemplate } from "../lib/github.server.ts"
 import { invalidateRepoCache, resolveHomeRepo } from "../lib/repos.server.ts"
@@ -54,6 +58,7 @@ export async function action({ request }: Route.ActionArgs) {
     () => {},
   )
   invalidateRepoCache(auth.token)
+  invalidateSidebarCache(auth.token)
   return redirect("/")
 }
 

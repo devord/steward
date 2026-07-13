@@ -26,6 +26,7 @@ import {
   repoExists,
 } from "./github.server.ts"
 import { listDataRepos } from "./repos.server.ts"
+import { invalidateSwr, swr, tokenKey } from "./swr.server.ts"
 import { discoverTemplates } from "./templates.server.ts"
 
 export interface ArtifactInfo {
@@ -85,9 +86,6 @@ export interface DashboardBase {
   dashboardName: string | null
   routines: RoutinesFile
   dashboard: DashboardFile
-  /** Routine templates for the add-routine picker — the board's data repo
-      read live, plus the bundled built-ins (ADR-0021). */
-  templates: DiscoveredTemplate[]
   /** Sibling dashboards in the same repo, for the switcher. */
   dashboards: string[]
   /** Base blob SHAs config was loaded at — drafts key off these (ADR-0003). */
@@ -97,6 +95,10 @@ export interface DashboardBase {
 }
 
 export interface DashboardView extends DashboardBase {
+  /** Routine templates for the add-routine picker — the board's data repo
+      read live, plus the bundled built-ins (ADR-0021). Streamed on the route
+      loaders (ADR-0030); resolved here only for loadDashboard callers. */
+  templates: DiscoveredTemplate[]
   /** Keyed by routine slug. The client joins these with the draft config,
       so a draft that reshapes the grid still finds its artifacts. */
   artifacts: Record<string, ArtifactInfo>
@@ -256,21 +258,43 @@ export async function loadSidebar(
   return { repos, complete: listing.complete }
 }
 
+/** SWR key prefix for one viewer's sidebar entries (ADR-0030). */
+function sidebarKeyPrefix(token: string): string {
+  return `sidebar:${tokenKey(token)}`
+}
+
+/** How long a served rail may lag reality before a background refresh. */
+const SIDEBAR_TTL_MS = 60_000
+
 /**
- * loadSidebar for route loaders: a dead token degrades to the 401 re-auth
- * page, a transient GitHub failure to the 503 refresh page — same contract
- * as loadDashboardStructureOr503.
+ * loadSidebar for route loaders (ADR-0030): served through the SWR cache —
+ * the rail is chrome, and a rail up to a minute behind is invisible next to
+ * paying its two GitHub round-trip waves on every navigation — and returned
+ * as a promise the routes stream, never await. Failures degrade to an empty
+ * rail with the quiet incomplete notice, never a failed page: the content
+ * loader owns the real 401/503 degrade. Mutations that change what the rail
+ * lists call {@link invalidateSidebarCache}.
  */
-export async function loadSidebarOr503(
+export function streamSidebar(
   token: string,
   login: string,
   override?: string,
 ): Promise<SidebarData> {
-  try {
-    return await loadSidebar(token, login, override)
-  } catch (error) {
-    degradeGitHubError(error)
-  }
+  return swr(
+    `${sidebarKeyPrefix(token)}:${override ?? ""}`,
+    SIDEBAR_TTL_MS,
+    () => loadSidebar(token, login, override),
+  ).catch(() => ({ repos: [], complete: false }))
+}
+
+/**
+ * Drop the viewer's cached rail. Every mutation that changes what the rail
+ * lists calls this — board create/delete (dashboards.ts), repo
+ * create/register/rename (data-repos.ts, setup.tsx) — so the change shows on
+ * the very next load instead of after the SWR window.
+ */
+export function invalidateSidebarCache(token: string): void {
+  invalidateSwr(sidebarKeyPrefix(token))
 }
 
 /**
@@ -282,16 +306,13 @@ export async function loadDashboardStructure(
   token: string,
   ref: BoardRef,
 ): Promise<DashboardBase> {
-  const [routinesRaw, dashboardRaw, templates, dashboards] = await Promise.all([
+  const [routinesRaw, dashboardRaw, dashboards] = await Promise.all([
     // Pin the ref so the loader and /sync read the *same* ETag-cache entry:
     // reading with no ref keys a separate entry that can hold a different
     // SHA for the same file, which surfaced as a false "base moved"
     // (ADR-0003).
     getFile(token, ref.repo, "data/routines.yaml", "main"),
     getFile(token, ref.repo, dashboardPath(ref.dashboard), "main"),
-    // The board's own repo — its templates are scoped to this repo's
-    // boards and shadow same-named built-ins (ADR-0023).
-    discoverTemplates(token, ref.repo),
     listDashboards(token, ref.repo),
   ])
 
@@ -310,7 +331,6 @@ export async function loadDashboardStructure(
     dashboardName: dashboard.name ?? null,
     routines,
     dashboard,
-    templates,
     dashboards: dashboards ?? [ref.dashboard],
     baseShas: {
       routines: routinesRaw?.sha ?? null,
@@ -421,17 +441,22 @@ export async function loadDashboardStructureOr503(
 }
 
 /**
- * The whole board in one awaited pass — structure plus artifacts. Route
- * loaders stream instead (loadDashboardStructureOr503 + loadArtifacts); this
- * stays for tests and any caller that wants everything resolved up front.
+ * The whole board in one awaited pass — structure plus templates plus
+ * artifacts. Route loaders stream the latter two instead
+ * (loadDashboardStructureOr503 + streamed discoverTemplates/loadArtifacts,
+ * ADR-0030); this stays for tests and any caller that wants everything
+ * resolved up front.
  */
 export async function loadDashboard(
   token: string,
   ref: BoardRef,
 ): Promise<DashboardView> {
   const base = await loadDashboardStructure(token, ref)
-  const artifacts = await loadArtifacts(token, ref, base.routines)
-  return { ...base, artifacts }
+  const [templates, artifacts] = await Promise.all([
+    discoverTemplates(token, ref.repo),
+    loadArtifacts(token, ref, base.routines),
+  ])
+  return { ...base, templates, artifacts }
 }
 
 /**

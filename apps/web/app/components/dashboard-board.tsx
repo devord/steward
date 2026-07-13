@@ -42,6 +42,8 @@ import type {
 } from "../lib/dashboard.server.ts"
 import { removeRoutine, type SyncKind, useDraft } from "../lib/draft.ts"
 import { useT } from "../lib/i18n.tsx"
+import type { DiscoveredTemplate } from "../lib/templates.ts"
+import { useStreamed } from "../lib/use-streamed.ts"
 import { usePendingRuns } from "../lib/pending-runs.ts"
 import { collides, findFreeSlot, type Rect } from "../lib/placement.ts"
 import { useGridDrag } from "../lib/use-grid-drag.ts"
@@ -56,6 +58,7 @@ import { usePollRevalidate } from "../lib/use-poll-revalidate.ts"
 export function DashboardBoard({
   view,
   artifacts,
+  templates,
   login,
   displayName,
   now,
@@ -65,13 +68,22 @@ export function DashboardBoard({
   /** Streams in after the structure (ADR-0002): each cell shows a skeleton
       until its artifact resolves. Keyed by routine slug. */
   artifacts: Promise<Record<string, ArtifactInfo>>
+  /** The add-routine picker's templates, streamed (ADR-0030): only the
+      dialog reads them, so the board never waits on the discovery reads. */
+  templates: DiscoveredTemplate[] | Promise<DiscoveredTemplate[]>
   login: string
   displayName?: string | null
   now: number
-  /** Every discovered repo with its boards — the rail's groups. */
-  sidebar: SidebarData
+  /** Every discovered repo with its boards — the rail's groups. Streamed
+      (ADR-0030): the rail renders its skeleton until the first resolve. */
+  sidebar: SidebarData | Promise<SidebarData>
 }) {
   const t = useT()
+  // Chrome data resolves out of band, holding the last value across board
+  // switches and poll revalidations (fresh promises every time) so the rail
+  // and picker never flash back to loading.
+  const sidebarData = useStreamed(sidebar, "sidebar")
+  const templatesData = useStreamed(templates, `templates:${view.dataRepo}`)
   const revalidator = useRevalidator()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -458,7 +470,7 @@ export function DashboardBoard({
       <DashboardShell
         dataRepo={view.dataRepo}
         dashboardSlug={view.dashboardSlug}
-        sidebar={sidebar}
+        sidebar={sidebarData}
         login={login}
         displayName={displayName}
         hasDraft={draft != null}
@@ -614,7 +626,7 @@ export function DashboardBoard({
             setEditingRoutine(null)
           }
         }}
-        templates={view.templates}
+        templates={templatesData ?? []}
         columns={columns}
         existingSlugs={routines.routines.map((r) => r.slug)}
         onAdd={addRoutine}

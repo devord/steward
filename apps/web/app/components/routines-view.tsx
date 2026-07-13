@@ -56,6 +56,7 @@ import { boardHref } from "../lib/repos.ts"
 import { widgetStatus, type WidgetStatus } from "../lib/routine-status.ts"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
 import { agoParts } from "../lib/time.ts"
+import { useStreamed } from "../lib/use-streamed.ts"
 import type { RunResult } from "../routes/run.ts"
 
 /** The claude.ai page for a cloud routine — keyed on the id in its trigger
@@ -103,8 +104,11 @@ export function RoutinesView({
 }: {
   repo: RepoInfo
   homeRepo: string
-  sidebar: SidebarData
-  templates: DiscoveredTemplate[]
+  /** Streamed (ADR-0030): the rail renders its skeleton until it resolves. */
+  sidebar: SidebarData | Promise<SidebarData>
+  /** Streamed too — read by the add/edit dialog's picker and the templates
+      ledger below the table (ADR-0029), never the paint. */
+  templates: DiscoveredTemplate[] | Promise<DiscoveredTemplate[]>
   login: string
   displayName: string | null
   now: number
@@ -113,6 +117,11 @@ export function RoutinesView({
 }) {
   const t = useT()
   const navigate = useNavigate()
+  // Chrome data resolves out of band, holding the last value across
+  // revalidations (fresh promises every time) so the rail and picker never
+  // flash back to loading.
+  const sidebarData = useStreamed(sidebar, "sidebar")
+  const templatesData = useStreamed(templates, `templates:${repo.full}`)
 
   // A repo-scoped draft key — `__routines__` can't collide with a board slug
   // (real slugs are kebab-case), so the pool's draft never crosses a board's.
@@ -236,7 +245,7 @@ export function RoutinesView({
           activeRepo: "",
           dashboardSlug: "",
           routinesRepo: repo.full,
-          sidebar,
+          sidebar: sidebarData,
           login,
           displayName,
         }}
@@ -310,8 +319,11 @@ export function RoutinesView({
           />
         )}
 
+        {/* Streams in below the pool table (ADR-0030): the section renders
+            nothing until the discovery reads resolve, then holds steady
+            across revalidations (useStreamed). */}
         <TemplatesSection
-          templates={templates}
+          templates={templatesData ?? []}
           routines={effective.routines}
           repo={repo}
           onUse={setAddingTemplate}
@@ -328,7 +340,7 @@ export function RoutinesView({
           }
         }}
         initialTemplate={addingTemplate}
-        templates={templates}
+        templates={templatesData ?? []}
         // No board to size for — placement (and its sizing) happens later, on a
         // board. The dialog still asks; the answer is dropped until placement.
         columns={4}
