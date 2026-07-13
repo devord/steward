@@ -577,6 +577,24 @@ const TILE_GUARD_SCRIPT =
   'document.readyState==="loading"?addEventListener("DOMContentLoaded",init):init()' +
   "})()</script>"
 
+/**
+ * Chrome-side @font-face for the artifact mono (ADR-0031). Artifacts lead
+ * their `--font-mono` stack with "Geist Mono Variable" but stay
+ * self-contained — the family only resolves when the host provides the
+ * face, and the raw page falls back to the system mono. The caller passes
+ * the woff2 as a data URI (never a URL: the sandboxed iframe has an opaque
+ * origin, so a same-origin asset fetch would be blocked as cross-origin)
+ * because this module runs both in the browser bundle (widget-card inlines
+ * via Vite) and under plain Node (artifact-sheet reads the file itself).
+ */
+export function artifactFontStyle(woff2DataUri: string): string {
+  return (
+    '<style data-steward-font>@font-face{font-family:"Geist Mono Variable";' +
+    "font-style:normal;font-weight:100 900;font-display:block;" +
+    `src:url(${woff2DataUri}) format("woff2")}</style>`
+  )
+}
+
 /** Where a framed artifact renders: a board cell, or the full-view lightbox. */
 export type ArtifactView = "tile" | "full"
 
@@ -584,11 +602,13 @@ export function frameArtifactHtml(
   html: string,
   name: ThemeName,
   view: ArtifactView = "tile",
+  fontStyle = "",
 ): string {
   return (
     html +
     EMBED_FRAME_STYLE +
     LINK_GUARD_SCRIPT +
+    fontStyle +
     (view === "tile" ? TILE_GUARD_STYLE + TILE_GUARD_SCRIPT : "") +
     (artifactThemeStyle(name) ?? "")
   )

@@ -80,6 +80,11 @@ An artifact MUST:
    color, and the palette accents, not by shrinking type. The 1×1 tier leans
    on its KPI number; detail tiers carry the 14px body. (Type sizes are baked
    into each published file — a rescale only lands when the routine reruns.)
+   The `--font-mono` token leads with `"Geist Mono Variable"` — the chrome's
+   mono — but the artifact still loads no webfont itself (rule 1 holds): the
+   dashboard injects the face into the iframe at render time, the same way it
+   injects the theme (ADR-0031), and the raw page falls back to the system
+   mono.
 7. **Link out, in a new tab.** Anything the artifact names that lives
    elsewhere — a PR, an issue, an event — is an anchor to it; the tile is
    triage, the source system is the follow-through. Every `<a href>`

@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -18,7 +19,11 @@
 @theme {
   --color-*: initial;
   --font-sans: system-ui, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  /* Geist Mono: the mono is Steward's brand voice (wordmark, widget
+     titles, timestamps, pills, machine strings) — it must be a designed
+     face, not the viewer's terminal default. Same family as the sans, so
+     chrome reads as one system in two voices. */
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* Chrome type scale, bumped one step off Tailwind's defaults: the old
      12/14 base read a touch small for a glanceable board. `xs` is the
