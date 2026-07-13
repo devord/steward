@@ -890,9 +890,15 @@ function TemplateCard({
     <div
       className={cn(
         "rounded-lg border text-sm transition-colors",
-        // Hover lives on the container: with nothing nested the header
-        // button fills it, and the selected card is already bg-muted.
-        selected ? "border-primary bg-muted" : "border-border hover:bg-muted",
+        // Selection is a translucent accent wash under unchanged ink (the
+        // DESIGN.md idiom, same family as the app's menu/nav highlights) —
+        // theme-symmetric where a solid bg-muted fill wasn't: on the light
+        // ramp bg2 sits two steps below the dialog surface and read as a
+        // heavy dark block, while on dark it was a whisper. Hover lives on
+        // the container: with nothing nested the header button fills it.
+        selected
+          ? "border-primary bg-primary/10"
+          : "border-border hover:bg-primary/5",
       )}
     >
       <button
