@@ -14,6 +14,10 @@ export const en = {
   "landing.privacy":
     "Your data is yours — it lives in a private GitHub repo you own; the app stores nothing.",
   "landing.deviceLink": "Sign in with a device code instead",
+  // Pager voice, deliberately lowercase mono next to a ▾ glyph — like the
+  // pipeline tokens; the aria label speaks full chrome.
+  "landing.more": "more",
+  "landing.moreLabel": "Scroll to how it works",
 
   "landing.loop.title": "How a widget stays fresh",
   "landing.loop.cron":

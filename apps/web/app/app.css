@@ -194,6 +194,45 @@
     }
   }
 
+  /* The scroll cue's ▾ breathes in the run-pulse family — a hint kept
+     quieter than the caret blink, which stays the hero's one hard motion. */
+  @keyframes landing-cue-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+  .landing-cue-glyph {
+    animation: landing-cue-pulse 2.4s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .landing-cue-glyph {
+      animation: none;
+    }
+  }
+
+  /* Below-fold landing sections print in as they enter, the way terminal
+     output arrives: each child rises 12px and fades, cascading 80ms apart
+     (--i). The data-reveal attribute is only ever set by JS (useReveal in
+     landing.tsx), so with no JS — or in a headless renderer where
+     transitions never run — nothing is hidden; and under reduced motion the
+     hidden state simply never applies. */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-reveal] .landing-reveal-item {
+      transition:
+        opacity 550ms cubic-bezier(0.25, 1, 0.5, 1),
+        translate 550ms cubic-bezier(0.25, 1, 0.5, 1);
+      transition-delay: calc(var(--i, 0) * 80ms);
+    }
+    [data-reveal="hidden"] .landing-reveal-item {
+      opacity: 0;
+      translate: 0 12px;
+    }
+  }
+
   /* A run in flight: a single accent dot that breathes. The status glyph (a
      dot) stays a different shape from the action glyph (the refresh arrows),
      so a run and its re-run control never read as two competing spinners; and

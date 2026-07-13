@@ -1,19 +1,26 @@
+import { useEffect, useRef, useState } from "react"
 import { Check, Monitor, Moon, Sun } from "lucide-react"
 
 import { handleRadioKeydown } from "./appearance-settings.tsx"
 import { Wordmark } from "./logo.tsx"
 import { buttonVariants } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
+import { cssVars } from "../lib/css.ts"
 import type { AppearanceMode } from "../lib/theme.ts"
 import { useAppearance } from "../lib/use-appearance.ts"
 import { useT } from "../lib/i18n.tsx"
 
 /**
  * The signed-out front door. Viewport one shows the product (pitch + live
- * demo board); the sections below argue it for a reader who has never heard
- * of Steward: the loop, ownership, what's built in. Terminal-calm per
- * PRODUCT.md — no entrance choreography; section headings stay in the chrome
- * scale, and only the hero headline shares the wordmark's display latitude.
+ * demo board) and ends on a pager-style `▾ more` cue, since a large screen
+ * makes the hero look like the whole page; the sections below argue the
+ * product for a reader who has never heard of Steward: the loop, ownership,
+ * what's built in. Terminal-calm per PRODUCT.md — the hero itself has no
+ * entrance choreography (the caret blink is the one signature motion);
+ * below the fold each section prints in once as it scrolls into view
+ * (useReveal), the way terminal output arrives. Section headings stay in
+ * the chrome scale; only the hero headline shares the wordmark's display
+ * latitude.
  */
 export function Landing() {
   const t = useT()
@@ -22,7 +29,7 @@ export function Landing() {
       <LandingModeToggle />
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {/* Viewport one: the pitch and the one action. */}
-        <div className="flex min-h-dvh flex-col justify-center gap-12 py-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-16">
+        <div className="relative flex min-h-dvh flex-col justify-center gap-12 py-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-16">
           <div className="max-w-md">
             <h1>
               <Wordmark live display className="text-4xl sm:text-5xl" />
@@ -54,6 +61,8 @@ export function Landing() {
           {/* Right: the product itself — a small living board. Decorative, so
               it's hidden from assistive tech; the pitch carries the meaning. */}
           <DemoBoard />
+
+          <ScrollCue />
         </div>
 
         {/* Below the fold: the argument, for readers arriving cold. */}
@@ -68,11 +77,86 @@ export function Landing() {
   )
 }
 
+/* --- Scroll cue ----------------------------------------------------------- */
+
+/**
+ * A pager prompt at the foot of viewport one: `▾ more` — the section marker
+ * turned downward — telling a reader on a tall screen that the argument
+ * continues below. It anchors to the first section and fades out the moment
+ * the page scrolls; a hint, not chrome.
+ */
+function ScrollCue() {
+  const t = useT()
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24)
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+  return (
+    <a
+      href="#how"
+      aria-label={t("landing.moreLabel")}
+      onClick={(event) => {
+        event.preventDefault()
+        document.getElementById("how")?.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+            .matches
+            ? "auto"
+            : "smooth",
+        })
+      }}
+      className={cn(
+        "absolute inset-x-0 bottom-4 z-10 mx-auto flex w-fit items-center gap-2 rounded-md px-3 py-2 font-mono text-xs text-ink-faint transition-opacity duration-200 outline-none hover:text-ink-dim focus-visible:ring-3 focus-visible:ring-ring/50",
+        scrolled && "pointer-events-none opacity-0",
+      )}
+    >
+      <span aria-hidden className="landing-cue-glyph text-primary/70">
+        ▾
+      </span>
+      {t("landing.more")}
+    </a>
+  )
+}
+
 /* --- Sections ------------------------------------------------------------ */
 
+/**
+ * Reveals an element (data-reveal="hidden" → "shown") the first time it
+ * scrolls into view; app.css translates the attribute into the print-in
+ * transition. Enhancement only: the hidden state is applied by this effect,
+ * so with no JS (or in a headless renderer) the content ships visible — and
+ * anything already on screen at mount, or above it after a scroll restore,
+ * is left static rather than re-animated under the reader.
+ */
+function useReveal() {
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    // Strict <: the first section's top sits exactly on the fold (the hero
+    // is exactly 100dvh), and a top at innerHeight is 0px visible.
+    if (!el || el.getBoundingClientRect().top < window.innerHeight) return
+    el.dataset.reveal = "hidden"
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          el.dataset.reveal = "shown"
+          io.disconnect()
+        }
+      },
+      { rootMargin: "0px 0px -10% 0px" },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  return ref
+}
+
+/** Section headings all reveal, so the title is always cascade item 0. */
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-lg font-medium text-foreground">
+    <h2 className="landing-reveal-item text-lg font-medium text-foreground">
       <span aria-hidden className="mr-2 font-mono text-primary/70">
         ▸
       </span>
@@ -87,6 +171,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
  */
 function LoopSection() {
   const t = useT()
+  const reveal = useReveal()
   const steps = [
     t("landing.loop.cron"),
     t("landing.loop.skill"),
@@ -94,11 +179,15 @@ function LoopSection() {
     t("landing.loop.widget"),
   ]
   return (
-    <section>
+    <section id="how" ref={reveal}>
       <SectionTitle>{t("landing.loop.title")}</SectionTitle>
       <ol className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
         {steps.map((body, i) => (
-          <li key={body} className="flex gap-2 text-sm leading-relaxed">
+          <li
+            key={body}
+            className="landing-reveal-item flex gap-2 text-sm leading-relaxed"
+            style={cssVars({ "--i": i + 1 })}
+          >
             <span aria-hidden className="font-mono text-ink-faint">
               {i + 1}.
             </span>
@@ -106,7 +195,10 @@ function LoopSection() {
           </li>
         ))}
       </ol>
-      <p className="mt-6 text-sm leading-relaxed text-ink-dim">
+      <p
+        className="landing-reveal-item mt-6 text-sm leading-relaxed text-ink-dim"
+        style={cssVars({ "--i": 5 })}
+      >
         {t("landing.loop.prereqs")}
       </p>
     </section>
@@ -115,13 +207,25 @@ function LoopSection() {
 
 function DataSection() {
   const t = useT()
+  const reveal = useReveal()
+  const points = [
+    t("landing.data.repo"),
+    t("landing.data.stateless"),
+    t("landing.data.leave"),
+  ]
   return (
-    <section>
+    <section ref={reveal}>
       <SectionTitle>{t("landing.data.title")}</SectionTitle>
       <ul className="mt-6 space-y-4 text-sm leading-relaxed text-ink-dim">
-        <li>{t("landing.data.repo")}</li>
-        <li>{t("landing.data.stateless")}</li>
-        <li>{t("landing.data.leave")}</li>
+        {points.map((point, i) => (
+          <li
+            key={point}
+            className="landing-reveal-item"
+            style={cssVars({ "--i": i + 1 })}
+          >
+            {point}
+          </li>
+        ))}
       </ul>
     </section>
   )
@@ -143,12 +247,17 @@ function FeaturesSection() {
       body: t("landing.features.fresh.body"),
     },
   ] as const
+  const reveal = useReveal()
   return (
-    <section>
+    <section ref={reveal}>
       <SectionTitle>{t("landing.features.title")}</SectionTitle>
       <div className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-3">
-        {features.map((feature) => (
-          <div key={feature.title} className="text-sm leading-relaxed">
+        {features.map((feature, i) => (
+          <div
+            key={feature.title}
+            className="landing-reveal-item text-sm leading-relaxed"
+            style={cssVars({ "--i": i + 1 })}
+          >
             <h3 className="font-medium text-foreground">{feature.title}</h3>
             <p className="mt-1.5 text-ink-dim">{feature.body}</p>
           </div>
@@ -160,10 +269,19 @@ function FeaturesSection() {
 
 function ClosingCta() {
   const t = useT()
+  const reveal = useReveal()
   return (
-    <section className="flex flex-col items-start gap-4 border-t border-border-dim pt-10">
-      <p className="font-mono text-sm text-ink-dim">{t("landing.cta")}</p>
-      <SignInButton />
+    <section
+      ref={reveal}
+      className="flex flex-col items-start gap-4 border-t border-border-dim pt-10"
+    >
+      <p className="landing-reveal-item font-mono text-sm text-ink-dim">
+        {t("landing.cta")}
+      </p>
+      <SignInButton
+        className="landing-reveal-item"
+        style={cssVars({ "--i": 1 })}
+      />
     </section>
   )
 }
@@ -171,14 +289,17 @@ function ClosingCta() {
 function SignInButton({
   size,
   className,
+  style,
 }: {
   size?: "lg"
   className?: string
+  style?: React.CSSProperties
 }) {
   const t = useT()
   return (
     <a
       href="/auth/login"
+      style={style}
       className={cn(buttonVariants({ size }), "gap-2", className)}
     >
       <GithubMark className="size-4" />
