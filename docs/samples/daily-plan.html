@@ -217,7 +217,7 @@
         margin-right: 5px;
         background: color-mix(in srgb, var(--tone) 80%, transparent);
       }
-      /* The time-grid ruler exists only on the page tier. */
+      /* The time-grid ruler exists only where the grid renders. */
       .ruler {
         display: none;
       }
@@ -243,19 +243,6 @@
         flex: 1;
         height: 1px;
         background: var(--color-orange-deep);
-      }
-      .now .past {
-        display: none;
-        color: var(--color-ink-faint);
-      }
-      /* On the board a tile is a "what's next" glance: collapse the
-         blocks already behind the day into the now line's counter. The
-         raw page and the full view keep every row. */
-      html[data-steward-tile] .blocks li[data-past] {
-        display: none;
-      }
-      html[data-steward-tile] .now .past {
-        display: inline;
       }
       /* The 1×1 stat: KPI number + label + the single top priority. */
       .stat {
@@ -411,19 +398,17 @@
         :root:not([data-steward-tile]) .date {
           display: block;
         }
-        /* The time grid (page tier only — tiles keep the ledger): the
-           paper planner. Every 30-minute slot is a labeled ruler row and
-           a rule across the day; blocks are drawn boxes spanning their
-           slots. The strip is redundant here; the grid IS the day. */
-        :root:not([data-steward-tile]) .strip {
+      }
+      /* The time grid (any wide surface tall enough to hold the day: the
+         raw page, the full view, and board tiles from ~4 rows up): the
+         paper planner. Every 30-minute slot is a labeled ruler row and a
+         rule across the day; blocks are drawn boxes spanning their slots.
+         The strip stays above it — the shape of the day, then the day. */
+      @media (min-width: 900px) and (min-height: 600px) {
+        .blocks .day li.now {
           display: none;
         }
-        /* .day li.now beats the grid-mode `.day li` display rule below —
-           equal-prefix selectors tie on specificity and the later wins. */
-        :root:not([data-steward-tile]) .blocks .day li.now {
-          display: none;
-        }
-        :root:not([data-steward-tile]) .blocks .day {
+        .blocks .day {
           --slot: 26px;
           position: relative;
           display: grid;
@@ -433,7 +418,7 @@
         /* The ruler: one 12px mono label per 30-minute slot (hours in
            full, half-hours as a quiet :30), script-built from the block
            list so it always spans exactly the working day. */
-        :root:not([data-steward-tile]) .ruler {
+        .ruler {
           display: grid;
           grid-auto-rows: var(--slot);
           border-top: 1px solid transparent;
@@ -445,13 +430,14 @@
           text-align: right;
           color: var(--color-ink-dim);
         }
-        :root:not([data-steward-tile]) .ruler span {
-          padding-top: 7px; /* (26 - 12) / 2 — centered in the slot row */
+        .ruler span {
+          /* centered in the slot row, whatever the slot resolves to */
+          padding-top: calc((var(--slot) - 12px) / 2);
         }
-        :root:not([data-steward-tile]) .ruler span.half {
+        .ruler span.half {
           color: var(--color-ink-faint);
         }
-        :root:not([data-steward-tile]) .blocks .day ul {
+        .blocks .day ul {
           display: grid;
           grid-template-columns: 1fr;
           grid-auto-rows: var(--slot);
@@ -477,7 +463,7 @@
         }
         /* A block is a drawn box: tone border + wash, spanning its slots.
            Free slots stay unboxed so the ruled paper shows through. */
-        :root:not([data-steward-tile]) .blocks .day li {
+        .blocks .day li {
           grid-column: 1;
           grid-row: span var(--s, 1);
           display: grid;
@@ -493,36 +479,36 @@
           overflow: hidden;
           background: color-mix(in srgb, var(--tone) 12%, transparent);
         }
-        :root:not([data-steward-tile]) .blocks .day li.t-free {
+        .blocks .day li.t-free {
           border-color: transparent;
           background: transparent;
         }
         /* The ruler carries the times on this tier — a box holds only
            its task, like the paper. */
-        :root:not([data-steward-tile]) .blocks .day li .key {
+        .blocks .day li .key {
           display: none;
         }
-        :root:not([data-steward-tile]) .blocks .day .note {
+        .blocks .day .note {
           grid-column: 1;
         }
-        :root:not([data-steward-tile]) .blocks .day .body {
+        .blocks .day .body {
           min-width: 0;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
-        :root:not([data-steward-tile]) .blocks .day .note {
+        .blocks .day .note {
           display: block;
           font-family: var(--font-mono);
           font-size: 12px;
           color: var(--color-ink-faint);
         }
-        :root:not([data-steward-tile]) .blocks .day li[data-past] {
+        .blocks .day li[data-past] {
           opacity: 0.55;
         }
         /* The now line crosses the whole grid at the current time; the
            script re-places it each minute, no refresh needed. */
-        :root:not([data-steward-tile]) .nowline {
+        .nowline {
           display: block;
           position: absolute;
           left: 0;
@@ -531,7 +517,7 @@
         }
         /* The time chip sits in the ruler gutter, calendar-style, so it
            never collides with a block's content. */
-        :root:not([data-steward-tile]) .nowline span {
+        .nowline span {
           position: absolute;
           left: 0;
           top: -7px;
@@ -542,6 +528,27 @@
           line-height: 14px;
           font-weight: 700;
           color: var(--color-orange);
+        }
+        /* Tiles never scroll (ADR-0019): the day flexes to spend exactly
+           the tile's height, slots dividing what the section gets (22px
+           floor — a shorter slot can't hold its 12px line). --slots is
+           script-set from the block list; cqh needs the size container. */
+        html[data-steward-tile] main {
+          flex: 1;
+          min-height: 0;
+        }
+        html[data-steward-tile] .blocks {
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+        }
+        html[data-steward-tile] .blocks .day {
+          flex: 1;
+          min-height: 0;
+          container-type: size;
+        }
+        html[data-steward-tile] .blocks .day > * {
+          --slot: max(22px, calc((100cqh - 2px) / var(--slots, 20)));
         }
       }
     </style>
@@ -707,7 +714,10 @@
             strip.appendChild(seg)
           })
         // The ruler: a label per 30-minute slot across the working day —
-        // hours in full, half-hours as a quiet :30.
+        // hours in full, half-hours as a quiet :30. --slots lets the tile
+        // tier divide its height into exactly this many slot rows.
+        var day = document.querySelector(".blocks .day")
+        if (day) day.style.setProperty("--slots", (dayEnd - dayStart) / 30)
         var ruler = document.querySelector(".ruler")
         if (ruler)
           for (var t = dayStart; t < dayEnd; t += 30) {
@@ -746,11 +756,8 @@
         var markerTime = document.createElement("span")
         var rule = document.createElement("span")
         rule.className = "rule"
-        var earlier = document.createElement("span")
-        earlier.className = "past"
         marker.appendChild(markerTime)
         marker.appendChild(rule)
-        marker.appendChild(earlier)
         var tick = strip ? document.createElement("i") : null
         if (tick) {
           tick.hidden = true
@@ -771,34 +778,34 @@
             return
           }
           var mins = now.getHours() * 60 + now.getMinutes()
-          var past = 0
           var firstFuture = null
           blocks.forEach(function (b) {
             if (b.start + b.mins <= mins) {
               b.li.setAttribute("data-past", "")
-              past++
             } else {
               b.li.removeAttribute("data-past")
               if (b.start > mins && !firstFuture) firstFuture = b.li
             }
           })
-          // Ledger tiers: the now rule between past and future rows.
+          // Ledger tiers: the now rule between past and future rows. Past
+          // rows stay — the day is a plan, not a queue; they only recede.
           markerTime.textContent = hhmm(mins) + " now"
-          earlier.textContent = past + " earlier"
-          earlier.hidden = !past
           firstFuture
             ? list.insertBefore(marker, firstFuture)
             : list.appendChild(marker)
-          // Page tier: the now line across the grid, and its strip tick.
+          // Grid tiers: the now line across the grid, and the strip tick.
+          // Slot height is measured off a ruler row — the tile tier sizes
+          // slots with container units, so the CSS value isn't a length.
           var inDay = mins >= dayStart && mins <= dayEnd
           var frac = (mins - dayStart) / (dayEnd - dayStart)
           if (nowline) {
-            var slot = parseFloat(
-              getComputedStyle(nowline.parentNode).getPropertyValue("--slot"),
-            )
-            nowline.hidden = !inDay || !slot
+            var rowH =
+              ruler && ruler.firstElementChild
+                ? ruler.firstElementChild.getBoundingClientRect().height
+                : 0
+            nowline.hidden = !inDay || !rowH
             if (!nowline.hidden) {
-              nowline.style.top = ((mins - dayStart) / 30) * slot + "px"
+              nowline.style.top = ((mins - dayStart) / 30) * rowH + "px"
               nowline.firstChild.textContent = hhmm(mins)
             }
           }

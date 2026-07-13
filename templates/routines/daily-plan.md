@@ -68,8 +68,10 @@ gruvbox tokens, breakpoints, generated-at meta + footer). Size behavior:
 - **2×1 / 1×2**: the three priorities as a list.
 - **2×2 and larger**: priorities, then the day (strip + block ledger),
   then carry-overs; wide tiles add the totals line.
-- **Raw page / full view**: the 30-minute time grid with the live now
-  line — the plan you read the day from.
+- **Tall wide tiles (~4 rows and up), raw page, full view**: the
+  30-minute time grid with the live now line — the plan you read the
+  day from, spanning the full day range. Past blocks always stay
+  visible (they recede, never disappear).
 
 Degrade gracefully: with no reachable data sources, still publish a plan
 derived from the instructions alone, with an explicit "no live data" note.

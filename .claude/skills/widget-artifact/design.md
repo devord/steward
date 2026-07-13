@@ -387,20 +387,29 @@ One block list, three renderings (see `docs/samples/daily-plan.html`):
 - **Day strip** — a 6px proportional bar under the section rule, one
   segment per block at `color-mix(tone 65%)` (free stays `bg3`, the
   unfilled track), a 2px orange tick at now. Script-built from the list;
-  the shape of the day at glance size.
-- **Time grid (page tier only)** — the paper planner, 26px per
-  30-minute slot. A script-built 12px mono ruler labels every slot from
-  day start to day end (hours `08:00` ink-dim, half-hours a quiet `:30`
-  ink-faint); an hour rule and a fainter half-hour rule run across the
-  day. A block is a drawn box spanning `--s` grid rows — 1px
-  `color-mix(tone 45%)` border over a `color-mix(tone 12%)` wash, no
-  time key inside the box (the ruler carries the times) — free slots
-  stay unboxed so the ruled paper shows through. `goal:` notes render
-  inline on ≥1h blocks; every block carries a `title` tooltip with its
-  full range, label, and note, so nothing truncated is lost. The now
-  line crosses the grid at the current time, its mono chip sitting in
-  the ruler gutter, calendar-style. Tiles never render the grid — the
-  ledger plus strip is the glance; the grid is the plan.
+  the shape of the day at glance size, kept on every tier — above the
+  time grid it's the day's summary line.
+- **Time grid (any wide surface tall enough for the day)** — the paper
+  planner, gated on size, not the tile stamp:
+  `@media (min-width: 900px) and (min-height: 600px)` — the raw page,
+  the full view, and board tiles from ~4 rows up all render it; shorter
+  tiers keep the ledger. Pages get 26px per 30-minute slot; tiles never
+  scroll, so there the day flexes to spend exactly the section's height
+  (`container-type: size` on the day, children take
+  `--slot: max(22px, calc((100cqh - 2px) / var(--slots)))`, with
+  `--slots` script-set from the block list). A script-built 12px mono
+  ruler labels every slot from day start to day end (hours `08:00`
+  ink-dim, half-hours a quiet `:30` ink-faint); an hour rule and a
+  fainter half-hour rule run across the day. A block is a drawn box
+  spanning `--s` grid rows — 1px `color-mix(tone 45%)` border over a
+  `color-mix(tone 12%)` wash, no time key inside the box (the ruler
+  carries the times) — free slots stay unboxed so the ruled paper shows
+  through. `goal:` notes render inline on ≥1h blocks; every block
+  carries a `title` tooltip with its full range, label, and note, so
+  nothing truncated is lost. The now line crosses the grid at the
+  current time, its mono chip sitting in the ruler gutter,
+  calendar-style; the script measures a ruler row for its position (the
+  tile tier's `--slot` is a container expression, not a length).
 
 A `.totals` line (12px mono, tone dots) states the process metric on
 wide tiers: `4.5h deep · 1h meetings · 3h shallow · 30m free`.
@@ -408,16 +417,17 @@ wide tiers: `4.5h deep · 1h meetings · 3h shallow · 30m free`.
 ### Now marker (timelines)
 
 For today-scoped time lists: dim rows whose time has passed
-(`color: var(--color-ink-faint)` on key and body) and insert a thin
-accent rule with a mono `HH:MM now` label between past and future. Gate
-on the generated-at date still being today. Keep it live: re-render the
-whole now state (dimming, marker, grid now line, strip tick) on a
-30-second timer plus `visibilitychange` and `resize`, so an open page
-tracks the day without a refresh — and clear it once the date rolls past
-the plan's. On the board, tiles are a "what's next" glance: collapse
-past rows into the marker's `N earlier` counter (CSS keyed on
-`html[data-steward-tile]`), while the raw page and full view keep every
-row. See the script in `docs/samples/daily-plan.html`.
+(`color: var(--color-ink-faint)` on key and body; `opacity: 0.55` on
+grid boxes) and insert a thin accent rule with a mono `HH:MM now` label
+between past and future. Gate on the generated-at date still being
+today. Keep it live: re-render the whole now state (dimming, marker,
+grid now line, strip tick) on a 30-second timer plus `visibilitychange`
+and `resize`, so an open page tracks the day without a refresh — and
+clear it once the date rolls past the plan's. Past rows are never
+hidden, on any tier — the plan is a record of the day, not a queue;
+passed time recedes, it doesn't disappear. When a tile runs out of
+height the fit-list trims for space, honestly (`+N more`), never by
+pastness. See the script in `docs/samples/daily-plan.html`.
 
 ```css
 .now {
@@ -432,16 +442,6 @@ row. See the script in `docs/samples/daily-plan.html`.
   flex: 1;
   height: 1px;
   background: var(--color-orange-deep);
-}
-.now .past {
-  display: none;
-  color: var(--color-ink-faint);
-}
-html[data-steward-tile] .blocks li[data-past] {
-  display: none;
-}
-html[data-steward-tile] .now .past {
-  display: inline;
 }
 ```
 
