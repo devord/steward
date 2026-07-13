@@ -74,6 +74,21 @@ describe("listDataRepos", () => {
     )
   })
 
+  it("excludes a GitHub template repo even when it's tagged", async () => {
+    // The data-repo template carries a `main` board and may be topic-tagged,
+    // but it's the scaffold new repos are generated from — never a live
+    // data repo in anyone's rail.
+    seedRepo(HOME, {})
+    seedRepoMeta("acme/steward-data-template", {
+      topics: [TOPIC],
+      isTemplate: true,
+    })
+
+    const listing = await listDataRepos("token", LOGIN)
+
+    expect(listing.repos.map((repo) => repo.full)).toEqual([HOME])
+  })
+
   it("dedupes a home repo that also carries the topic", async () => {
     seedRepoMeta(HOME, { topics: [TOPIC] })
 
@@ -189,6 +204,20 @@ describe("requireDataRepo", () => {
     seedRepoMeta("acme/later", { topics: [TOPIC] })
     const listing = await listDataRepos("token", LOGIN)
     expect(listing.repos.map((r) => r.full)).not.toContain("acme/later")
+  })
+
+  it("rejects a template repo reached by direct link", async () => {
+    seedRepoMeta("acme/steward-data-template", {
+      topics: [TOPIC],
+      isTemplate: true,
+    })
+
+    const thrown = (await requireDataRepo(
+      "token",
+      LOGIN,
+      "acme/steward-data-template",
+    ).catch((e) => e)) as { init?: { status: number } }
+    expect(thrown.init?.status).toBe(404)
   })
 
   it("rejects a stranger's public tagged repo reached by direct link", async () => {

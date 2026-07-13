@@ -45,6 +45,8 @@ interface MockRepoMeta {
   /** null → GitHub omits the permissions block entirely. */
   permissions: { admin: boolean; push: boolean } | null
   topics: string[]
+  /** GitHub template-repository flag. */
+  isTemplate: boolean
   /** "forbidden" → the collaborators endpoint answers 403 (viewer lacks
       push access), exactly GitHub's behavior for plain readers. */
   collaborators: { login: string; avatar_url: string }[] | "forbidden"
@@ -56,6 +58,7 @@ const DEFAULT_META: MockRepoMeta = {
   private: true,
   permissions: { admin: true, push: true },
   topics: [],
+  isTemplate: false,
   collaborators: [],
 }
 
@@ -223,6 +226,7 @@ export const githubHandlers = [
       return json(request, {
         full_name: repo,
         private: meta.private,
+        is_template: meta.isTemplate,
         ...(meta.permissions ? { permissions: meta.permissions } : {}),
       })
     },
@@ -246,6 +250,7 @@ export const githubHandlers = [
         return {
           full_name: repo,
           private: meta.private,
+          is_template: meta.isTemplate,
           ...(meta.permissions ? { permissions: meta.permissions } : {}),
         }
       })

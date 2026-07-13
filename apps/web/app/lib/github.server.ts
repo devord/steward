@@ -205,18 +205,24 @@ const repoMetaSchema = z.object({
   full_name: z.string(),
   private: z.boolean(),
   permissions: permissionsSchema,
+  // The scaffold-repo flag. Absent on some payloads → treat as false.
+  is_template: z.boolean().optional(),
 })
 
 export interface RepoMeta {
   full: string
   private: boolean
   permissions?: { admin: boolean; push: boolean }
+  /** A GitHub template repository — the scaffold new repos are generated
+      from, never itself a live data repo (ADR-0023). */
+  isTemplate: boolean
 }
 
 function toRepoMeta(raw: z.infer<typeof repoMetaSchema>): RepoMeta {
   return {
     full: raw.full_name,
     private: raw.private,
+    isTemplate: raw.is_template ?? false,
     ...(raw.permissions ? { permissions: raw.permissions } : {}),
   }
 }
