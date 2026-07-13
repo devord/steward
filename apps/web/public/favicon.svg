@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="9 9 46 46">
   <style>
-    .wing{fill:#3c3836}.knot{fill:#d65d0e}
-    @media (prefers-color-scheme:dark){.wing{fill:#ebdbb2}.knot{fill:#fe8019}}
+    .wing{fill:#d65d0e}.knot{fill:#3c3836}
+    @media (prefers-color-scheme:dark){.wing{fill:#fe8019}.knot{fill:#ebdbb2}}
   </style>
-  <path class="wing" d="M10 22 Q10 19.5 12.5 20.5 L26 27 L26 37 L12.5 43.5 Q10 44.5 10 42 Z"/>
-  <path class="wing" d="M54 22 Q54 19.5 51.5 20.5 L38 27 L38 37 L51.5 43.5 Q54 44.5 54 42 Z"/>
-  <rect class="knot" x="26.5" y="25" width="11" height="14" rx="3.5"/>
+  <path class="wing" d="M10 21.5 Q10 19 12.5 20 L28 28.5 L28 35.5 L12.5 44 Q10 45 10 42.5 Z"/>
+  <path class="wing" d="M54 21.5 Q54 19 51.5 20 L36 28.5 L36 35.5 L51.5 44 Q54 45 54 42.5 Z"/>
+  <rect class="knot" x="25.5" y="24" width="13" height="16" rx="4"/>
 </svg>

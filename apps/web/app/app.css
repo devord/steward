@@ -172,8 +172,8 @@
     background-size: 24px 24px;
   }
 
-  /* The mark's orange block is the wordmark's trailing caret; on the landing
-     it blinks like a terminal cursor — the one signature motion, "the board,
+  /* The mark's ink knot is the wordmark's block caret; on the landing it
+     blinks like a terminal cursor — the one signature motion, "the board,
      still being written." Hard on/off (steps) reads as a caret, not a fade. */
   @keyframes logo-cursor-blink {
     0%,

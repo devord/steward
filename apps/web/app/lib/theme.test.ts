@@ -186,10 +186,11 @@ describe("every theme clears the contrast floors", () => {
       expect(contrast(t.inkFaint, t.bg)).toBeGreaterThanOrEqual(3)
       expect(contrast(t.inkFaint, t.bg1)).toBeGreaterThanOrEqual(3)
     })
-    it(`${name}: the mark's knot ≥ 3:1 on page and sidebar`, () => {
-      // The bow tie renders tile-less in chrome (wings `ink`, knot `accent`),
-      // so the knot must clear the WCAG graphics floor on the surfaces the
+    it(`${name}: the mark's wings ≥ 3:1 on page and sidebar`, () => {
+      // The bow tie renders tile-less in chrome (wings `accent`, knot `ink`),
+      // so the wings must clear the WCAG graphics floor on the surfaces the
       // glyph actually sits on: the landing page (bg) and the sidebar (bg1).
+      // (The ink knot rides on the body-text ratios tested above.)
       expect(contrast(t.accent, t.bg)).toBeGreaterThanOrEqual(3)
       expect(contrast(t.accent, t.bg1)).toBeGreaterThanOrEqual(3)
     })

@@ -2,13 +2,15 @@ import { cn } from "~/lib/utils"
 
 /**
  * The Steward mark: the bow tie — the butler's uniform in three shapes,
- * formal service without the food dome. The orange knot is the same block
- * that ends the wordmark (steward's cursor, dressed up). One geometry at
- * every size; it reads from 16px favicons to the landing hero. Mirrored as
- * static SVG in public/favicon.svg and the public/wordmark-*.svg / og.png
- * lockups; keep the geometries in sync (DESIGN.md § Mark).
+ * formal service without the food dome. The wings carry the theme's accent
+ * (the tie IS the brand color); the knot is the ink block that ends the
+ * wordmark — a terminal caret takes the foreground color, so the caret
+ * story got stronger when the fills flipped. One geometry at every size;
+ * it reads from 16px favicons to the landing hero. Mirrored as static SVG
+ * in public/favicon.svg and the public/wordmark-*.svg / og.png lockups;
+ * keep the geometries in sync (DESIGN.md § Mark).
  *
- * In chrome the mark is the bare glyph — ink wings, accent knot, no tile.
+ * In chrome the mark is the bare glyph — accent wings, ink knot, no tile.
  * A tile behind a chrome mark either vanishes (light themes: bg on bg1) or
  * punches a darker hole in the sidebar (dark themes), and the glyph-only
  * treatment is what mark-in-chrome looks like elsewhere (GitHub, Linear,
@@ -28,10 +30,10 @@ export function Logo({
 }) {
   return (
     <svg
-      // The glyph's ink spans x 10–54, y ≈20–44; the bare-glyph crop frames
+      // The glyph's ink spans x 10–54, y ≈19–45; the bare-glyph crop frames
       // it tight (center y stays 32) so the tie fills its box instead of
       // floating in the tile's old padding.
-      viewBox={display ? "0 0 64 64" : "8 18 48 28"}
+      viewBox={display ? "0 0 64 64" : "8 17.5 48 29"}
       aria-hidden
       className={cn("shrink-0", className)}
     >
@@ -50,21 +52,23 @@ export function Logo({
           />
         </>
       )}
+      {/* Wings tuck 2.5 under the knot (drawn last) so the flipped fills
+          never show a background hairline between the shapes. */}
       <path
-        d="M10 22 Q10 19.5 12.5 20.5 L26 27 L26 37 L12.5 43.5 Q10 44.5 10 42 Z"
-        className="fill-foreground"
+        d="M10 21.5 Q10 19 12.5 20 L28 28.5 L28 35.5 L12.5 44 Q10 45 10 42.5 Z"
+        className="fill-primary"
       />
       <path
-        d="M54 22 Q54 19.5 51.5 20.5 L38 27 L38 37 L51.5 43.5 Q54 44.5 54 42 Z"
-        className="fill-foreground"
+        d="M54 21.5 Q54 19 51.5 20 L36 28.5 L36 35.5 L51.5 44 Q54 45 54 42.5 Z"
+        className="fill-primary"
       />
       <rect
-        x="26.5"
-        y="25"
-        width="11"
-        height="14"
-        rx="3.5"
-        className={cn("fill-primary", live && "logo-cursor")}
+        x="25.5"
+        y="24"
+        width="13"
+        height="16"
+        rx="4"
+        className={cn("fill-foreground", live && "logo-cursor")}
       />
     </svg>
   )
