@@ -62,6 +62,21 @@ export function Logo({
         d="M54 21.5 Q54 19 51.5 20 L36 28.5 L36 35.5 L51.5 44 Q54 45 54 42.5 Z"
         className="fill-primary"
       />
+      {/* Blink mask: the wings tuck 2.5 under the knot, so when the knot
+          fades on the caret blink its edges would show the accent wing-tips
+          through the dimmed ink. A bg-filled rect under the knot hides them,
+          so the fade reveals background — a dimming caret, not a hole onto
+          the tie. Only needed while the knot blinks (gated on `live`). */}
+      {live && (
+        <rect
+          x="25.5"
+          y="24"
+          width="13"
+          height="16"
+          rx="4"
+          className="fill-bg"
+        />
+      )}
       <rect
         x="25.5"
         y="24"
