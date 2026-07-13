@@ -219,7 +219,6 @@ export function RoutinesView({
     <>
       <NavShell
         nav={{
-          dataRepo: repo.full,
           activeRepo: "",
           dashboardSlug: "",
           routinesRepo: repo.full,

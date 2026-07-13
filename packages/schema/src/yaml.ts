@@ -1,6 +1,7 @@
 import { parse, stringify } from "yaml"
 
 import { type DashboardFile, dashboardFileSchema } from "./dashboard.ts"
+import { type RepoFile, repoFileSchema } from "./repo.ts"
 import { type RoutinesFile, routinesFileSchema } from "./routine.ts"
 
 /** Parse + validate data/routines.yaml. Throws ZodError/YAMLParseError. */
@@ -11,6 +12,11 @@ export function parseRoutinesFile(text: string): RoutinesFile {
 /** Parse + validate data/dashboards/<slug>.yaml. Throws ZodError/YAMLParseError. */
 export function parseDashboardFile(text: string): DashboardFile {
   return dashboardFileSchema.parse(parse(text))
+}
+
+/** Parse + validate data/repo.yaml. An empty file is a valid empty config. */
+export function parseRepoFile(text: string): RepoFile {
+  return repoFileSchema.parse(parse(text) ?? {})
 }
 
 /**
@@ -27,4 +33,8 @@ export function serializeRoutinesFile(file: RoutinesFile): string {
 
 export function serializeDashboardFile(file: DashboardFile): string {
   return stringify(dashboardFileSchema.parse(file), STRINGIFY_OPTIONS)
+}
+
+export function serializeRepoFile(file: RepoFile): string {
+  return stringify(repoFileSchema.parse(file), STRINGIFY_OPTIONS)
 }

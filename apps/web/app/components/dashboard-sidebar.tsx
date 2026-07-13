@@ -45,7 +45,6 @@ import { useT } from "../lib/i18n.tsx"
  * list — deleting the last board must not make the repo disappear from the app.
  */
 export function DashboardSidebar({
-  dataRepo,
   activeRepo,
   dashboardSlug,
   routinesRepo = "",
@@ -55,7 +54,6 @@ export function DashboardSidebar({
   onDeleteBoard,
   onNavigate,
 }: {
-  dataRepo: string
   /** The active board's repo; "" on chrome pages (settings). */
   activeRepo: string
   dashboardSlug: string
@@ -190,7 +188,6 @@ export function DashboardSidebar({
         <AccountMenu
           login={login}
           displayName={displayName}
-          dataRepo={dataRepo}
           block
           onNavigate={onNavigate}
         />
@@ -292,7 +289,8 @@ function NavGroup({
  * node slot (where boards carry a dot), the label on the board-name column — so
  * it reads as the repo's own entry, plainly not one of the dashboards. Set off
  * from the last board by a hair of space, it lights the same accent-tinted
- * selection as an active board when it's the current page.
+ * selection as an active board when it's the current page, and its icon takes
+ * the accent then too — the same "you are here" node the active board's dot is.
  */
 function PoolNavItem({
   to,
@@ -318,7 +316,10 @@ function PoolNavItem({
     >
       <ListTodo
         aria-hidden
-        className="absolute top-1/2 left-[13px] size-4 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
+        className={cn(
+          "absolute top-1/2 left-[13px] size-4 -translate-x-1/2 -translate-y-1/2 transition-colors",
+          active ? "text-primary" : "text-ink-faint",
+        )}
       />
       {t("nav.routines")}
     </Link>

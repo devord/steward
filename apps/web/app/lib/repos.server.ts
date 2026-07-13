@@ -70,6 +70,7 @@ function toDataRepo(meta: RepoMeta, home: string): DataRepo | null {
     private: meta.private,
     isShared: meta.full !== home,
     viewerIsAdmin: meta.permissions?.admin ?? null,
+    viewerCanPush: meta.permissions?.push ?? null,
   }
 }
 
@@ -166,6 +167,7 @@ export async function listDataRepos(
         private: null,
         isShared: false,
         viewerIsAdmin: null,
+        viewerCanPush: null,
       })
     }
   }

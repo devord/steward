@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 
 import {
   parseDashboardFile,
+  parseRepoFile,
   parseRoutinesFile,
+  serializeRepoFile,
   serializeRoutinesFile,
 } from "./yaml.ts"
 
@@ -36,6 +38,27 @@ describe("serializeRoutinesFile", () => {
   it("is stable: serialize(parse(serialize(x))) === serialize(x)", () => {
     const once = serializeRoutinesFile(parseRoutinesFile(ROUTINES_YAML))
     expect(serializeRoutinesFile(parseRoutinesFile(once))).toBe(once)
+  })
+})
+
+describe("parseRepoFile", () => {
+  it("parses a display name", () => {
+    expect(parseRepoFile("name: Form Factory\n")).toEqual({
+      name: "Form Factory",
+    })
+  })
+
+  it("treats an empty file as an empty config", () => {
+    expect(parseRepoFile("")).toEqual({})
+  })
+
+  it("rejects a blank name", () => {
+    expect(() => parseRepoFile('name: "  "\n')).toThrow()
+  })
+
+  it("round-trips through serialize", () => {
+    const parsed = parseRepoFile("name: Form Factory\n")
+    expect(parseRepoFile(serializeRepoFile(parsed))).toEqual(parsed)
   })
 })
 

@@ -28,6 +28,9 @@ export interface DataRepo extends RepoRef {
   /** Whether the viewer can administer the repo — gates the "manage access"
       link target. null → unknown (metadata degraded). */
   viewerIsAdmin: boolean | null
+  /** Whether the viewer can push — gates the rename affordance (the display
+      name is a commit, ADR-0026). null → unknown (metadata degraded). */
+  viewerCanPush: boolean | null
 }
 
 const REPO_RE = /^([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+)$/

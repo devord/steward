@@ -9,7 +9,6 @@ import {
 } from "../components/appearance-settings.tsx"
 import { NavShell } from "../components/nav-shell.tsx"
 import { loadSidebar } from "../lib/dashboard.server.ts"
-import { resolveHomeRepo } from "../lib/repos.server.ts"
 import {
   isLocale,
   LOCALE_OPTIONS,
@@ -35,7 +34,6 @@ import { cn } from "~/lib/utils"
  */
 export async function loader({ request }: Route.LoaderArgs) {
   const auth = await requireAuth(request)
-  const dataRepo = resolveHomeRepo(auth.login, auth.dataRepo)
   // Best-effort: a transient GitHub blip degrades to an empty rail rather
   // than crashing the one page that must never trap the user.
   const sidebar = await loadSidebar(
@@ -47,7 +45,6 @@ export async function loader({ request }: Route.LoaderArgs) {
     locale: getLocale(request),
     login: auth.login,
     displayName: auth.name ?? null,
-    dataRepo,
     sidebar,
   }
 }
@@ -80,7 +77,6 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
   return (
     <NavShell
       nav={{
-        dataRepo: loaderData.dataRepo,
         // No board is current on settings, so pass an empty repo+slug — the
         // rail then lights nothing, reading as "you're off the board".
         activeRepo: "",

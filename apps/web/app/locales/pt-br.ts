@@ -45,7 +45,6 @@ export const ptBR: Messages = {
   "nav.routines": "Rotinas",
   "account.menu": "Conta",
   "account.githubAccount": "Conta do GitHub",
-  "account.viewRepo": "Ver repo de dados",
 
   "empty.fact": "A grade está vazia",
   "empty.hint":
@@ -133,6 +132,9 @@ export const ptBR: Messages = {
   "repo.viewOnGitHub": "Ver {repo} no GitHub",
   "repo.manageOnGitHub": "Gerenciar acesso no GitHub",
   "repo.openOnGitHub": "Ver no GitHub",
+  "repo.displayName": "Nome de exibição",
+  "repo.saveName": "Salvar",
+  "repo.renameFailed": "Não foi possível salvar o nome — tente de novo.",
 
   "addRepo.title": "Adicionar um repo de dados",
   "addRepo.description":

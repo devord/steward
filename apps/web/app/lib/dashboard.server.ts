@@ -5,7 +5,9 @@ import {
   dashboardPath,
   DASHBOARDS_DIR,
   parseDashboardFile,
+  parseRepoFile,
   parseRoutinesFile,
+  REPO_FILE_PATH,
   routineHost,
   triggerFileSchema,
   triggerPath,
@@ -181,8 +183,11 @@ export async function listDashboards(
 export interface SidebarRepo {
   /** `owner/name`. */
   repo: string
-  /** Short repo name — the group label. */
+  /** Short repo name — the group label when no display name is set. */
   name: string
+  /** Display name from the repo's data/repo.yaml (ADR-0026). null → unset
+      or unreadable: the group falls back to the short name / "Personal". */
+  displayName: string | null
   isHome: boolean
   /** null → visibility unknown (metadata degraded); UI omits the badge. */
   private: boolean | null
@@ -193,6 +198,9 @@ export interface SidebarRepo {
   /** Gates where the header's external link lands: repo access settings
       for admins, the repo page otherwise. null → unknown. */
   viewerIsAdmin: boolean | null
+  /** Gates the rename affordance — the display name is a commit, so it
+      needs push access. null → unknown: affordance withheld. */
+  viewerCanPush: boolean | null
   /** Board slugs. `[]` — the repo is alive with no boards yet (git prunes
       `data/dashboards/` with the last file): the group stays, carrying its
       create-first row. */
@@ -219,18 +227,25 @@ export async function loadSidebar(
   const listing = await listDataRepos(token, login, override)
   const repos = await Promise.all(
     listing.repos.map(async (repo) => {
-      const [dashboards, collaborators] = await Promise.all([
+      const [dashboards, collaborators, repoFile] = await Promise.all([
         listDashboards(token, repo.full).catch(() => null),
         // Best-effort by contract (403 for plain readers → null).
         listCollaborators(token, repo.full),
+        // Best-effort too: an absent or malformed repo.yaml is just "no
+        // display name", never a failed rail.
+        getFile(token, repo.full, REPO_FILE_PATH, "main")
+          .then((raw) => (raw ? parseRepoFile(raw.text) : null))
+          .catch(() => null),
       ])
       return {
         repo: repo.full,
         name: repo.name,
+        displayName: repoFile?.name ?? null,
         isHome: repo.isHome,
         private: repo.private,
         collaborators,
         viewerIsAdmin: repo.viewerIsAdmin,
+        viewerCanPush: repo.viewerCanPush,
         dashboards: dashboards ?? [],
       }
     }),
