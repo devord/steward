@@ -19,12 +19,14 @@ export function RepoCombobox({
   onChange,
   placeholder,
   invalid,
+  autoFocus,
 }: {
   id?: string
   value: string
   onChange: (next: string) => void
   placeholder?: string
   invalid?: boolean
+  autoFocus?: boolean
 }) {
   const [suggestions, setSuggestions] = useState<string[]>([])
 
@@ -68,6 +70,7 @@ export function RepoCombobox({
     >
       <Combobox.Input
         id={id}
+        autoFocus={autoFocus}
         placeholder={placeholder}
         aria-invalid={invalid || undefined}
         className={cn(
