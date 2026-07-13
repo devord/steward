@@ -17,9 +17,10 @@ weight, color, and alignment — never from shrinking type below the floors
 ## The shell
 
 Copy this skeleton on top of the token snippet (SKILL.md). It gives every
-artifact the same bones: content on the tile's optical center when sparse
-(never adrift in a corner), footer pinned to the bottom on the raw page,
-tabular digits everywhere.
+artifact the same bones: content top-aligned so lists read top-down (only
+the one-row glance tier centers its lone KPI, so it's never adrift in a
+corner), footer pinned to the bottom on the raw page, tabular digits
+everywhere.
 
 ```css
 * {
@@ -48,8 +49,14 @@ body {
 main {
   display: grid;
   gap: 12px;
-  margin-block: auto;
   min-height: 0;
+}
+/* One-row glance tiles are inherently sparse — center the lone KPI so it
+   isn't adrift. Taller tiles (and raw/full pages) read top-down. */
+@media (max-height: 160px) {
+  [data-steward-tile] main {
+    margin-block: auto;
+  }
 }
 footer {
   margin-top: auto;
@@ -78,9 +85,6 @@ media block:
     padding: 40px 32px;
     overflow: auto;
   }
-  :root:not([data-steward-tile]) main {
-    margin-block: 0;
-  } /* pages read top-down */
 }
 ```
 
