@@ -1,12 +1,6 @@
 import { useState } from "react"
 
-import {
-  FolderGit2,
-  LayoutGrid,
-  MoreHorizontal,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { FolderGit2, MoreHorizontal, Plus, Trash2 } from "lucide-react"
 
 import { AccountMenu } from "./account-menu.tsx"
 import { AddDataRepoDialog } from "./add-data-repo-dialog.tsx"
@@ -91,80 +85,89 @@ export function DashboardSidebar({
 
       <nav
         aria-label={t("nav.boards")}
-        className="flex-1 space-y-4 overflow-y-auto px-2 py-3"
+        className="flex flex-1 flex-col overflow-y-auto px-2 py-3"
       >
-        {sidebar.repos.map((group) => (
-          <NavGroup key={group.repo} header={<RepoGroupHeader group={group} />}>
-            {group.dashboards.map((slug) => {
-              const active = activeRepo === group.repo && dashboardSlug === slug
-              // Every repo's `main` is its default board (server-protected in
-              // all repos) — so no delete menu on any `main`.
-              return (
-                <NavItem
-                  key={`${group.repo}:${slug}`}
-                  to={boardHref(group.repo, slug, homeRepo)}
-                  label={slug}
-                  active={active}
-                  onDelete={
-                    onDeleteBoard && slug !== DEFAULT_DASHBOARD
-                      ? () => onDeleteBoard(group.repo, slug)
-                      : undefined
-                  }
-                  onNavigate={onNavigate}
+        <div className="space-y-4">
+          {sidebar.repos.map((group) => (
+            <NavGroup
+              key={group.repo}
+              header={<RepoGroupHeader group={group} />}
+            >
+              {group.dashboards.map((slug) => {
+                const active =
+                  activeRepo === group.repo && dashboardSlug === slug
+                // Every repo's `main` is its default board (server-protected in
+                // all repos) — so no delete menu on any `main`.
+                return (
+                  <NavItem
+                    key={`${group.repo}:${slug}`}
+                    to={boardHref(group.repo, slug, homeRepo)}
+                    label={slug}
+                    active={active}
+                    onDelete={
+                      onDeleteBoard && slug !== DEFAULT_DASHBOARD
+                        ? () => onDeleteBoard(group.repo, slug)
+                        : undefined
+                    }
+                    onNavigate={onNavigate}
+                  />
+                )
+              })}
+              {group.dashboards.length === 0 && (
+                // The group's only child while the repo has no boards: the
+                // next action, sitting where the first board will. The plus
+                // takes the rail-node slot the active dot uses, so it reads
+                // as "a board goes here".
+                <RailAction
+                  icon={Plus}
+                  label={t("switcher.newHere")}
+                  onClick={() => setCreating(group.repo)}
                 />
-              )
-            })}
-            {group.dashboards.length === 0 && (
-              // The group's only child while the repo has no boards: the
-              // next action, sitting where the first board will. The plus
-              // takes the rail-node slot the active dot uses, so it reads
-              // as "a board goes here".
-              <button
-                type="button"
-                onClick={() => setCreating(group.repo)}
-                className="relative flex w-full cursor-pointer items-center rounded-md py-1.5 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <Plus
-                  aria-hidden
-                  className="absolute top-1/2 left-[13px] size-3 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
-                />
-                {t("switcher.newHere")}
-              </button>
-            )}
-          </NavGroup>
-        ))}
+              )}
+            </NavGroup>
+          ))}
 
-        {/* Discovery degraded (search rate limit, GitHub flap): say quietly
-            that groups may be missing rather than render a confident lie. */}
-        {!sidebar.complete && (
-          <p className="px-2.5 font-mono text-xs text-ink-faint">
-            {t("switcher.incomplete")}
-          </p>
-        )}
+          {/* Discovery degraded (search rate limit, GitHub flap): say quietly
+              that groups may be missing rather than render a confident lie. */}
+          {!sidebar.complete && (
+            <p className="px-2.5 font-mono text-xs text-ink-faint">
+              {t("switcher.incomplete")}
+            </p>
+          )}
+        </div>
 
-        {/* Hairline setting the create action apart from the boards it makes —
-            a peer of them, but a verb, not one of the nouns. */}
-        <div className="mx-2.5 border-t border-border-dim" />
+        {/* New board — a create verb that belongs with the boards above, so it
+            sits at the end of the list on the same marker/label column, set off
+            by one hairline (a verb, not one of the nouns). The trailing space
+            is empty scroll room, not a gap the actions float in. */}
+        <div className="mt-2 space-y-2">
+          <div className="mx-2.5 border-t border-border-dim" />
+          <RailAction
+            icon={Plus}
+            label={t("switcher.new")}
+            onClick={() => setCreating(activeRepo || homeRepo)}
+          />
+        </div>
+      </nav>
 
-        <button
-          type="button"
-          onClick={() => setCreating(activeRepo || homeRepo)}
-          className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          <LayoutGrid className="size-4 shrink-0 text-ink-faint" />
-          {t("switcher.new")}
-        </button>
+      {/* Foot: workspace-level actions live here, not adrift in the board list.
+          "Add data repo" grows the rail itself (a new group), so it sits with
+          the account — the other whole-workspace control — on a shared column
+          keyed to the account avatar. */}
+      <div className="shrink-0 space-y-0.5 border-t border-border-dim p-2">
         <button
           type="button"
           onClick={() => setAddingRepo(true)}
-          className="!mt-0.5 flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <FolderGit2 className="size-4 shrink-0 text-ink-faint" />
+          <span
+            aria-hidden
+            className="flex size-6 shrink-0 items-center justify-center"
+          >
+            <FolderGit2 className="size-4 text-ink-faint" />
+          </span>
           {t("switcher.addRepo")}
         </button>
-      </nav>
-
-      <div className="shrink-0 border-t border-border-dim p-2">
         <AccountMenu
           login={login}
           displayName={displayName}
@@ -193,6 +196,37 @@ export function DashboardSidebar({
         onNavigate={onNavigate}
       />
     </div>
+  )
+}
+
+/**
+ * A create verb rendered on the board list's own grid: the icon sits centered
+ * on the rail spine (the marker column the active dot uses), the label on the
+ * board-name column. Sharing that geometry is what keeps "new dashboard" and
+ * the empty-group create-first row reading as peers of the boards they make,
+ * not buttons floating on a different margin.
+ */
+function RailAction({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: typeof Plus
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative flex w-full cursor-pointer items-center rounded-md py-1.5 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      <Icon
+        aria-hidden
+        className="absolute top-1/2 left-[13px] size-4 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
+      />
+      {label}
+    </button>
   )
 }
 
