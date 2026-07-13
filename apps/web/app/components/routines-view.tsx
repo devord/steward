@@ -53,17 +53,15 @@ import type { ArtifactInfo, SidebarData } from "../lib/dashboard.server.ts"
 import { removeRoutine, type ServerConfig, useDraft } from "../lib/draft.ts"
 import { useT, type Translate } from "../lib/i18n.tsx"
 import { boardHref } from "../lib/repos.ts"
-import { widgetStatus, type WidgetStatus } from "../lib/routine-status.ts"
+import {
+  claudeRoutineUrl,
+  widgetStatus,
+  type WidgetStatus,
+} from "../lib/routine-status.ts"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
 import { agoParts } from "../lib/time.ts"
 import { useStreamed } from "../lib/use-streamed.ts"
 import type { RunResult } from "../routes/run.ts"
-
-/** The claude.ai page for a cloud routine — keyed on the id in its trigger
-    file, the same id the fire API addresses (ADR-0016). */
-function claudeRoutineUrl(id: string): string {
-  return `https://claude.ai/code/routines/${id}`
-}
 
 /** A routine pool draft edits routines.yaml alone; there's no board in scope,
     so the dashboard side of the shared draft shape (draft.ts) stays empty and
@@ -442,23 +440,37 @@ export function RoutinesTable({
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-left align-bottom font-mono text-xs text-ink-faint">
-            <th className="px-3 py-1.5 font-normal">{t("routines.colName")}</th>
-            <th className="py-1.5 pr-3 font-normal">
+            <th scope="col" className="px-3 py-1.5 font-normal">
+              {t("routines.colName")}
+            </th>
+            <th scope="col" className="py-1.5 pr-3 font-normal">
               {t("routines.colState")}
             </th>
-            <th className="hidden py-1.5 pr-3 font-normal md:table-cell">
+            <th
+              scope="col"
+              className="hidden py-1.5 pr-3 font-normal md:table-cell"
+            >
               {t("routines.colSchedule")}
             </th>
-            <th className="hidden py-1.5 pr-3 font-normal md:table-cell">
+            <th
+              scope="col"
+              className="hidden py-1.5 pr-3 font-normal md:table-cell"
+            >
               {t("routines.colHost")}
             </th>
-            <th className="hidden py-1.5 pr-3 font-normal md:table-cell">
+            <th
+              scope="col"
+              className="hidden py-1.5 pr-3 font-normal md:table-cell"
+            >
               {t("routines.colOwner")}
             </th>
-            <th className="hidden py-1.5 pr-3 font-normal sm:table-cell">
+            <th
+              scope="col"
+              className="hidden py-1.5 pr-3 font-normal sm:table-cell"
+            >
               {t("routines.colBoards")}
             </th>
-            <th className="w-11 py-1.5 pr-3">
+            <th scope="col" className="w-16 py-1.5 pr-3">
               <span className="sr-only">{t("routines.colActions")}</span>
             </th>
           </tr>
@@ -508,6 +520,15 @@ export function RoutinesTable({
   )
 }
 
+/** The row-action idiom both ledgers share: hover-revealed, quiet until the
+    row has attention, always there for keyboard and coarse pointers. */
+const rowActionCls =
+  "size-6 text-ink-faint opacity-0 transition-opacity group-hover:opacity-100 hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 pointer-coarse:opacity-100"
+
+/** The dotted-underline cross-reference both ledgers share (boards, used-by). */
+const rowLinkCls =
+  "font-mono text-xs text-ink-dim underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
+
 function RoutineRow({
   routine,
   status,
@@ -554,19 +575,26 @@ function RoutineRow({
   const cloud = routineHost(routine) === "cloud"
 
   return (
-    <tr className="group border-b border-border-dim last:border-0 hover:bg-bg1/60">
-      {/* Name — the leading state node sits on the baseline of the mono name,
-          the two-second glance target; slug rides beneath in faint mono. */}
+    // The id anchors the templates ledger's used-by links — one page, one
+    // graph, so a cross-reference should land on the row it names.
+    <tr
+      id={`routine-${routine.slug}`}
+      className="group border-b border-border-dim last:border-0 hover:bg-bg1/60"
+    >
+      {/* Name — the leading state node beside the mono name, the two-second
+          glance target. The slug usually just repeats the kebab-cased name,
+          so it rides as a hover tooltip (native title, the chrome's tooltip
+          idiom) plus an sr-only echo — not a second line doubling every row's
+          height. It stays a first-class string elsewhere (Used by, menus). */}
       <td className="px-3 py-2 align-top">
-        <div className="flex items-start gap-2">
-          <StateDot status={status} className="mt-[0.4rem]" />
-          <div className="min-w-0">
-            <div className="truncate font-mono text-sm font-medium text-foreground">
-              {routine.name}
-            </div>
-            <div className="truncate font-mono text-xs text-ink-faint">
-              {routine.slug}
-            </div>
+        <div className="flex min-w-0 items-center gap-2">
+          <StateDot status={status} />
+          <div
+            className="truncate font-mono text-sm font-medium text-foreground"
+            title={routine.slug}
+          >
+            {routine.name}
+            <span className="sr-only"> — {routine.slug}</span>
           </div>
         </div>
       </td>
@@ -592,7 +620,7 @@ function RoutineRow({
           href={`https://github.com/${owner}`}
           target="_blank"
           rel="noreferrer"
-          className="font-mono text-xs text-ink-dim underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
+          className={rowLinkCls}
         >
           {owner}
         </a>
@@ -611,19 +639,25 @@ function RoutineRow({
       </td>
 
       <td className="py-1.5 pr-3 align-top">
-        <RowMenu
-          routine={routine}
-          cloud={cloud}
-          committed={committed}
-          routineId={routineId}
-          dashboards={dashboards}
-          repo={repo}
-          onEdit={onEdit}
-          onToggle={onToggle}
-          onDelete={onDelete}
-          onPlace={onPlace}
-          onFired={onFired}
-        />
+        <div className="flex justify-end gap-0.5">
+          {/* Run is the pool's most frequent verb — one click on row hover,
+              not buried in the ⋯ menu. Steps aside while a run is in flight
+              (the state chip owns it — one run glyph per row, same rule as
+              the board tile) and for disabled routines, which never run. */}
+          {cloud && routine.enabled && status?.kind !== "running" && (
+            <RunNowAction routine={routine} repo={repo} onFired={onFired} />
+          )}
+          <RowMenu
+            routine={routine}
+            committed={committed}
+            routineId={routineId}
+            dashboards={dashboards}
+            onEdit={onEdit}
+            onToggle={onToggle}
+            onDelete={onDelete}
+            onPlace={onPlace}
+          />
+        </div>
       </td>
     </tr>
   )
@@ -767,7 +801,7 @@ function BoardsCell({
         <Link
           key={slug}
           to={boardHref(repo.full, slug, homeRepo)}
-          className="font-mono text-xs text-ink-dim underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
+          className={rowLinkCls}
         >
           {slug}
         </Link>
@@ -821,22 +855,31 @@ export function TemplatesSection({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left align-bottom font-mono text-xs text-ink-faint">
-              <th className="px-3 py-1.5 font-normal">
+              <th scope="col" className="px-3 py-1.5 font-normal">
                 {t("templates.colTemplate")}
               </th>
-              <th className="hidden py-1.5 pr-3 font-normal md:table-cell">
+              <th
+                scope="col"
+                className="hidden py-1.5 pr-3 font-normal md:table-cell"
+              >
                 {t("templates.colDescription")}
               </th>
-              <th className="py-1.5 pr-3 font-normal">
+              <th scope="col" className="py-1.5 pr-3 font-normal">
                 {t("templates.colSource")}
               </th>
-              <th className="hidden py-1.5 pr-3 font-normal md:table-cell">
+              <th
+                scope="col"
+                className="hidden py-1.5 pr-3 font-normal md:table-cell"
+              >
                 {t("templates.colSchedule")}
               </th>
-              <th className="hidden py-1.5 pr-3 font-normal sm:table-cell">
+              <th
+                scope="col"
+                className="hidden py-1.5 pr-3 font-normal sm:table-cell"
+              >
                 {t("templates.colUsedBy")}
               </th>
-              <th className="w-14 py-1.5 pr-3">
+              <th scope="col" className="w-16 py-1.5 pr-3">
                 <span className="sr-only">{t("templates.colActions")}</span>
               </th>
             </tr>
@@ -867,11 +910,6 @@ function templateFileUrl(repoFull: string, id: string): string {
   return `https://github.com/${repoFull}/blob/HEAD/templates/routines/${id}.md`
 }
 
-/** Same hover-reveal as the routine RowMenu trigger — quiet until the row
-    has attention, always there for keyboard and coarse pointers. */
-const templateActionCls =
-  "size-6 text-ink-faint opacity-0 transition-opacity group-hover:opacity-100 hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 pointer-coarse:opacity-100"
-
 /** Faint bordered tag, the `orphan` chip's vocabulary — informational
     markers (built-in, unused, overrides), never state. */
 function TemplateTag({ children }: { children: ReactNode }) {
@@ -896,16 +934,17 @@ function TemplateRow({
   const t = useT()
   return (
     <tr className="group border-b border-border-dim last:border-0 hover:bg-bg1/60">
-      {/* Mono name over faint id, the routine rows' glance shape — the id is
-          what routines.yaml's `template:` references. */}
+      {/* Mono name, the routine rows' glance shape. The id — what
+          routines.yaml's `template:` references — is the name itself for
+          every built-in, so like the routine slug it rides as a title
+          tooltip + sr-only echo instead of a duplicated second line. */}
       <td className="px-3 py-2 align-top">
-        <div className="min-w-0">
-          <div className="truncate font-mono text-sm font-medium text-foreground">
-            {template.name}
-          </div>
-          <div className="truncate font-mono text-xs text-ink-faint">
-            {template.id}
-          </div>
+        <div
+          className="truncate font-mono text-sm font-medium text-foreground"
+          title={template.id}
+        >
+          {template.name}
+          <span className="sr-only"> — {template.id}</span>
         </div>
       </td>
 
@@ -943,9 +982,13 @@ function TemplateRow({
             <TemplateTag>{t("templates.unused")}</TemplateTag>
           </span>
         ) : (
-          <span className="flex flex-wrap gap-x-2 gap-y-0.5 font-mono text-xs text-ink-dim">
+          // Anchors to the pool rows above — the same dotted cross-reference
+          // idiom as the boards cell, not inert text (one page, one graph).
+          <span className="flex flex-wrap gap-x-2 gap-y-0.5">
             {usedBy.map((slug) => (
-              <span key={slug}>{slug}</span>
+              <a key={slug} href={`#routine-${slug}`} className={rowLinkCls}>
+                {slug}
+              </a>
             ))}
           </span>
         )}
@@ -959,7 +1002,7 @@ function TemplateRow({
               size="icon-xs"
               nativeButton={false}
               aria-label={t("templates.viewFile", { id: template.id })}
-              className={templateActionCls}
+              className={rowActionCls}
               render={
                 <a
                   href={templateFileUrl(repo.full, template.id)}
@@ -975,7 +1018,7 @@ function TemplateRow({
             variant="ghost"
             size="icon-xs"
             aria-label={t("templates.use", { name: template.name })}
-            className={templateActionCls}
+            className={rowActionCls}
             onClick={onUse}
           >
             <CalendarPlus />
@@ -986,29 +1029,18 @@ function TemplateRow({
   )
 }
 
-function RowMenu({
+/** The pool's inline run affordance — fires the routine's API trigger via
+    /run, the same plumbing as the board's Update control (ADR-0016). On a
+    successful fire the row flips to Running through onFired and this button
+    unmounts; on failure it stays visible in destructive ink with the error
+    as its label. */
+function RunNowAction({
   routine,
-  cloud,
-  committed,
-  routineId,
-  dashboards,
   repo,
-  onEdit,
-  onToggle,
-  onDelete,
-  onPlace,
   onFired,
 }: {
   routine: Routine
-  cloud: boolean
-  committed: boolean
-  routineId: string | undefined
-  dashboards: string[]
   repo: RepoInfo
-  onEdit: () => void
-  onToggle: () => void
-  onDelete: () => void
-  onPlace: (boardSlug: string) => void
   onFired: () => void
 }) {
   const t = useT()
@@ -1018,11 +1050,61 @@ function RowMenu({
     if (fetcher.data?.ok === true) onFired()
   }, [fetcher.data, onFired])
 
-  const fire = () =>
-    void fetcher.submit(
-      { repo: repo.full, slug: routine.slug },
-      { method: "post", action: "/run", encType: "application/json" },
-    )
+  const busy = fetcher.state !== "idle"
+  const error =
+    fetcher.data != null && !fetcher.data.ok
+      ? fetcher.data.error === "no-trigger"
+        ? t("widget.updateNoTrigger", { slug: routine.slug })
+        : t("widget.updateFailed")
+      : null
+  const label = error ?? t("routines.runNow", { name: routine.name })
+  return (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      aria-label={label}
+      title={label}
+      disabled={busy}
+      className={cn(
+        rowActionCls,
+        (busy || error != null) && "opacity-100",
+        error != null && "text-destructive",
+      )}
+      onClick={() =>
+        void fetcher.submit(
+          { repo: repo.full, slug: routine.slug },
+          { method: "post", action: "/run", encType: "application/json" },
+        )
+      }
+    >
+      <Play />
+      <span role="status" className="sr-only">
+        {error ?? ""}
+      </span>
+    </Button>
+  )
+}
+
+function RowMenu({
+  routine,
+  committed,
+  routineId,
+  dashboards,
+  onEdit,
+  onToggle,
+  onDelete,
+  onPlace,
+}: {
+  routine: Routine
+  committed: boolean
+  routineId: string | undefined
+  dashboards: string[]
+  onEdit: () => void
+  onToggle: () => void
+  onDelete: () => void
+  onPlace: (boardSlug: string) => void
+}) {
+  const t = useT()
 
   return (
     <DropdownMenu>
@@ -1032,19 +1114,13 @@ function RowMenu({
             variant="ghost"
             size="icon-xs"
             aria-label={t("routines.rowMenu", { name: routine.name })}
-            className="size-6 text-ink-faint opacity-0 transition-opacity group-hover:opacity-100 hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 aria-expanded:opacity-100 pointer-coarse:opacity-100"
+            className={cn(rowActionCls, "aria-expanded:opacity-100")}
           />
         }
       >
         <MoreHorizontal />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={4} className="w-52">
-        {cloud && (
-          <DropdownMenuItem onClick={fire} disabled={fetcher.state !== "idle"}>
-            <Play />
-            {t("widget.runNow")}
-          </DropdownMenuItem>
-        )}
         <DropdownMenuItem onClick={onEdit}>
           <Pencil />
           {t("routines.edit")}

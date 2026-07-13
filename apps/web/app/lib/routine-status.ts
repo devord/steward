@@ -40,6 +40,12 @@ export interface StatusContext {
   now: number
 }
 
+/** The claude.ai page for a cloud routine — keyed on the id in its trigger
+    file, the same id the fire API addresses (ADR-0016). */
+export function claudeRoutineUrl(id: string): string {
+  return `https://claude.ai/code/routines/${id}`
+}
+
 /** Overdue by more than one full interval → the schedule missed a run. Manual
     routines and never-run ones are never stale (ADR-0016). */
 export function isStale(

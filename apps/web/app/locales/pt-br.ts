@@ -122,6 +122,7 @@ export const ptBR: Messages = {
   "routines.stateNever": "Nunca rodou",
   "routines.orphan": "órfã",
   "routines.rowMenu": "Opções de {name}",
+  "routines.runNow": "Rodar {name} agora",
   "routines.edit": "Editar",
   "routines.addToBoard": "Adicionar a um painel",
   "routines.noBoards": "Nenhum painel ainda",
@@ -261,6 +262,7 @@ export const ptBR: Messages = {
   "widget.disabled": "Rotina desativada",
   "widget.enable": "Ativar",
   "widget.running": "Rodando",
+  "widget.runningTitle": "Execução em andamento — abra no claude.ai",
   "widget.runningSince": "Rodando — começou {ago}",
   "widget.draftHint": "No seu rascunho — sincronize para commitar",
   "widget.needsTriggerHint":

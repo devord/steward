@@ -167,17 +167,21 @@ describe("RoutinesTable", () => {
     )
   })
 
-  it("offers run-now on a cloud routine's menu", async () => {
+  it("offers an inline run button on a cloud routine's row", async () => {
     await renderTable()
+    expect(
+      document.querySelector('button[aria-label="Run Daily plan now"]'),
+    ).not.toBeNull()
+    // The menu no longer carries the verb — one affordance per action.
     await openMenu("Daily plan")
-    expect(menuItem("Run now")).not.toBeNull()
+    expect(menuItem("Run now")).toBeNull()
   })
 
-  it("omits run-now on a local routine's menu", async () => {
-    // Fresh render — one open menu at a time keeps the item set unambiguous.
+  it("omits the run button on a local routine's row", async () => {
     await renderTable()
-    await openMenu("Triage brief")
-    expect(menuItem("Run now")).toBeNull()
+    expect(
+      document.querySelector('button[aria-label="Run Triage brief now"]'),
+    ).toBeNull()
   })
 
   it("deletes the routine the menu belongs to", async () => {

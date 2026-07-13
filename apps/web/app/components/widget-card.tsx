@@ -21,6 +21,7 @@ import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
 import {
+  claudeRoutineUrl,
   setupCommands,
   type WidgetStatus,
   widgetStatus,
@@ -353,7 +354,23 @@ export function WidgetCard({
               )}
               <span className="flex items-center gap-1.5">
                 {running ? (
-                  <StatusPill tone="running" title={t("widget.running")}>
+                  /* When the trigger file gave us the cloud routine's id, the
+                     pill links to its claude.ai page — the only place to watch
+                     the in-flight run. Without an id (local routine, legacy
+                     trigger) it stays a plain readout. */
+                  <StatusPill
+                    tone="running"
+                    title={
+                      artifact?.routineId != null
+                        ? t("widget.runningTitle")
+                        : t("widget.running")
+                    }
+                    href={
+                      artifact?.routineId != null
+                        ? claudeRoutineUrl(artifact.routineId)
+                        : undefined
+                    }
+                  >
                     <span
                       aria-hidden
                       className="run-pulse size-1.5 shrink-0 rounded-full bg-primary"
@@ -468,21 +485,31 @@ export function WidgetCard({
 function StatusPill({
   tone,
   title,
+  href,
   children,
 }: {
   tone: "running" | "stale" | "neutral"
   title?: string
+  /** Renders the pill as an external link (new tab) — e.g. the running pill
+      pointing at the claude.ai routine page. */
+  href?: string
   children: React.ReactNode
 }) {
   return (
     <Badge
       variant="secondary"
       title={title}
+      render={
+        href != null ? (
+          <a href={href} target="_blank" rel="noreferrer" />
+        ) : undefined
+      }
       className={cn(
         "h-[18px] gap-1 border px-1.5 font-mono text-xs font-normal",
         tone === "running" && "border-primary/40 bg-primary/10 text-primary",
         tone === "stale" && "border-yellow/45 bg-yellow/10 text-ink",
         tone === "neutral" && "border-border-dim bg-bg2 text-ink-dim",
+        href != null && "hover:border-primary hover:bg-primary/20",
       )}
     >
       {children}
