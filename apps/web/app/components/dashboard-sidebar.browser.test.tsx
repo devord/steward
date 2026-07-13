@@ -243,6 +243,25 @@ describe("DashboardSidebar repo groups", () => {
     expect(status?.textContent).toContain("2")
   })
 
+  it("sets the group ⋯ glyph on the board rows' ⋯ column", async () => {
+    // The header teaches the same ⋯ idiom the board rows carry one line
+    // down — same glyph, one column. The buttons rest invisible, so it's
+    // the glyphs' optical centers that must align, not the box edges
+    // (the header button is size-5 against the rows' size-6).
+    await renderSidebar()
+    const headerGlyph = groupHeader(HOME_REPO)
+      ?.querySelector('[data-slot="popover-trigger"] svg')
+      ?.getBoundingClientRect()
+    const rowGlyph = requireMenuButton("test")
+      .querySelector("svg")
+      ?.getBoundingClientRect()
+    if (!headerGlyph || !rowGlyph) throw new Error("missing a ⋯ glyph")
+    expect(headerGlyph.left + headerGlyph.width / 2).toBeCloseTo(
+      rowGlyph.left + rowGlyph.width / 2,
+      1,
+    )
+  })
+
   it("opens an access popover: visibility, people, GitHub link", async () => {
     await renderSidebar()
 
