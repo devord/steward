@@ -17,7 +17,7 @@ matches the iframe height exactly, and `margin-block: auto` splits the
 leftover into equal top and bottom bands. On the daily-plan archetype —
 where all priorities and carried-over rows fit with room to spare — the
 result is a fat empty strip above the first section and below the last,
-with the content floating mid-tile. Centering a *list* doesn't read as
+with the content floating mid-tile. Centering a _list_ doesn't read as
 "centered", it reads as "misaligned": the eye expects a list to start at
 the top edge, under the title bar, and run down.
 
@@ -35,7 +35,9 @@ Top-align tile content by default; center only the one-row glance tier.
 
   ```css
   @media (max-height: 160px) {
-    [data-steward-tile] main { margin-block: auto; }
+    [data-steward-tile] main {
+      margin-block: auto;
+    }
   }
   ```
 
@@ -44,6 +46,7 @@ Top-align tile content by default; center only the one-row glance tier.
   still earns its place there and the lone number is never adrift. The
   `[data-steward-tile]` gate keeps it board-only; raw pages and the full
   view always read top-down.
+
 - The `:root:not([data-steward-tile]) main { margin-block: 0 }` override
   in each artifact's ≥900px block is now redundant (the base no longer
   centers) and is removed.
@@ -59,5 +62,5 @@ Lands in the same three places every shell rule lives: the
 - Published artifacts pick this up only when their routine reruns — the
   standard's usual rescale caveat (widget-standard §6).
 - ADR-0027's "content on the tile's optical center when sparse" now means
-  *the glance tier*, not every under-full tile; that bullet is annotated
+  _the glance tier_, not every under-full tile; that bullet is annotated
   to point here.
