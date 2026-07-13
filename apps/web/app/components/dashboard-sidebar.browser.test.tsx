@@ -169,25 +169,88 @@ describe("DashboardSidebar repo groups", () => {
     expect(groupHeader(SHARED_REPO)?.textContent).toContain("steward-team")
   })
 
-  it("carries repo identity: visibility badge, avatar stack, GitHub link", async () => {
+  it("carries repo identity: visibility glyph and collaborator count", async () => {
     await renderSidebar()
 
-    // Home: private lock; the viewer admins it, so the link goes to the
-    // access-settings page.
+    // Home: private lock; solo (collaborators null) — glyph only, no count,
+    // and no avatars anywhere in the rail (people live in the popover now).
     const home = groupHeader(HOME_REPO)
     expect(home?.querySelector('[data-testid="repo-private"]')).not.toBeNull()
+    expect(home?.querySelector('[data-slot="avatar"]')).toBeNull()
+    expect(home?.textContent).not.toContain("2")
+
+    // Shared: public globe plus the people count on the trigger.
+    const shared = groupHeader(SHARED_REPO)
+    expect(shared?.querySelector('[data-testid="repo-public"]')).not.toBeNull()
     expect(
-      home?.querySelector(
+      shared?.querySelector('[data-slot="popover-trigger"]')?.textContent,
+    ).toContain("2")
+  })
+
+  it("opens an access popover: visibility, people, GitHub link", async () => {
+    await renderSidebar()
+
+    // Home (admin, solo): slug, visibility in words, no list, settings link.
+    groupHeader(HOME_REPO)
+      ?.querySelector<HTMLButtonElement>('[data-slot="popover-trigger"]')
+      ?.click()
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="popover-content"]'),
+      ).not.toBeNull(),
+    )
+    const homePop = document.querySelector('[data-slot="popover-content"]')
+    expect(homePop?.textContent).toContain(HOME_REPO)
+    expect(homePop?.textContent).toContain("collaborators only")
+    expect(homePop?.querySelector("ul")).toBeNull()
+    expect(
+      homePop?.querySelector(
         `a[href="https://github.com/${HOME_REPO}/settings/access"]`,
       ),
     ).not.toBeNull()
-    // Solo repo (collaborators null) — no avatar stack.
-    expect(home?.querySelector('[data-slot="avatar-group"]')).toBeNull()
+    document.body.click() // dismiss
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="popover-content"]'),
+      ).toBeNull(),
+    )
 
-    // Shared: public globe, two collaborators, plain-repo link (no admin).
+    // Shared (reader): both collaborators listed readably, plain repo link.
+    groupHeader(SHARED_REPO)
+      ?.querySelector<HTMLButtonElement>('[data-slot="popover-trigger"]')
+      ?.click()
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="popover-content"]'),
+      ).not.toBeNull(),
+    )
+    const sharedPop = document.querySelector('[data-slot="popover-content"]')
+    expect(sharedPop?.textContent).toContain("alice")
+    expect(sharedPop?.textContent).toContain("bob")
+    expect(
+      sharedPop?.querySelector(`a[href="https://github.com/${SHARED_REPO}"]`),
+    ).not.toBeNull()
+  })
+
+  it("falls back to a bare GitHub link when metadata is fully degraded", async () => {
+    // Visibility unknown and collaborators unlistable — nothing to disclose,
+    // so no popover trigger; the plain jump to GitHub remains.
+    await renderSidebar({
+      sidebar: {
+        repos: [
+          base.sidebar.repos[0],
+          {
+            ...base.sidebar.repos[1],
+            private: null,
+            collaborators: null,
+            viewerIsAdmin: null,
+          },
+        ],
+        complete: true,
+      },
+    })
     const shared = groupHeader(SHARED_REPO)
-    expect(shared?.querySelector('[data-testid="repo-public"]')).not.toBeNull()
-    expect(shared?.querySelector('[data-slot="avatar-group"]')).not.toBeNull()
+    expect(shared?.querySelector('[data-slot="popover-trigger"]')).toBeNull()
     expect(
       shared?.querySelector(`a[href="https://github.com/${SHARED_REPO}"]`),
     ).not.toBeNull()
