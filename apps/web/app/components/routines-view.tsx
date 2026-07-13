@@ -215,6 +215,11 @@ export function RoutinesView({
     [navigate, repo.full, homeRepo],
   )
 
+  // The subtitle's {repo} slot renders as a link to the repo itself (git is
+  // visible, not hidden) — split out of the translated template so the link
+  // survives every locale's word order.
+  const [subtitleBefore, subtitleAfter] = t("routines.subtitle").split("{repo}")
+
   return (
     <>
       <NavShell
@@ -257,7 +262,16 @@ export function RoutinesView({
             {t("routines.title")}
           </h1>
           <p className="mt-0.5 text-sm text-ink-dim">
-            {t("routines.subtitle", { repo: repo.name })}
+            {subtitleBefore}
+            <a
+              href={`https://github.com/${repo.full}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
+            >
+              {repo.name}
+            </a>
+            {subtitleAfter}
           </p>
         </header>
 
@@ -387,11 +401,15 @@ export function RoutinesTable({
   const repoOwner = repo.full.split("/")[0]
 
   return (
-    <div className="overflow-x-auto">
+    // The table bleeds 12px past the content column (NavShell's -mx idiom)
+    // while the edge cells pad it back — text keeps the page's left rail, and
+    // the row wash gets breathing room around the leading state dot and the
+    // trailing ⋯ instead of cutting flush against them.
+    <div className="-mx-3 overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-left align-bottom font-mono text-xs text-ink-faint">
-            <th className="py-1.5 pr-3 font-normal">{t("routines.colName")}</th>
+            <th className="px-3 py-1.5 font-normal">{t("routines.colName")}</th>
             <th className="py-1.5 pr-3 font-normal">
               {t("routines.colState")}
             </th>
@@ -407,7 +425,7 @@ export function RoutinesTable({
             <th className="hidden py-1.5 pr-3 font-normal sm:table-cell">
               {t("routines.colBoards")}
             </th>
-            <th className="w-8 py-1.5">
+            <th className="w-11 py-1.5 pr-3">
               <span className="sr-only">{t("routines.colActions")}</span>
             </th>
           </tr>
@@ -501,7 +519,7 @@ function RoutineRow({
     <tr className="group border-b border-border-dim last:border-0 hover:bg-bg1/60">
       {/* Name — the leading state node sits on the baseline of the mono name,
           the two-second glance target; slug rides beneath in faint mono. */}
-      <td className="py-2 pr-3 align-top">
+      <td className="px-3 py-2 align-top">
         <div className="flex items-start gap-2">
           <StateDot status={status} className="mt-[0.4rem]" />
           <div className="min-w-0">
@@ -546,7 +564,7 @@ function RoutineRow({
         <BoardsCell boards={boards} repo={repo} homeRepo={homeRepo} t={t} />
       </td>
 
-      <td className="py-1.5 align-top">
+      <td className="py-1.5 pr-3 align-top">
         <RowMenu
           routine={routine}
           cloud={cloud}
