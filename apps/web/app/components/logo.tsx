@@ -70,8 +70,12 @@ export function Wordmark({
         className,
       )}
     >
-      <Logo live={live} className="size-[1.4em]" />
-      steward
+      {/* Optical nudge: "Steward" has ascenders (S, t, d) and no descenders, so
+          its visual mass rides above the line box's geometric center that
+          items-center aligns to. This drops the mark ~0.05em to sit its center
+          between the word's x-height and cap-height midlines. */}
+      <Logo live={live} className="size-[1.4em] translate-y-[0.05em]" />
+      Steward
     </span>
   )
 }

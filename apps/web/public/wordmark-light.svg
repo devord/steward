@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 64" width="300" height="64" role="img" aria-label="steward">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 64" width="300" height="64" role="img" aria-label="Steward">
   <rect width="64" height="64" rx="14" fill="#f9f5d7"/>
   <rect x="1" y="1" width="62" height="62" rx="13" fill="none" stroke="#bdae93" stroke-width="2" opacity="0.7"/>
   <rect x="12" y="12" width="17" height="17" rx="4" fill="#7c6f64"/>
   <rect x="12" y="35" width="17" height="17" rx="4" fill="#7c6f64"/>
   <rect x="35" y="12" width="17" height="40" rx="4" fill="#af3a03"/>
-  <text x="86" y="45" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="40" font-weight="600" letter-spacing="-1" fill="#3c3836">steward</text>
+  <text x="86" y="45" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="40" font-weight="600" letter-spacing="-1" fill="#3c3836">Steward</text>
 </svg>
