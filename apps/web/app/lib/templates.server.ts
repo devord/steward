@@ -71,6 +71,14 @@ export async function discoverTemplates(
   dataRepo: string,
 ): Promise<DiscoveredTemplate[]> {
   const own = await discoverFrom(token, dataRepo).catch(() => [])
+  const builtinIds = new Set(builtins.map((template) => template.id))
   const seen = new Set(own.map((template) => template.id))
-  return [...own, ...builtins.filter((template) => !seen.has(template.id))]
+  return [
+    // A repo template that shadows a built-in is flagged, not duplicated —
+    // the shadowed built-in stays out of the list (it can't be picked).
+    ...own.map((template) =>
+      builtinIds.has(template.id) ? { ...template, shadows: true } : template,
+    ),
+    ...builtins.filter((template) => !seen.has(template.id)),
+  ]
 }

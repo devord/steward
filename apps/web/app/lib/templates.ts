@@ -7,4 +7,10 @@ import type { RoutineTemplate } from "@steward/schema"
 export type TemplateSource = "builtin" | "repo"
 
 /** A routine template as the add-routine picker renders it. */
-export type DiscoveredTemplate = RoutineTemplate & { source: TemplateSource }
+export type DiscoveredTemplate = RoutineTemplate & {
+  source: TemplateSource
+  /** Repo template hiding a same-named built-in (ADR-0021 shadowing) — the
+      picker shows one card either way; the templates ledger names the
+      override, since nothing else does. */
+  shadows?: boolean
+}

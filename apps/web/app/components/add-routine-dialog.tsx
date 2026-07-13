@@ -149,6 +149,7 @@ export function AddRoutineDialog({
   editRoutine,
   onEdit,
   runner,
+  initialTemplate,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -167,6 +168,10 @@ export function AddRoutineDialog({
       cloud resource (ADR-0010/0016). Stamped on the routine and surfaced
       as a hint. */
   runner?: string
+  /** Add mode only: pre-select this template on open — the "new routine
+      from template" entry point (templates ledger, ADR-0029). Ignored in
+      edit mode; the picker stays fully editable after seeding. */
+  initialTemplate?: string | null
 }) {
   const t = useT()
   const isEdit = editRoutine != null
@@ -214,6 +219,26 @@ export function AddRoutineDialog({
   // re-run the prefill over in-progress edits.
   const templatesRef = useRef(templates)
   templatesRef.current = templates
+  const existingSlugsRef = useRef(existingSlugs)
+  existingSlugsRef.current = existingSlugs
+
+  // Opening in add mode from a "new routine from template" entry point seeds
+  // the picker exactly as a click on its card would (name, slug, suggested
+  // schedule, connectors) — via refs and stable deps so it seeds once per
+  // open and never clobbers in-progress edits, same as the edit seed below.
+  useEffect(() => {
+    if (!open || editRoutine || initialTemplate == null) return
+    const entry = templatesRef.current.find((e) => e.id === initialTemplate)
+    if (!entry) return
+    setTemplateId(entry.id)
+    if (entry.widget.schedule) setSchedule(entry.widget.schedule)
+    const suggested = entry.widget.connectors ?? []
+    if (suggested.length > 0) {
+      setConnectors((current) => [...new Set([...current, ...suggested])])
+    }
+    setName(entry.name)
+    setSlug(uniqueSlug(kebab(entry.name), existingSlugsRef.current))
+  }, [open, editRoutine, initialTemplate])
 
   // Opening in edit mode seeds the fields from the routine and jumps to the
   // configure step. Keyed on the routine (stable for the life of an edit
