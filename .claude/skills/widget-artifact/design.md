@@ -274,6 +274,42 @@ somewhere on the row (`CI ✓`, `unreachable`).
 }
 ```
 
+### Icon
+
+Pictograms are inline lucide SVGs — the app chrome's icon set (paste the
+paths from lucide.dev): 12px in ledger keys, `stroke="currentColor"` so
+the key's semantic color carries through, stroke-width 2, round caps,
+`aria-hidden="true"`. An icon never replaces text — the section label or
+row body carries the meaning. No dingbat glyphs (↻ ⟳ ⚠ ➜): they render
+soft and font-dependent, never sharp.
+
+```html
+<span class="key"
+  ><svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="m15 14 5-5-5-5" />
+    <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13" /></svg
+></span>
+```
+
+```css
+.key svg {
+  width: 12px;
+  height: 12px;
+  vertical-align: -1.5px;
+}
+```
+
+(That path set is lucide `redo-2` — the daily-plan sample's carried-over
+key.)
+
 ### Meter
 
 Progress as a segmented bar (done/total), 4px tall. Use for genuinely
@@ -352,13 +388,19 @@ One block list, three renderings (see `docs/samples/daily-plan.html`):
   segment per block at `color-mix(tone 65%)` (free stays `bg3`, the
   unfilled track), a 2px orange tick at now. Script-built from the list;
   the shape of the day at glance size.
-- **Time grid (page tier only)** — 26px per 30-minute slot: a 12px mono
-  hour ruler with half-hour ticks, blocks spanning `--s` grid rows with
-  a `color-mix(tone 10%)` wash (free slots stay unfilled so the hour
-  lines show through), optional 12px mono `goal:` notes on ≥1h blocks,
-  and an absolute now line across the grid with a mono time chip. Tiles
-  never render the grid — the ledger plus strip is the glance; the grid
-  is the plan.
+- **Time grid (page tier only)** — the paper planner, 26px per
+  30-minute slot. A script-built 12px mono ruler labels every slot from
+  day start to day end (hours `08:00` ink-dim, half-hours a quiet `:30`
+  ink-faint); an hour rule and a fainter half-hour rule run across the
+  day. A block is a drawn box spanning `--s` grid rows — 1px
+  `color-mix(tone 45%)` border over a `color-mix(tone 12%)` wash, no
+  time key inside the box (the ruler carries the times) — free slots
+  stay unboxed so the ruled paper shows through. `goal:` notes render
+  inline on ≥1h blocks; every block carries a `title` tooltip with its
+  full range, label, and note, so nothing truncated is lost. The now
+  line crosses the grid at the current time, its mono chip sitting in
+  the ruler gutter, calendar-style. Tiles never render the grid — the
+  ledger plus strip is the glance; the grid is the plan.
 
 A `.totals` line (12px mono, tone dots) states the process metric on
 wide tiers: `4.5h deep · 1h meetings · 3h shallow · 30m free`.
@@ -368,11 +410,14 @@ wide tiers: `4.5h deep · 1h meetings · 3h shallow · 30m free`.
 For today-scoped time lists: dim rows whose time has passed
 (`color: var(--color-ink-faint)` on key and body) and insert a thin
 accent rule with a mono `HH:MM now` label between past and future. Gate
-on the generated-at date still being today. On the board, tiles are a
-"what's next" glance: collapse past rows into the marker's `N earlier`
-counter (CSS keyed on `html[data-steward-tile]`), while the raw page and
-full view keep every row. See the script in
-`docs/samples/daily-plan.html`.
+on the generated-at date still being today. Keep it live: re-render the
+whole now state (dimming, marker, grid now line, strip tick) on a
+30-second timer plus `visibilitychange` and `resize`, so an open page
+tracks the day without a refresh — and clear it once the date rolls past
+the plan's. On the board, tiles are a "what's next" glance: collapse
+past rows into the marker's `N earlier` counter (CSS keyed on
+`html[data-steward-tile]`), while the raw page and full view keep every
+row. See the script in `docs/samples/daily-plan.html`.
 
 ```css
 .now {
