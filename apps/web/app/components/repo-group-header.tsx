@@ -3,7 +3,7 @@ import { useFetcher } from "react-router"
 
 import { REPO_NAME_MAX } from "@steward/schema"
 
-import { ExternalLink, Globe, Lock } from "lucide-react"
+import { ExternalLink, Globe, Lock, MoreHorizontal } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
 import { Button } from "~/components/ui/button"
@@ -27,23 +27,29 @@ const MAX_LISTED = 12
 /**
  * A rail group's identity row (ADR-0023): the repo's display name — its
  * data/repo.yaml `name`, else "Personal" / the short repo name (ADR-0026) —
- * in the group-heading voice, and — when there is anything to disclose — a
- * quiet visibility glyph plus collaborator count that opens an access
- * popover: the full repo slug, visibility in words, who has access at a
- * readable size, and a jump to GitHub — access settings for admins, the repo
- * page otherwise. For sharing, indicators and a link out only: GitHub's own
- * screen is the source of truth. The display name is the one thing managed
- * here, because it is ours — a commit to the repo's own config, offered only
- * to viewers who can push.
+ * in the group-heading voice, then two distinct trailing marks. A **quiet
+ * visibility glyph plus collaborator count** is status, not a control: it
+ * reads at a glance and never acts (a lock that secretly opened a menu was
+ * the affordance lying about its job). Beside it, a **`⋯` control** opens the
+ * access popover — the same status-vs-actions split, and the same `⋯` glyph,
+ * the board rows already carry one line down, so the rail teaches the idiom
+ * once. The popover holds the full repo slug, visibility in words, who has
+ * access at a readable size, and a jump to GitHub — access settings for
+ * admins, the repo page otherwise. For sharing, indicators and a link out
+ * only: GitHub's own screen is the source of truth. The display name is the
+ * one thing managed here, because it is ours — a commit to the repo's own
+ * config, offered only to viewers who can push.
  *
- * The rail itself stays two glyphs wide at most — the name owns the row; the
- * people moved into the popover where 20px avatars and logins actually read.
+ * The rail itself stays a status cluster plus one `⋯` wide — the name owns
+ * the row; the people moved into the popover where 20px avatars and logins
+ * actually read.
  *
  * Everything degrades to less, quietly: unlistable collaborators (plain
  * readers get a 403) drop the count and the popover's list, unknown
  * visibility drops the glyph and the visibility line. With nothing to
- * disclose at all, the popover gives way to the bare hover-revealed GitHub
- * link — the home group usually reads as the plain heading it always was.
+ * disclose at all (no status, no `⋯`), the row gives way to the bare
+ * hover-revealed GitHub link — the home group usually reads as the plain
+ * heading it always was.
  */
 export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
   const t = useT()
@@ -74,47 +80,70 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
         {group.displayName ??
           (group.isHome ? t("switcher.personal") : group.name)}
       </span>
-      {/* Visibility must survive without the glyph for assistive tech. */}
-      {group.private != null && (
-        <span className="sr-only">
-          {group.private ? t("repo.private") : t("repo.public")}
-        </span>
-      )}
 
-      <span className="ml-auto flex shrink-0 items-center">
+      <span className="ml-auto flex shrink-0 items-center gap-1">
+        {/* Status, not a control: visibility and how many can see it, resting
+            quiet. It reads at a glance and never acts — the actions live under
+            the ⋯ beside it. Screen readers get the words; the glyph is the
+            at-a-glance shorthand. */}
+        {(group.private != null || shared) && (
+          <span
+            data-testid="repo-status"
+            className="flex items-center gap-1 text-ink-faint"
+          >
+            {group.private != null &&
+              (group.private ? (
+                <Lock
+                  aria-hidden
+                  className="size-3 shrink-0"
+                  data-testid="repo-private"
+                />
+              ) : (
+                <Globe
+                  aria-hidden
+                  className="size-3 shrink-0"
+                  data-testid="repo-public"
+                />
+              ))}
+            {shared && (
+              // Mono digits sit ~0.75px above the line box's center (the
+              // baseline lands at (ascent−descent)/2, and digits have no
+              // descender), so flexbox centering leaves the count riding
+              // high against the glyph. Nudge it onto the optical center.
+              <span className="translate-y-[0.75px] font-mono text-xs">
+                {collaborators.length}
+              </span>
+            )}
+            <span className="sr-only">
+              {group.private != null &&
+                (group.private ? t("repo.private") : t("repo.public"))}
+              {shared &&
+                ` — ${t("repo.collaborators", {
+                  n: collaborators.length,
+                  repo: group.repo,
+                })}`}
+            </span>
+          </span>
+        )}
+
         {group.private != null || shared || group.viewerCanPush ? (
           <Popover>
+            {/* The board rows' ⋯ idiom (NavItem), shrunk to the heading's
+                20px: same glyph, same faint-at-rest → brighten-as-the-pointer-
+                nears → fill-when-open behavior. A real control, so the panel it
+                opens (access, name, GitHub) is findable — where the lock alone
+                only ever said "private". */}
             <PopoverTrigger
-              aria-label={t("repo.access", { repo: group.repo })}
-              className={cn(
-                "flex h-5 cursor-pointer items-center gap-1 rounded-sm px-1 text-ink-faint transition-colors outline-none",
-                "hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
-                "aria-expanded:bg-sidebar-accent aria-expanded:text-foreground",
-              )}
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={t("repo.access", { repo: group.repo })}
+                  className="size-5 text-ink-faint transition-colors group-hover/repo:text-ink-dim hover:bg-sidebar-accent hover:text-foreground focus-visible:text-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-foreground"
+                />
+              }
             >
-              {group.private != null &&
-                (group.private ? (
-                  <Lock
-                    aria-hidden
-                    className="size-3 shrink-0"
-                    data-testid="repo-private"
-                  />
-                ) : (
-                  <Globe
-                    aria-hidden
-                    className="size-3 shrink-0"
-                    data-testid="repo-public"
-                  />
-                ))}
-              {shared && (
-                // Mono digits sit ~0.75px above the line box's center (the
-                // baseline lands at (ascent−descent)/2, and digits have no
-                // descender), so flexbox centering leaves the count riding
-                // high against the glyph. Nudge it onto the optical center.
-                <span className="translate-y-[0.75px] font-mono text-xs">
-                  {collaborators.length}
-                </span>
-              )}
+              <MoreHorizontal />
             </PopoverTrigger>
             <PopoverContent
               align="end"

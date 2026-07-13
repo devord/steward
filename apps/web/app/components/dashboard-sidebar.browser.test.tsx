@@ -235,12 +235,12 @@ describe("DashboardSidebar repo groups", () => {
     expect(home?.querySelector('[data-slot="avatar"]')).toBeNull()
     expect(home?.textContent).not.toContain("2")
 
-    // Shared: public globe plus the people count on the trigger.
+    // Shared: public globe plus the people count — both in the status
+    // cluster, which is not the control (the ⋯ popover-trigger sits beside it).
     const shared = groupHeader(SHARED_REPO)
-    expect(shared?.querySelector('[data-testid="repo-public"]')).not.toBeNull()
-    expect(
-      shared?.querySelector('[data-slot="popover-trigger"]')?.textContent,
-    ).toContain("2")
+    const status = shared?.querySelector('[data-testid="repo-status"]')
+    expect(status?.querySelector('[data-testid="repo-public"]')).not.toBeNull()
+    expect(status?.textContent).toContain("2")
   })
 
   it("opens an access popover: visibility, people, GitHub link", async () => {
