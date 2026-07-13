@@ -75,9 +75,15 @@ whichever side drifted:
   --color-purple: #d3869b;
   --color-red: #fb4934;
   --font-sans: system-ui, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
 }
 ```
+
+The mono stack leads with **"Geist Mono Variable"** — the chrome's own
+mono — but the artifact never loads a webfont itself (rule 1 stands): the
+board injects the face into the iframe at render time (ADR-0031), so on
+the dashboard the artifact matches the chrome, and the raw page falls back
+to the system mono after the comma.
 
 Conventions on top: page background `--color-bg1` (matches the widget
 card), body/data text `--color-ink` at **14px** (the readable floor — the

@@ -69,8 +69,12 @@ tokens only; a literal hex breaks every non-default theme.
 ## Typography
 
 - Sans: Geist Variable (bundled via fontsource) — UI copy.
-- Mono: `ui-monospace, "SF Mono", Menlo` — identifiers (slugs, repo names,
-  cron expressions), timestamps, state labels, the wordmark.
+- Mono: Geist Mono Variable (bundled via fontsource; system mono fallback)
+  — identifiers (slugs, repo names, cron expressions), timestamps, state
+  labels, the wordmark. The mono is the brand voice — the wordmark and
+  widget titles set in it are the most visible type in the app — so it is
+  a designed face from the same family as the sans, never the viewer's
+  terminal default.
 - Rule of thumb: if git or the schema would care about the string, it's
   mono. The scale is set at the foundation by two Tailwind size tokens in
   `app.css` (`--text-sm`/`--text-xs`), one step above Tailwind's defaults:
@@ -89,7 +93,10 @@ tokens only; a literal hex breaks every non-default theme.
 - Artifacts set their own type, one register bolder than chrome since they
   are the content that glows: body/data ≥14px, section labels ≥12px, nothing
   below 12px (the contract lives in `docs/widget-standard.md` §6 and the
-  `widget-artifact` skill).
+  `widget-artifact` skill). Their mono is the chrome's own: the frame
+  injects Geist Mono into every artifact iframe the way it injects the
+  theme, and the artifact's `--font-mono` leads with the family name
+  (ADR-0031; the raw page falls back to system mono).
 
 ## Mark
 
@@ -155,11 +162,16 @@ delegate is not faithful. Static SVGs carry explicit `width`/`height`
   These are a document context (a light or dark page), so they keep the
   theme pair; wings in the accent, knot in ink, like everywhere. Text
   baseline `y=46.5` centers the word's cap band on the tile center — the
-  measured optical alignment of the lockup.
+  measured optical alignment of the lockup. The word is **outlined paths**
+  (Geist Mono 600, 40px, tracking −1), not a `<text>` node — GitHub's image
+  context can't load webfonts, so live text would render in the viewer's
+  system mono instead of the brand face.
 - `apps/web/public/og.png` — 1200×630 (@2x) social card in the light
   (gruvbox-light) palette; OG/Twitter meta lives in the home route's
   `meta`. One fixed image for every viewer — OG previews can't theme-switch,
-  so it stays light to match the default.
+  so it stays light to match the default. Source is `scripts/og-card.html`
+  (fonts resolve from the installed fontsource packages; the render command
+  is in its header comment).
 
 The wordmark text is `foreground` ink, mono, capitalized **`Steward`** —
 the mark's wings carry the orange. (The logotype was lowercase pre-rename;

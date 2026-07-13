@@ -1,0 +1,239 @@
+<!doctype html>
+<!-- Source for apps/web/public/og.png — the 1200x630 (@2x) social card
+     (gruvbox-light; see DESIGN.md "Mark"). Fonts resolve from the installed
+     fontsource packages, the lockup from public/wordmark-light.svg. Render:
+
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
+    --disable-gpu --hide-scrollbars --force-device-scale-factor=2 \
+    --window-size=1200,630 --virtual-time-budget=8000 \
+    --screenshot=apps/web/public/og.png "file://$PWD/scripts/og-card.html"
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face {
+        font-family: "Geist Mono Variable";
+        font-weight: 100 900;
+        font-display: block;
+        src: url("../apps/web/node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2")
+          format("woff2");
+      }
+      @font-face {
+        font-family: "Geist Variable";
+        font-weight: 100 900;
+        font-display: block;
+        src: url("../apps/web/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2")
+          format("woff2");
+      }
+      * {
+        margin: 0;
+        box-sizing: border-box;
+      }
+      :root {
+        --bg: #f2e5bc;
+        --bg1: #f9f5d7;
+        --border: #bdae93;
+        --border-dim: #d5c4a1;
+        --ink: #3c3836;
+        --ink-dim: #665c54;
+        --ink-faint: #7c6f64;
+        --accent: #af3a03;
+        --yellow: #b57614;
+      }
+      body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Geist Variable", sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 56px;
+        padding: 0 60px;
+        background-image: radial-gradient(
+          color-mix(in oklab, var(--ink) 8%, transparent) 1px,
+          transparent 1px
+        );
+        background-size: 28px 28px;
+      }
+      .left {
+        width: 560px;
+        flex: none;
+      }
+      .left img {
+        width: 512px;
+        display: block;
+        margin-bottom: 48px;
+      }
+      .tag {
+        font-size: 40px;
+        line-height: 1.28;
+        color: var(--ink);
+        letter-spacing: -0.01em;
+      }
+      .tag b {
+        font-weight: 700;
+      }
+      .served {
+        font-family: "Geist Mono Variable", monospace;
+        font-size: 27px;
+        color: var(--accent);
+        margin-top: 40px;
+      }
+      .right {
+        flex: 1;
+        display: grid;
+        gap: 24px;
+      }
+      .card {
+        background: var(--bg1);
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 24px;
+        border-bottom: 1.5px solid var(--border-dim);
+      }
+      .head .t {
+        font-size: 25px;
+        font-weight: 650;
+        flex: 1;
+      }
+      .mono {
+        font-family: "Geist Mono Variable", monospace;
+      }
+      .ts {
+        font-size: 22px;
+        color: var(--ink-faint);
+      }
+      .pill {
+        font-family: "Geist Mono Variable", monospace;
+        font-size: 21px;
+        color: var(--yellow);
+        border: 1.5px solid color-mix(in oklab, var(--yellow) 45%, transparent);
+        border-radius: 999px;
+        padding: 2px 14px;
+      }
+      .bd {
+        padding: 14px 24px 18px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 23px;
+        padding: 5px 0;
+        color: var(--ink);
+      }
+      .row.hdr {
+        justify-content: space-between;
+        font-family: "Geist Mono Variable", monospace;
+        color: var(--ink-dim);
+      }
+      .done {
+        text-decoration: line-through;
+        color: var(--ink-dim);
+      }
+      .chk {
+        color: #79740e;
+        font-size: 22px;
+        width: 26px;
+      }
+      .o {
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--ink-faint);
+        border-radius: 50%;
+        margin: 0 4px 0 2px;
+        flex: none;
+      }
+      .bar {
+        flex: 1;
+        height: 12px;
+        border-radius: 6px;
+        background: color-mix(in oklab, var(--ink) 16%, transparent);
+        position: relative;
+        margin: 0 18px 0 26px;
+      }
+      .bar i {
+        position: absolute;
+        inset: 0 auto 0 0;
+        border-radius: 6px;
+        background: var(--ink-dim);
+        display: block;
+      }
+      .pr {
+        display: flex;
+        align-items: center;
+        font-family: "Geist Mono Variable", monospace;
+        font-size: 23px;
+        padding: 6px 0;
+      }
+      .pr .n {
+        width: 120px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="left">
+      <img src="../apps/web/public/wordmark-light.svg" alt="" />
+      <div class="tag">
+        A dashboard of living widgets — <b>reports that update themselves.</b>
+      </div>
+      <div class="served">Your results, served.</div>
+    </div>
+    <div class="right">
+      <div class="card">
+        <div class="head">
+          <span class="t">Daily plan</span
+          ><span class="mono ts">Ran 2h ago</span>
+        </div>
+        <div class="bd">
+          <div class="row hdr"><span>Today</span><span>Jul 13</span></div>
+          <div class="row">
+            <span class="chk">✓</span
+            ><span class="done">Ship M1 acceptance</span>
+          </div>
+          <div class="row">
+            <span class="chk">✓</span><span class="done">Review sync PR</span>
+          </div>
+          <div class="row">
+            <span class="o"></span><span>Draft ADR-0026</span>
+          </div>
+          <div class="row">
+            <span class="o"></span><span>Triage the inbox</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="head">
+          <span class="t">Repo pulse</span><span class="pill">Stale</span
+          ><span class="mono ts">Ran 4d ago</span>
+        </div>
+        <div class="bd">
+          <div class="row hdr" style="justify-content: flex-start">
+            Open PRs
+          </div>
+          <div class="pr">
+            <span class="n">steward</span
+            ><span class="bar"><i style="width: 78%"></i></span>4
+          </div>
+          <div class="pr">
+            <span class="n">chat</span
+            ><span class="bar"><i style="width: 44%"></i></span>2
+          </div>
+          <div class="pr">
+            <span class="n">kb</span
+            ><span class="bar"><i style="width: 20%"></i></span>1
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -26,12 +26,20 @@ import {
   type WidgetStatus,
   widgetStatus,
 } from "../lib/routine-status.ts"
-import { frameArtifactHtml } from "../lib/theme.ts"
+import { artifactFontStyle, frameArtifactHtml } from "../lib/theme.ts"
 import { agoParts } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
 import type { DragKind, GridDrag } from "../lib/use-grid-drag.ts"
 import type { RunResult } from "../routes/run.ts"
 import { WidgetLightbox } from "./widget-lightbox.tsx"
+
+// The chrome mono, inlined for the sandboxed iframes (ADR-0031): the frame
+// has an opaque origin, so a URL-based @font-face would be blocked as a
+// cross-origin fetch — the data URI ships the face with the document. Latin
+// subset only (~30 kB base64, in-memory per frame, never published).
+import geistMonoWoff2 from "@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2?inline"
+
+const ARTIFACT_FONT_STYLE = artifactFontStyle(geistMonoWoff2)
 
 export interface WidgetCardProps {
   widget: Widget
@@ -113,14 +121,19 @@ export function WidgetCard({
   const [expanded, setExpanded] = useState(false)
   const { position, size } = widget
   const html = useMemo(
-    () => (artifact?.html ? frameArtifactHtml(artifact.html, theme) : null),
+    () =>
+      artifact?.html
+        ? frameArtifactHtml(artifact.html, theme, "tile", ARTIFACT_FONT_STYLE)
+        : null,
     [artifact?.html, theme],
   )
   // The lightbox is the full-data surface (ADR-0019): same artifact, framed
   // without the tile overflow guard so every row is reachable by scrolling.
   const fullHtml = useMemo(
     () =>
-      artifact?.html ? frameArtifactHtml(artifact.html, theme, "full") : null,
+      artifact?.html
+        ? frameArtifactHtml(artifact.html, theme, "full", ARTIFACT_FONT_STYLE)
+        : null,
     [artifact?.html, theme],
   )
   const lastRunAt = artifact?.lastRunAt ?? null

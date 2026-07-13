@@ -19,11 +19,25 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import {
+  artifactFontStyle,
   frameArtifactHtml,
   themeNames,
   themes,
   type ThemeName,
 } from "../apps/web/app/lib/theme.ts"
+
+// The board injects the chrome mono into every frame (ADR-0031); the sheet
+// must too, or its tiles lie about the type. Plain Node has no Vite ?inline,
+// so read the woff2 from the web app's own dependency.
+const ARTIFACT_FONT_STYLE = artifactFontStyle(
+  "data:font/woff2;base64," +
+    readFileSync(
+      new URL(
+        "../apps/web/node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2",
+        import.meta.url,
+      ),
+    ).toString("base64"),
+)
 
 const CHROME =
   process.env.CHROME_BIN ??
@@ -79,7 +93,7 @@ mkdirSync(tmpDir, { recursive: true })
 for (const themeName of sheetThemes) {
   const t = themes[themeName]
   const cells = SIZES.map(({ label, w, h, view }) => {
-    const framed = frameArtifactHtml(html, themeName, view)
+    const framed = frameArtifactHtml(html, themeName, view, ARTIFACT_FONT_STYLE)
     return (
       `<div><p>${label} — ${w}×${h}</p>` +
       `<iframe sandbox="allow-scripts" srcdoc="${escAttr(framed)}"` +
