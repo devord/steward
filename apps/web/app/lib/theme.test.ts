@@ -174,11 +174,18 @@ describe("every theme clears the contrast floors", () => {
       expect(contrast(t.inkFaint, t.bg)).toBeGreaterThanOrEqual(3)
       expect(contrast(t.inkFaint, t.bg1)).toBeGreaterThanOrEqual(3)
     })
-    it(`${name}: primary button text ≥ 4.4:1, focus ring ≥ 3:1`, () => {
-      // 4.4, not 4.5: Catppuccin Latte's mauve caps at ≈4.48:1 against any
-      // palette-true text tone — accepted residual, see ADR-0009.
-      expect(contrast(t.bg, t.accent)).toBeGreaterThanOrEqual(4.4)
+    it(`${name}: primary button label ≥ 4.5:1, fill and ring ≥ 3:1`, () => {
+      // The button label is bg1 (--primary-foreground) — each palette's
+      // brightest/most-neutral surface, which clears full AA on every
+      // accent; the fill itself must stay distinct against the page.
+      expect(contrast(t.bg1, t.accent)).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(t.accent, t.bg)).toBeGreaterThanOrEqual(3)
       expect(contrast(t.accentDeep, t.bg)).toBeGreaterThanOrEqual(3)
+    })
+    it(`${name}: cards separate from the canvas`, () => {
+      // The surface hierarchy is the product ("widgets glow, chrome
+      // recedes"): a card must sit visibly off the page in every theme.
+      expect(contrast(t.bg, t.bg1)).toBeGreaterThanOrEqual(1.05)
     })
   }
 })

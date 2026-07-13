@@ -79,15 +79,21 @@ export interface Theme {
  * Values are transcribed from each palette's upstream definition (gruvbox
  * hard variants, Catppuccin mocha/latte, Rosé Pine main/dawn,
  * tokyonight.nvim night style + the Tokyo Night Light VS Code palette).
+ * Light themes spread their surface roles deliberately (still transcribed
+ * values, roles repointed within the palette's own ramp): the canvas takes
+ * a mid neutral one step deeper and the cards keep the palette's lightest
+ * tone, so widgets read as the elevated surface ("widgets glow, chrome
+ * recedes") instead of the whole page collapsing into one near-white plane.
+ * Dark themes get the same hierarchy for free from their upstream bg ramps.
  * Documented residuals:
  *  - Rosé Pine has no green, so `green` reuses foam;
  *  - where a palette's own dim/faint ink misses AA on its canvas, the role
  *    is repointed to the nearest AA-clearing tone from the same palette
- *    family (latte ink-dim → subtext1, dawn ink-dim → the family's muted,
- *    tokyo-night ink-faint → dark5);
- *  - Tokyo Night Light ships no AA-clearing mid gray at all, so its
- *    ink-dim collapses to the body ink and hierarchy is carried by weight
- *    and size — theme.test.ts enforces the ratios for every theme.
+ *    family (latte ink-dim → subtext1, tokyo-night ink-faint → dark5);
+ *  - Tokyo Night Light ships no AA-clearing mid gray at all, and Rosé Pine
+ *    Dawn's muted inks miss AA on its overlay canvas, so their ink-dim
+ *    collapses to the body ink and hierarchy is carried by weight and
+ *    size — theme.test.ts enforces the ratios for every theme.
  */
 export const themes = {
   "gruvbox-dark": {
@@ -117,10 +123,12 @@ export const themes = {
     label: "Gruvbox Light",
     mode: "light",
     tokens: {
-      bg: "#f9f5d7",
-      bg1: "#fbf1c7",
-      bg2: "#f2e5bc",
-      bg3: "#ebdbb2",
+      // Canvas bg0_s, cards bg0_h: the board recedes, the widgets keep the
+      // terminal's own paper tone and glow against it.
+      bg: "#f2e5bc",
+      bg1: "#f9f5d7",
+      bg2: "#ebdbb2",
+      bg3: "#d5c4a1",
       border: "#bdae93",
       borderDim: "#d5c4a1",
       ink: "#3c3836",
@@ -163,7 +171,9 @@ export const themes = {
     label: "Catppuccin Latte",
     mode: "light",
     tokens: {
-      bg: "#e6e9ef",
+      // Canvas crust, cards base, wells mantle — latte's own three-step
+      // surface ramp, spread so the cards actually lift off the page.
+      bg: "#dce0e8",
       bg1: "#eff1f5",
       bg2: "#e6e9ef",
       bg3: "#ccd0da",
@@ -209,14 +219,17 @@ export const themes = {
     label: "Rosé Pine Dawn",
     mode: "light",
     tokens: {
-      bg: "#faf4ed",
+      // Canvas overlay, cards surface; wells reuse the canvas tone (dawn
+      // has no fourth light neutral). Ink-dim collapses to the body ink —
+      // dawn's muted inks miss AA on the overlay canvas (see residuals).
+      bg: "#f2e9e1",
       bg1: "#fffaf3",
       bg2: "#f2e9e1",
       bg3: "#dfdad9",
       border: "#cecacd",
       borderDim: "#dfdad9",
       ink: "#575279",
-      inkDim: "#6e6a86",
+      inkDim: "#575279",
       inkFaint: "#797593",
       accent: "#286983",
       accentDeep: "#286983",

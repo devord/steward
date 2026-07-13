@@ -98,7 +98,10 @@
   --popover: var(--palette-bg1);
   --popover-foreground: var(--palette-ink);
   --primary: var(--palette-accent);
-  --primary-foreground: var(--palette-bg);
+  /* Button label = the card tone, not the page: bg1 is each palette's
+     brightest (light) / most-neutral (dark) surface, so the label clears
+     4.5:1 on every accent — the page bg alone dips below on latte. */
+  --primary-foreground: var(--palette-bg1);
   --secondary: var(--palette-bg3);
   --secondary-foreground: var(--palette-ink);
   --muted: var(--palette-bg2);
@@ -115,10 +118,13 @@
   --chart-4: var(--palette-aqua);
   --chart-5: var(--palette-blue);
   --radius: 0.5rem;
-  --sidebar: var(--palette-bg1);
+  /* The rail sits on the canvas plane, not the card surface: chrome is one
+     flat plane (page, rail, header) split by hairlines, and the widget
+     cards are the only elevated surface — "widgets glow, chrome recedes". */
+  --sidebar: var(--palette-bg);
   --sidebar-foreground: var(--palette-ink);
   --sidebar-primary: var(--palette-accent);
-  --sidebar-primary-foreground: var(--palette-bg);
+  --sidebar-primary-foreground: var(--palette-bg1);
   --sidebar-accent: var(--palette-bg3);
   --sidebar-accent-foreground: var(--palette-ink);
   --sidebar-border: var(--palette-border-dim);
@@ -142,9 +148,16 @@
     padding-right: env(safe-area-inset-right);
   }
 
+  /* Terminal-style selection: a translucent accent wash under unchanged
+     ink. A solid accent fill with inverted text dropped selected text
+     below AA on the light palettes; the wash keeps body contrast intact
+     in every theme. */
   ::selection {
-    background-color: var(--palette-accent-deep);
-    color: var(--palette-bg);
+    background-color: color-mix(
+      in oklab,
+      var(--palette-accent) 30%,
+      transparent
+    );
   }
 }
 

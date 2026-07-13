@@ -623,43 +623,30 @@ function StateLabel({
       <span className="inline-block h-3 w-16 animate-pulse rounded-full bg-bg3" />
     )
   }
+  // The dot beside the label is the tone carrier; the label itself stays in
+  // ink so 13px state text clears AA on every palette (yellow/red/accent
+  // text don't, on the light themes). Attention states lift to full ink +
+  // medium — legible urgency without leaning on color.
   const strong = "font-mono text-xs text-ink-dim"
   const faint = "font-mono text-xs text-ink-faint"
+  const attention = "font-mono text-xs font-medium text-ink"
   switch (status.kind) {
     case "live":
       return status.stale ? (
-        <span className="font-mono text-xs text-yellow">
-          {t("widget.stale")}
-        </span>
+        <span className={attention}>{t("widget.stale")}</span>
       ) : (
         <span className={strong}>{ranLabel(lastRunAt, now, t)}</span>
       )
     case "running":
-      return (
-        <span className="font-mono text-xs text-primary">
-          {t("widget.running")}
-        </span>
-      )
+      return <span className={attention}>{t("widget.running")}</span>
     case "draft":
-      return (
-        <span className="font-mono text-xs text-primary">
-          {t("routines.stateDraft")}
-        </span>
-      )
+      return <span className={attention}>{t("routines.stateDraft")}</span>
     case "disabled":
       return <span className={faint}>{t("routines.stateDisabled")}</span>
     case "unreachable":
-      return (
-        <span className="font-mono text-xs text-red">
-          {t("routines.stateUnreachable")}
-        </span>
-      )
+      return <span className={attention}>{t("routines.stateUnreachable")}</span>
     case "needs-trigger":
-      return (
-        <span className="font-mono text-xs text-yellow">
-          {t("routines.stateNeedsSetup")}
-        </span>
-      )
+      return <span className={attention}>{t("routines.stateNeedsSetup")}</span>
     default:
       return <span className={faint}>{t("routines.stateNever")}</span>
   }
