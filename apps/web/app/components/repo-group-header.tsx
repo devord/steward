@@ -69,7 +69,11 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
 
   return (
     <div
-      className="group/repo mb-1 flex h-5 items-center gap-1.5 pr-1 pl-2.5"
+      // pr-1.5, not pr-1: the ⋯ here is size-5 while the board rows' is
+      // size-6 with right-1 — the extra 2px puts both glyphs' optical
+      // centers on one column (the buttons are invisible at rest, so the
+      // glyph, not the box edge, is what must align).
+      className="group/repo mb-1 flex h-5 items-center gap-1.5 pr-1.5 pl-2.5"
       title={group.repo}
     >
       {/* ink-dim, not ink-faint: with N repos the group heading is the rail's
