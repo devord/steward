@@ -22,7 +22,8 @@ import { useT } from "../lib/i18n.tsx"
 import { getAuth } from "../lib/session.server.ts"
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const description = "A dashboard of living widgets, kept fresh by routines."
+  const description =
+    "A dashboard of living widgets — routines do the work and report back."
   return [
     { title: "Steward" },
     { name: "description", content: description },
@@ -99,7 +100,7 @@ function Landing() {
         {/* Left: the pitch and the one action. */}
         <div className="max-w-md">
           <h1>
-            <Wordmark live className="text-4xl sm:text-5xl" />
+            <Wordmark live display className="text-4xl sm:text-5xl" />
           </h1>
           <p className="mt-7 text-lg leading-snug text-pretty text-foreground">
             {t("landing.tagline")}

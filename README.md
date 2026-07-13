@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">
-  A dashboard of living widgets — each one an HTML report that a scheduled
-  Claude Code routine regenerates and publishes.<br />
+  A dashboard of living widgets — scheduled Claude Code routines do the
+  work for you and report back.<br />
   Daily plans, status reports, time tracking, billing: reports that update
   themselves, never written by hand again.
 </p>

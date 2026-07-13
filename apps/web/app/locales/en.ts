@@ -7,8 +7,8 @@
  */
 export const en = {
   "landing.tagline":
-    "A dashboard of living widgets — each one an HTML report that a scheduled routine regenerates.",
-  "landing.sub": "Reports that update themselves.",
+    "A dashboard of living widgets — routines do the work for you and report back here.",
+  "landing.sub": "Your results, served.",
   "landing.signIn": "Sign in with GitHub",
   "landing.privacy":
     "Everything lives in a private GitHub repo you own — the app stores nothing.",

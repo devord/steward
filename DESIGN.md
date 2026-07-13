@@ -81,11 +81,16 @@ non-default theme.
 
 ## Mark
 
-The logo is a mini dashboard grid on a gruvbox tile: two widgets
-(`ink-dim`, legible not faint) and one tall orange block — the wordmark's
-trailing cursor (`steward▮`) placed as the last widget on the board. One
-drawing, several mirrors that must stay geometrically in sync; the fills
-differ by surface (context below), but never the geometry.
+The logo is **the bow tie**: the steward's uniform in three shapes — two
+wings in the neutral ink role and the orange knot at center. The knot is
+the same block that ends the wordmark (the steward's cursor, dressed for
+service), so the mark and the logotype are one system. Symmetric and
+solid, it holds one geometry at every size, from the 16px favicon to the
+landing hero — no small-size cut needed. Several mirrors must stay
+geometrically in sync; the fills differ by surface (context below), but
+never the geometry. The only size-conditional element is the tile's frame
+stroke: display contexts (hero lockup, wordmark SVGs, og card) keep it,
+small chrome and icons drop it (it turns to mush below ~32px).
 
 Two contexts, deliberately split. **In-app** the mark is chrome, so it
 follows the active theme. **As an OS/browser icon** the mark is a fixed
@@ -93,14 +98,18 @@ dark identity tile — a tile has to hold its own on an unknown background
 (a colorful launcher, a light or dark tab strip, a photo wallpaper), where
 a near-white body would melt in and read as a placeholder, so it does _not_
 theme-switch and does _not_ use the light palette. Canonical icon colors:
-`#1d2021` tile, `#ebdbb2` widgets, `#fe8019` cursor (raised widget contrast
-so all three shapes read at 16px; the frame stroke is dropped on icons
-where it turns to mush).
+`#1d2021` tile, `#ebdbb2` wings, `#fe8019` knot (raised contrast so the
+silhouette reads at 16px; no frame stroke on icons). Rasters are rendered
+from the SVGs with headless Chrome — ImageMagick's SVG delegate is not
+faithful. Static SVGs carry explicit `width`/`height` (favicon renderers
+assume 300×150 and crop without them).
 
 - `apps/web/app/components/logo.tsx` — `Logo` (mark) and `Wordmark`
   (mark + mono name lockup, scales with font size) for in-app use; token-
-  based, so it follows the active theme. Widgets are `muted-foreground`,
-  the one frame that keeps its `border` stroke (rendered large enough).
+  based, so it follows the active theme. Wings are `muted-foreground`,
+  the knot `primary`; the landing hero passes `display` for the frame's
+  `border` stroke (rendered large enough there). `live` blinks the knot
+  like a terminal caret (landing only).
 - `apps/web/public/favicon.svg` — the browser-tab mark: one fixed dark
   tile, no frame, no `prefers-color-scheme` swap (see the split above).
   `favicon.ico` (16/32/48) is the raster fallback, generated from it.
@@ -111,18 +120,21 @@ where it turns to mush).
   — the PWA/Android adaptive icon, so launchers build a real adaptive tile
   instead of masking apple-touch into a flat squircle. Linked from
   `root.tsx`; `theme_color`/`background_color` are the dark `#1d2021`.
-- `apps/web/public/wordmark-{dark,light}.svg` — the mark + `steward`
+- `apps/web/public/wordmark-{dark,light}.svg` — the mark + `Steward`
   lockup for the README, swapped by `prefers-color-scheme` in a `<picture>`.
   These are a document context (a light or dark page), so they keep the
-  theme pair; widgets are the palette's `ink-dim` for legibility.
+  theme pair; the wings take the palette's secondary ink for legibility.
+  Text baseline `y=46.5` centers the word's cap band on the tile center —
+  the measured optical alignment of the lockup.
 - `apps/web/public/og.png` — 1200×630 (@2x) social card in the light
   (gruvbox-light) palette; OG/Twitter meta lives in the home route's
   `meta`. One fixed image for every viewer — OG previews can't theme-switch,
   so it stays light to match the default.
 
-The wordmark text is `foreground` ink; the mark carries the orange. The
-wordmark stays lowercase — a deliberate logotype, the one place lowercase
-survives the Sentence-case chrome.
+The wordmark text is `foreground` ink, mono, capitalized **`Steward`** —
+the mark carries the orange. (The logotype was lowercase pre-rename;
+capitalized since the wordmark reads as the product noun everywhere it
+appears.)
 
 ## Layout
 
@@ -165,20 +177,16 @@ entrance choreography — this is a glanceable tool. Honor
 
 Labels in Sentence case ("Ran 2h ago", "Never ran", "Sign out"); literal
 machine strings stay verbatim (slugs, branch names, cron, shell commands).
-The wordmark is the one deliberate lowercase logotype. Git words used
-plainly: draft, diff, commit, PR, base. Empty states state
+Git words used plainly: draft, diff, commit, PR, base. Empty states state
 the fact and the next action in one line each — no cheerleading.
 
-The product name splits on **who sets the type**. Where we render the
-lockup — the `Wordmark`/`Logo` components, the README SVGs — it is the
-lowercase logotype **`steward`**. Everywhere a string is handed off to the
-system or a reader — page `<title>`s, `manifest` name/`short_name`, OG/
-Twitter meta, `aria-label`s, and all prose ("from your Steward checkout")
-— it is the capitalized product noun **`Steward`**. Lowercase in a
-system-rendered label or mid-sentence reads as a typo, not a logotype, so it
-stays confined to the marks we draw. Identifiers keep lowercase for the usual
-machine-string reason (`@steward/schema`, `steward-data-*`, cookies, storage
-keys, the `Run the steward routine` command).
+The product name is the capitalized noun **`Steward`** everywhere a
+reader or the system sees it — the `Wordmark` lockup, the README SVGs,
+page `<title>`s, `manifest` name/`short_name`, OG/Twitter meta,
+`aria-label`s, and all prose ("from your Steward checkout"). Identifiers
+keep lowercase for the usual machine-string reason (`@steward/schema`,
+`steward-data-*`, cookies, storage keys, the `Run the steward routine`
+command).
 
 ## Language
 
