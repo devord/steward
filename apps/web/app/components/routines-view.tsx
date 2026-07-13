@@ -802,11 +802,14 @@ export function TemplatesSection({
       <p className="mt-0.5 mb-3 text-sm text-ink-dim">
         {t("templates.subtitle", { repo: repo.name })}
       </p>
-      <div className="overflow-x-auto">
+      {/* Same -mx-3 bleed as the pool table above: the row wash breathes past
+          the content column while the edge cells pad the text back to the
+          page rail. */}
+      <div className="-mx-3 overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left align-bottom font-mono text-xs text-ink-faint">
-              <th className="py-1.5 pr-3 font-normal">
+              <th className="px-3 py-1.5 font-normal">
                 {t("templates.colTemplate")}
               </th>
               <th className="hidden py-1.5 pr-3 font-normal md:table-cell">
@@ -821,7 +824,7 @@ export function TemplatesSection({
               <th className="hidden py-1.5 pr-3 font-normal sm:table-cell">
                 {t("templates.colUsedBy")}
               </th>
-              <th className="w-14 py-1.5">
+              <th className="w-14 py-1.5 pr-3">
                 <span className="sr-only">{t("templates.colActions")}</span>
               </th>
             </tr>
@@ -883,7 +886,7 @@ function TemplateRow({
     <tr className="group border-b border-border-dim last:border-0 hover:bg-bg1/60">
       {/* Mono name over faint id, the routine rows' glance shape — the id is
           what routines.yaml's `template:` references. */}
-      <td className="py-2 pr-3 align-top">
+      <td className="px-3 py-2 align-top">
         <div className="min-w-0">
           <div className="truncate font-mono text-sm font-medium text-foreground">
             {template.name}
@@ -936,7 +939,7 @@ function TemplateRow({
         )}
       </td>
 
-      <td className="py-1.5 align-top">
+      <td className="py-1.5 pr-3 align-top">
         <div className="flex justify-end gap-0.5">
           {template.source === "repo" && (
             <Button
