@@ -90,9 +90,15 @@ export const en = {
 
   "repo.private": "Private repo",
   "repo.public": "Public repo",
+  "repo.access": "Access to {repo}",
+  "repo.privateDetail": "Private — visible to collaborators only",
+  "repo.publicDetail": "Public — anyone on GitHub can view",
   "repo.collaborators": "{n} people have access to {repo}",
+  "repo.moreCollaborators": "+{n} more",
   "repo.manageAccess": "Manage access to {repo} on GitHub",
   "repo.viewOnGitHub": "View {repo} on GitHub",
+  "repo.manageOnGitHub": "Manage access on GitHub",
+  "repo.openOnGitHub": "View on GitHub",
 
   "addRepo.title": "Add a data repo",
   "addRepo.description":

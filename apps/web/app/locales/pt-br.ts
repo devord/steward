@@ -91,9 +91,15 @@ export const ptBR: Messages = {
 
   "repo.private": "Repo privado",
   "repo.public": "Repo público",
+  "repo.access": "Acesso a {repo}",
+  "repo.privateDetail": "Privado — visível só para colaboradores",
+  "repo.publicDetail": "Público — qualquer pessoa no GitHub pode ver",
   "repo.collaborators": "{n} pessoas têm acesso a {repo}",
+  "repo.moreCollaborators": "+{n} outros",
   "repo.manageAccess": "Gerenciar acesso a {repo} no GitHub",
   "repo.viewOnGitHub": "Ver {repo} no GitHub",
+  "repo.manageOnGitHub": "Gerenciar acesso no GitHub",
+  "repo.openOnGitHub": "Ver no GitHub",
 
   "addRepo.title": "Adicionar um repo de dados",
   "addRepo.description":
