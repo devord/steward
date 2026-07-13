@@ -90,6 +90,13 @@ priorities/primary, aqua for times, yellow for warnings/carry-overs, red
 only for genuinely bad states. At the 1×1 tier the KPI number carries the
 glance; detail tiers get the 14px body.
 
+**Compose from the design language** — read `design.md` (next to this
+file) before authoring. It carries the shared shell (vertical centering,
+tile-vs-page split) and the component set every artifact picks from:
+section rules, ledger rows, the stat tier, pills, dots, meters,
+sparklines, the now marker, empty states, and the tier playbook. One
+board, one language — don't invent per-routine visuals.
+
 ## The fit-to-height snippet
 
 The board stamps `data-steward-tile` on `<html>` and clips overflow
@@ -124,8 +131,16 @@ it hides trailing items until the page fits and says how many it hid:
           el.hidden = false
         })
         more.hidden = true
+        // Overflow lives on <body> — html/body pin overflow:hidden, so the
+        // clipped region never surfaces on documentElement.scrollHeight.
+        var over = function () {
+          return (
+            Math.max(doc.scrollHeight, document.body.scrollHeight) >
+            doc.clientHeight
+          )
+        }
         var hidden = 0
-        while (doc.scrollHeight > doc.clientHeight && hidden < items.length) {
+        while (over() && hidden < items.length) {
           items[items.length - ++hidden].hidden = true
           more.hidden = false
           more.textContent = "+" + hidden + " more"
@@ -145,8 +160,11 @@ is that nothing overflows a tile silently.
 
 ## Reference
 
-`docs/samples/daily-plan.html` in the shared repo is the canonical example —
-structure, breakpoint technique, and footer included.
+Two canonical samples in the app repo's `docs/samples/` show the design
+language end-to-end — structure, breakpoint technique, and footer
+included: `daily-plan.html` (the plan/ledger archetype: sections, ledger
+rows, the now marker) and `repo-pulse.html` (the stats/pulse archetype:
+the stat tier, status dots, pills, trailing values, detail nests).
 
 ## Checklist before publishing
 

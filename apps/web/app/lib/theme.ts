@@ -552,7 +552,10 @@ const TILE_GUARD_SCRIPT =
   "function init(){" +
   'var f=document.createElement("div");f.id="steward-tile-fade";' +
   "document.body.appendChild(f);" +
-  'var check=function(){f.style.opacity=d.scrollHeight>d.clientHeight+1?"1":"0"};' +
+  // Overflow must be read off <body>: html/body pin overflow:hidden, so the
+  // clipped region belongs to body and never surfaces on documentElement.
+  "var check=function(){f.style.opacity=" +
+  'Math.max(d.scrollHeight,document.body.scrollHeight)>d.clientHeight+1?"1":"0"};' +
   "new ResizeObserver(check).observe(document.body);" +
   'addEventListener("resize",check);check()}' +
   'document.readyState==="loading"?addEventListener("DOMContentLoaded",init):init()' +

@@ -1,0 +1,363 @@
+<!doctype html>
+<!-- Sample steward artifact (docs/widget-standard.md): the stats/pulse
+     archetype of the design language in
+     .claude/skills/widget-artifact/design.md — the stat tier, status
+     dots, pills, trailing values, and nested detail rows. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="widget-generated-at" content="2026-07-09T12:00:00Z" />
+    <title>Repo Pulse</title>
+    <style>
+      /* Gruvbox dark hard — identical to the @theme block in
+         apps/web/app/app.css (ADR-0007). Do not invent colors. */
+      :root {
+        color-scheme: dark;
+        --color-bg: #1d2021;
+        --color-bg1: #282828;
+        --color-bg2: #32302f;
+        --color-bg3: #3c3836;
+        --color-border: #504945;
+        --color-border-dim: #3c3836;
+        --color-ink: #ebdbb2;
+        --color-ink-dim: #a89984;
+        --color-ink-faint: #928374;
+        --color-orange: #fe8019;
+        --color-orange-deep: #d65d0e;
+        --color-yellow: #fabd2f;
+        --color-green: #b8bb26;
+        --color-aqua: #8ec07c;
+        --color-blue: #83a598;
+        --color-purple: #d3869b;
+        --color-red: #fb4934;
+        --font-sans: system-ui, sans-serif;
+        --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        padding: 12px 14px;
+        background: var(--color-bg1);
+        color: var(--color-ink);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.45;
+        font-variant-numeric: tabular-nums;
+        overflow: hidden;
+      }
+      main {
+        display: grid;
+        gap: 12px;
+        margin-block: auto;
+        min-height: 0;
+      }
+      /* The 1×1 stat: the one number that answers the glance. */
+      .stat {
+        display: none;
+      }
+      .stat .num {
+        font-family: var(--font-mono);
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        color: var(--color-orange);
+      }
+      .stat .label {
+        color: var(--color-ink-dim);
+      }
+      .stat .sub {
+        margin-top: 8px;
+      }
+      /* Status pill — mirrors the chrome's tag vocabulary (tone/10 fill,
+         tone/40 border, mono 12px). Color only when it means something. */
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 18px;
+        padding: 0 7px;
+        border-radius: 999px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: 1;
+        color: var(--color-ink-dim);
+        border: 1px solid
+          color-mix(in srgb, var(--color-ink-faint) 40%, transparent);
+        background: color-mix(in srgb, var(--color-ink-faint) 10%, transparent);
+      }
+      .pill.ok {
+        color: var(--color-green);
+        border-color: color-mix(in srgb, var(--color-green) 40%, transparent);
+        background: color-mix(in srgb, var(--color-green) 10%, transparent);
+      }
+      .pill.bad {
+        color: var(--color-red);
+        border-color: color-mix(in srgb, var(--color-red) 40%, transparent);
+        background: color-mix(in srgb, var(--color-red) 10%, transparent);
+      }
+      /* Repo ledger: dot · repo · counts · what needs you, columns shared
+         across rows so the table reads in one vertical sweep. */
+      ul {
+        list-style: none;
+        padding: 0;
+        display: grid;
+        grid-template-columns: max-content max-content 1fr max-content;
+        gap: 6px 10px;
+      }
+      li {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: subgrid;
+        align-items: baseline;
+      }
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        align-self: center;
+        background: var(--color-green);
+      }
+      .dot.bad {
+        background: var(--color-red);
+      }
+      .repo {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        color: var(--color-ink);
+      }
+      .counts {
+        color: var(--color-ink-dim);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .need {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-orange);
+        white-space: nowrap;
+      }
+      .need[data-zero] {
+        color: var(--color-ink-faint);
+      }
+      /* PR detail rows nest under the repo column and only exist on
+         taller tiers. */
+      .detail {
+        grid-column: 2 / -1;
+        display: none;
+        grid-template-columns: 1fr max-content;
+        gap: 3px 12px;
+        padding: 4px 0 6px;
+      }
+      .detail li {
+        grid-template-columns: subgrid;
+      }
+      .detail .title {
+        color: var(--color-ink-dim);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .detail .age {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-faint);
+      }
+      .detail .age[data-stale] {
+        color: var(--color-yellow);
+      }
+      [data-fit-more] {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-dim);
+      }
+      footer {
+        margin-top: auto;
+        padding-top: 8px;
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-faint);
+      }
+      /* Progressive disclosure per grid size (widget standard §2). */
+      @media (max-width: 340px) and (max-height: 160px) {
+        .stat {
+          display: block;
+        }
+        .rows {
+          display: none;
+        }
+      }
+      @media (max-width: 340px) {
+        .counts {
+          display: none;
+        }
+      }
+      @media (min-height: 300px) {
+        .detail {
+          display: grid;
+        }
+      }
+      /* Wide (~900px+): the ledger becomes a page table — roomier rows,
+         hairlines, detail always on. */
+      @media (min-width: 900px) {
+        main,
+        footer {
+          width: 100%;
+          max-width: 880px;
+          margin-inline: auto;
+        }
+        .stat {
+          display: none;
+        }
+        .rows {
+          display: grid;
+        }
+        .detail {
+          display: grid;
+        }
+        li {
+          padding-block: 8px;
+        }
+        li + li {
+          border-top: 1px solid var(--color-border-dim);
+        }
+        .detail li {
+          padding-block: 0;
+          border: 0;
+        }
+        .detail .title {
+          white-space: normal;
+        }
+        :root:not([data-steward-tile]) body {
+          padding: 40px 32px;
+          overflow: auto;
+        }
+        :root:not([data-steward-tile]) main {
+          margin-block: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="stat">
+        <div class="num">11</div>
+        <div class="label">PRs need your review</div>
+        <div class="sub"><span class="pill bad">CI ✗ elf-shopify</span></div>
+      </section>
+      <ul class="rows" data-fit-list>
+        <li>
+          <span class="dot"></span>
+          <span class="repo">corza</span>
+          <span class="counts">22 PRs · 0 new issues</span>
+          <span class="need">9 need you</span>
+          <ul class="detail">
+            <li>
+              <span class="title"
+                >#249 Quoting flow: stories in outreach emails</span
+              ><time class="age">2d</time>
+            </li>
+            <li>
+              <span class="title"
+                >#234 De-conflict overdue drafts (CORZA-136)</span
+              ><time class="age" data-stale>24d</time>
+            </li>
+            <li>
+              <span class="title">#226 Draft review queue: CORZA-44</span
+              ><time class="age" data-stale>31d</time>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <span class="dot bad"></span>
+          <span class="repo">elf-shopify</span>
+          <span class="counts">7 PRs · 1 new issue</span>
+          <span class="need">2 need you</span>
+          <ul class="detail">
+            <li>
+              <span class="title">#2635 Cart upsell regression fix</span
+              ><time class="age" data-stale>12d</time>
+            </li>
+            <li>
+              <span class="title">#2641 Checkout i18n strings</span
+              ><time class="age">1d</time>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <span class="dot"></span>
+          <span class="repo">steward</span>
+          <span class="counts">3 PRs · 0 new issues</span>
+          <span class="need" data-zero>—</span>
+        </li>
+      </ul>
+    </main>
+    <footer>
+      <span>repo-pulse</span>
+      <span>2026-07-09 12:00Z</span>
+    </footer>
+    <script>
+      // Fit lists to the tile (widget-standard §2, ADR-0019): tiles never
+      // scroll, so collapse trailing items that overflow into "+N more".
+      // Runs only on the board — the frame stamps data-steward-tile.
+      ;(function () {
+        function fit() {
+          if (!document.documentElement.hasAttribute("data-steward-tile"))
+            return
+          var doc = document.documentElement
+          // Bottom-most lists give way first — the top of the tile is the glance.
+          var lists = [].slice
+            .call(document.querySelectorAll("[data-fit-list]"))
+            .reverse()
+          lists.forEach(function (list) {
+            var more = list.querySelector("[data-fit-more]")
+            if (!more) {
+              more = document.createElement("li")
+              more.setAttribute("data-fit-more", "")
+              list.appendChild(more)
+            }
+            var items = [].filter.call(list.children, function (el) {
+              return el !== more
+            })
+            items.forEach(function (el) {
+              el.hidden = false
+            })
+            more.hidden = true
+            // Overflow lives on <body> — html/body pin overflow:hidden, so
+            // it never surfaces on documentElement.scrollHeight.
+            var over = function () {
+              return (
+                Math.max(doc.scrollHeight, document.body.scrollHeight) >
+                doc.clientHeight
+              )
+            }
+            var hidden = 0
+            while (over() && hidden < items.length) {
+              items[items.length - ++hidden].hidden = true
+              more.hidden = false
+              more.textContent = "+" + hidden + " more"
+            }
+          })
+        }
+        addEventListener("DOMContentLoaded", fit)
+        addEventListener("resize", fit)
+      })()
+    </script>
+  </body>
+</html>
