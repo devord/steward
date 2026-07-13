@@ -8,10 +8,11 @@ import { DEFAULT_DASHBOARD } from "../lib/repos.ts"
 import {
   loadArtifacts,
   loadDashboardStructureOr503,
-  loadSidebarOr503,
+  streamSidebar,
 } from "../lib/dashboard.server.ts"
 import { requireDataRepo, resolveHomeRepo } from "../lib/repos.server.ts"
 import { requireAuth } from "../lib/session.server.ts"
+import { streamTemplates } from "../lib/templates.server.ts"
 
 export function meta({ params }: Route.MetaArgs) {
   return [{ title: `Steward — ${params.repo}/${params.dashboard}` }]
@@ -27,6 +28,10 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   if (!slugSchema.safeParse(params.dashboard).success) {
     throw data("not found", { status: 404 })
   }
+  // The rail streams (ADR-0030), fired before the gate: it's per-viewer, not
+  // per-board, so even a 404 below leaves nothing wasted — the read lands in
+  // the SWR cache the next page serves from.
+  const sidebar = streamSidebar(auth.token, auth.login, auth.dataRepo)
   // requireDataRepo is the whole gate: a repo that isn't a topic-tagged data
   // repo the viewer can read 404s here, indistinguishable from absent.
   const repo = await requireDataRepo(
@@ -45,23 +50,23 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     shared: repo.isShared,
     dashboard: params.dashboard,
   }
-  const [view, sidebar] = await Promise.all([
-    loadDashboardStructureOr503(auth.token, ref),
-    loadSidebarOr503(auth.token, auth.login, auth.dataRepo),
-  ])
+  const view = await loadDashboardStructureOr503(auth.token, ref)
   // A named board must actually exist — a missing file here is a typo.
   if (view.baseShas.dashboard === null) {
     throw data("not found", { status: 404 })
   }
-  // Fire artifacts only after the existence checks pass, so a 404 never
-  // leaves a dangling request. Streamed (ADR-0002), not awaited.
+  // Fire artifacts + templates only after the existence checks pass, so a 404
+  // never leaves a dangling per-board request. Streamed (ADR-0002/0030),
+  // not awaited.
   const artifacts = loadArtifacts(auth.token, ref, view.routines)
+  const templates = streamTemplates(auth.token, repo.full)
   return {
     login: auth.login,
     displayName: auth.name ?? null,
     now: Date.now(),
     view,
     artifacts,
+    templates,
     sidebar,
   }
 }
@@ -75,6 +80,7 @@ export default function RepoDashboard({ loaderData }: Route.ComponentProps) {
       key={`${loaderData.view.dataRepo}:${loaderData.view.dashboardSlug}`}
       view={loaderData.view}
       artifacts={loaderData.artifacts}
+      templates={loaderData.templates}
       login={loaderData.login}
       displayName={loaderData.displayName}
       now={loaderData.now}

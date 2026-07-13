@@ -8,7 +8,7 @@ import {
   handleRadioKeydown,
 } from "../components/appearance-settings.tsx"
 import { NavShell } from "../components/nav-shell.tsx"
-import { loadSidebar } from "../lib/dashboard.server.ts"
+import { streamSidebar } from "../lib/dashboard.server.ts"
 import {
   isLocale,
   LOCALE_OPTIONS,
@@ -18,6 +18,7 @@ import {
 } from "../lib/i18n.tsx"
 import { getLocale, localeCookie } from "../lib/locale.server.ts"
 import { requireAuth } from "../lib/session.server.ts"
+import { useStreamed } from "../lib/use-streamed.ts"
 import { buttonVariants } from "~/components/ui/button"
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
@@ -34,13 +35,11 @@ import { cn } from "~/lib/utils"
  */
 export async function loader({ request }: Route.LoaderArgs) {
   const auth = await requireAuth(request)
-  // Best-effort: a transient GitHub blip degrades to an empty rail rather
-  // than crashing the one page that must never trap the user.
-  const sidebar = await loadSidebar(
-    auth.token,
-    auth.login,
-    auth.dataRepo,
-  ).catch(() => ({ repos: [], complete: false }))
+  // Streamed, never awaited (ADR-0030): settings itself needs zero GitHub
+  // data, so the page answers instantly and the rail fills in when the
+  // sidebar resolves. streamSidebar already degrades any failure to an empty
+  // rail rather than crashing the one page that must never trap the user.
+  const sidebar = streamSidebar(auth.token, auth.login, auth.dataRepo)
   return {
     locale: getLocale(request),
     login: auth.login,
@@ -73,6 +72,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Settings({ loaderData }: Route.ComponentProps) {
   const t = useT()
+  const sidebar = useStreamed(loaderData.sidebar, "sidebar")
 
   return (
     <NavShell
@@ -81,7 +81,7 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
         // rail then lights nothing, reading as "you're off the board".
         activeRepo: "",
         dashboardSlug: "",
-        sidebar: loaderData.sidebar,
+        sidebar,
         login: loaderData.login,
         displayName: loaderData.displayName,
       }}

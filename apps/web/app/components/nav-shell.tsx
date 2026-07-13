@@ -21,8 +21,9 @@ export interface ShellNav {
   /** The repo whose routine pool view (ADR-0025) is active — lights that repo's
       Routines entry instead of a board. "" / absent everywhere else. */
   routinesRepo?: string
-  /** Every discovered data repo with its boards (ADR-0023), home first. */
-  sidebar: SidebarData
+  /** Every discovered data repo with its boards (ADR-0023), home first.
+      null → still streaming in (ADR-0030): the rail renders its skeleton. */
+  sidebar: SidebarData | null
   login: string
   /** GitHub display name for the account menu; falls back to the login. */
   displayName?: string | null

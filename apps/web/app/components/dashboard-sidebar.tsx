@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { Link } from "~/components/ui/link"
+import { Skeleton } from "~/components/ui/skeleton"
 import { cn } from "~/lib/utils"
 import type { SidebarData } from "../lib/dashboard.server.ts"
 import { boardHref, DEFAULT_DASHBOARD, routinesHref } from "../lib/repos.ts"
@@ -60,7 +61,9 @@ export function DashboardSidebar({
   dashboardSlug: string
   /** The repo whose routine pool view is active (ADR-0025), else "". */
   routinesRepo?: string
-  sidebar: SidebarData
+  /** null → still streaming in (ADR-0030): the board list renders its
+      skeleton while the brand row and the foot stay put. */
+  sidebar: SidebarData | null
   login: string
   displayName?: string | null
   /** Delete a board by repo+slug — the handler behind every board's per-board
@@ -77,7 +80,7 @@ export function DashboardSidebar({
   const [creating, setCreating] = useState<string | null>(null)
   const [addingRepo, setAddingRepo] = useState(false)
 
-  const homeRepo = sidebar.repos.find((repo) => repo.isHome)?.repo ?? ""
+  const homeRepo = sidebar?.repos.find((repo) => repo.isHome)?.repo ?? ""
 
   return (
     <div className="flex h-full flex-col">
@@ -98,74 +101,80 @@ export function DashboardSidebar({
         aria-label={t("nav.boards")}
         className="flex flex-1 flex-col overflow-y-auto px-2 py-3"
       >
-        <div className="space-y-4">
-          {sidebar.repos.map((group) => (
-            <NavGroup
-              key={group.repo}
-              header={<RepoGroupHeader group={group} />}
-              foot={
-                <PoolNavItem
-                  to={routinesHref(group.repo)}
-                  active={routinesRepo === group.repo}
-                  onNavigate={onNavigate}
-                />
-              }
-            >
-              {group.dashboards.map((slug) => {
-                const active =
-                  activeRepo === group.repo && dashboardSlug === slug
-                // Every repo's `main` is its default board (server-protected in
-                // all repos) — so no delete menu on any `main`.
-                return (
-                  <NavItem
-                    key={`${group.repo}:${slug}`}
-                    to={boardHref(group.repo, slug, homeRepo)}
-                    label={slug}
-                    active={active}
-                    onDelete={
-                      onDeleteBoard && slug !== DEFAULT_DASHBOARD
-                        ? () => onDeleteBoard(group.repo, slug)
-                        : undefined
-                    }
-                    onNavigate={onNavigate}
-                  />
-                )
-              })}
-              {group.dashboards.length === 0 && (
-                // The group's only child while the repo has no boards: the
-                // next action, sitting where the first board will. The plus
-                // takes the rail-node slot the active dot uses, so it reads
-                // as "a board goes here".
-                <RailAction
-                  icon={Plus}
-                  label={t("switcher.newHere")}
-                  onClick={() => setCreating(group.repo)}
-                />
-              )}
-            </NavGroup>
-          ))}
+        {sidebar === null ? (
+          <RailSkeleton />
+        ) : (
+          <>
+            <div className="space-y-4">
+              {sidebar.repos.map((group) => (
+                <NavGroup
+                  key={group.repo}
+                  header={<RepoGroupHeader group={group} />}
+                  foot={
+                    <PoolNavItem
+                      to={routinesHref(group.repo)}
+                      active={routinesRepo === group.repo}
+                      onNavigate={onNavigate}
+                    />
+                  }
+                >
+                  {group.dashboards.map((slug) => {
+                    const active =
+                      activeRepo === group.repo && dashboardSlug === slug
+                    // Every repo's `main` is its default board (server-protected in
+                    // all repos) — so no delete menu on any `main`.
+                    return (
+                      <NavItem
+                        key={`${group.repo}:${slug}`}
+                        to={boardHref(group.repo, slug, homeRepo)}
+                        label={slug}
+                        active={active}
+                        onDelete={
+                          onDeleteBoard && slug !== DEFAULT_DASHBOARD
+                            ? () => onDeleteBoard(group.repo, slug)
+                            : undefined
+                        }
+                        onNavigate={onNavigate}
+                      />
+                    )
+                  })}
+                  {group.dashboards.length === 0 && (
+                    // The group's only child while the repo has no boards: the
+                    // next action, sitting where the first board will. The plus
+                    // takes the rail-node slot the active dot uses, so it reads
+                    // as "a board goes here".
+                    <RailAction
+                      icon={Plus}
+                      label={t("switcher.newHere")}
+                      onClick={() => setCreating(group.repo)}
+                    />
+                  )}
+                </NavGroup>
+              ))}
 
-          {/* Discovery degraded (search rate limit, GitHub flap): say quietly
+              {/* Discovery degraded (search rate limit, GitHub flap): say quietly
               that groups may be missing rather than render a confident lie. */}
-          {!sidebar.complete && (
-            <p className="px-2.5 font-mono text-xs text-ink-faint">
-              {t("switcher.incomplete")}
-            </p>
-          )}
-        </div>
+              {!sidebar.complete && (
+                <p className="px-2.5 font-mono text-xs text-ink-faint">
+                  {t("switcher.incomplete")}
+                </p>
+              )}
+            </div>
 
-        {/* New board — a create verb that belongs with the boards above, so it
+            {/* New board — a create verb that belongs with the boards above, so it
             sits at the end of the list on the same marker/label column, set off
             by one hairline (a verb, not one of the nouns). The trailing space
             is empty scroll room, not a gap the actions float in. */}
-        <div className="mt-2 space-y-2">
-          <div className="border-t border-border-dim" />
-          <RailAction
-            icon={Plus}
-            label={t("switcher.new")}
-            onClick={() => setCreating(activeRepo || homeRepo)}
-          />
-        </div>
+            <div className="mt-2 space-y-2">
+              <div className="border-t border-border-dim" />
+              <RailAction
+                icon={Plus}
+                label={t("switcher.new")}
+                onClick={() => setCreating(activeRepo || homeRepo)}
+              />
+            </div>
+          </>
+        )}
       </nav>
 
       {/* Foot: workspace-level actions live here, not adrift in the board list.
@@ -194,24 +203,59 @@ export function DashboardSidebar({
         />
       </div>
 
-      <NewDashboardDialog
-        open={creating !== null}
-        onOpenChange={(open) => {
-          if (!open) setCreating(null)
-        }}
-        repos={sidebar.repos.map((repo) => repo.repo)}
-        defaultRepo={creating ?? activeRepo ?? homeRepo}
-        homeRepo={homeRepo}
-        takenSlugs={Object.fromEntries(
-          sidebar.repos.map((repo) => [repo.repo, repo.dashboards]),
-        )}
-      />
-      <AddDataRepoDialog
-        open={addingRepo}
-        onOpenChange={setAddingRepo}
-        known={sidebar.repos.map((repo) => repo.repo)}
-        onNavigate={onNavigate}
-      />
+      {/* Both create dialogs read the resolved rail (repo lists, taken
+          slugs); their openers only render once it resolves, so `sidebar`
+          is never null while either is open. */}
+      {sidebar !== null && (
+        <>
+          <NewDashboardDialog
+            open={creating !== null}
+            onOpenChange={(open) => {
+              if (!open) setCreating(null)
+            }}
+            repos={sidebar.repos.map((repo) => repo.repo)}
+            defaultRepo={creating ?? activeRepo ?? homeRepo}
+            homeRepo={homeRepo}
+            takenSlugs={Object.fromEntries(
+              sidebar.repos.map((repo) => [repo.repo, repo.dashboards]),
+            )}
+          />
+          <AddDataRepoDialog
+            open={addingRepo}
+            onOpenChange={setAddingRepo}
+            known={sidebar.repos.map((repo) => repo.repo)}
+            onNavigate={onNavigate}
+          />
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The board list while the sidebar streams in (ADR-0030): two ghost groups —
+ * a heading bar over a couple of board rows on the group spine's indent — so
+ * the rail's silhouette is already right and the resolved groups land without
+ * a reflow. Purely decorative; the nav landmark itself stays labeled.
+ */
+function RailSkeleton() {
+  return (
+    <div aria-hidden className="space-y-4">
+      {[3, 2].map((rows, group) => (
+        <div key={group}>
+          <div className="mb-2 px-2.5 py-1">
+            <Skeleton className="h-2.5 w-24" />
+          </div>
+          <div className="flex flex-col gap-2 py-1 pl-6">
+            {Array.from({ length: rows }, (_, row) => (
+              <Skeleton
+                key={row}
+                className={row % 2 === 0 ? "h-3 w-24" : "h-3 w-16"}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

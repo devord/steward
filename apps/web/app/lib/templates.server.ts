@@ -2,6 +2,7 @@ import { parseRoutineTemplate } from "@steward/schema"
 
 import type { DiscoveredTemplate } from "./templates.ts"
 import { getFile, listTreePaths } from "./github.server.ts"
+import { swr, tokenKey } from "./swr.server.ts"
 
 /**
  * Routine-template discovery (ADR-0015/0021): built-ins ship in the app
@@ -81,4 +82,23 @@ export async function discoverTemplates(
     ),
     ...builtins.filter((template) => !seen.has(template.id)),
   ]
+}
+
+/** How long a served picker may lag a template commit pushed to the repo. */
+const TEMPLATES_TTL_MS = 60_000
+
+/**
+ * discoverTemplates for route loaders (ADR-0030): SWR-cached — templates
+ * change by commits outside the app, so there is no in-app mutation to
+ * invalidate on and the TTL is the whole liveness story — and streamed, so
+ * the tree listing + per-candidate reads never sit on the paint path. Never
+ * rejects (discoverTemplates already degrades to built-ins only).
+ */
+export function streamTemplates(
+  token: string,
+  dataRepo: string,
+): Promise<DiscoveredTemplate[]> {
+  return swr(`templates:${tokenKey(token)}:${dataRepo}`, TEMPLATES_TTL_MS, () =>
+    discoverTemplates(token, dataRepo),
+  )
 }

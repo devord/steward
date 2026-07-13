@@ -36,7 +36,8 @@ export function DashboardShell({
 }: {
   dataRepo: string
   dashboardSlug: string
-  sidebar: SidebarData
+  /** null → still streaming in (ADR-0030): the rail renders its skeleton. */
+  sidebar: SidebarData | null
   login: string
   displayName?: string | null
   hasDraft: boolean

@@ -3,11 +3,11 @@ import { RoutinesView } from "../components/routines-view.tsx"
 import {
   loadArtifacts,
   loadRoutinesPoolOr503,
-  loadSidebarOr503,
+  streamSidebar,
 } from "../lib/dashboard.server.ts"
 import { requireDataRepo, resolveHomeRepo } from "../lib/repos.server.ts"
 import { requireAuth } from "../lib/session.server.ts"
-import { discoverTemplates } from "../lib/templates.server.ts"
+import { streamTemplates } from "../lib/templates.server.ts"
 
 export function meta({ params }: Route.MetaArgs) {
   return [{ title: `Steward — ${params.repo}/routines` }]
@@ -22,6 +22,9 @@ export function meta({ params }: Route.MetaArgs) {
  */
 export async function loader({ request, params }: Route.LoaderArgs) {
   const auth = await requireAuth(request)
+  // The rail streams (ADR-0030), fired before the gate: per-viewer, not
+  // per-repo, so even a 404 below leaves nothing wasted.
+  const sidebar = streamSidebar(auth.token, auth.login, auth.dataRepo)
   // requireDataRepo is the whole gate — a repo that isn't a topic-tagged data
   // repo the viewer can read 404s here, indistinguishable from absent.
   const repo = await requireDataRepo(
@@ -32,13 +35,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   )
   const home = resolveHomeRepo(auth.login, auth.dataRepo)
 
-  const [pool, sidebar, templates] = await Promise.all([
-    loadRoutinesPoolOr503(auth.token, repo.full),
-    loadSidebarOr503(auth.token, auth.login, auth.dataRepo),
-    // The add/edit dialog's picker — this repo's templates plus the built-ins
-    // (ADR-0021), same source the board's add-routine flow reads.
-    discoverTemplates(auth.token, repo.full),
-  ])
+  const pool = await loadRoutinesPoolOr503(auth.token, repo.full)
+  // The add/edit dialog's picker — this repo's templates plus the built-ins
+  // (ADR-0021), same source the board's add-routine flow reads. Streamed
+  // (ADR-0030): only the dialog reads them, never the table paint.
+  const templates = streamTemplates(auth.token, repo.full)
 
   // Freshness/state streams in after the table paints, exactly as the board
   // streams widget bodies (ADR-0002) — the artifact + trigger reads are the
