@@ -15,6 +15,8 @@ export const ptBR: Messages = {
   "landing.privacy":
     "Seus dados são seus — vivem em um repo privado do GitHub que é seu; o app não guarda nada.",
   "landing.deviceLink": "Entrar com um código de dispositivo",
+  "landing.more": "mais",
+  "landing.moreLabel": "Rolar para como funciona",
 
   "landing.loop.title": "Como um widget se mantém fresco",
   "landing.loop.cron":
