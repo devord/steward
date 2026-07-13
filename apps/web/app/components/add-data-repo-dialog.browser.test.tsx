@@ -48,6 +48,11 @@ describe("AddDataRepoDialog", () => {
 
     expect(input("data-repo-existing")).not.toBeNull()
 
+    // The field takes focus as it mounts — pick register, type the repo.
+    await expect
+      .poll(() => document.activeElement?.id)
+      .toBe("data-repo-existing")
+
     // Free text that isn't owner/repo — submit stays disabled.
     await screen.getByLabelText("Repository").fill("not a repo")
     expect(submitButton("Register")?.disabled).toBe(true)

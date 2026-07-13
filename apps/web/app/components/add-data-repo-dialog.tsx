@@ -231,6 +231,9 @@ export function AddDataRepoDialog({
                 onChange={setExisting}
                 placeholder="owner/repo"
                 invalid={alreadyKnown}
+                // Picking register answers "which repo?" next — the field
+                // takes focus as it mounts.
+                autoFocus
               />
               {alreadyKnown ? (
                 <p className="text-xs text-destructive">

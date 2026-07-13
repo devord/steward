@@ -179,6 +179,9 @@ export function NewDashboardDialog({
               <Label htmlFor="dashboard-slug">{t("newDash.slug")}</Label>
               <Input
                 id="dashboard-slug"
+                // Open-and-type, like the routine dialog's prompt: initial
+                // focus lands in the slug field.
+                autoFocus
                 value={slug}
                 onChange={(event) => {
                   setSlugEdited(true)
