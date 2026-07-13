@@ -524,6 +524,22 @@ const EMBED_FRAME_STYLE =
   "<style data-steward-embed>footer{display:none !important}</style>"
 
 /**
+ * Link guard (ADR-0028). The contract wants `target="_blank"
+ * rel="noopener"` on every artifact link (widget-standard §8) — in-frame
+ * navigation stays sandbox-blocked, so a bare href goes nowhere. The frame
+ * backstops non-compliant artifacts by retargeting anchors at click time,
+ * capture phase, before the navigation attempt. Embed-only, like the
+ * footer hide: the raw page must link correctly on its own.
+ */
+const LINK_GUARD_SCRIPT =
+  "<script data-steward-link-guard>" +
+  'document.addEventListener("click",function(e){' +
+  "var t=e.target;" +
+  'var a=t&&t.closest&&t.closest("a[href]");' +
+  'if(a&&!a.target){a.target="_blank";a.rel="noopener"}' +
+  "},true)</script>"
+
+/**
  * Tile-only overflow guard (ADR-0019). Board cells never scroll — a tile is
  * a glance, and a wheel-trapping scrollbar hides rows invisibly — so the
  * artifact must fit its height tier (widget-standard §2). The frame:
@@ -572,6 +588,7 @@ export function frameArtifactHtml(
   return (
     html +
     EMBED_FRAME_STYLE +
+    LINK_GUARD_SCRIPT +
     (view === "tile" ? TILE_GUARD_STYLE + TILE_GUARD_SCRIPT : "") +
     (artifactThemeStyle(name) ?? "")
   )

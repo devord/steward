@@ -122,7 +122,7 @@ export function WidgetLightbox({
           </header>
           <iframe
             srcDoc={html + ESCAPE_BRIDGE}
-            sandbox="allow-scripts"
+            sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
             title={name}
             className="min-h-0 w-full flex-1 border-0 bg-bg1"
           />

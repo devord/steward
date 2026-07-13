@@ -77,8 +77,9 @@ export interface WidgetCardProps {
 
 /**
  * One grid cell: a title bar (name + freshness + actions), the routine's
- * artifact in a sandboxed srcdoc iframe (scripts allowed, no same-origin, no
- * network — ADR-0002), and a placeholder when nothing was ever published.
+ * artifact in a sandboxed srcdoc iframe (scripts allowed, links escape to
+ * real tabs — ADR-0028 — no same-origin, no network — ADR-0002), and a
+ * placeholder when nothing was ever published.
  *
  * Artifacts are authored in gruvbox; a non-default theme is injected as a
  * `--color-*` override appended to the document (ADR-0009). The server
@@ -368,7 +369,7 @@ export function WidgetCard({
         {html ? (
           <iframe
             srcDoc={html}
-            sandbox="allow-scripts"
+            sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
             title={routine.name}
             loading="lazy"
             className="min-h-0 w-full flex-1 border-0"
