@@ -277,22 +277,36 @@ export function SyncPanel({
                   {change.path}
                 </p>
                 <pre className="overflow-x-auto rounded-lg border bg-bg p-3 font-mono text-xs leading-5">
+                  {/* Changed lines read in body ink on a green/red wash — the
+                      tint and the sign carry add/remove (the stale-pill
+                      pattern), because several light palettes have no
+                      AA-clearing green for 13px text. */}
                   {change.diff.map((line, index) => (
                     <div
                       key={index}
                       className={
                         line.kind === "add"
-                          ? "bg-green/10 text-green"
+                          ? "bg-green/15 text-ink"
                           : line.kind === "del"
-                            ? "bg-red/10 text-red"
+                            ? "bg-red/15 text-ink"
                             : "text-ink-dim"
                       }
                     >
-                      {line.kind === "add"
-                        ? "+ "
-                        : line.kind === "del"
-                          ? "- "
-                          : "  "}
+                      <span
+                        className={
+                          line.kind === "add"
+                            ? "text-green"
+                            : line.kind === "del"
+                              ? "text-red"
+                              : undefined
+                        }
+                      >
+                        {line.kind === "add"
+                          ? "+ "
+                          : line.kind === "del"
+                            ? "- "
+                            : "  "}
+                      </span>
                       {line.text}
                     </div>
                   ))}

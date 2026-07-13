@@ -49,10 +49,22 @@ is that palette's signature color (gruvbox orange, catppuccin mauve, rosé
 pine iris/pine, tokyo night blue). In artifacts the accent keeps its
 historical `--color-orange` name.
 
+Surface hierarchy: chrome is **one flat plane** — page, rail, and header
+all sit on `bg`, split by hairlines — and the widget cards (`bg1`) are the
+only elevated surface. Light themes spread their surface roles deliberately
+(values still transcribed, roles repointed within the palette's own ramp):
+the canvas takes a mid neutral one step deeper and the cards keep the
+palette's lightest tone, so widgets glow against the board instead of the
+whole page collapsing into one near-white plane. Button labels take `bg1`
+(each palette's brightest/most-neutral surface — full AA on every accent);
+selection is a translucent accent wash under unchanged ink.
+
 Strategy: **restrained** — near-monochrome chrome, accent ≤10% of any
 screen. Yellow/green/red appear only when they mean something (stale,
-added, removed). Chrome code uses tokens only; a literal hex breaks every
-non-default theme.
+added, removed) — and never carry 13px text alone: state text stays in the
+ink roles while a tint wash, dot, or sign carries the tone (several light
+palettes have no AA-clearing yellow/green for small text). Chrome code uses
+tokens only; a literal hex breaks every non-default theme.
 
 ## Typography
 

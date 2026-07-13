@@ -590,12 +590,14 @@ export function DashboardBoard({
 
         {/* View mode: a quiet pointer that repo-shared routines exist but
             aren't placed here — the only cue, since the parking lot itself is
-            edit-only. Silent when everything's placed. */}
+            edit-only. Silent when everything's placed. ink-dim, not
+            ink-faint: this is an interactive control, so it carries
+            body-text contrast even though it rests quiet. */}
         {unplaced.length > 0 && !editing && dashboard.widgets.length > 0 && (
-          <p className="mt-6 font-mono text-xs text-ink-faint">
+          <p className="mt-6 font-mono text-xs text-ink-dim">
             <button
               type="button"
-              className="underline decoration-dotted underline-offset-2 outline-none hover:text-ink-dim focus-visible:text-ink-dim"
+              className="underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
               onClick={() => setEditing(true)}
             >
               {t("offgrid.viewHint", { n: unplaced.length })}

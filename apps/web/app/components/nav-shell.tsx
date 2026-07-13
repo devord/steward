@@ -121,8 +121,10 @@ export function NavShell({
 
   return (
     <div className="flex min-h-dvh">
-      {/* Persistent rail — the second neutral layer (bg1). Collapses to zero
-          width (content clipped, not reflowed) and resizes via the gutter. */}
+      {/* Persistent rail — on the canvas plane (bg, via --sidebar), split
+          from the content by a hairline: chrome is one flat plane, cards the
+          only elevated surface. Collapses to zero width (content clipped,
+          not reflowed) and resizes via the gutter. */}
       <aside
         inert={collapsed || undefined}
         className={cn(
