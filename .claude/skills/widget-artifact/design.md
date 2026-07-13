@@ -319,6 +319,50 @@ grid at tile sizes; label the endpoint value in 12px mono instead.
 </svg>
 ```
 
+### Time blocks (the Newport day)
+
+The plan archetype plans the whole day, not just meetings: every
+30-minute slot has a job. Blocks are typed classes carrying a `--tone`;
+`--s` is the span in 30-minute slots:
+
+```css
+.t-deep {
+  --tone: var(--color-orange); /* executes a top priority */
+}
+.t-mtg {
+  --tone: var(--color-aqua); /* externally fixed time */
+}
+.t-shal {
+  --tone: var(--color-purple); /* batched email/review work */
+}
+.t-per {
+  --tone: var(--color-ink-faint); /* life around the work */
+}
+.t-free {
+  --tone: var(--color-bg3); /* honest slack — the meter's off tone */
+}
+```
+
+One block list, three renderings (see `docs/samples/daily-plan.html`):
+
+- **Tile ledger** — the rows component with a trailing duration column
+  (`14:00 · Deep — … · 1h30`). Hierarchy by ink, not fills: deep bodies
+  full ink at weight 500, free bodies ink-faint, the rest ink-dim.
+- **Day strip** — a 6px proportional bar under the section rule, one
+  segment per block at `color-mix(tone 65%)` (free stays `bg3`, the
+  unfilled track), a 2px orange tick at now. Script-built from the list;
+  the shape of the day at glance size.
+- **Time grid (page tier only)** — 26px per 30-minute slot: a 12px mono
+  hour ruler with half-hour ticks, blocks spanning `--s` grid rows with
+  a `color-mix(tone 10%)` wash (free slots stay unfilled so the hour
+  lines show through), optional 12px mono `goal:` notes on ≥1h blocks,
+  and an absolute now line across the grid with a mono time chip. Tiles
+  never render the grid — the ledger plus strip is the glance; the grid
+  is the plan.
+
+A `.totals` line (12px mono, tone dots) states the process metric on
+wide tiers: `4.5h deep · 1h meetings · 3h shallow · 30m free`.
+
 ### Now marker (timelines)
 
 For today-scoped time lists: dim rows whose time has passed

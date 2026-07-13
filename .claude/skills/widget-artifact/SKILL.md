@@ -125,7 +125,7 @@ it hides trailing items until the page fits and says how many it hid:
           list.appendChild(more)
         }
         var items = [].filter.call(list.children, function (el) {
-          return el !== more
+          return el !== more && !el.classList.contains("now")
         })
         items.forEach(function (el) {
           el.hidden = false
@@ -141,7 +141,18 @@ it hides trailing items until the page fits and says how many it hid:
         }
         var hidden = 0
         while (over() && hidden < items.length) {
-          items[items.length - ++hidden].hidden = true
+          var before = Math.max(doc.scrollHeight, document.body.scrollHeight)
+          var el = items[items.length - ++hidden]
+          el.hidden = true
+          // In multi-column tiers hiding a short-column item frees no
+          // height — revert and leave this list whole.
+          if (
+            Math.max(doc.scrollHeight, document.body.scrollHeight) >= before
+          ) {
+            el.hidden = false
+            hidden--
+            break
+          }
           more.hidden = false
           more.textContent = "+" + hidden + " more"
         }
