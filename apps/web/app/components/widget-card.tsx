@@ -320,6 +320,22 @@ export function WidgetCard({
                     forceVisible={status.kind !== "live"}
                   />
                 )}
+              {/* Open the routine editor. Config (name, schedule, params) is
+                  a routines.yaml draft, not a layout edit, so it lives here in
+                  view mode — edit mode stays purely layout. Also kept in the
+                  edit-mode bar for reach while rearranging. */}
+              {onEdit && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={t("routine.edit", { name: routine.name })}
+                  title={t("routine.edit", { name: routine.name })}
+                  className={cn(BAR_ACTION, "opacity-0")}
+                  onClick={() => onEdit()}
+                >
+                  <Pencil />
+                </Button>
+              )}
               {/* Peek at full size. Recedes until the card is hovered/focused
                 (fine pointers), always shown on touch where there is no hover;
                 the reserved slot means no layout shift on reveal. */}

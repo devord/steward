@@ -214,6 +214,31 @@ describe("WidgetCard empty states", () => {
     await expect.poll(() => toggled).toBe(true)
   })
 
+  it("opens the routine editor from the view-mode title bar", async () => {
+    let edited = false
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine()}
+        artifact={artifact({ html: "<h1>live</h1>" })}
+        now={Date.now()}
+        dataRepo="o/r"
+        committed
+        onEdit={() => {
+          edited = true
+        }}
+      />,
+    )
+    // Editing a routine is a config edit, not a layout edit — the pencil must
+    // not require entering dashboard edit mode.
+    const btn = document.querySelector<HTMLButtonElement>(
+      'button[aria-label^="Edit"]',
+    )
+    await expect.poll(() => btn != null).toBe(true)
+    btn?.click()
+    await expect.poll(() => edited).toBe(true)
+  })
+
   it("toggles enabled from the edit-mode title bar", async () => {
     let toggled = false
     await renderCard(
