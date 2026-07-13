@@ -467,6 +467,7 @@ export function RoutinesTable({
                 lastRunAt={artifact?.lastRunAt ?? null}
                 routineId={artifact?.routineId}
                 owner={owner}
+                account={artifact?.claudeAccount ?? null}
                 committed={committedSlugs.has(routine.slug)}
                 boards={boardsByRoutine[routine.slug] ?? []}
                 dashboards={dashboards}
@@ -498,6 +499,7 @@ function RoutineRow({
   lastRunAt,
   routineId,
   owner,
+  account,
   committed,
   boards,
   dashboards,
@@ -516,6 +518,9 @@ function RoutineRow({
   lastRunAt: string | null
   routineId: string | undefined
   owner: string
+  /** Claude account email from the trigger file (ADR-0029) — the axis the
+      GitHub login can't carry: one runner, several Claude accounts. */
+  account: string | null
   /** On the server (synced), not just in the local draft — placement needs it,
       since the board loader only sees committed routines.yaml. */
   committed: boolean
@@ -576,6 +581,14 @@ function RoutineRow({
         >
           {owner}
         </a>
+        {/* The owning Claude account beneath the login — same two-line idiom
+            as name/slug. Absent (local, no trigger, pre-ADR-0029 trigger) the
+            cell stays a bare login rather than showing a placeholder. */}
+        {account != null && (
+          <div className="truncate font-mono text-xs text-ink-faint">
+            {account}
+          </div>
+        )}
       </td>
 
       <td className="hidden py-2 pr-3 align-top sm:table-cell">

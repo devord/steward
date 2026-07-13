@@ -134,6 +134,13 @@ export const triggerFileSchema = z.object({
   routine: z.string().min(1),
   /** Trigger-only scoped bearer token, minted in the Claude web UI. */
   token: z.string().min(1),
+  /**
+   * Claude account email that owns the cloud routine — the account the
+   * trigger was minted under (ADR-0029). `runner:` names a GitHub login,
+   * which can't tell one person's Claude accounts apart; this can.
+   * Optional: triggers committed before ADR-0029 don't carry it.
+   */
+  account: nonBlank.optional(),
 })
 
 export type TriggerFile = z.infer<typeof triggerFileSchema>

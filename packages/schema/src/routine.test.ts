@@ -7,6 +7,7 @@ import {
   routineHost,
   routineSchema,
   routinesFileSchema,
+  triggerFileSchema,
   triggerPath,
 } from "./routine.ts"
 
@@ -214,6 +215,31 @@ describe("triggerPath", () => {
 
   it("rejects a slug that would escape the triggers dir", () => {
     expect(() => triggerPath("../secrets")).toThrow()
+  })
+})
+
+describe("triggerFileSchema", () => {
+  it("round-trips the owning Claude account (ADR-0029)", () => {
+    const parsed = triggerFileSchema.parse({
+      routine: "rt_123",
+      token: "tok",
+      account: "daniel@dmoraes.org",
+    })
+    expect(parsed.account).toBe("daniel@dmoraes.org")
+  })
+
+  it("accepts a pre-ADR-0029 trigger without an account", () => {
+    const parsed = triggerFileSchema.parse({ routine: "rt_123", token: "tok" })
+    expect(parsed.account).toBeUndefined()
+  })
+
+  it("rejects a blank account — absent beats blank", () => {
+    const result = triggerFileSchema.safeParse({
+      routine: "rt_123",
+      token: "tok",
+      account: "   ",
+    })
+    expect(result.success).toBe(false)
   })
 })
 

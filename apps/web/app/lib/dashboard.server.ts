@@ -49,6 +49,9 @@ export interface ArtifactInfo {
       only for a cloud routine whose trigger file exists and parses; undefined
       otherwise (local, no trigger, or an unreadable/legacy trigger). */
   routineId?: string
+  /** Claude account email that owns the cloud routine, from its trigger file
+      (ADR-0029). undefined for triggers committed before the field existed. */
+  claudeAccount?: string
 }
 
 /**
@@ -360,15 +363,17 @@ export async function loadArtifacts(
           ? trigger.value != null
           : undefined
         : undefined
-      // The routine id rides in the trigger file body — parse it out for the
-      // claude.ai link and the fire path. A malformed trigger just leaves it
-      // undefined (the link is suppressed), never fails the cell.
+      // The routine id and owning account ride in the trigger file body —
+      // parsed out for the claude.ai link, the fire path, and the pool's
+      // account column (ADR-0029). A malformed trigger just leaves them
+      // undefined (the affordances are suppressed), never fails the cell.
       let routineId: string | undefined
+      let claudeAccount: string | undefined
       if (trigger.status === "fulfilled" && trigger.value) {
         try {
-          routineId = triggerFileSchema.parse(
-            JSON.parse(trigger.value.text),
-          ).routine
+          const parsed = triggerFileSchema.parse(JSON.parse(trigger.value.text))
+          routineId = parsed.routine
+          claudeAccount = parsed.account
         } catch {
           routineId = undefined
         }
@@ -376,6 +381,7 @@ export async function loadArtifacts(
       const triggerFields = {
         ...(hasTrigger !== undefined ? { hasTrigger } : {}),
         ...(routineId !== undefined ? { routineId } : {}),
+        ...(claudeAccount !== undefined ? { claudeAccount } : {}),
       }
       artifacts[slug] =
         body.status === "fulfilled"
