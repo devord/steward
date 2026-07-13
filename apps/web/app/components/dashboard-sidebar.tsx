@@ -160,7 +160,7 @@ export function DashboardSidebar({
             by one hairline (a verb, not one of the nouns). The trailing space
             is empty scroll room, not a gap the actions float in. */}
         <div className="mt-2 space-y-2">
-          <div className="mx-2.5 border-t border-border-dim" />
+          <div className="border-t border-border-dim" />
           <RailAction
             icon={Plus}
             label={t("switcher.new")}
