@@ -179,6 +179,26 @@ li + li {
 }
 ```
 
+### Link
+
+Anything that names an object living elsewhere — a PR, an issue, an
+event — is an anchor to it, always with `target="_blank" rel="noopener"`
+(widget-standard §7: in-frame navigation is blocked, so a bare href is a
+dead link). Links keep the ink register: no browser blue, a hairline
+underline that inks up on hover.
+
+```css
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-border);
+  text-underline-offset: 2px;
+}
+a:hover {
+  text-decoration-color: var(--color-ink-dim);
+}
+```
+
 ### Stat (the 1×1 tier)
 
 The one number that answers the glance, plus what it counts, plus at most

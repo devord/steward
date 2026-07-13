@@ -15,8 +15,10 @@ relies on it when rendering. Grid bounds are encoded in
 - A widget declares `size: { cols: 1..columns, rows: 1..6 }` and a
   `position: { col, row }` in `data/dashboards/<slug>.yaml`.
 - The widget body is an iframe:
-  `<iframe srcdoc={artifactHtml} sandbox="allow-scripts">` — scripts allowed,
-  **no** `allow-same-origin`, and the sandbox has no network.
+  `<iframe srcdoc={artifactHtml} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox">`
+  — scripts allowed, links open real new tabs (ADR-0028), **no**
+  `allow-same-origin`, no in-frame navigation, and the sandbox has no
+  network.
 - **Tiles never scroll** (ADR-0019). The frame pins `overflow: hidden`
   inside the tile iframe and stamps `data-steward-tile` on the artifact's
   `<html>`; if content overflows anyway, the frame fades the bottom edge out
@@ -78,7 +80,15 @@ An artifact MUST:
    color, and the palette accents, not by shrinking type. The 1×1 tier leans
    on its KPI number; detail tiers carry the 14px body. (Type sizes are baked
    into each published file — a rescale only lands when the routine reruns.)
-7. **Compose from the shared design language** (ADR-0027). The
+7. **Link out, in a new tab.** Anything the artifact names that lives
+   elsewhere — a PR, an issue, an event — is an anchor to it; the tile is
+   triage, the source system is the follow-through. Every `<a href>`
+   carries `target="_blank" rel="noopener"`: in-frame navigation is
+   sandbox-blocked (ADR-0028), so a bare href goes nowhere on the raw
+   page. (On the board the frame retargets forgotten anchors as a
+   backstop.) Style links with the design language's link component —
+   calm ink, never browser blue.
+8. **Compose from the shared design language** (ADR-0027). The
    `widget-artifact` skill's `design.md` defines the component set —
    shell, section rules, ledger rows, the stat tier, pills, dots, meters,
    sparklines, empty states — and the per-tier playbook. Artifacts pick

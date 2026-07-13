@@ -2,7 +2,7 @@
 <!-- Sample steward artifact (docs/widget-standard.md): the stats/pulse
      archetype of the design language in
      .claude/skills/widget-artifact/design.md — the stat tier, status
-     dots, pills, trailing values, and nested detail rows. -->
+     dots, pills, links, trailing values, and nested detail rows. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -62,6 +62,17 @@
         gap: 12px;
         margin-block: auto;
         min-height: 0;
+      }
+      /* Links (widget-standard §7, ADR-0028): every named object opens its
+         source in a new tab. Ink register — hairline underline, no blue. */
+      a {
+        color: inherit;
+        text-decoration: underline;
+        text-decoration-color: var(--color-border);
+        text-underline-offset: 2px;
+      }
+      a:hover {
+        text-decoration-color: var(--color-ink-dim);
       }
       /* The 1×1 stat: the one number that answers the glance. */
       .stat {
@@ -153,31 +164,55 @@
       .need[data-zero] {
         color: var(--color-ink-faint);
       }
-      /* PR detail rows nest under the repo column and only exist on
-         taller tiers. */
+      /* PR detail rows nest under the repo column and only exist on taller
+         tiers: who · title (link) · state/CI meta · age — a real table, the
+         key columns aligned down the whole nest by subgrid. */
       .detail {
         grid-column: 2 / -1;
         display: none;
-        grid-template-columns: 1fr max-content;
-        gap: 3px 12px;
+        grid-template-columns: max-content 1fr max-content max-content;
+        gap: 3px 10px;
         padding: 4px 0 6px;
       }
       .detail li {
         grid-template-columns: subgrid;
       }
+      .who {
+        grid-column: 1;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-faint);
+      }
+      .who.you {
+        color: var(--color-orange);
+      }
       .detail .title {
+        grid-column: 2;
         color: var(--color-ink-dim);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
+      .detail .meta {
+        grid-column: 3;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
       .detail .age {
+        grid-column: 4;
         font-family: var(--font-mono);
         font-size: 12px;
         color: var(--color-ink-faint);
       }
+      /* Yellow only when the wait is on the user: needs-you rows > 3d. */
       .detail .age[data-stale] {
         color: var(--color-yellow);
+      }
+      /* Drafts read as parked, not pending. */
+      .detail li[data-draft] .title,
+      .detail li[data-draft] .who {
+        color: var(--color-ink-faint);
       }
       [data-fit-more] {
         display: block;
@@ -264,45 +299,113 @@
       <ul class="rows" data-fit-list>
         <li>
           <span class="dot"></span>
-          <span class="repo">corza</span>
+          <a
+            class="repo"
+            href="https://github.com/acme/corza/pulls"
+            target="_blank"
+            rel="noopener"
+            >corza</a
+          >
           <span class="counts">22 PRs · 0 new issues</span>
           <span class="need">9 need you</span>
           <ul class="detail">
             <li>
-              <span class="title"
-                >#249 Quoting flow: stories in outreach emails</span
-              ><time class="age">2d</time>
+              <span class="who you">you</span>
+              <a
+                class="title"
+                href="https://github.com/acme/corza/pull/249"
+                target="_blank"
+                rel="noopener"
+                >#249 Quoting flow: stories in outreach emails</a
+              >
+              <time class="age">2d</time>
             </li>
             <li>
-              <span class="title"
-                >#234 De-conflict overdue drafts (CORZA-136)</span
-              ><time class="age" data-stale>24d</time>
+              <span class="who you">you</span>
+              <a
+                class="title"
+                href="https://github.com/acme/corza/pull/234"
+                target="_blank"
+                rel="noopener"
+                >#234 De-conflict overdue drafts (CORZA-136)</a
+              >
+              <span class="meta"
+                ><span class="pill bad">changes requested</span></span
+              >
+              <time class="age" data-stale>24d</time>
             </li>
             <li>
-              <span class="title">#226 Draft review queue: CORZA-44</span
-              ><time class="age" data-stale>31d</time>
+              <span class="who">mine</span>
+              <a
+                class="title"
+                href="https://github.com/acme/corza/pull/226"
+                target="_blank"
+                rel="noopener"
+                >#226 Draft review queue: CORZA-44</a
+              >
+              <span class="meta"><span class="pill ok">approved</span></span>
+              <time class="age">31d</time>
+            </li>
+            <li data-draft>
+              <span class="who">mine</span>
+              <a
+                class="title"
+                href="https://github.com/acme/corza/pull/251"
+                target="_blank"
+                rel="noopener"
+                >#251 Spike: quote PDF theming</a
+              >
+              <span class="meta"><span class="pill">draft</span></span>
+              <time class="age">1d</time>
             </li>
           </ul>
         </li>
         <li>
           <span class="dot bad"></span>
-          <span class="repo">elf-shopify</span>
+          <a
+            class="repo"
+            href="https://github.com/acme/elf-shopify/pulls"
+            target="_blank"
+            rel="noopener"
+            >elf-shopify</a
+          >
           <span class="counts">7 PRs · 1 new issue</span>
           <span class="need">2 need you</span>
           <ul class="detail">
             <li>
-              <span class="title">#2635 Cart upsell regression fix</span
-              ><time class="age" data-stale>12d</time>
+              <span class="who">mine</span>
+              <a
+                class="title"
+                href="https://github.com/acme/elf-shopify/pull/2635"
+                target="_blank"
+                rel="noopener"
+                >#2635 Cart upsell regression fix</a
+              >
+              <span class="meta"><span class="pill bad">CI ✗</span></span>
+              <time class="age">12d</time>
             </li>
             <li>
-              <span class="title">#2641 Checkout i18n strings</span
-              ><time class="age">1d</time>
+              <span class="who"></span>
+              <a
+                class="title"
+                href="https://github.com/acme/elf-shopify/pull/2641"
+                target="_blank"
+                rel="noopener"
+                >#2641 Checkout i18n strings</a
+              >
+              <time class="age">1d</time>
             </li>
           </ul>
         </li>
         <li>
           <span class="dot"></span>
-          <span class="repo">steward</span>
+          <a
+            class="repo"
+            href="https://github.com/acme/steward/pulls"
+            target="_blank"
+            rel="noopener"
+            >steward</a
+          >
           <span class="counts">3 PRs · 0 new issues</span>
           <span class="need" data-zero>—</span>
         </li>

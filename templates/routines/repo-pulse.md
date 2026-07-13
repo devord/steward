@@ -28,10 +28,29 @@ emphasize, what to ignore).
 
 ## Gather
 
+Resolve the viewer once — every row is marked relative to them:
+
+```bash
+login="$(gh api user -q .login)"
+```
+
 For each watched repo, via `gh` (preferred) or the GitHub API:
 
-1. Open PRs, flagging ones where the user's review is requested and ones
-   older than 3 days.
+1. Open PRs with per-PR structure, one call:
+
+   ```bash
+   gh pr list --repo "$repo" --limit 50 \
+     --json number,title,url,author,isDraft,reviewDecision,reviewRequests,statusCheckRollup,createdAt
+   ```
+
+   Derive per PR: **mine** (`author.login == login`), **needs me**
+   (`login` among `reviewRequests` — direct requests only; a
+   team-only request doesn't count as "need you"), **state**
+   (`draft` / `changes requested` / `approved` / `review required`,
+   from `isDraft` + `reviewDecision`), **CI** (worst conclusion in
+   `statusCheckRollup`: failing > pending > passing; no checks →
+   none), and **age** from `createdAt`.
+
 2. Issues opened since the last run (previous artifact's generated-at time,
    else the last 24h).
 3. Latest default-branch CI status — name the watched repo explicitly
@@ -46,16 +65,45 @@ For each watched repo, via `gh` (preferred) or the GitHub API:
 
 ## Compose
 
-Per repo, one compact row: `repo · N PRs (M need you) · K new issues · CI ✓/✗`.
-Order repos by how much needs attention (review requests first).
+Order PRs by actionability, never by number: **needs your review**
+first, then **yours that are blocked** (changes requested or failing
+CI), then yours in flight, then the rest; oldest first within each
+group — old _and_ waiting on you is the emergency.
+
+- **One repo watched**: PR rows at top level, grouped under section
+  rules — `Needs your review` / `Yours` / `Open` — with counts in the
+  section labels.
+- **Several repos**: per-repo summary rows
+  (`repo · N PRs (M need you) · K new issues · CI ✓/✗`), repos with
+  review requests first, PR rows nested under each.
 
 ## Author the artifact
 
-Follow the `widget-artifact` skill for the HTML contract. Size behavior:
+Follow the `widget-artifact` skill for the HTML contract; compose from
+its design language (ledger rows, pills, dots, links). Row anatomy —
+a PR is a ledger row:
+
+- `#num title` is a **link** to the PR (`target="_blank"
+rel="noopener"`, widget-standard §7); repo names link to the repo's
+  PR list.
+- Key column marks ownership: `you` in orange on review-requested rows,
+  `mine` in faint ink on the user's own, empty otherwise.
+- Trailing meta, right-aligned: a state pill only when the state
+  demands action (`changes requested` bad, `approved` ok, `draft`
+  neutral — and dim the whole draft row; plain `review required` needs
+  no pill), a CI dot when the PR has checks, age in 12px mono. Age
+  colors yellow only when the wait is on the user (needs-you rows
+  older than 3 days) — a big number alone is not an alarm.
+
+Size behavior:
 
 - **1×1**: total count of PRs needing the user's review, plus worst CI state.
-- **2×1**: the per-repo rows.
-- **2×2 and larger**: per-repo rows plus PR titles under each repo.
+- **2×1**: per-repo summary rows (or the top group when one repo).
+- **2×2 and larger**: the grouped PR rows.
+- **Wide tile / full view**: a real table — the same ledger grid with a
+  12px mono header row (`pr · state · ci · age`), columns aligned by
+  subgrid, hairline-separated rows. Spend width on columns, not longer
+  lines.
 
 Degrade gracefully: a repo that can't be read gets an "unreachable" row, not
 an error; no watched repos configured → an empty state telling the user to

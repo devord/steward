@@ -129,6 +129,18 @@ describe("frameArtifactHtml", () => {
     expect(tile).toContain('data-steward-tile",""')
   })
 
+  it("carries the link guard in both views (ADR-0028)", () => {
+    const tile = frameArtifactHtml(doc, DEFAULT_THEME)
+    const full = frameArtifactHtml(doc, DEFAULT_THEME, "full")
+    for (const framed of [tile, full]) {
+      // Bare anchors get retargeted at click time — in-frame navigation is
+      // sandbox-blocked, so without this a forgotten target is a dead link.
+      expect(framed).toContain("data-steward-link-guard")
+      expect(framed).toContain('a.target="_blank"')
+      expect(framed).toContain('a.rel="noopener"')
+    }
+  })
+
   it("leaves the full view scrollable — footer hidden, no tile guard", () => {
     const full = frameArtifactHtml(doc, DEFAULT_THEME, "full")
     expect(full).toContain("footer{display:none !important}")
