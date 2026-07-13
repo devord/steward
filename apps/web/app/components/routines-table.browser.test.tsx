@@ -51,6 +51,7 @@ const artifacts: Record<string, ArtifactInfo> = {
     lastRunAt: new Date(NOW - 2 * HOUR).toISOString(),
     hasTrigger: true,
     routineId: "rt_daily_123",
+    claudeAccount: "alice@example.org",
   },
   changelog: {
     html: "<p>old</p>",
@@ -141,6 +142,19 @@ describe("RoutinesTable", () => {
     expect(boardLink?.textContent?.trim()).toBe("main")
     // The orphan (triage) row carries the orphan tag, not a board link.
     expect(document.body.textContent).toContain("orphan")
+  })
+
+  it("shows the owning Claude account when the trigger carries one (ADR-0029)", async () => {
+    await renderTable()
+    // daily-plan's trigger names its account; changelog's predates the field.
+    const dailyRow = [...document.querySelectorAll("tr")].find((tr) =>
+      tr.textContent?.includes("Daily plan"),
+    )
+    expect(dailyRow?.textContent).toContain("alice@example.org")
+    const changelogRow = [...document.querySelectorAll("tr")].find((tr) =>
+      tr.textContent?.includes("Changelog"),
+    )
+    expect(changelogRow?.textContent).not.toContain("@")
   })
 
   it("shows a claude.ai link only for a routine with a trigger id", async () => {
