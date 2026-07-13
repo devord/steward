@@ -61,7 +61,15 @@ function SelectContent({
   sideOffset = 4,
   align = "center",
   alignOffset = 0,
-  alignItemWithTrigger = true,
+  // Always a plain anchored dropdown, never Base UI's "align the selected
+  // item over the trigger" mode. That mode switches the popup to
+  // `position: fixed` and slides the list so the active item lands on the
+  // trigger — a lurch that reads as jank inside our fixed, translate-centered
+  // dialog. Base UI already drops it on touch (opening via touch anchors
+  // below the trigger); making it the default anchors every pointer the same
+  // way and, because `data-align-trigger` now reads false, restores the plain
+  // fade/zoom open the CSS below defines (the align gate had suppressed it).
+  alignItemWithTrigger = false,
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<
