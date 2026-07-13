@@ -109,11 +109,13 @@ export function Wordmark({
     >
       {/* Optical nudge: items-center centers the mark on the text's line box,
           but "Steward" has no descenders (only S/t/d rise), so its ink centroid
-          — the word's visual center of mass — sits ~0.043em below that line-box
-          center. Drop the mark to meet it. Measured and size-independent: the
-          half-leading items-center adds exactly cancels line-height, so this one
-          value holds at every font size (text-sm through the landing's text-5xl).
-          Both crops keep the glyph's center at y=32, so the nudge is shared. */}
+          — the word's visual center of mass — sits below that line-box center.
+          Drop the mark ~0.054em to meet it: measured from pixel screenshots of
+          the real Geist Mono render (mark centroid vs word centroid → ~0 at
+          60–120px). Size-independent — the half-leading items-center adds
+          exactly cancels line-height, so this one value holds at every font
+          size (text-sm through the landing's text-5xl). Both crops keep the
+          glyph's center at y=32, so the nudge is shared. */}
       <Logo
         live={live}
         display={display}
@@ -121,7 +123,7 @@ export function Wordmark({
           // Bare glyph: sized so the wings stand roughly cap-height next to
           // the name. Display tile: the old 1.4em block.
           display ? "size-[1.4em]" : "size-[1.25em]",
-          "translate-y-[0.043em]",
+          "translate-y-[0.054em]",
         )}
       />
       Steward
