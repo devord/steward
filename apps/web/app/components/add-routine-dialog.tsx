@@ -8,7 +8,15 @@ import type {
   WidgetSize,
 } from "@steward/schema"
 import { repoRefSchema, slugSchema } from "@steward/schema"
-import { CheckIcon, ChevronRightIcon } from "lucide-react"
+import {
+  Activity,
+  CheckIcon,
+  ChevronRightIcon,
+  LayoutGrid,
+  ListChecks,
+  PenLine,
+} from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
 import { cn } from "~/lib/utils"
 
@@ -31,7 +39,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select"
-import { Textarea } from "~/components/ui/textarea"
 import { useT } from "../lib/i18n.tsx"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
 import type { RepoSearchResult } from "../routes/repos.ts"
@@ -58,6 +65,18 @@ const CUSTOM = "custom"
     template card is picked. Not a card itself — it ships without a
     `widget:` block, so discovery never offers it. */
 const CUSTOM_TEMPLATE = "custom"
+
+/** Per-template glyphs for the picker's leading anchor. Known built-ins get
+    a specific mark; a discovered (repo/team) template falls back to the
+    generic widget glyph. The icon is decoration for the id, never the pick
+    target — chrome stays quiet, accent only when selected. */
+const TEMPLATE_ICONS: Record<string, LucideIcon> = {
+  custom: PenLine,
+  "daily-plan": ListChecks,
+  "repo-pulse": Activity,
+}
+const templateIcon = (id: string): LucideIcon =>
+  TEMPLATE_ICONS[id] ?? LayoutGrid
 
 type Step = "intent" | "config"
 
@@ -493,13 +512,19 @@ export function AddRoutineDialog({
                 <div className="grid gap-1.5">
                   <TemplateCard
                     id={CUSTOM_TEMPLATE}
+                    icon={PenLine}
                     badge={t("dialog.sourceBuiltin")}
                     description={t("dialog.customCard")}
                     selected={isCustom}
                     onPick={() => setTemplateId(null)}
                   >
                     {isCustom && (
-                      <Textarea
+                      // Seamless writing area, not a boxed input: the card's
+                      // own border frames the brief, so the field carries no
+                      // border/fill/ring of its own (that nesting read as a
+                      // box-in-a-box). The hairline above sets it apart; the
+                      // caret is its focus affordance.
+                      <textarea
                         id="routine-prompt"
                         // The on-ramp: open the dialog and type. Custom is
                         // preselected, so the prompt takes initial focus.
@@ -511,6 +536,7 @@ export function AddRoutineDialog({
                         }
                         placeholder={t("dialog.promptPlaceholder")}
                         rows={3}
+                        className="field-sizing-content min-h-[4.5rem] w-full resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
                       />
                     )}
                   </TemplateCard>
@@ -518,6 +544,7 @@ export function AddRoutineDialog({
                     <TemplateCard
                       key={entry.id}
                       id={entry.id}
+                      icon={templateIcon(entry.id)}
                       badge={t(
                         entry.source === "repo"
                           ? "dialog.sourceRepo"
@@ -841,6 +868,7 @@ export function AddRoutineDialog({
  */
 function TemplateCard({
   id,
+  icon: Icon,
   badge,
   description,
   selected,
@@ -848,6 +876,8 @@ function TemplateCard({
   children,
 }: {
   id: string
+  /** Leading glyph — the row's fixed left anchor (see TEMPLATE_ICONS). */
+  icon: LucideIcon
   /** Translated source label (Built-in / Team / Private). */
   badge: string
   description: string
@@ -869,9 +899,18 @@ function TemplateCard({
         type="button"
         aria-pressed={selected}
         onClick={onPick}
-        className="flex w-full cursor-pointer items-start justify-between gap-2 rounded-lg px-3 py-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <span className="min-w-0">
+        <Icon
+          aria-hidden
+          className={cn(
+            "size-4 shrink-0 transition-colors",
+            selected ? "text-primary" : "text-muted-foreground",
+          )}
+        />
+        {/* min-w-0 lets the one-line description truncate instead of pushing
+            the check off — every row stays the same height. */}
+        <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="font-mono text-xs text-primary">{id}</span>
             <Badge
@@ -881,14 +920,14 @@ function TemplateCard({
               {badge}
             </Badge>
           </span>
-          <span className="mt-0.5 block text-xs text-muted-foreground">
+          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
             {description}
           </span>
         </span>
         <CheckIcon
           aria-hidden
           className={cn(
-            "mt-0.5 size-4 shrink-0 text-primary transition-opacity duration-100",
+            "size-4 shrink-0 text-primary transition-opacity duration-100",
             selected ? "opacity-100" : "opacity-0",
           )}
         />
