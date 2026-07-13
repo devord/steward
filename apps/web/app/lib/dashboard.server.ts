@@ -7,6 +7,7 @@ import {
   parseDashboardFile,
   parseRoutinesFile,
   routineHost,
+  triggerFileSchema,
   triggerPath,
 } from "@steward/schema"
 
@@ -41,6 +42,11 @@ export interface ArtifactInfo {
       tile can tell "press update" from "set the trigger up first" (ADR-0016).
       undefined → not a manual cloud routine, or the check couldn't run. */
   hasTrigger?: boolean
+  /** The cloud routine's id, read from its trigger file — the same id the fire
+      API addresses (ADR-0016) and the claude.ai routine page keys on. Present
+      only for a cloud routine whose trigger file exists and parses; undefined
+      otherwise (local, no trigger, or an unreadable/legacy trigger). */
+  routineId?: string
 }
 
 /**
@@ -339,20 +345,37 @@ export async function loadArtifacts(
           ? trigger.value != null
           : undefined
         : undefined
+      // The routine id rides in the trigger file body — parse it out for the
+      // claude.ai link and the fire path. A malformed trigger just leaves it
+      // undefined (the link is suppressed), never fails the cell.
+      let routineId: string | undefined
+      if (trigger.status === "fulfilled" && trigger.value) {
+        try {
+          routineId = triggerFileSchema.parse(
+            JSON.parse(trigger.value.text),
+          ).routine
+        } catch {
+          routineId = undefined
+        }
+      }
+      const triggerFields = {
+        ...(hasTrigger !== undefined ? { hasTrigger } : {}),
+        ...(routineId !== undefined ? { routineId } : {}),
+      }
       artifacts[slug] =
         body.status === "fulfilled"
           ? {
               html: body.value?.text ?? null,
               sha: body.value?.sha ?? null,
               lastRunAt: lastRun.status === "fulfilled" ? lastRun.value : null,
-              ...(hasTrigger !== undefined ? { hasTrigger } : {}),
+              ...triggerFields,
             }
           : {
               html: null,
               sha: null,
               lastRunAt: null,
               unreachable: true,
-              ...(hasTrigger !== undefined ? { hasTrigger } : {}),
+              ...triggerFields,
             }
     }),
   )
@@ -388,4 +411,79 @@ export async function loadDashboard(
   const base = await loadDashboardStructure(token, ref)
   const artifacts = await loadArtifacts(token, ref, base.routines)
   return { ...base, artifacts }
+}
+
+/**
+ * The routine pool of one data repo (ADR-0025): every routine in
+ * data/routines.yaml plus, for each, which boards place it — the map the pool
+ * view uses to surface orphans (a routine on no board) and route to where a
+ * routine renders. Structure only; freshness/state streams in via loadArtifacts
+ * exactly as the board does, so the table paints before the artifact reads land.
+ */
+export interface RoutinesPool {
+  routines: RoutinesFile
+  /** routines.yaml blob SHA + body — the pool view's draft base (ADR-0003). */
+  baseSha: string | null
+  baseFile: string | null
+  /** Board slugs each routine is placed on, keyed by routine slug. A slug
+      absent here (or mapped to []) is an orphan: in the pool, on no board. */
+  boardsByRoutine: Record<string, string[]>
+  /** Every board slug in the repo — the add-to-board picker's options. */
+  dashboards: string[]
+}
+
+export async function loadRoutinesPool(
+  token: string,
+  repo: string,
+): Promise<RoutinesPool> {
+  const [routinesRaw, slugs] = await Promise.all([
+    getFile(token, repo, "data/routines.yaml", "main"),
+    listDashboards(token, repo),
+  ])
+  const routines = routinesRaw
+    ? parseRoutinesFile(routinesRaw.text)
+    : { routines: [] }
+  const dashboards = slugs ?? []
+
+  // Read each board's layout to learn placements. One flaky board degrades to
+  // "placements unknown for that board" (dropped from the map), never a failed
+  // page — the same failure-isolation the sidebar's per-repo listing uses.
+  const layouts = await Promise.all(
+    dashboards.map((slug) =>
+      getFile(token, repo, dashboardPath(slug), "main")
+        .then((raw) =>
+          raw ? { slug, file: parseDashboardFile(raw.text) } : null,
+        )
+        .catch(() => null),
+    ),
+  )
+  const boardsByRoutine: Record<string, string[]> = {}
+  for (const layout of layouts) {
+    if (!layout) continue
+    for (const widget of layout.file.widgets) {
+      ;(boardsByRoutine[widget.routine] ??= []).push(layout.slug)
+    }
+  }
+
+  return {
+    routines,
+    baseSha: routinesRaw?.sha ?? null,
+    baseFile: routinesRaw?.text ?? null,
+    boardsByRoutine,
+    dashboards,
+  }
+}
+
+/** loadRoutinesPool for route loaders: same degrade contract as the board
+    loaders — a dead token becomes the 401 re-auth page, any other transient
+    GitHub failure the 503 refresh page. */
+export async function loadRoutinesPoolOr503(
+  token: string,
+  repo: string,
+): Promise<RoutinesPool> {
+  try {
+    return await loadRoutinesPool(token, repo)
+  } catch (error) {
+    degradeGitHubError(error)
+  }
 }

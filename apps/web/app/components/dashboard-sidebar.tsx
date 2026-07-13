@@ -1,6 +1,12 @@
 import { useState } from "react"
 
-import { FolderGit2, MoreHorizontal, Plus, Trash2 } from "lucide-react"
+import {
+  FolderGit2,
+  ListTodo,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+} from "lucide-react"
 
 import { AccountMenu } from "./account-menu.tsx"
 import { AddDataRepoDialog } from "./add-data-repo-dialog.tsx"
@@ -17,7 +23,7 @@ import {
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
 import type { SidebarData } from "../lib/dashboard.server.ts"
-import { boardHref, DEFAULT_DASHBOARD } from "../lib/repos.ts"
+import { boardHref, DEFAULT_DASHBOARD, routinesHref } from "../lib/repos.ts"
 import { useT } from "../lib/i18n.tsx"
 
 /**
@@ -39,6 +45,7 @@ export function DashboardSidebar({
   dataRepo,
   activeRepo,
   dashboardSlug,
+  routinesRepo = "",
   sidebar,
   login,
   displayName,
@@ -49,6 +56,8 @@ export function DashboardSidebar({
   /** The active board's repo; "" on chrome pages (settings). */
   activeRepo: string
   dashboardSlug: string
+  /** The repo whose routine pool view is active (ADR-0025), else "". */
+  routinesRepo?: string
   sidebar: SidebarData
   login: string
   displayName?: string | null
@@ -92,6 +101,13 @@ export function DashboardSidebar({
             <NavGroup
               key={group.repo}
               header={<RepoGroupHeader group={group} />}
+              fixed={
+                <RoutinesNavItem
+                  to={routinesHref(group.repo)}
+                  active={routinesRepo === group.repo}
+                  onNavigate={onNavigate}
+                />
+              }
             >
               {group.dashboards.map((slug) => {
                 const active =
@@ -239,14 +255,20 @@ function RailAction({
  */
 function NavGroup({
   header,
+  fixed,
   children,
 }: {
   header: React.ReactNode
+  /** A repo-level fixture rendered between the header and the board spine —
+      the Routines pool link (ADR-0025), which is not a board and so hangs off
+      the spine rather than on it. */
+  fixed?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <div>
       {header}
+      {fixed}
       <div className="relative flex flex-col gap-0.5">
         <span
           aria-hidden
@@ -255,6 +277,40 @@ function NavGroup({
         {children}
       </div>
     </div>
+  )
+}
+
+/**
+ * A repo's routine pool link (ADR-0025) — a peer of its boards but a different
+ * kind: it lists what runs, not a grid. It carries an icon in the spine-node
+ * slot instead of a board dot, so it reads as the repo's fixture, and lights
+ * the same accent fill as the active board when it's the current page.
+ */
+function RoutinesNavItem({
+  to,
+  active,
+  onNavigate,
+}: {
+  to: string
+  active: boolean
+  onNavigate?: () => void
+}) {
+  const t = useT()
+  return (
+    <Link
+      to={to}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "relative flex items-center gap-2 rounded-md py-1.5 pr-2.5 pl-2.5 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        active
+          ? "bg-sidebar-accent font-medium text-foreground"
+          : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
+      )}
+    >
+      <ListTodo aria-hidden className="size-4 shrink-0 text-ink-faint" />
+      {t("nav.routines")}
+    </Link>
   )
 }
 

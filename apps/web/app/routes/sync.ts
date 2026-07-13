@@ -18,15 +18,26 @@ const fileChangeSchema = z.object({
   baseSha: z.string().nullable(),
 })
 
-const payloadSchema = z.object({
-  intent: z.enum(["commit", "pr"]),
-  /** Which data repo the sync targets — gated by requireDataRepo (ADR-0023). */
-  repo: z.string(),
-  /** Slug-validated so a crafted payload can't path-traverse the repo. */
-  dashboardSlug: slugSchema,
-  routines: fileChangeSchema.optional(),
-  dashboard: fileChangeSchema.optional(),
-})
+const payloadSchema = z
+  .object({
+    intent: z.enum(["commit", "pr"]),
+    /** Which data repo the sync targets — gated by requireDataRepo (ADR-0023). */
+    repo: z.string(),
+    /** Slug-validated so a crafted payload can't path-traverse the repo.
+        Optional: the routines pool view (ADR-0025) syncs routines.yaml alone,
+        with no board in scope, so it carries no dashboard slug. */
+    dashboardSlug: slugSchema.optional(),
+    routines: fileChangeSchema.optional(),
+    dashboard: fileChangeSchema.optional(),
+  })
+  // A dashboard change names a file at data/dashboards/<slug>.yaml — without the
+  // slug there's no path to write, so reject that shape rather than guess one.
+  .refine(
+    (payload) => payload.dashboard == null || payload.dashboardSlug != null,
+    {
+      error: "dashboard change requires dashboardSlug",
+    },
+  )
 
 export async function action({ request }: { request: Request }) {
   const auth = await requireAuth(request)
@@ -50,14 +61,19 @@ export async function action({ request }: { request: Request }) {
     auth.dataRepo,
   )
 
+  // The dashboard path only exists when a slug is present; the refine above
+  // guarantees a dashboard change never arrives without one.
   const paths = {
     routines: "data/routines.yaml",
-    dashboard: dashboardPath(payload.dashboardSlug),
+    dashboard: payload.dashboardSlug
+      ? dashboardPath(payload.dashboardSlug)
+      : null,
   } as const
 
   const changes = (["routines", "dashboard"] as const).flatMap((kind) => {
     const change = payload[kind]
-    return change ? [{ kind, path: paths[kind], ...change }] : []
+    const path = paths[kind]
+    return change && path ? [{ kind, path, ...change }] : []
   })
   if (changes.length === 0) {
     throw data({ error: "empty sync" }, { status: 400 })

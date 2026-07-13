@@ -1,6 +1,12 @@
 import type { ReactNode } from "react"
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
-import { Await, useFetcher, useNavigate, useRevalidator } from "react-router"
+import {
+  Await,
+  useFetcher,
+  useNavigate,
+  useRevalidator,
+  useSearchParams,
+} from "react-router"
 
 import type { DashboardFile, Routine, WidgetSize } from "@steward/schema"
 import { dashboardPath, GRID_MAX_COLS } from "@steward/schema"
@@ -68,6 +74,7 @@ export function DashboardBoard({
   const t = useT()
   const revalidator = useRevalidator()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // One draft per board: two dashboards in the same repo are separate edit
   // surfaces even though they share routines.yaml (ADR-0003/0010).
@@ -209,6 +216,37 @@ export function DashboardBoard({
     },
     [update],
   )
+
+  // The pool view's "Add to board" handoff (ADR-0025): it navigates here with
+  // `?place=<slug>`, and the board — which owns placement — drops the routine
+  // at a free slot in its own draft and opens edit mode on it. Only a real,
+  // still-unplaced pool routine qualifies; the param is stripped either way so
+  // a reload or back-nav can't re-place. Keyed on the slug, so one place per
+  // request; placeRoutine reads live draft state through `update`, not the
+  // closure, so a stale identity can't misplace it.
+  const placeParam = searchParams.get("place")
+  useEffect(() => {
+    if (!placeParam) return
+    const exists = routines.routines.some((r) => r.slug === placeParam)
+    const alreadyPlaced = dashboard.widgets.some(
+      (w) => w.routine === placeParam,
+    )
+    if (exists && !alreadyPlaced) {
+      placeRoutine(placeParam)
+      setEditing(true)
+    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete("place")
+        return next
+      },
+      { replace: true, preventScrollReset: true },
+    )
+    // Run once per distinct place request — routines/dashboard are read for the
+    // guard only, and placeRoutine mutates live state internally.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeParam])
 
   const moveWidget = useCallback(
     (slug: string, dCol: number, dRow: number) => {
