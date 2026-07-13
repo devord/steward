@@ -49,19 +49,6 @@ export function Landing() {
             >
               {t("landing.deviceLink")}
             </a>
-
-            {/* The mechanism in four tokens — the same pipeline the OG card
-                carries, expanded step by step in the section below. Git words
-                stay untranslated (DESIGN.md). */}
-            <p className="mt-10 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-ink-faint">
-              <PipeStep>cron</PipeStep>
-              <PipeArrow />
-              <PipeStep>skill</PipeStep>
-              <PipeArrow />
-              <PipeStep>git push</PipeStep>
-              <PipeArrow />
-              <PipeStep>widget</PipeStep>
-            </p>
           </div>
 
           {/* Right: the product itself — a small living board. Decorative, so
@@ -95,31 +82,27 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * The pipeline strip, expanded: one step per token. The token labels are
- * machine strings (mono, untranslated); the prose under each is chrome.
- * Claude Code is named here — the hero stays outcome-only.
+ * The loop in four numbered steps. Claude Code is named here — the hero
+ * stays outcome-only.
  */
 function LoopSection() {
   const t = useT()
   const steps = [
-    { token: "cron", body: t("landing.loop.cron") },
-    { token: "skill", body: t("landing.loop.skill") },
-    { token: "git push", body: t("landing.loop.push") },
-    { token: "widget", body: t("landing.loop.widget") },
+    t("landing.loop.cron"),
+    t("landing.loop.skill"),
+    t("landing.loop.push"),
+    t("landing.loop.widget"),
   ]
   return (
     <section>
       <SectionTitle>{t("landing.loop.title")}</SectionTitle>
       <ol className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
-        {steps.map((step, i) => (
-          <li key={step.token} className="text-sm leading-relaxed">
-            <span className="flex items-baseline gap-2 font-mono text-sm">
-              <span aria-hidden className="text-ink-faint">
-                {i + 1}.
-              </span>
-              <span className="text-foreground">{step.token}</span>
+        {steps.map((body, i) => (
+          <li key={body} className="flex gap-2 text-sm leading-relaxed">
+            <span aria-hidden className="font-mono text-ink-faint">
+              {i + 1}.
             </span>
-            <p className="mt-1.5 text-ink-dim">{step.body}</p>
+            <p className="text-ink-dim">{body}</p>
           </li>
         ))}
       </ol>
@@ -256,18 +239,6 @@ function LandingModeToggle() {
         )
       })}
     </div>
-  )
-}
-
-function PipeStep({ children }: { children: React.ReactNode }) {
-  return <span className="text-ink-dim">{children}</span>
-}
-
-function PipeArrow() {
-  return (
-    <span aria-hidden className="text-primary/70">
-      ▸
-    </span>
   )
 }
 
