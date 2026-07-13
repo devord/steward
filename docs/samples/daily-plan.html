@@ -4,7 +4,8 @@
      as w/daily-plan/index.html. Also the reference the widget-artifact
      skill's output should look like — it demonstrates the design language
      in .claude/skills/widget-artifact/design.md (ledger rows, section
-     rules, the stat tier, the now marker, the day strip, the time grid). -->
+     rules, the stat tier, the day strip, the Newport time grid with its
+     live now line, inline lucide icons). -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -112,6 +113,12 @@
         line-height: inherit;
         color: var(--color-ink-dim);
         white-space: nowrap;
+      }
+      /* Inline icon (lucide path data, stroke inherits the key color). */
+      .key svg {
+        width: 12px;
+        height: 12px;
+        vertical-align: -1.5px;
       }
       .prio .key {
         color: var(--color-orange);
@@ -222,8 +229,8 @@
       .blocks li[data-past] .body {
         color: var(--color-ink-faint);
       }
-      /* The now marker: a thin accent rule the script drops between the
-         last past block and the next one. */
+      /* The now marker: a thin accent rule the script keeps between the
+         last past block and the next one, re-placed as the day moves. */
       .now {
         display: flex;
         align-items: center;
@@ -404,9 +411,10 @@
         :root:not([data-steward-tile]) .date {
           display: block;
         }
-        /* The time grid (page tier only — tiles keep the ledger): a
-           30-minute ruler and proportional blocks, Newport style. The
-           strip is redundant here; the grid IS the shape of the day. */
+        /* The time grid (page tier only — tiles keep the ledger): the
+           paper planner. Every 30-minute slot is a labeled ruler row and
+           a rule across the day; blocks are drawn boxes spanning their
+           slots. The strip is redundant here; the grid IS the day. */
         :root:not([data-steward-tile]) .strip {
           display: none;
         }
@@ -422,6 +430,9 @@
           grid-template-columns: max-content 1fr;
           column-gap: 10px;
         }
+        /* The ruler: one 12px mono label per 30-minute slot (hours in
+           full, half-hours as a quiet :30), script-built from the block
+           list so it always spans exactly the working day. */
         :root:not([data-steward-tile]) .ruler {
           display: grid;
           grid-auto-rows: var(--slot);
@@ -431,17 +442,14 @@
           font-family: var(--font-mono);
           font-size: 12px;
           line-height: 1;
-          color: var(--color-ink-faint);
-          /* 30-minute tick marks along the axis. */
-          background: repeating-linear-gradient(
-              to bottom,
-              transparent 0 calc(var(--slot) - 1px),
-              var(--color-border-dim) calc(var(--slot) - 1px) var(--slot)
-            )
-            right / 5px 100% no-repeat;
+          text-align: right;
+          color: var(--color-ink-dim);
         }
         :root:not([data-steward-tile]) .ruler span {
-          grid-row: var(--h) / span 2;
+          padding-top: 7px; /* (26 - 12) / 2 — centered in the slot row */
+        }
+        :root:not([data-steward-tile]) .ruler span.half {
+          color: var(--color-ink-faint);
         }
         :root:not([data-steward-tile]) .blocks .day ul {
           display: grid;
@@ -450,32 +458,52 @@
           gap: 0;
           border-top: 1px solid var(--color-border-dim);
           border-bottom: 1px solid var(--color-border-dim);
-          /* Hour lines; visible where the day is free. */
-          background: repeating-linear-gradient(
-            to bottom,
-            transparent 0 calc(var(--slot) * 2 - 1px),
-            var(--color-border-dim) calc(var(--slot) * 2 - 1px)
-              calc(var(--slot) * 2)
-          );
+          /* The paper: an hour line plus a fainter half-hour line, ruled
+             across the whole day — visible through free slots and the
+             translucent block washes alike. */
+          background:
+            repeating-linear-gradient(
+              to bottom,
+              transparent 0 calc(var(--slot) * 2 - 1px),
+              var(--color-border-dim) calc(var(--slot) * 2 - 1px)
+                calc(var(--slot) * 2)
+            ),
+            repeating-linear-gradient(
+              to bottom,
+              transparent 0 calc(var(--slot) - 1px),
+              color-mix(in srgb, var(--color-border-dim) 55%, transparent)
+                calc(var(--slot) - 1px) var(--slot)
+            );
         }
+        /* A block is a drawn box: tone border + wash, spanning its slots.
+           Free slots stay unboxed so the ruled paper shows through. */
         :root:not([data-steward-tile]) .blocks .day li {
           grid-column: 1;
           grid-row: span var(--s, 1);
           display: grid;
-          grid-template-columns: max-content 1fr max-content;
+          grid-template-columns: 1fr max-content;
           column-gap: 8px;
           align-content: start;
           align-items: baseline;
           margin: 1px 2px 1px 0;
-          padding: 2px 8px;
-          border: 0;
-          border-radius: 4px;
+          padding: 1px 8px;
+          border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
+          border-radius: 3px;
           line-height: 1.4;
           overflow: hidden;
-          background: color-mix(in srgb, var(--tone) 10%, transparent);
+          background: color-mix(in srgb, var(--tone) 12%, transparent);
         }
         :root:not([data-steward-tile]) .blocks .day li.t-free {
+          border-color: transparent;
           background: transparent;
+        }
+        /* The ruler carries the times on this tier — a box holds only
+           its task, like the paper. */
+        :root:not([data-steward-tile]) .blocks .day li .key {
+          display: none;
+        }
+        :root:not([data-steward-tile]) .blocks .day .note {
+          grid-column: 1;
         }
         :root:not([data-steward-tile]) .blocks .day .body {
           min-width: 0;
@@ -485,7 +513,6 @@
         }
         :root:not([data-steward-tile]) .blocks .day .note {
           display: block;
-          grid-column: 2;
           font-family: var(--font-mono);
           font-size: 12px;
           color: var(--color-ink-faint);
@@ -493,7 +520,8 @@
         :root:not([data-steward-tile]) .blocks .day li[data-past] {
           opacity: 0.55;
         }
-        /* The now line crosses the whole grid at the current time. */
+        /* The now line crosses the whole grid at the current time; the
+           script re-places it each minute, no refresh needed. */
         :root:not([data-steward-tile]) .nowline {
           display: block;
           position: absolute;
@@ -501,15 +529,18 @@
           right: 0;
           border-top: 1px solid var(--color-orange-deep);
         }
+        /* The time chip sits in the ruler gutter, calendar-style, so it
+           never collides with a block's content. */
         :root:not([data-steward-tile]) .nowline span {
           position: absolute;
-          right: 0;
+          left: 0;
           top: -7px;
-          padding: 0 4px;
+          padding: 0 4px 0 0;
           background: var(--color-bg1);
           font-family: var(--font-mono);
           font-size: 12px;
           line-height: 14px;
+          font-weight: 700;
           color: var(--color-orange);
         }
       }
@@ -550,13 +581,7 @@
           <span class="t-free">30m free</span>
         </p>
         <div class="day">
-          <div class="ruler" aria-hidden="true">
-            <span style="--h: 1">08</span><span style="--h: 3">09</span
-            ><span style="--h: 5">10</span><span style="--h: 7">11</span
-            ><span style="--h: 9">12</span><span style="--h: 11">13</span
-            ><span style="--h: 13">14</span><span style="--h: 15">15</span
-            ><span style="--h: 17">16</span><span style="--h: 19">17</span>
-          </div>
+          <div class="ruler" aria-hidden="true"></div>
           <ul data-fit-list>
             <li class="t-shal" style="--s: 1">
               <time class="key">08:00</time
@@ -622,7 +647,20 @@
         <h2>Carried over <span class="count">1</span></h2>
         <ul data-fit-list>
           <li>
-            <span class="key">↻</span
+            <span class="key"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m15 14 5-5-5-5" />
+                <path
+                  d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"
+                /></svg></span
             ><span class="body">Reply to the ADR-0005 thread</span>
           </li>
         </ul>
@@ -633,9 +671,11 @@
       <span>2026-07-13 08:00Z</span>
     </footer>
     <script>
-      // The day, derived from the block list: the proportional strip, past
-      // dimming, the ledger now marker, and the time grid's now line.
-      // Pure presentation — if it fails, the list simply renders undimmed.
+      // The day, derived from the block list: the proportional strip, the
+      // 30-minute ruler, block tooltips, and the live now state — past
+      // dimming, the ledger now marker, the time grid's now line — kept
+      // current by a timer, so an open page tracks the day without a
+      // refresh. Pure presentation — without JS the list renders undimmed.
       ;(function () {
         var list = document.querySelector(".blocks ul")
         if (!list) return
@@ -651,6 +691,12 @@
         var dayStart = blocks[0].start
         var last = blocks[blocks.length - 1]
         var dayEnd = last.start + last.mins
+        var pad = function (n) {
+          return (n < 10 ? "0" : "") + n
+        }
+        var hhmm = function (mins) {
+          return pad(Math.floor(mins / 60)) + ":" + pad(mins % 60)
+        }
         // The strip: one segment per block, width proportional to minutes.
         var strip = document.querySelector(".strip")
         if (strip)
@@ -660,61 +706,113 @@
             seg.style.flex = b.mins + " 0 0px"
             strip.appendChild(seg)
           })
-        // The rest is live state — only when the plan is today's.
+        // The ruler: a label per 30-minute slot across the working day —
+        // hours in full, half-hours as a quiet :30.
+        var ruler = document.querySelector(".ruler")
+        if (ruler)
+          for (var t = dayStart; t < dayEnd; t += 30) {
+            var span = document.createElement("span")
+            if (t % 60) {
+              span.className = "half"
+              span.textContent = ":30"
+            } else span.textContent = hhmm(t)
+            ruler.appendChild(span)
+          }
+        // Tooltips: every block row carries its full story (range, label,
+        // goal note). Notes stay inline only on blocks with room (≥ 1h);
+        // on 30-minute blocks the tooltip is the note's home.
+        blocks.forEach(function (b) {
+          var body = b.li.querySelector(".body")
+          var note = b.li.querySelector(".note")
+          var tip =
+            hhmm(b.start) +
+            "–" +
+            hhmm(b.start + b.mins) +
+            " · " +
+            (body ? body.textContent : "")
+          if (note) {
+            tip += "\n" + note.textContent
+            if (b.mins < 60) note.hidden = true
+          }
+          b.li.title = tip
+        })
+        // Live now state, re-rendered on a timer. Everything below is
+        // idempotent: elements are created once and re-placed/retoned.
         var gen = new Date(
           document.querySelector('meta[name="widget-generated-at"]').content,
         )
-        var now = new Date()
-        if (now.toDateString() !== gen.toDateString()) return
-        var hhmm = now.getHours() * 60 + now.getMinutes()
-        var firstFuture = null
-        var past = 0
-        blocks.forEach(function (b) {
-          if (b.start + b.mins <= hhmm) {
-            b.li.setAttribute("data-past", "")
-            past++
-          } else if (b.start > hhmm && !firstFuture) firstFuture = b.li
-        })
-        var hh = (now.getHours() < 10 ? "0" : "") + now.getHours()
-        var mm = (now.getMinutes() < 10 ? "0" : "") + now.getMinutes()
-        // Ledger tiers: the now rule between past and future rows.
-        var mark = document.createElement("li")
-        mark.className = "now"
-        var label = document.createElement("span")
-        label.textContent = hh + ":" + mm + " now"
+        var marker = document.createElement("li")
+        marker.className = "now"
+        var markerTime = document.createElement("span")
         var rule = document.createElement("span")
         rule.className = "rule"
-        mark.appendChild(label)
-        mark.appendChild(rule)
-        if (past) {
-          var count = document.createElement("span")
-          count.className = "past"
-          count.textContent = past + " earlier"
-          mark.appendChild(count)
-        }
-        firstFuture
-          ? list.insertBefore(mark, firstFuture)
-          : list.appendChild(mark)
-        // Page tier: the now line across the time grid, and its strip tick.
-        if (hhmm < dayStart || hhmm > dayEnd) return
-        var day = document.querySelector(".day")
-        var nowline = document.querySelector(".nowline")
-        if (day && nowline) {
-          var slot = parseFloat(
-            getComputedStyle(day).getPropertyValue("--slot"),
-          )
-          if (slot) {
-            nowline.style.top = ((hhmm - dayStart) / 30) * slot + "px"
-            nowline.querySelector("span").textContent = hh + ":" + mm
-            nowline.hidden = false
-          }
-        }
-        if (strip) {
-          var tick = document.createElement("i")
-          tick.style.left =
-            ((hhmm - dayStart) / (dayEnd - dayStart)) * 100 + "%"
+        var earlier = document.createElement("span")
+        earlier.className = "past"
+        marker.appendChild(markerTime)
+        marker.appendChild(rule)
+        marker.appendChild(earlier)
+        var tick = strip ? document.createElement("i") : null
+        if (tick) {
+          tick.hidden = true
           strip.appendChild(tick)
         }
+        var nowline = document.querySelector(".nowline")
+        function render() {
+          var now = new Date()
+          // Live state only while the plan is today's; when the date
+          // rolls, clear it and show the plan as written.
+          if (now.toDateString() !== gen.toDateString()) {
+            blocks.forEach(function (b) {
+              b.li.removeAttribute("data-past")
+            })
+            marker.remove()
+            if (tick) tick.hidden = true
+            if (nowline) nowline.hidden = true
+            return
+          }
+          var mins = now.getHours() * 60 + now.getMinutes()
+          var past = 0
+          var firstFuture = null
+          blocks.forEach(function (b) {
+            if (b.start + b.mins <= mins) {
+              b.li.setAttribute("data-past", "")
+              past++
+            } else {
+              b.li.removeAttribute("data-past")
+              if (b.start > mins && !firstFuture) firstFuture = b.li
+            }
+          })
+          // Ledger tiers: the now rule between past and future rows.
+          markerTime.textContent = hhmm(mins) + " now"
+          earlier.textContent = past + " earlier"
+          earlier.hidden = !past
+          firstFuture
+            ? list.insertBefore(marker, firstFuture)
+            : list.appendChild(marker)
+          // Page tier: the now line across the grid, and its strip tick.
+          var inDay = mins >= dayStart && mins <= dayEnd
+          var frac = (mins - dayStart) / (dayEnd - dayStart)
+          if (nowline) {
+            var slot = parseFloat(
+              getComputedStyle(nowline.parentNode).getPropertyValue("--slot"),
+            )
+            nowline.hidden = !inDay || !slot
+            if (!nowline.hidden) {
+              nowline.style.top = ((mins - dayStart) / 30) * slot + "px"
+              nowline.firstChild.textContent = hhmm(mins)
+            }
+          }
+          if (tick) {
+            tick.hidden = !inDay
+            if (inDay) tick.style.left = frac * 100 + "%"
+          }
+        }
+        render()
+        setInterval(render, 30000)
+        addEventListener("resize", render)
+        document.addEventListener("visibilitychange", function () {
+          if (!document.hidden) render()
+        })
       })()
       // Fit lists to the tile (widget-standard §2, ADR-0019): tiles never
       // scroll, so collapse trailing items that overflow into "+N more".

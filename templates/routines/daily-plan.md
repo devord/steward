@@ -37,7 +37,9 @@ environment — skip silently anything that isn't:
   gathered data; when in doubt, prefer what the instructions emphasize.
 - **Time blocks**: a full time-block plan (Cal Newport style) — every
   30-minute slot from day start to shutdown has a job, snapped to
-  :00/:30. Build it in order:
+  :00/:30. The day span comes from the day itself: the working hours the
+  instructions state, else today's calendar (start at or before the
+  first commitment, end at the workday's close). Build it in order:
   1. Place the fixed commitments: calendar events and personal blocks
      (gym, meals, family). Declined/cancelled events are not blocks —
      when their slot is reallocated, say so in the new block's note
@@ -66,8 +68,8 @@ gruvbox tokens, breakpoints, generated-at meta + footer). Size behavior:
 - **2×1 / 1×2**: the three priorities as a list.
 - **2×2 and larger**: priorities, then the day (strip + block ledger),
   then carry-overs; wide tiles add the totals line.
-- **Raw page / full view**: the 30-minute time grid with the now line —
-  the plan you read the day from.
+- **Raw page / full view**: the 30-minute time grid with the live now
+  line — the plan you read the day from.
 
 Degrade gracefully: with no reachable data sources, still publish a plan
 derived from the instructions alone, with an explicit "no live data" note.
