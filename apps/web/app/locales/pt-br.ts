@@ -7,13 +7,47 @@ import type { Messages } from "./en.ts"
  * (draft → rascunho, commit → commit, PR → PR).
  */
 export const ptBR: Messages = {
+  "landing.headline": "Relatórios que se atualizam sozinhos.",
   "landing.tagline":
-    "Um painel de widgets vivos — rotinas fazem o trabalho por você e reportam aqui.",
+    "Um painel de widgets vivos — plano do dia, saúde dos repos, changelogs — cada um regenerado conforme o agendamento por uma rotina e servido a você aqui.",
   "landing.sub": "Seus resultados, servidos.",
   "landing.signIn": "Entrar com GitHub",
   "landing.privacy":
-    "Tudo vive em um repo privado do GitHub que é seu — o app não guarda nada.",
+    "Seus dados são seus — vivem em um repo privado do GitHub que é seu; o app não guarda nada.",
   "landing.deviceLink": "Entrar com um código de dispositivo",
+
+  "landing.loop.title": "Como um widget se mantém fresco",
+  "landing.loop.cron":
+    "Um agendamento dispara — ou você clica em Atualizar no widget, ou roda uma linha no terminal. Todo caminho inicia a mesma rotina.",
+  "landing.loop.skill":
+    "O Claude Code executa a rotina: segue seu template ou instruções e escreve um único arquivo HTML autocontido.",
+  "landing.loop.push":
+    "Publicar é um git push — o arquivo é commitado na branch artifacts do seu repo de dados. Sem upload, sem CDN, e histórico de versões de graça.",
+  "landing.loop.widget":
+    'O painel renderiza o arquivo em um frame isolado; o último commit vira o "Rodou há 2h".',
+  "landing.loop.prereqs":
+    "Só é preciso uma conta no GitHub e o Claude Code — rotinas rodam na sua assinatura Claude, na nuvem ou na sua máquina.",
+
+  "landing.data.title": "Seus dados são seus",
+  "landing.data.repo":
+    "Um repo privado guarda tudo — rotinas, layouts, widgets publicados. Só você tem acesso; a privacidade é a fronteira do repo no GitHub, não lógica do app.",
+  "landing.data.stateless":
+    "Sem banco de dados, sem CDN — o app é um renderizador sem estado: lê seu repo com seu token e não guarda nada em nenhum outro lugar. Publicar é só um git push.",
+  "landing.data.leave":
+    "Sair é apagar um repo. Nada para exportar, nada deixado para trás.",
+
+  "landing.features.title": "O que vem pronto",
+  "landing.features.templates.title": "Templates, ou suas próprias palavras",
+  "landing.features.templates.body":
+    "Comece de um template embutido — plano do dia, pulso dos repos — e preencha os campos, ou descreva o widget que você quer em palavras simples. Uma rotina são poucas linhas de YAML no seu repo.",
+  "landing.features.hosts.title": "Nuvem ou local, agendado ou manual",
+  "landing.features.hosts.body":
+    "Rode na nuvem da Anthropic com o laptop fechado, ou na sua máquina junto dos dados locais. Rotinas manuais esperam o botão Atualizar; dry runs renderizam para um arquivo local primeiro.",
+  "landing.features.fresh.title": "Frescor confiável",
+  "landing.features.fresh.body":
+    '"Rodou há 2h" vem do histórico de commits e widgets atrasados avisam. Edições são rascunhos que você sincroniza como commit ou PR — nunca um salvar silencioso.',
+
+  "landing.cta": "Bata o olho em vez de cavar.",
 
   "device.title": "Entrar com um código de dispositivo",
   "device.intro":
