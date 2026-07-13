@@ -36,7 +36,10 @@ import { useT } from "../lib/i18n.tsx"
  *
  * Board switching lives in this always-visible list: every board is one click,
  * the active one reads from across the room, and "new dashboard" is a peer of
- * the boards it joins.
+ * the boards it joins. Each group leads with its dashboards — the group IS its
+ * boards — and the repo's routine pool (ADR-0025) hangs off the group foot: a
+ * peer view, but a different kind, so it sits under the boards, never posing as
+ * the first one.
  *
  * A repo group with no boards keeps a create-first row in place of the board
  * list — deleting the last board must not make the repo disappear from the app.
@@ -101,8 +104,8 @@ export function DashboardSidebar({
             <NavGroup
               key={group.repo}
               header={<RepoGroupHeader group={group} />}
-              fixed={
-                <RoutinesNavItem
+              foot={
+                <PoolNavItem
                   to={routinesHref(group.repo)}
                   active={routinesRepo === group.repo}
                   onNavigate={onNavigate}
@@ -247,28 +250,29 @@ function RailAction({
 }
 
 /**
- * A repo heading with its board list threaded on a single hairline spine — a
- * tree indent guide (1px, neutral), not a side-stripe: the rail descends from
- * under the heading and runs the height of the group, so the boards read as its
- * children rather than rows floating in space. The active board is an accent
- * node sitting on the rail (see {@link NavItem}).
+ * A repo heading over its board list, the boards threaded on a single hairline
+ * spine — a tree indent guide (1px, neutral), not a side-stripe: the rail
+ * descends from under the heading and runs the height of the list, so the
+ * boards read as its children rather than rows floating in space. The active
+ * board is an accent node sitting on the rail (see {@link NavItem}). The repo's
+ * routine pool isn't a board, so it hangs off the group foot below the spine
+ * ({@link PoolNavItem}) — the group reads first as the dashboards it holds.
  */
 function NavGroup({
   header,
-  fixed,
+  foot,
   children,
 }: {
   header: React.ReactNode
-  /** A repo-level fixture rendered between the header and the board spine —
-      the Routines pool link (ADR-0025), which is not a board and so hangs off
-      the spine rather than on it. */
-  fixed?: React.ReactNode
+  /** A repo-level entry rendered under the board spine — the routine pool link
+      (ADR-0025). A peer view of the boards but a different kind, so it sits at
+      the group's foot, off the spine, never as the first "board". */
+  foot?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <div>
       {header}
-      {fixed}
       <div className="relative flex flex-col gap-0.5">
         <span
           aria-hidden
@@ -276,17 +280,21 @@ function NavGroup({
         />
         {children}
       </div>
+      {foot}
     </div>
   )
 }
 
 /**
  * A repo's routine pool link (ADR-0025) — a peer of its boards but a different
- * kind: it lists what runs, not a grid. It carries an icon in the spine-node
- * slot instead of a board dot, so it reads as the repo's fixture, and lights
- * the same accent fill as the active board when it's the current page.
+ * kind: it lists what runs, not a grid. It sits at the group's foot, below the
+ * board spine, on the boards' own marker/label columns — a ledger icon in the
+ * node slot (where boards carry a dot), the label on the board-name column — so
+ * it reads as the repo's own entry, plainly not one of the dashboards. Set off
+ * from the last board by a hair of space, it lights the same accent-tinted
+ * selection as an active board when it's the current page.
  */
-function RoutinesNavItem({
+function PoolNavItem({
   to,
   active,
   onNavigate,
@@ -302,13 +310,16 @@ function RoutinesNavItem({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex items-center gap-2 rounded-md py-1.5 pr-2.5 pl-2.5 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        "relative mt-1 flex items-center rounded-md py-1.5 pr-2.5 pl-6 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
         active
-          ? "bg-sidebar-accent font-medium text-foreground"
+          ? "bg-primary/10 font-medium text-foreground"
           : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
       )}
     >
-      <ListTodo aria-hidden className="size-4 shrink-0 text-ink-faint" />
+      <ListTodo
+        aria-hidden
+        className="absolute top-1/2 left-[13px] size-4 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
+      />
       {t("nav.routines")}
     </Link>
   )
@@ -352,15 +363,17 @@ function NavItem({
           "group relative flex min-w-0 flex-1 items-center rounded-md py-1.5 pr-2.5 pl-6 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
           onDelete && "pr-8",
           active
-            ? "bg-sidebar-accent font-medium text-foreground"
+            ? "bg-primary/10 font-medium text-foreground"
             : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
         )}
       >
         <span
           aria-hidden
           className={cn(
-            "absolute top-1/2 left-[13px] size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors",
-            active ? "bg-primary" : "bg-transparent group-hover:bg-ink-faint",
+            "absolute top-1/2 left-[13px] -translate-x-1/2 -translate-y-1/2 rounded-full transition-all",
+            active
+              ? "size-2 bg-primary"
+              : "size-1.5 bg-transparent group-hover:bg-ink-faint",
           )}
         />
         <span className="truncate">{label}</span>
