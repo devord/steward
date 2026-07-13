@@ -107,7 +107,11 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
                   />
                 ))}
               {shared && (
-                <span className="font-mono text-xs">
+                // Mono digits sit ~0.75px above the line box's center (the
+                // baseline lands at (ascent−descent)/2, and digits have no
+                // descender), so flexbox centering leaves the count riding
+                // high against the glyph. Nudge it onto the optical center.
+                <span className="translate-y-[0.75px] font-mono text-xs">
                   {collaborators.length}
                 </span>
               )}
