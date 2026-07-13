@@ -61,13 +61,18 @@
         font-variant-numeric: tabular-nums;
         overflow: hidden;
       }
-      /* Sparse content sits on the tile's optical center, never adrift in
-         a corner; overflowing content tops out and lets fit-lists trim. */
+      /* Content top-aligned so the list reads top-down; overflowing content
+         tops out and lets fit-lists trim. The one-row glance tier centers
+         its lone KPI instead (below), so a sparse tile isn't adrift. */
       main {
         display: grid;
         gap: 12px;
-        margin-block: auto;
         min-height: 0;
+      }
+      @media (max-height: 160px) {
+        [data-steward-tile] main {
+          margin-block: auto;
+        }
       }
       /* Section label: mono cap, count, hairline rule filling the width. */
       h2 {
@@ -392,9 +397,6 @@
         :root:not([data-steward-tile]) body {
           padding: 40px 32px;
           overflow: auto;
-        }
-        :root:not([data-steward-tile]) main {
-          margin-block: 0;
         }
         :root:not([data-steward-tile]) .date {
           display: block;

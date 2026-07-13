@@ -23,7 +23,9 @@ Add a **design language layer** to the artifact contract, owned by the
 `docs/widget-standard.md` §7:
 
 - **A shared shell**: flex-column body, content on the tile's optical
-  center when sparse, footer pinned; page generosity (outer padding,
+  center when sparse (narrowed to the one-row glance tier by ADR-0032 —
+  taller tiles top-align so ledgers read top-down), footer pinned; page
+  generosity (outer padding,
   top-anchored flow, page-only elements) gated on
   `:root:not([data-steward-tile])`, because width alone cannot tell a
   wide tile from the full view.

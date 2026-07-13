@@ -61,8 +61,14 @@
       main {
         display: grid;
         gap: 12px;
-        margin-block: auto;
         min-height: 0;
+      }
+      /* Content top-aligned so rows read top-down; only the one-row glance
+         tier centers its lone stat so it isn't adrift. */
+      @media (max-height: 160px) {
+        [data-steward-tile] main {
+          margin-block: auto;
+        }
       }
       /* Links (widget-standard §7, ADR-0028): every named object opens its
          source in a new tab. Ink register — hairline underline, no blue. */
@@ -283,9 +289,6 @@
         :root:not([data-steward-tile]) body {
           padding: 40px 32px;
           overflow: auto;
-        }
-        :root:not([data-steward-tile]) main {
-          margin-block: 0;
         }
       }
     </style>
