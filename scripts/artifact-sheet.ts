@@ -35,6 +35,7 @@ const SIZES = [
   { label: "2×1", w: 594, h: 150, view: "tile" },
   { label: "2×2", w: 594, h: 312, view: "tile" },
   { label: "4×2", w: 1200, h: 312, view: "tile" },
+  { label: "4×4", w: 1200, h: 636, view: "tile" },
   { label: "full view", w: 1400, h: 820, view: "full" },
 ] as const
 
