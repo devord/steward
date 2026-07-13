@@ -608,6 +608,21 @@ function dotTone(status: WidgetStatus): string {
   }
 }
 
+/**
+ * The state chip carries freshness as color — this ledger's reason to exist
+ * ("is anything stale?", Design Principle #2). It's the lazygit / `gh run
+ * list` status column, not a SaaS badge: the tone rides a low-alpha wash
+ * behind the label (never 13px colored text — several light palettes have no
+ * AA-clearing yellow/green at that size), and the label stays full ink so it
+ * clears 4.5:1 on every wash in every theme. Weight and wash strength — not
+ * dimming — separate a calm healthy row from one that wants a look, so a
+ * board of fresh routines reads as a quiet green ladder and the amber/red
+ * anomaly pops. Off states (disabled, never-run) carry no wash: there is no
+ * tone to report, and they should recede.
+ */
+const chipBase =
+  "inline-flex items-center rounded px-1.5 py-0.5 font-mono text-xs leading-none"
+
 function StateLabel({
   status,
   lastRunAt,
@@ -620,35 +635,33 @@ function StateLabel({
   const t = useT()
   if (status === null) {
     return (
-      <span className="inline-block h-3 w-16 animate-pulse rounded-full bg-bg3" />
+      <span className="inline-block h-4 w-16 animate-pulse rounded bg-bg3" />
     )
   }
-  // The dot beside the label is the tone carrier; the label itself stays in
-  // ink so 13px state text clears AA on every palette (yellow/red/accent
-  // text don't, on the light themes). Attention states lift to full ink +
-  // medium — legible urgency without leaning on color.
-  const strong = "font-mono text-xs text-ink-dim"
-  const faint = "font-mono text-xs text-ink-faint"
-  const attention = "font-mono text-xs font-medium text-ink"
+  const off = "font-mono text-xs text-ink-faint"
+  const fresh = cn(chipBase, "bg-green/12 text-ink")
+  const stale = cn(chipBase, "bg-yellow/15 font-medium text-ink")
+  const active = cn(chipBase, "bg-primary/15 font-medium text-ink")
+  const bad = cn(chipBase, "bg-red/15 font-medium text-ink")
   switch (status.kind) {
     case "live":
       return status.stale ? (
-        <span className={attention}>{t("widget.stale")}</span>
+        <span className={stale}>{t("widget.stale")}</span>
       ) : (
-        <span className={strong}>{ranLabel(lastRunAt, now, t)}</span>
+        <span className={fresh}>{ranLabel(lastRunAt, now, t)}</span>
       )
     case "running":
-      return <span className={attention}>{t("widget.running")}</span>
+      return <span className={active}>{t("widget.running")}</span>
     case "draft":
-      return <span className={attention}>{t("routines.stateDraft")}</span>
+      return <span className={active}>{t("routines.stateDraft")}</span>
     case "disabled":
-      return <span className={faint}>{t("routines.stateDisabled")}</span>
+      return <span className={off}>{t("routines.stateDisabled")}</span>
     case "unreachable":
-      return <span className={attention}>{t("routines.stateUnreachable")}</span>
+      return <span className={bad}>{t("routines.stateUnreachable")}</span>
     case "needs-trigger":
-      return <span className={attention}>{t("routines.stateNeedsSetup")}</span>
+      return <span className={stale}>{t("routines.stateNeedsSetup")}</span>
     default:
-      return <span className={faint}>{t("routines.stateNever")}</span>
+      return <span className={off}>{t("routines.stateNever")}</span>
   }
 }
 
