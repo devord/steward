@@ -6,13 +6,47 @@
  * (slugs, branch names, cron, shell commands) verbatim; git words plain.
  */
 export const en = {
+  "landing.headline": "Reports that update themselves.",
   "landing.tagline":
-    "A dashboard of living widgets — routines do the work for you and report back here.",
+    "A dashboard of living widgets — daily plans, repo health, changelogs — each one regenerated on schedule by a routine and served to you here.",
   "landing.sub": "Your results, served.",
   "landing.signIn": "Sign in with GitHub",
   "landing.privacy":
-    "Everything lives in a private GitHub repo you own — the app stores nothing.",
+    "Your data is yours — it lives in a private GitHub repo you own; the app stores nothing.",
   "landing.deviceLink": "Sign in with a device code instead",
+
+  "landing.loop.title": "How a widget stays fresh",
+  "landing.loop.cron":
+    "A schedule fires — or you click Update on the widget, or run one line in a terminal. Every path starts the same routine.",
+  "landing.loop.skill":
+    "Claude Code executes the routine: it follows your template or instructions and writes one self-contained HTML file.",
+  "landing.loop.push":
+    "Publishing is a git push — the file is committed to the artifacts branch of your data repo. No upload, no CDN, and version history for free.",
+  "landing.loop.widget":
+    'The dashboard renders the file in a sandboxed frame; the last commit becomes its "Ran 2h ago".',
+  "landing.loop.prereqs":
+    "All it takes: a GitHub account and Claude Code — routines run on your Claude subscription, in the cloud or on your machine.",
+
+  "landing.data.title": "Your data is yours",
+  "landing.data.repo":
+    "One private repo holds everything — routines, layouts, published widgets. Only you have access; privacy is GitHub's repo boundary, not app logic.",
+  "landing.data.stateless":
+    "No database, no CDN — the app is a stateless renderer: it reads your repo with your token and stores nothing anywhere else. Publishing is just a git push.",
+  "landing.data.leave":
+    "Leaving is deleting a repo. Nothing to export, nothing left behind.",
+
+  "landing.features.title": "What's built in",
+  "landing.features.templates.title": "Templates, or your own words",
+  "landing.features.templates.body":
+    "Start from a built-in template — daily plan, repo pulse — and fill in its settings, or describe the widget you want in plain words. A routine is a few lines of YAML in your repo.",
+  "landing.features.hosts.title": "Cloud or local, scheduled or manual",
+  "landing.features.hosts.body":
+    "Run in Anthropic's cloud with the laptop closed, or on your machine next to local data. Manual routines wait for the Update button; dry runs render to a local file first.",
+  "landing.features.fresh.title": "Freshness you can trust",
+  "landing.features.fresh.body":
+    '"Ran 2h ago" comes from commit history and stale widgets say so. Edits are drafts you sync as a commit or a PR — never a silent save.',
+
+  "landing.cta": "Glance instead of digging.",
 
   "device.title": "Sign in with a device code",
   "device.intro":

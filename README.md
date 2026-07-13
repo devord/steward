@@ -7,15 +7,35 @@
 </p>
 
 <p align="center">
-  A dashboard of living widgets — scheduled Claude Code routines do the
-  work for you and report back.<br />
-  Daily plans, status reports, time tracking, billing: reports that update
-  themselves, never written by hand again.
+  Reports that update themselves.<br />
+  A dashboard of living widgets — daily plans, repo health, changelogs —
+  each one regenerated on schedule by a Claude Code routine and published
+  to a GitHub repo you own.
 </p>
+
+## Why
+
+Every developer keeps a handful of reports someone refreshes by hand —
+the daily plan, the review queue, the status update, the changelog. They
+rot the moment the author gets busy, and a stale report is worse than
+none: you stop trusting it and go digging again.
+
+Steward hands the chore to **routines**: each widget on the dashboard is
+a small self-contained HTML artifact that a scheduled Claude Code routine
+regenerates and publishes. The dashboard's promise is honesty about
+freshness — every widget carries when it last ran and says so plainly
+when it's stale. Success is a dashboard you trust enough to glance at
+instead of digging.
+
+And your data is yours. There is no database and no artifact host:
+everything — routines, layouts, published widgets — lives in a private
+GitHub repo you own, and only you have access. The app is a stateless
+renderer working with your token; privacy is GitHub's repo boundary, not
+app logic. Leaving is deleting a repo.
 
 ## How it works
 
-Steward has no database and no artifact host. GitHub is both:
+GitHub is the whole backend:
 
 - **This repo (shared):** the web app, the schemas, the contract skills,
   and the built-in routine templates (`templates/routines/`, ADR-0021).

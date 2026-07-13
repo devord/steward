@@ -6,11 +6,15 @@ product
 
 ## Users
 
-Daniel and, later, the Form Factory team — developers who live in
+Daniel and the Form Factory team first; beyond them, any developer who
+discovers Steward cold (a repo link, a post) — people who live in
 terminals, editors, and GitHub. They open Steward a few times a day for a
 glance, not a session: "what's my plan, what needs my review, is anything
 stale?" Ambient context: a dark editor, a wall of monospace, dozens of tabs.
-Steward is the calm one.
+Steward is the calm one. The signed-out landing page addresses the
+discovering developer and must argue the product from scratch — lead with
+the outcome (reports that update themselves), then the loop, ownership
+("your data is yours"), and what's built in.
 
 ## Product Purpose
 
