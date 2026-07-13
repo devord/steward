@@ -53,3 +53,14 @@ export function boardHref(
   if (repo === homeRepo && dashboard === DEFAULT_DASHBOARD) return "/"
   return `/r/${repo}/${dashboard}`
 }
+
+/**
+ * Route of a repo's routine pool view (ADR-0025) — a peer of its boards, one
+ * per data repo. `routines` is a reserved segment: it's matched statically,
+ * ahead of the `:dashboard` slug, so a board that happened to be named
+ * `routines` would be shadowed here (an acceptable reservation — the pool view
+ * is a per-repo fixture, a board of that name is not).
+ */
+export function routinesHref(repo: string): string {
+  return `/r/${repo}/routines`
+}

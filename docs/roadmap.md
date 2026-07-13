@@ -97,6 +97,18 @@ apply prompt asks the schedule tooling and reports back; the fire API
 endpoint/beta header shape (`ANTHROPIC_ROUTINES_BETA` overrides the
 pinned value).
 
+## M7 — Routine pool view ✅ (code)
+
+Implements ADR-0025 (built 2026-07-12): a per-repo `Routines` surface at
+`/r/:owner/:repo/routines` — the whole `routines.yaml` pool as one
+terminal-calm table (state, schedule, host, owner, on-boards, claude.ai
+link), surfacing orphan routines the board view can't show. Full actions
+(edit, enable/disable, delete, run-now) over a repo-scoped routines draft
+that reuses the board's Sync flow (`dashboardSlug` now optional on
+`SyncPanel`/`/sync`); `Add to board` hands off to the board grid editor via
+`?place=<slug>`. No standalone templates page (read-only by ADR-0022,
+already in the picker).
+
 ## Watch items
 
 - **GitHub API rate limit** (5k/h authed) — batch loader fetches, ETags.

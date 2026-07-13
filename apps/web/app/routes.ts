@@ -2,6 +2,9 @@ import { type RouteConfig, index, route } from "@react-router/dev/routes"
 
 export default [
   index("routes/home.tsx"),
+  // Static `routines` is ranked ahead of the `:dashboard` slug below, so the
+  // pool view (ADR-0025) reserves that one segment per repo.
+  route("r/:owner/:repo/routines", "routes/r.$owner.$repo.routines.tsx"),
   route("r/:owner/:repo/:dashboard", "routes/r.$owner.$repo.$dashboard.tsx"),
   // Legacy URL shapes, pre-ADR-0023 — permanent redirects to the canonical
   // `/r/:owner/:repo/:dashboard` space.

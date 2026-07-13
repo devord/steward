@@ -222,7 +222,7 @@ describe("loadDashboard", () => {
     expect(view.artifacts["daily-plan"]?.unreachable).toBeUndefined()
   })
 
-  it("reports hasTrigger true for a manual cloud routine with a trigger file", async () => {
+  it("reports hasTrigger true and the routine id from the trigger file", async () => {
     seedRepo(DATA_REPO, {
       "data/routines.yaml":
         "routines:\n  - slug: mp\n    name: meeting prep\n    template: custom\n    instructions: x\n",
@@ -232,11 +232,14 @@ describe("loadDashboard", () => {
 
     const view = await loadDashboard("token", MAIN_BOARD)
 
+    // The routine id rides out of the trigger file for the claude.ai link and
+    // the fire path (ADR-0016/0025).
     expect(view.artifacts["mp"]).toEqual({
       html: null,
       sha: null,
       lastRunAt: null,
       hasTrigger: true,
+      routineId: "rt_1",
     })
   })
 

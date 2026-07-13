@@ -75,7 +75,10 @@ export function SyncPanel({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  dashboardSlug: string
+  /** The board whose layout this draft can also touch. Absent for the routines
+      pool view (ADR-0025), which edits routines.yaml alone — no board in scope,
+      so the dashboard diff never applies. */
+  dashboardSlug?: string
   /** Which data repo the sync targets (ADR-0023) — also makes the next-steps
       commands copy-pasteable (`--repo` instead of a --file placeholder). */
   dataRepo: string
@@ -134,6 +137,9 @@ export function SyncPanel({
       })
     }
     if (
+      // No board in scope (pool view) → routines.yaml is the only file the
+      // draft can commit; skip the dashboard side entirely.
+      dashboardSlug != null &&
       !untouched(baseFiles.dashboard, dashboardYaml, (text) =>
         serializeDashboardFile(parseDashboardFile(text)),
       )
@@ -184,7 +190,9 @@ export function SyncPanel({
     const payload: Record<string, unknown> = {
       intent: asPr ? "pr" : "commit",
       repo: dataRepo,
-      dashboardSlug,
+      // Omitted for the pool view — the /sync payload only needs a slug when a
+      // dashboard change rides along.
+      ...(dashboardSlug != null ? { dashboardSlug } : {}),
     }
     for (const change of changes) {
       payload[change.kind] = { yaml: change.yaml, baseSha: change.baseSha }

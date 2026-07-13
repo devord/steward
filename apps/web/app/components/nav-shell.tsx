@@ -21,6 +21,9 @@ export interface ShellNav {
       board is current, so the rail lights nothing and reads as "off-board". */
   activeRepo: string
   dashboardSlug: string
+  /** The repo whose routine pool view (ADR-0025) is active — lights that repo's
+      Routines entry instead of a board. "" / absent everywhere else. */
+  routinesRepo?: string
   /** Every discovered data repo with its boards (ADR-0023), home first. */
   sidebar: SidebarData
   login: string
