@@ -123,6 +123,7 @@ export const en = {
   "routines.stateNever": "Never ran",
   "routines.orphan": "orphan",
   "routines.rowMenu": "Options for {name}",
+  "routines.runNow": "Run {name} now",
   "routines.edit": "Edit",
   "routines.addToBoard": "Add to board",
   "routines.noBoards": "No boards yet",
@@ -260,6 +261,7 @@ export const en = {
   "widget.disabled": "Routine disabled",
   "widget.enable": "Enable",
   "widget.running": "Running",
+  "widget.runningTitle": "Run in flight — open it in claude.ai",
   "widget.runningSince": "Running — started {ago}",
   "widget.draftHint": "In your draft — sync to commit it",
   "widget.needsTriggerHint":

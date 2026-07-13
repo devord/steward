@@ -192,6 +192,46 @@ describe("WidgetCard empty states", () => {
     expect(document.querySelector('button[aria-label^="Update"]')).toBeNull()
   })
 
+  it("links the Running pill to the claude.ai routine page when the id is known", async () => {
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine()}
+        artifact={artifact({
+          html: "<h1>live</h1>",
+          hasTrigger: true,
+          routineId: "abc-123",
+        })}
+        now={Date.now()}
+        dataRepo="o/r"
+        committed
+        pendingFiredAt={Date.now()}
+      />,
+    )
+    await expect.poll(() => hasText("Running")).toBe(true)
+    const pill = document.querySelector(
+      'a[href="https://claude.ai/code/routines/abc-123"]',
+    )
+    expect(pill?.textContent).toContain("Running")
+    expect(pill?.getAttribute("target")).toBe("_blank")
+  })
+
+  it("keeps the Running pill a plain readout without a routine id", async () => {
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine()}
+        artifact={artifact({ html: "<h1>live</h1>", hasTrigger: true })}
+        now={Date.now()}
+        dataRepo="o/r"
+        committed
+        pendingFiredAt={Date.now()}
+      />,
+    )
+    await expect.poll(() => hasText("Running")).toBe(true)
+    expect(document.querySelector('a[href^="https://claude.ai"]')).toBeNull()
+  })
+
   it("offers an Enable button on a disabled tile — not a dead end", async () => {
     let toggled = false
     await renderCard(
