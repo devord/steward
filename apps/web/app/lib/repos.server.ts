@@ -172,6 +172,9 @@ export async function listDataRepos(
   if (searched.status === "fulfilled") {
     for (const meta of searched.value) {
       if (repos.has(meta.full)) continue
+      // A GitHub template repo is the scaffold new data repos are generated
+      // from — never a live data repo, even if it carries the topic.
+      if (meta.isTemplate) continue
       // Skip public repos the viewer wasn't actually granted — otherwise a
       // stranger's topic-tagged public repo lands in the rail.
       if (!isEligible(meta, login)) continue
@@ -230,6 +233,8 @@ export async function requireDataRepo(
     // a link to a stranger's tagged public repo 404s here too.
     const meta = await getRepoMeta(token, ref.full)
     if (!meta) throw data("Not a data repo.", { status: 404 })
+    // A template repo is never a board host, even reached by direct link.
+    if (meta.isTemplate) throw data("Not a data repo.", { status: 404 })
     if (ref.full !== home) {
       if (!isEligible(meta, login)) {
         throw data("Not a data repo.", { status: 404 })
