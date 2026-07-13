@@ -78,6 +78,13 @@ An artifact MUST:
    color, and the palette accents, not by shrinking type. The 1×1 tier leans
    on its KPI number; detail tiers carry the 14px body. (Type sizes are baked
    into each published file — a rescale only lands when the routine reruns.)
+7. **Compose from the shared design language** (ADR-0027). The
+   `widget-artifact` skill's `design.md` defines the component set —
+   shell, section rules, ledger rows, the stat tier, pills, dots, meters,
+   sparklines, empty states — and the per-tier playbook. Artifacts pick
+   from it rather than inventing per-routine visuals, so a board of
+   widgets from different routines reads as one product; the canonical
+   samples live in `docs/samples/`.
 
 ## Addressing & freshness
 

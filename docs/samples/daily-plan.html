@@ -2,7 +2,9 @@
 <!-- Sample steward artifact (docs/widget-standard.md). Hand-authored to
      prove the render path in M2: push to the data repo's artifacts branch
      as w/daily-plan/index.html. Also the reference the widget-artifact
-     skill's output should look like. -->
+     skill's output should look like — it demonstrates the design language
+     in .claude/skills/widget-artifact/design.md (ledger rows, section
+     rules, the stat tier, the now marker). -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -38,6 +40,9 @@
         box-sizing: border-box;
         margin: 0;
       }
+      [hidden] {
+        display: none !important;
+      }
       html,
       body {
         height: 100%;
@@ -45,104 +50,414 @@
       body {
         display: flex;
         flex-direction: column;
-        padding: 10px 12px 6px;
-        gap: 8px;
+        padding: 12px 14px;
         background: var(--color-bg1);
         color: var(--color-ink);
         font-family: var(--font-sans);
         font-size: 14px;
         line-height: 1.45;
+        font-variant-numeric: tabular-nums;
         overflow: hidden;
       }
+      /* Sparse content sits on the tile's optical center, never adrift in
+         a corner; overflowing content tops out and lets fit-lists trim. */
+      main {
+        display: grid;
+        gap: 12px;
+        margin-block: auto;
+        min-height: 0;
+      }
+      /* Section label: mono cap, count, hairline rule filling the width. */
       h2 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         font-family: var(--font-mono);
         font-size: 12px;
         font-weight: 700;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
         color: var(--color-ink-dim);
-        margin-bottom: 4px;
+        margin-bottom: 6px;
       }
+      h2 .count {
+        font-weight: 400;
+        color: var(--color-ink-faint);
+      }
+      h2::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--color-border-dim);
+      }
+      /* Ledger rows: shared key column via subgrid, so times and ranks
+         align across rows and wrapped text keeps a hanging indent. */
       ol,
       ul {
         list-style: none;
         padding: 0;
         display: grid;
-        gap: 3px;
+        grid-template-columns: max-content 1fr;
+        gap: 4px 10px;
       }
-      .prio li::before {
-        content: "▸ ";
+      li {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: subgrid;
+        align-items: baseline;
+      }
+      .key {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: inherit;
+        color: var(--color-ink-dim);
+        white-space: nowrap;
+      }
+      .prio .key {
         color: var(--color-orange);
       }
-      .blocks li,
-      .carry li {
+      .blocks .key {
+        color: var(--color-aqua);
+      }
+      .carry .key {
+        color: var(--color-yellow);
+      }
+      .blocks .body,
+      .carry .body {
         color: var(--color-ink-dim);
       }
-      .blocks time {
-        font-family: var(--font-mono);
-        color: var(--color-aqua);
-        margin-right: 6px;
+      .blocks li[data-declined] .body {
+        text-decoration: line-through;
+        color: var(--color-ink-faint);
       }
-      .carry li::before {
-        content: "↻ ";
-        color: var(--color-yellow);
+      /* Past blocks recede so the glance lands on what's next. */
+      .blocks li[data-past] .key,
+      .blocks li[data-past] .body {
+        color: var(--color-ink-faint);
+      }
+      /* The now marker: a thin accent rule the script drops between the
+         last past block and the next one. */
+      .now {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-orange);
+      }
+      .now .rule {
+        flex: 1;
+        height: 1px;
+        background: var(--color-orange-deep);
+      }
+      .now .past {
+        display: none;
+        color: var(--color-ink-faint);
+      }
+      /* On the board a tile is a "what's next" glance: collapse the
+         blocks already behind the day into the now line's counter. The
+         raw page and the full view keep every row. */
+      html[data-steward-tile] .blocks li[data-past] {
+        display: none;
+      }
+      html[data-steward-tile] .now .past {
+        display: inline;
+      }
+      /* The 1×1 stat: KPI number + label + the single top priority. */
+      .stat {
+        display: none;
+        text-align: left;
+      }
+      .stat .num {
+        font-family: var(--font-mono);
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+      }
+      .stat .label {
+        color: var(--color-ink-dim);
+      }
+      .stat .top {
+        margin-top: 6px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .stat .top::before {
+        content: "1 ";
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-orange);
+      }
+      [data-fit-more] {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-dim);
       }
       footer {
         margin-top: auto;
+        padding-top: 8px;
         display: flex;
         justify-content: space-between;
         font-family: var(--font-mono);
         font-size: 12px;
         color: var(--color-ink-faint);
       }
+      .date {
+        display: none;
+        font-size: 16px;
+        font-weight: 600;
+      }
       /* Progressive disclosure per grid size (widget standard §2):
-         1×1 shows the KPI essence; wider/taller adds detail. */
+         1×1 shows the stat essence; wider/taller adds detail. */
+      @media (max-width: 340px) and (max-height: 160px) {
+        .stat {
+          display: block;
+        }
+        .prio,
+        .blocks,
+        .carry {
+          display: none;
+        }
+      }
+      /* Single-row tiles: one line per priority, no wrapping. */
+      @media (max-height: 160px) {
+        .prio .body {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
       .blocks,
       .carry {
         display: none;
       }
-      @media (min-width: 341px) {
-        .blocks {
-          display: grid;
-        }
-      }
       @media (min-width: 341px) and (min-height: 161px) {
+        .blocks,
         .carry {
-          display: grid;
+          display: block;
         }
       }
-      @media (max-height: 160px) {
-        .prio li:nth-child(n + 2) {
+      /* Wide (~900px+, 3+ columns or the full view): two columns —
+         priorities and carry-overs left, the day's timeline right. */
+      @media (min-width: 900px) {
+        main,
+        footer {
+          width: 100%;
+          max-width: 920px;
+          margin-inline: auto;
+        }
+        main {
+          grid-template-columns: 1.1fr 0.9fr;
+          grid-template-areas:
+            "date date"
+            "prio blocks"
+            "carry blocks";
+          align-content: start;
+          gap: 20px 56px;
+        }
+        .stat {
           display: none;
+        }
+        .date {
+          grid-area: date;
+        }
+        .prio {
+          grid-area: prio;
+        }
+        .blocks {
+          grid-area: blocks;
+        }
+        .carry {
+          grid-area: carry;
+        }
+        .prio,
+        .blocks,
+        .carry {
+          display: block;
+        }
+        .prio .body {
+          white-space: normal;
+        }
+        ol,
+        ul {
+          gap: 0 12px;
+        }
+        li {
+          padding-block: 6px;
+        }
+        li + li {
+          border-top: 1px solid var(--color-border-dim);
+        }
+        li.now {
+          border: 0;
+          padding-block: 2px;
+        }
+        li.now + li {
+          border-top: 0;
+        }
+        /* Page generosity only off the board (raw page, full-view
+           lightbox): the frame stamps data-steward-tile on board cells. */
+        :root:not([data-steward-tile]) body {
+          padding: 40px 32px;
+          overflow: auto;
+        }
+        :root:not([data-steward-tile]) main {
+          margin-block: 0;
+        }
+        :root:not([data-steward-tile]) .date {
+          display: block;
         }
       }
     </style>
   </head>
   <body>
-    <section class="prio">
-      <h2>Top priorities</h2>
-      <ol>
-        <li>Ship the M2 dashboard render path</li>
-        <li>Review the schema PR</li>
-        <li>Write the routines-sync plan</li>
-      </ol>
-    </section>
-    <section class="blocks">
-      <h2>Blocks</h2>
-      <ul>
-        <li><time>10:00</time>Team standup</li>
-        <li><time>14:00</time>Focus: steward M2</li>
-      </ul>
-    </section>
-    <section class="carry">
-      <h2>Carried over</h2>
-      <ul>
-        <li>Reply to the ADR-0005 thread</li>
-      </ul>
-    </section>
+    <main>
+      <p class="date">Thursday, July 9</p>
+      <section class="stat">
+        <div class="num">3</div>
+        <div class="label">priorities today</div>
+        <p class="top">Ship the M2 dashboard render path</p>
+      </section>
+      <section class="prio">
+        <h2>Top priorities <span class="count">3</span></h2>
+        <ol>
+          <li>
+            <span class="key">1</span
+            ><span class="body">Ship the M2 dashboard render path</span>
+          </li>
+          <li>
+            <span class="key">2</span
+            ><span class="body">Review the schema PR</span>
+          </li>
+          <li>
+            <span class="key">3</span
+            ><span class="body">Write the routines-sync plan</span>
+          </li>
+        </ol>
+      </section>
+      <section class="blocks">
+        <h2>Blocks <span class="count">2</span></h2>
+        <ul data-fit-list>
+          <li>
+            <time class="key">10:00</time><span class="body">Team standup</span>
+          </li>
+          <li>
+            <time class="key">14:00</time
+            ><span class="body">Focus: steward M2</span>
+          </li>
+        </ul>
+      </section>
+      <section class="carry">
+        <h2>Carried over <span class="count">1</span></h2>
+        <ul data-fit-list>
+          <li>
+            <span class="key">↻</span
+            ><span class="body">Reply to the ADR-0005 thread</span>
+          </li>
+        </ul>
+      </section>
+    </main>
     <footer>
       <span>daily-plan</span>
       <span>2026-07-09 08:00Z</span>
     </footer>
+    <script>
+      // Now marker: dim past blocks, drop a thin rule where the day is.
+      // Pure presentation — if it fails, the list is simply undimmed.
+      ;(function () {
+        var list = document.querySelector(".blocks ul")
+        if (!list) return
+        var now = new Date()
+        var hhmm = now.getHours() * 60 + now.getMinutes()
+        var gen = new Date(
+          document.querySelector('meta[name="widget-generated-at"]').content,
+        )
+        if (now.toDateString() !== gen.toDateString()) return
+        var firstFuture = null
+        var past = 0
+        ;[].forEach.call(list.children, function (li) {
+          var t = li.querySelector("time")
+          if (!t) return
+          var m = /^(\d{1,2}):(\d{2})/.exec(t.textContent)
+          if (!m) return
+          if (+m[1] * 60 + +m[2] <= hhmm) {
+            li.setAttribute("data-past", "")
+            past++
+          } else if (!firstFuture) firstFuture = li
+        })
+        var mark = document.createElement("li")
+        mark.className = "now"
+        var label = document.createElement("span")
+        label.textContent =
+          (now.getHours() < 10 ? "0" : "") +
+          now.getHours() +
+          ":" +
+          (now.getMinutes() < 10 ? "0" : "") +
+          now.getMinutes() +
+          " now"
+        var rule = document.createElement("span")
+        rule.className = "rule"
+        mark.appendChild(label)
+        mark.appendChild(rule)
+        if (past) {
+          var count = document.createElement("span")
+          count.className = "past"
+          count.textContent = past + " earlier"
+          mark.appendChild(count)
+        }
+        firstFuture
+          ? list.insertBefore(mark, firstFuture)
+          : list.appendChild(mark)
+      })()
+      // Fit lists to the tile (widget-standard §2, ADR-0019): tiles never
+      // scroll, so collapse trailing items that overflow into "+N more".
+      // Runs only on the board — the frame stamps data-steward-tile.
+      ;(function () {
+        function fit() {
+          if (!document.documentElement.hasAttribute("data-steward-tile"))
+            return
+          var doc = document.documentElement
+          // Bottom-most lists give way first — the top of the tile is the glance.
+          var lists = [].slice
+            .call(document.querySelectorAll("[data-fit-list]"))
+            .reverse()
+          lists.forEach(function (list) {
+            var more = list.querySelector("[data-fit-more]")
+            if (!more) {
+              more = document.createElement("li")
+              more.setAttribute("data-fit-more", "")
+              list.appendChild(more)
+            }
+            var items = [].filter.call(list.children, function (el) {
+              return el !== more && !el.classList.contains("now")
+            })
+            items.forEach(function (el) {
+              el.hidden = false
+            })
+            more.hidden = true
+            // Overflow lives on <body> — html/body pin overflow:hidden, so
+            // it never surfaces on documentElement.scrollHeight.
+            var over = function () {
+              return (
+                Math.max(doc.scrollHeight, document.body.scrollHeight) >
+                doc.clientHeight
+              )
+            }
+            var hidden = 0
+            while (over() && hidden < items.length) {
+              items[items.length - ++hidden].hidden = true
+              more.hidden = false
+              more.textContent = "+" + hidden + " more"
+            }
+          })
+        }
+        addEventListener("DOMContentLoaded", fit)
+        addEventListener("resize", fit)
+      })()
+    </script>
   </body>
 </html>
