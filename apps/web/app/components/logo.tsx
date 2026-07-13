@@ -7,6 +7,13 @@ import { cn } from "~/lib/utils"
  * every size; it reads from 16px favicons to the landing hero. Mirrored as
  * static SVG in public/favicon.svg and the public/wordmark-*.svg / og.png
  * lockups; keep the geometries in sync (DESIGN.md § Mark).
+ *
+ * In chrome the mark is the bare glyph — ink wings, accent knot, no tile.
+ * A tile behind a chrome mark either vanishes (light themes: bg on bg1) or
+ * punches a darker hole in the sidebar (dark themes), and the glyph-only
+ * treatment is what mark-in-chrome looks like elsewhere (GitHub, Linear,
+ * Vercel). The tile survives only in `display` contexts, where the mark
+ * poses as the product icon.
  */
 export function Logo({
   className,
@@ -16,31 +23,40 @@ export function Logo({
   className?: string
   /** Blink the orange knot like a terminal caret (landing only). */
   live?: boolean
-  /** Hero sizes only: adds the tile's frame stroke (mush below ~32px). */
+  /** Hero sizes only: the framed identity tile (mush below ~32px). */
   display?: boolean
 }) {
   return (
-    <svg viewBox="0 0 64 64" aria-hidden className={cn("shrink-0", className)}>
-      <rect width="64" height="64" rx="14" className="fill-bg" />
+    <svg
+      // The glyph's ink spans x 10–54, y ≈20–44; the bare-glyph crop frames
+      // it tight (center y stays 32) so the tie fills its box instead of
+      // floating in the tile's old padding.
+      viewBox={display ? "0 0 64 64" : "8 18 48 28"}
+      aria-hidden
+      className={cn("shrink-0", className)}
+    >
       {display && (
-        <rect
-          x="1"
-          y="1"
-          width="62"
-          height="62"
-          rx="13"
-          fill="none"
-          strokeWidth="2"
-          className="stroke-border"
-        />
+        <>
+          <rect width="64" height="64" rx="14" className="fill-bg" />
+          <rect
+            x="1"
+            y="1"
+            width="62"
+            height="62"
+            rx="13"
+            fill="none"
+            strokeWidth="2"
+            className="stroke-border"
+          />
+        </>
       )}
       <path
         d="M10 22 Q10 19.5 12.5 20.5 L26 27 L26 37 L12.5 43.5 Q10 44.5 10 42 Z"
-        className="fill-muted-foreground"
+        className="fill-foreground"
       />
       <path
         d="M54 22 Q54 19.5 51.5 20.5 L38 27 L38 37 L51.5 43.5 Q54 44.5 54 42 Z"
-        className="fill-muted-foreground"
+        className="fill-foreground"
       />
       <rect
         x="26.5"
@@ -77,11 +93,17 @@ export function Wordmark({
           — the word's visual center of mass — sits ~0.043em below that line-box
           center. Drop the mark to meet it. Measured and size-independent: the
           half-leading items-center adds exactly cancels line-height, so this one
-          value holds at every font size (text-sm through the landing's text-5xl). */}
+          value holds at every font size (text-sm through the landing's text-5xl).
+          Both crops keep the glyph's center at y=32, so the nudge is shared. */}
       <Logo
         live={live}
         display={display}
-        className="size-[1.4em] translate-y-[0.043em]"
+        className={cn(
+          // Bare glyph: sized so the wings stand roughly cap-height next to
+          // the name. Display tile: the old 1.4em block.
+          display ? "size-[1.4em]" : "size-[1.25em]",
+          "translate-y-[0.043em]",
+        )}
       />
       Steward
     </span>

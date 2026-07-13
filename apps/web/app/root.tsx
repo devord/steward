@@ -32,11 +32,12 @@ export function loader({ request }: Route.LoaderArgs) {
 const THEME_STYLESHEET = themeStylesheet()
 
 export const links: Route.LinksFunction = () => [
-  // The standalone mark is one fixed dark identity tile across every OS
-  // surface — a tile has to hold its own on unknown backgrounds (a colorful
-  // launcher, a light or dark tab strip, a photo wallpaper), so it doesn't
-  // theme-switch the way the in-app <Logo> does. SVG first for modern
-  // browsers; .ico carries the 16/32/48 fallbacks. The manifest gives
+  // Tab strips get the bare glyph, not a tile: favicon.svg swaps its inks
+  // with prefers-color-scheme (the GitHub/Vercel treatment), and the .ico
+  // fallback (16/32/48) renders the glyph in the palette's theme-neutral
+  // gray, since .ico can't media-query. The dark identity tile survives
+  // only on launcher surfaces (apple-touch + manifest icons), which must
+  // be opaque and hold their own on unknown wallpapers. The manifest gives
   // Android a real maskable adaptive icon instead of masking apple-touch.
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
   { rel: "icon", href: "/favicon.ico", sizes: "16x16 32x32 48x48" },
