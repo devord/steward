@@ -199,7 +199,13 @@ export function WidgetCard({
     <>
       <article
         className={cn(
-          "widget-cell group relative flex flex-col overflow-hidden rounded-lg border bg-card",
+          // `isolate` keeps the card's internal z-layering (edit-mode header
+          // z-20, drag surface z-10, resize handle z-30) inside its own
+          // stacking context. Without it the article isn't a stacking context
+          // in the static edit state, so the header's z-20 leaks to the root
+          // and — tying the app header's own z-20 but later in the DOM — paints
+          // over the sticky page header when a tall card scrolls up under it.
+          "widget-cell group relative isolate flex flex-col overflow-hidden rounded-lg border bg-card",
           editing && "focus-visible:outline-2 focus-visible:-outline-offset-1",
           drag && "shadow-xl shadow-black/50",
         )}

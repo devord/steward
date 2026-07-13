@@ -164,8 +164,9 @@ export function NavShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* h-11 + border-b, the same box as the rail's brand row → continuous
-            top hairline across the two columns. */}
-        <header className="sticky top-0 z-20 flex h-11 shrink-0 items-center border-b bg-background">
+            top hairline across the two columns. z-30 clears a lifted card
+            (drag z-20) so a widget dragged up to the top can't cover it. */}
+        <header className="sticky top-0 z-30 flex h-11 shrink-0 items-center border-b bg-background">
           <div
             className={cn(
               "mx-auto flex h-full w-full items-center gap-1.5 px-4 sm:px-6",
