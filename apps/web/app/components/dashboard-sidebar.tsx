@@ -37,9 +37,10 @@ import { useT } from "../lib/i18n.tsx"
  * Board switching lives in this always-visible list: every board is one click,
  * the active one reads from across the room, and "new dashboard" is a peer of
  * the boards it joins. Each group leads with its dashboards — the group IS its
- * boards — and the repo's routine pool (ADR-0025) hangs off the group foot: a
- * peer view, but a different kind, so it sits under the boards, never posing as
- * the first one.
+ * boards — and the repo's routine pool (ADR-0025) closes the group as the last
+ * child on its spine: unmistakably inside the repo, but in a different voice
+ * (persistent glyph node + sans label vs the boards' rest-quiet dots + mono
+ * names), so it never poses as one of the boards.
  *
  * A repo group with no boards keeps a create-first row in place of the board
  * list — deleting the last board must not make the repo disappear from the app.
@@ -237,9 +238,11 @@ function RailAction({
       onClick={onClick}
       className="relative flex w-full cursor-pointer items-center rounded-md py-1.5 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
     >
+      {/* 14px like the pool glyph — every marker-column icon shares one size,
+          so nothing outdents past the group headings. */}
       <Icon
         aria-hidden
-        className="absolute top-1/2 left-[13px] size-4 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
+        className="absolute top-1/2 left-[13px] size-3.5 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
       />
       {label}
     </button>
@@ -251,9 +254,10 @@ function RailAction({
  * spine — a tree indent guide (1px, neutral), not a side-stripe: the rail
  * descends from under the heading and runs the height of the list, so the
  * boards read as its children rather than rows floating in space. The active
- * board is an accent node sitting on the rail (see {@link NavItem}). The repo's
- * routine pool isn't a board, so it hangs off the group foot below the spine
- * ({@link PoolNavItem}) — the group reads first as the dashboards it holds.
+ * board is an accent node sitting on the rail (see {@link NavItem}). The
+ * routine pool is the spine's terminal node: the line runs down through the
+ * boards and ends at its glyph ({@link PoolNavItem}), so the group is closed
+ * by its fixed view instead of leaving it adrift below.
  */
 function NavGroup({
   header,
@@ -261,9 +265,9 @@ function NavGroup({
   children,
 }: {
   header: React.ReactNode
-  /** A repo-level entry rendered under the board spine — the routine pool link
-      (ADR-0025). A peer view of the boards but a different kind, so it sits at
-      the group's foot, off the spine, never as the first "board". */
+  /** The group's terminal entry on the spine — the routine pool link
+      (ADR-0025). A peer view of the boards but a different kind, so it sits
+      last, in its own voice, never as the first "board". */
   foot?: React.ReactNode
   children: React.ReactNode
 }) {
@@ -271,26 +275,33 @@ function NavGroup({
     <div>
       {header}
       <div className="relative flex flex-col gap-0.5">
+        {/* bottom-6, not inset-y-1: the spine ends at the top edge of the pool
+            row's glyph (last row 32px tall, 14px glyph on its center), leading
+            into the terminal node instead of striking through the icon's
+            transparent strokes. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-y-1 left-[13px] w-px bg-border-dim"
+          className="pointer-events-none absolute top-1 bottom-6 left-[13px] w-px bg-border-dim"
         />
         {children}
+        {foot}
       </div>
-      {foot}
     </div>
   )
 }
 
 /**
  * A repo's routine pool link (ADR-0025) — a peer of its boards but a different
- * kind: it lists what runs, not a grid. It sits at the group's foot, below the
- * board spine, on the boards' own marker/label columns — a ledger icon in the
- * node slot (where boards carry a dot), the label on the board-name column — so
- * it reads as the repo's own entry, plainly not one of the dashboards. Set off
- * from the last board by a hair of space, it lights the same accent-tinted
- * selection as an active board when it's the current page, and its icon takes
- * the accent then too — the same "you are here" node the active board's dot is.
+ * kind: it lists what runs, not a grid. It closes the group as the spine's
+ * last child, on the boards' own marker/label columns — a small ledger glyph
+ * in the node slot where boards carry a dot, sized into the marker column
+ * (14px, not the 16px that outdented past the group heading and made the row
+ * read top-level). What separates it from the boards is kind, not distance:
+ * the glyph rests visible where board dots rest invisible (the fixed view is
+ * furniture; boards are content), the label is sans where board names are
+ * mono, and a hair of extra space sets it off. Active, it lights the same
+ * accent-tinted selection as an active board, glyph in accent — the same
+ * "you are here" node the active board's dot is.
  */
 function PoolNavItem({
   to,
@@ -317,7 +328,7 @@ function PoolNavItem({
       <ListTodo
         aria-hidden
         className={cn(
-          "absolute top-1/2 left-[13px] size-4 -translate-x-1/2 -translate-y-1/2 transition-colors",
+          "absolute top-1/2 left-[13px] size-3.5 -translate-x-1/2 -translate-y-1/2 transition-colors",
           active ? "text-primary" : "text-ink-faint",
         )}
       />
