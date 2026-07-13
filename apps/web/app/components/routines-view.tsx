@@ -244,20 +244,23 @@ export function RoutinesView({
         actions={
           <>
             {draft != null && (
+              // The ledger's own state-chip idiom (StateLabel): yellow as a
+              // low-alpha wash + hairline, label in full ink for AA.
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="gap-2 font-mono text-xs max-sm:aspect-square max-sm:px-0"
+                className="gap-2 border-yellow/45 bg-yellow/10 font-mono text-xs text-ink hover:bg-yellow/15 dark:hover:bg-yellow/15 max-sm:aspect-square max-sm:px-0"
                 onClick={() => setSyncing(true)}
               >
                 <span aria-hidden className="size-1.5 rounded-full bg-yellow" />
                 <span className="max-sm:sr-only">{t("header.unsynced")}</span>
               </Button>
             )}
+            {/* The create verb takes the solid accent, as its empty-state twin
+                below already does — the toolbar's one accent moment. */}
             <Button
-              variant="ghost"
               size="sm"
-              className="gap-2 text-ink-dim hover:text-foreground max-sm:aspect-square max-sm:px-0"
+              className="gap-2 max-sm:aspect-square max-sm:px-0"
               onClick={() => setAdding(true)}
             >
               <CalendarPlus />

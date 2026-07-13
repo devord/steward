@@ -71,9 +71,12 @@ export function DashboardShell({
       actions={
         <>
           {hasDraft && (
+            // The routines ledger's state-chip idiom (StateLabel): the yellow
+            // rides a low-alpha wash and hairline while the label stays full
+            // ink — 13px colored text misses AA on several light palettes.
             <ToolbarAction
-              variant="outline"
-              className="gap-2 font-mono text-xs"
+              variant="ghost"
+              className="gap-2 border-yellow/45 bg-yellow/10 font-mono text-xs text-ink hover:bg-yellow/15 dark:hover:bg-yellow/15"
               label={t("header.unsynced")}
               icon={
                 <span aria-hidden className="size-1.5 rounded-full bg-yellow" />
@@ -81,21 +84,29 @@ export function DashboardShell({
               onClick={onSync}
             />
           )}
+          {/* The toolbar's one accent moment: the create verb takes the solid
+              primary (as its empty-state twin already does); everything else
+              here rests in ink. */}
           <ToolbarAction
-            variant="ghost"
-            className="text-ink-dim hover:text-foreground"
             label={t("header.addRoutine")}
             icon={<CalendarPlus />}
             onClick={onAdd}
           />
           <ToolbarAction
-            variant={editing ? "secondary" : "ghost"}
+            variant="ghost"
             className={
-              editing ? undefined : "text-ink-dim hover:text-foreground"
+              editing
+                ? // Active edit mode is a "you are here", not a gray fill — the
+                  // rail's selection vocabulary: accent wash, accent glyph,
+                  // label in unchanged ink.
+                  "bg-primary/10 text-foreground hover:bg-primary/15 dark:hover:bg-primary/15"
+                : "text-ink-dim hover:text-foreground"
             }
             aria-pressed={editing}
             label={editing ? t("header.done") : t("header.editLayout")}
-            icon={editing ? <Check /> : <PencilRuler />}
+            icon={
+              editing ? <Check className="text-primary" /> : <PencilRuler />
+            }
             onClick={onToggleEdit}
           />
         </>
