@@ -35,7 +35,26 @@ environment — skip silently anything that isn't:
 
 - **Top priorities**: at most 3, one line each. Derive from instructions +
   gathered data; when in doubt, prefer what the instructions emphasize.
-- **Time blocks**: the day's fixed commitments in chronological order.
+- **Time blocks**: a full time-block plan (Cal Newport style) — every
+  30-minute slot from day start to shutdown has a job, snapped to
+  :00/:30. Build it in order:
+  1. Place the fixed commitments: calendar events and personal blocks
+     (gym, meals, family). Declined/cancelled events are not blocks —
+     when their slot is reallocated, say so in the new block's note
+     (`was: Corza sync — declined`).
+  2. Give the largest remaining gaps to **deep blocks** executing the
+     top priorities — 90m–2h each, earliest gaps first. Put a one-line
+     `goal:` note on each (what done looks like by the block's end).
+  3. Batch the shallow work — review queues, replies, small carry-overs —
+     into named 30–60m blocks, and end the day with a 30m **shutdown**
+     block (clear queues, plan tomorrow).
+  4. Whatever remains is a **free** block: honest slack, labeled with
+     what it buffers.
+     Block types are deep / meeting / shallow / personal / free — the
+     `widget-artifact` design language defines their tones and the three
+     renderings (ledger, day strip, time grid).
+- **Day totals**: sum deep / meetings / shallow / free hours — the
+  process metric the totals line renders.
 - **Carry-overs**: unfinished items from the previous plan, max 5.
 
 ## Author the artifact
@@ -45,7 +64,10 @@ gruvbox tokens, breakpoints, generated-at meta + footer). Size behavior:
 
 - **1×1**: count of priorities done/total plus the single top priority.
 - **2×1 / 1×2**: the three priorities as a list.
-- **2×2 and larger**: priorities, then time blocks, then carry-overs.
+- **2×2 and larger**: priorities, then the day (strip + block ledger),
+  then carry-overs; wide tiles add the totals line.
+- **Raw page / full view**: the 30-minute time grid with the now line —
+  the plan you read the day from.
 
 Degrade gracefully: with no reachable data sources, still publish a plan
 derived from the instructions alone, with an explicit "no live data" note.

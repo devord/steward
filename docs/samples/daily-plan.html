@@ -4,12 +4,12 @@
      as w/daily-plan/index.html. Also the reference the widget-artifact
      skill's output should look like — it demonstrates the design language
      in .claude/skills/widget-artifact/design.md (ledger rows, section
-     rules, the stat tier, the now marker). -->
+     rules, the stat tier, the now marker, the day strip, the time grid). -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="widget-generated-at" content="2026-07-09T08:00:00Z" />
+    <meta name="widget-generated-at" content="2026-07-13T08:00:00Z" />
     <title>Daily Plan</title>
     <style>
       /* Gruvbox dark hard — identical to the @theme block in
@@ -126,9 +126,96 @@
       .carry .body {
         color: var(--color-ink-dim);
       }
-      .blocks li[data-declined] .body {
-        text-decoration: line-through;
+      /* Time blocks (Newport-style: every 30-minute slot has a job).
+         Each block carries a type tone; --s is its span in 30-min slots. */
+      .t-deep {
+        --tone: var(--color-orange);
+      }
+      .t-mtg {
+        --tone: var(--color-aqua);
+      }
+      .t-shal {
+        --tone: var(--color-purple);
+      }
+      .t-per {
+        --tone: var(--color-ink-faint);
+      }
+      .t-free {
+        --tone: var(--color-bg3);
+      }
+      .blocks ul {
+        grid-template-columns: max-content 1fr max-content;
+      }
+      /* Deep work is the plan's point — it reads at full ink; the rest of
+         the day recedes a step; free slots are honest gaps. */
+      .blocks .t-deep .body {
+        color: var(--color-ink);
+        font-weight: 500;
+      }
+      .blocks .t-free .body {
         color: var(--color-ink-faint);
+      }
+      .dur {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-faint);
+        white-space: nowrap;
+      }
+      /* Block notes (the "what done looks like" elaboration) are a page
+         luxury — hidden on tiles, shown inside the time grid. */
+      .note {
+        display: none;
+      }
+      /* The day strip: the whole day as one proportional bar, segments
+         tinted by block type — the shape of the day at glance size.
+         Built by script from the block list; absent without JS. */
+      .strip {
+        position: relative;
+        display: flex;
+        gap: 1px;
+        height: 6px;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+      .strip span {
+        background: color-mix(in srgb, var(--tone) 65%, transparent);
+      }
+      .strip .t-free {
+        background: var(--color-bg3);
+      }
+      .strip i {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--color-orange);
+      }
+      /* Day totals — the process metric (deep vs meetings vs shallow vs
+         free). Wide tiers only. */
+      .totals {
+        display: none;
+        gap: 14px;
+        margin-bottom: 8px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-dim);
+      }
+      .totals span::before {
+        content: "";
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        margin-right: 5px;
+        background: color-mix(in srgb, var(--tone) 80%, transparent);
+      }
+      /* The time-grid ruler exists only on the page tier. */
+      .ruler {
+        display: none;
+      }
+      .nowline {
+        display: none;
       }
       /* Past blocks recede so the glance lands on what's next. */
       .blocks li[data-past] .key,
@@ -242,7 +329,7 @@
         }
       }
       /* Wide (~900px+, 3+ columns or the full view): two columns —
-         priorities and carry-overs left, the day's timeline right. */
+         priorities and carry-overs left, the day's plan right. */
       @media (min-width: 900px) {
         main,
         footer {
@@ -251,13 +338,16 @@
           margin-inline: auto;
         }
         main {
-          grid-template-columns: 1.1fr 0.9fr;
+          grid-template-columns: 0.95fr 1.05fr;
+          /* Last row soaks the time grid's height, so carry-overs sit
+             right under the priorities instead of drifting down. */
+          grid-template-rows: auto auto 1fr;
           grid-template-areas:
             "date date"
             "prio blocks"
             "carry blocks";
           align-content: start;
-          gap: 20px 56px;
+          gap: 20px 48px;
         }
         .stat {
           display: none;
@@ -281,6 +371,9 @@
         }
         .prio .body {
           white-space: normal;
+        }
+        .totals {
+          display: flex;
         }
         ol,
         ul {
@@ -311,12 +404,120 @@
         :root:not([data-steward-tile]) .date {
           display: block;
         }
+        /* The time grid (page tier only — tiles keep the ledger): a
+           30-minute ruler and proportional blocks, Newport style. The
+           strip is redundant here; the grid IS the shape of the day. */
+        :root:not([data-steward-tile]) .strip {
+          display: none;
+        }
+        /* .day li.now beats the grid-mode `.day li` display rule below —
+           equal-prefix selectors tie on specificity and the later wins. */
+        :root:not([data-steward-tile]) .blocks .day li.now {
+          display: none;
+        }
+        :root:not([data-steward-tile]) .blocks .day {
+          --slot: 26px;
+          position: relative;
+          display: grid;
+          grid-template-columns: max-content 1fr;
+          column-gap: 10px;
+        }
+        :root:not([data-steward-tile]) .ruler {
+          display: grid;
+          grid-auto-rows: var(--slot);
+          border-top: 1px solid transparent;
+          border-right: 1px solid var(--color-border-dim);
+          padding-right: 8px;
+          font-family: var(--font-mono);
+          font-size: 12px;
+          line-height: 1;
+          color: var(--color-ink-faint);
+          /* 30-minute tick marks along the axis. */
+          background: repeating-linear-gradient(
+              to bottom,
+              transparent 0 calc(var(--slot) - 1px),
+              var(--color-border-dim) calc(var(--slot) - 1px) var(--slot)
+            )
+            right / 5px 100% no-repeat;
+        }
+        :root:not([data-steward-tile]) .ruler span {
+          grid-row: var(--h) / span 2;
+        }
+        :root:not([data-steward-tile]) .blocks .day ul {
+          display: grid;
+          grid-template-columns: 1fr;
+          grid-auto-rows: var(--slot);
+          gap: 0;
+          border-top: 1px solid var(--color-border-dim);
+          border-bottom: 1px solid var(--color-border-dim);
+          /* Hour lines; visible where the day is free. */
+          background: repeating-linear-gradient(
+            to bottom,
+            transparent 0 calc(var(--slot) * 2 - 1px),
+            var(--color-border-dim) calc(var(--slot) * 2 - 1px)
+              calc(var(--slot) * 2)
+          );
+        }
+        :root:not([data-steward-tile]) .blocks .day li {
+          grid-column: 1;
+          grid-row: span var(--s, 1);
+          display: grid;
+          grid-template-columns: max-content 1fr max-content;
+          column-gap: 8px;
+          align-content: start;
+          align-items: baseline;
+          margin: 1px 2px 1px 0;
+          padding: 2px 8px;
+          border: 0;
+          border-radius: 4px;
+          line-height: 1.4;
+          overflow: hidden;
+          background: color-mix(in srgb, var(--tone) 10%, transparent);
+        }
+        :root:not([data-steward-tile]) .blocks .day li.t-free {
+          background: transparent;
+        }
+        :root:not([data-steward-tile]) .blocks .day .body {
+          min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        :root:not([data-steward-tile]) .blocks .day .note {
+          display: block;
+          grid-column: 2;
+          font-family: var(--font-mono);
+          font-size: 12px;
+          color: var(--color-ink-faint);
+        }
+        :root:not([data-steward-tile]) .blocks .day li[data-past] {
+          opacity: 0.55;
+        }
+        /* The now line crosses the whole grid at the current time. */
+        :root:not([data-steward-tile]) .nowline {
+          display: block;
+          position: absolute;
+          left: 0;
+          right: 0;
+          border-top: 1px solid var(--color-orange-deep);
+        }
+        :root:not([data-steward-tile]) .nowline span {
+          position: absolute;
+          right: 0;
+          top: -7px;
+          padding: 0 4px;
+          background: var(--color-bg1);
+          font-family: var(--font-mono);
+          font-size: 12px;
+          line-height: 14px;
+          color: var(--color-orange);
+        }
       }
     </style>
   </head>
   <body>
     <main>
-      <p class="date">Thursday, July 9</p>
+      <p class="date">Monday, July 13</p>
       <section class="stat">
         <div class="num">3</div>
         <div class="label">priorities today</div>
@@ -340,16 +541,82 @@
         </ol>
       </section>
       <section class="blocks">
-        <h2>Blocks <span class="count">2</span></h2>
-        <ul data-fit-list>
-          <li>
-            <time class="key">10:00</time><span class="body">Team standup</span>
-          </li>
-          <li>
-            <time class="key">14:00</time
-            ><span class="body">Focus: steward M2</span>
-          </li>
-        </ul>
+        <h2>Blocks <span class="count">08:00–18:00</span></h2>
+        <div class="strip" aria-hidden="true"></div>
+        <p class="totals">
+          <span class="t-deep">4.5h deep</span>
+          <span class="t-mtg">1h meetings</span>
+          <span class="t-shal">3h shallow</span>
+          <span class="t-free">30m free</span>
+        </p>
+        <div class="day">
+          <div class="ruler" aria-hidden="true">
+            <span style="--h: 1">08</span><span style="--h: 3">09</span
+            ><span style="--h: 5">10</span><span style="--h: 7">11</span
+            ><span style="--h: 9">12</span><span style="--h: 11">13</span
+            ><span style="--h: 13">14</span><span style="--h: 15">15</span
+            ><span style="--h: 17">16</span><span style="--h: 19">17</span>
+          </div>
+          <ul data-fit-list>
+            <li class="t-shal" style="--s: 1">
+              <time class="key">08:00</time
+              ><span class="body">Inbox sweep + plan review</span
+              ><span class="dur">30m</span>
+            </li>
+            <li class="t-deep" style="--s: 3">
+              <time class="key">08:30</time
+              ><span class="body">Deep — M2 dashboard render path</span
+              ><span class="dur">1h30</span>
+              <span class="note">goal: render path PR up by lunch</span>
+            </li>
+            <li class="t-mtg" style="--s: 1">
+              <time class="key">10:00</time
+              ><span class="body">Team standup</span
+              ><span class="dur">30m</span>
+            </li>
+            <li class="t-deep" style="--s: 3">
+              <time class="key">10:30</time
+              ><span class="body">Deep — M2 render path, continued</span
+              ><span class="dur">1h30</span>
+            </li>
+            <li class="t-per" style="--s: 2">
+              <time class="key">12:00</time><span class="body">Lunch</span
+              ><span class="dur">1h</span>
+            </li>
+            <li class="t-shal" style="--s: 2">
+              <time class="key">13:00</time
+              ><span class="body">Review the schema PR</span
+              ><span class="dur">1h</span>
+            </li>
+            <li class="t-deep" style="--s: 3">
+              <time class="key">14:00</time
+              ><span class="body">Deep — routines-sync plan draft</span
+              ><span class="dur">1h30</span>
+              <span class="note">goal: outline ready for ADR review</span>
+            </li>
+            <li class="t-free" style="--s: 1">
+              <time class="key">15:30</time
+              ><span class="body">Free — buffer before the 1:1</span
+              ><span class="dur">30m</span>
+            </li>
+            <li class="t-mtg" style="--s: 1">
+              <time class="key">16:00</time
+              ><span class="body">Mateus / Daniel 1:1</span
+              ><span class="dur">30m</span>
+            </li>
+            <li class="t-shal" style="--s: 2">
+              <time class="key">16:30</time
+              ><span class="body">Replies — ADR-0005 thread, review queue</span
+              ><span class="dur">1h</span>
+            </li>
+            <li class="t-shal" style="--s: 1">
+              <time class="key">17:30</time
+              ><span class="body">Shutdown — clear queues, plan tomorrow</span
+              ><span class="dur">30m</span>
+            </li>
+          </ul>
+          <div class="nowline" hidden><span></span></div>
+        </div>
       </section>
       <section class="carry">
         <h2>Carried over <span class="count">1</span></h2>
@@ -363,42 +630,58 @@
     </main>
     <footer>
       <span>daily-plan</span>
-      <span>2026-07-09 08:00Z</span>
+      <span>2026-07-13 08:00Z</span>
     </footer>
     <script>
-      // Now marker: dim past blocks, drop a thin rule where the day is.
-      // Pure presentation — if it fails, the list is simply undimmed.
+      // The day, derived from the block list: the proportional strip, past
+      // dimming, the ledger now marker, and the time grid's now line.
+      // Pure presentation — if it fails, the list simply renders undimmed.
       ;(function () {
         var list = document.querySelector(".blocks ul")
         if (!list) return
-        var now = new Date()
-        var hhmm = now.getHours() * 60 + now.getMinutes()
+        var blocks = []
+        ;[].forEach.call(list.children, function (li) {
+          var t = li.querySelector("time")
+          var m = t && /^(\d{1,2}):(\d{2})/.exec(t.textContent)
+          if (!m) return
+          var s = parseInt(li.style.getPropertyValue("--s"), 10) || 1
+          blocks.push({ li: li, start: +m[1] * 60 + +m[2], mins: s * 30 })
+        })
+        if (!blocks.length) return
+        var dayStart = blocks[0].start
+        var last = blocks[blocks.length - 1]
+        var dayEnd = last.start + last.mins
+        // The strip: one segment per block, width proportional to minutes.
+        var strip = document.querySelector(".strip")
+        if (strip)
+          blocks.forEach(function (b) {
+            var seg = document.createElement("span")
+            seg.className = b.li.className
+            seg.style.flex = b.mins + " 0 0px"
+            strip.appendChild(seg)
+          })
+        // The rest is live state — only when the plan is today's.
         var gen = new Date(
           document.querySelector('meta[name="widget-generated-at"]').content,
         )
+        var now = new Date()
         if (now.toDateString() !== gen.toDateString()) return
+        var hhmm = now.getHours() * 60 + now.getMinutes()
         var firstFuture = null
         var past = 0
-        ;[].forEach.call(list.children, function (li) {
-          var t = li.querySelector("time")
-          if (!t) return
-          var m = /^(\d{1,2}):(\d{2})/.exec(t.textContent)
-          if (!m) return
-          if (+m[1] * 60 + +m[2] <= hhmm) {
-            li.setAttribute("data-past", "")
+        blocks.forEach(function (b) {
+          if (b.start + b.mins <= hhmm) {
+            b.li.setAttribute("data-past", "")
             past++
-          } else if (!firstFuture) firstFuture = li
+          } else if (b.start > hhmm && !firstFuture) firstFuture = b.li
         })
+        var hh = (now.getHours() < 10 ? "0" : "") + now.getHours()
+        var mm = (now.getMinutes() < 10 ? "0" : "") + now.getMinutes()
+        // Ledger tiers: the now rule between past and future rows.
         var mark = document.createElement("li")
         mark.className = "now"
         var label = document.createElement("span")
-        label.textContent =
-          (now.getHours() < 10 ? "0" : "") +
-          now.getHours() +
-          ":" +
-          (now.getMinutes() < 10 ? "0" : "") +
-          now.getMinutes() +
-          " now"
+        label.textContent = hh + ":" + mm + " now"
         var rule = document.createElement("span")
         rule.className = "rule"
         mark.appendChild(label)
@@ -412,6 +695,26 @@
         firstFuture
           ? list.insertBefore(mark, firstFuture)
           : list.appendChild(mark)
+        // Page tier: the now line across the time grid, and its strip tick.
+        if (hhmm < dayStart || hhmm > dayEnd) return
+        var day = document.querySelector(".day")
+        var nowline = document.querySelector(".nowline")
+        if (day && nowline) {
+          var slot = parseFloat(
+            getComputedStyle(day).getPropertyValue("--slot"),
+          )
+          if (slot) {
+            nowline.style.top = ((hhmm - dayStart) / 30) * slot + "px"
+            nowline.querySelector("span").textContent = hh + ":" + mm
+            nowline.hidden = false
+          }
+        }
+        if (strip) {
+          var tick = document.createElement("i")
+          tick.style.left =
+            ((hhmm - dayStart) / (dayEnd - dayStart)) * 100 + "%"
+          strip.appendChild(tick)
+        }
       })()
       // Fit lists to the tile (widget-standard §2, ADR-0019): tiles never
       // scroll, so collapse trailing items that overflow into "+N more".
@@ -449,7 +752,21 @@
             }
             var hidden = 0
             while (over() && hidden < items.length) {
-              items[items.length - ++hidden].hidden = true
+              var before = Math.max(
+                doc.scrollHeight,
+                document.body.scrollHeight,
+              )
+              var el = items[items.length - ++hidden]
+              el.hidden = true
+              // In multi-column tiers hiding a short-column item frees no
+              // height — revert and leave this list whole.
+              if (
+                Math.max(doc.scrollHeight, document.body.scrollHeight) >= before
+              ) {
+                el.hidden = false
+                hidden--
+                break
+              }
               more.hidden = false
               more.textContent = "+" + hidden + " more"
             }
