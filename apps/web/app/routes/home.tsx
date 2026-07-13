@@ -237,8 +237,8 @@ function GithubMark({ className }: { className?: string }) {
 function DemoBoard() {
   const t = useT()
   return (
-    <div className="flex w-full max-w-md flex-col items-start gap-3 max-lg:mx-auto sm:flex-row">
-      {/* Left column: one tall widget. */}
+    <div className="flex w-full max-w-md flex-col items-stretch gap-3 max-lg:mx-auto sm:flex-row">
+      {/* Left column: one tall widget, stretched to match the right stack. */}
       <DemoWidget name="Daily plan" ago="Ran 2h ago" className="flex-1">
         <p className="mb-3 flex items-center justify-between font-mono text-xs text-ink-dim">
           Today
@@ -252,7 +252,7 @@ function DemoBoard() {
           <Task>Merge appearance branch</Task>
           <Task>Reply to design thread</Task>
         </ul>
-        <div className="mt-4 flex items-center gap-2 font-mono text-xs text-ink-dim">
+        <div className="mt-auto flex items-center gap-2 pt-4 font-mono text-xs text-ink-dim">
           <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg3">
             <span
               className="block h-full rounded-full bg-green"
@@ -326,7 +326,7 @@ function DemoWidget({
           {ago}
         </span>
       </div>
-      <div className="min-h-0 flex-1 p-3">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col p-3">{children}</div>
     </div>
   )
 }
