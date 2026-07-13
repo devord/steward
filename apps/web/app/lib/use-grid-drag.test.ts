@@ -40,11 +40,11 @@ describe("dragCandidate", () => {
   })
 
   it("clamps a resize to the remaining columns and max rows", () => {
-    expect(dragCandidate("resize", origin, 10, 10, columns)).toEqual({
+    expect(dragCandidate("resize", origin, 10, 50, columns)).toEqual({
       col: 2,
       row: 2,
       cols: 3, // columns 2..4
-      rows: 6, // GRID_MAX_ROWS
+      rows: 12, // GRID_MAX_ROWS
     })
   })
 
