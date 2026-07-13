@@ -132,6 +132,22 @@ export const ptBR: Messages = {
   "routines.emptyHint":
     "Uma rotina produz um widget — adicione uma e coloque-a num painel.",
 
+  "templates.title": "Templates",
+  "templates.subtitle":
+    "O que o seletor de rotinas oferece — templates/routines/ em {repo}, mais os nativos.",
+  "templates.colTemplate": "Template",
+  "templates.colDescription": "Descrição",
+  "templates.colSource": "Origem",
+  "templates.colSchedule": "Agendamento sugerido",
+  "templates.colUsedBy": "Usado por",
+  "templates.colActions": "Ações",
+  "templates.count": "{n} templates",
+  "templates.builtin": "nativo",
+  "templates.shadows": "sobrepõe o nativo",
+  "templates.unused": "sem uso",
+  "templates.use": "Nova rotina a partir de {name}",
+  "templates.viewFile": "Ver {id}.md no GitHub",
+
   "grid.columnsLabel": "Colunas",
   "grid.width": "Largura",
   "grid.widthFixed": "Fixa",

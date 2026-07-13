@@ -131,6 +131,22 @@ export const en = {
   "routines.emptyHint":
     "A routine produces a widget — add one, then place it on a board.",
 
+  "templates.title": "Templates",
+  "templates.subtitle":
+    "What the routine picker offers — templates/routines/ in {repo}, plus the built-ins.",
+  "templates.colTemplate": "Template",
+  "templates.colDescription": "Description",
+  "templates.colSource": "Source",
+  "templates.colSchedule": "Suggested schedule",
+  "templates.colUsedBy": "Used by",
+  "templates.colActions": "Actions",
+  "templates.count": "{n} templates",
+  "templates.builtin": "built-in",
+  "templates.shadows": "overrides built-in",
+  "templates.unused": "unused",
+  "templates.use": "New routine from {name}",
+  "templates.viewFile": "View {id}.md on GitHub",
+
   "grid.columnsLabel": "Columns",
   "grid.width": "Width",
   "grid.widthFixed": "Fixed",

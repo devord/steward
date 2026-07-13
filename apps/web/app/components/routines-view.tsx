@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react"
 import { useFetcher, useNavigate, useRevalidator } from "react-router"
 
 import {
@@ -126,6 +132,9 @@ export function RoutinesView({
 
   const [syncing, setSyncing] = useState(false)
   const [adding, setAdding] = useState(false)
+  // Set by the templates ledger's "new routine from template" — opens the
+  // add dialog with that template pre-picked (still fully editable).
+  const [addingTemplate, setAddingTemplate] = useState<string | null>(null)
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null)
   const [deletingSlug, setDeletingSlug] = useState<string | null>(null)
   // Runs the client fired this session, so the row shows "running" until a
@@ -297,16 +306,25 @@ export function RoutinesView({
             }
           />
         )}
+
+        <TemplatesSection
+          templates={templates}
+          routines={effective.routines}
+          repo={repo}
+          onUse={setAddingTemplate}
+        />
       </NavShell>
 
       <AddRoutineDialog
-        open={adding || editingRoutine != null}
+        open={adding || addingTemplate != null || editingRoutine != null}
         onOpenChange={(open) => {
           if (!open) {
             setAdding(false)
+            setAddingTemplate(null)
             setEditingRoutine(null)
           }
         }}
+        initialTemplate={addingTemplate}
         templates={templates}
         // No board to size for — placement (and its sizing) happens later, on a
         // board. The dialog still asks; the answer is dropped until placement.
@@ -727,6 +745,213 @@ function BoardsCell({
         </Link>
       ))}
     </span>
+  )
+}
+
+/**
+ * The templates ledger (ADR-0029): everything the add-routine picker offers
+ * — this repo's templates/routines/ plus the built-ins — with the signals
+ * the picker can't give: which routines instantiate each template (`unused`
+ * mirrors the pool's `orphan`) and a repo template overriding a same-named
+ * built-in. Read-only by design — templates are authored in Claude Code,
+ * never the app (ADR-0022) — so its one action instantiates: new routine
+ * from template, seeding the add dialog.
+ */
+export function TemplatesSection({
+  templates,
+  routines,
+  repo,
+  onUse,
+}: {
+  templates: DiscoveredTemplate[]
+  routines: Routine[]
+  repo: RepoInfo
+  onUse: (templateId: string) => void
+}) {
+  const t = useT()
+  if (templates.length === 0) return null
+  // Draft-aware cross-reference: every routine names a template (ADR-0022),
+  // so the pool partitions cleanly under the ledger's used-by column.
+  const usedBy = new Map<string, string[]>()
+  for (const routine of routines) {
+    const list = usedBy.get(routine.template) ?? []
+    list.push(routine.slug)
+    usedBy.set(routine.template, list)
+  }
+  return (
+    <section className="mt-10">
+      <h2 className="font-mono text-base font-medium text-foreground">
+        {t("templates.title")}
+      </h2>
+      <p className="mt-0.5 mb-3 text-sm text-ink-dim">
+        {t("templates.subtitle", { repo: repo.name })}
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-border text-left align-bottom font-mono text-xs text-ink-faint">
+              <th className="py-1.5 pr-3 font-normal">
+                {t("templates.colTemplate")}
+              </th>
+              <th className="hidden py-1.5 pr-3 font-normal md:table-cell">
+                {t("templates.colDescription")}
+              </th>
+              <th className="py-1.5 pr-3 font-normal">
+                {t("templates.colSource")}
+              </th>
+              <th className="hidden py-1.5 pr-3 font-normal md:table-cell">
+                {t("templates.colSchedule")}
+              </th>
+              <th className="hidden py-1.5 pr-3 font-normal sm:table-cell">
+                {t("templates.colUsedBy")}
+              </th>
+              <th className="w-14 py-1.5">
+                <span className="sr-only">{t("templates.colActions")}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {templates.map((template) => (
+              <TemplateRow
+                key={template.id}
+                template={template}
+                usedBy={usedBy.get(template.id) ?? []}
+                repo={repo}
+                onUse={() => onUse(template.id)}
+              />
+            ))}
+          </tbody>
+        </table>
+        <p className="sr-only" role="status">
+          {t("templates.count", { n: templates.length })}
+        </p>
+      </div>
+    </section>
+  )
+}
+
+/** The template's source file on GitHub — repo templates only; built-ins
+    ship inside the app bundle and have no file in the viewer's repos. */
+function templateFileUrl(repoFull: string, id: string): string {
+  return `https://github.com/${repoFull}/blob/HEAD/templates/routines/${id}.md`
+}
+
+/** Same hover-reveal as the routine RowMenu trigger — quiet until the row
+    has attention, always there for keyboard and coarse pointers. */
+const templateActionCls =
+  "size-6 text-ink-faint opacity-0 transition-opacity group-hover:opacity-100 hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 pointer-coarse:opacity-100"
+
+/** Faint bordered tag, the `orphan` chip's vocabulary — informational
+    markers (built-in, unused, overrides), never state. */
+function TemplateTag({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded border border-border-dim px-1 font-mono text-xs text-ink-faint">
+      {children}
+    </span>
+  )
+}
+
+function TemplateRow({
+  template,
+  usedBy,
+  repo,
+  onUse,
+}: {
+  template: DiscoveredTemplate
+  usedBy: string[]
+  repo: RepoInfo
+  onUse: () => void
+}) {
+  const t = useT()
+  return (
+    <tr className="group border-b border-border-dim last:border-0 hover:bg-bg1/60">
+      {/* Mono name over faint id, the routine rows' glance shape — the id is
+          what routines.yaml's `template:` references. */}
+      <td className="py-2 pr-3 align-top">
+        <div className="min-w-0">
+          <div className="truncate font-mono text-sm font-medium text-foreground">
+            {template.name}
+          </div>
+          <div className="truncate font-mono text-xs text-ink-faint">
+            {template.id}
+          </div>
+        </div>
+      </td>
+
+      <td className="hidden max-w-96 py-2 pr-3 align-top text-ink-dim md:table-cell">
+        <div className="truncate">{template.description}</div>
+      </td>
+
+      <td className="py-2 pr-3 align-top">
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          {template.source === "builtin" ? (
+            <TemplateTag>{t("templates.builtin")}</TemplateTag>
+          ) : (
+            <span className="font-mono text-xs text-ink-dim">{repo.name}</span>
+          )}
+          {template.shadows && (
+            <TemplateTag>{t("templates.shadows")}</TemplateTag>
+          )}
+        </span>
+      </td>
+
+      <td className="hidden py-2 pr-3 align-top font-mono text-xs text-ink-dim md:table-cell">
+        {template.widget.schedule ?? (
+          <span aria-hidden className="text-ink-faint">
+            —
+          </span>
+        )}
+      </td>
+
+      <td className="hidden py-2 pr-3 align-top sm:table-cell">
+        {usedBy.length === 0 ? (
+          // The picker can't say this: a template no routine instantiates —
+          // the ledger's twin of the pool's orphan.
+          <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink-faint">
+            <span aria-hidden>—</span>
+            <TemplateTag>{t("templates.unused")}</TemplateTag>
+          </span>
+        ) : (
+          <span className="flex flex-wrap gap-x-2 gap-y-0.5 font-mono text-xs text-ink-dim">
+            {usedBy.map((slug) => (
+              <span key={slug}>{slug}</span>
+            ))}
+          </span>
+        )}
+      </td>
+
+      <td className="py-1.5 align-top">
+        <div className="flex justify-end gap-0.5">
+          {template.source === "repo" && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              nativeButton={false}
+              aria-label={t("templates.viewFile", { id: template.id })}
+              className={templateActionCls}
+              render={
+                <a
+                  href={templateFileUrl(repo.full, template.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                />
+              }
+            >
+              <ExternalLink />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={t("templates.use", { name: template.name })}
+            className={templateActionCls}
+            onClick={onUse}
+          >
+            <CalendarPlus />
+          </Button>
+        </div>
+      </td>
+    </tr>
   )
 }
 

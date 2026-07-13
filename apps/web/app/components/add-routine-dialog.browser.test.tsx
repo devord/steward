@@ -106,11 +106,13 @@ async function renderDialog(
     />,
   )
   // The Base UI dialog portals its content a tick after render resolves —
-  // wait for something from either step (edit mode opens on configure).
+  // wait for a field from either step (edit mode opens on configure; a
+  // seeded template deselects the custom card and its nested prompt).
   await vi.waitFor(() =>
     expect(
       document.querySelector("#routine-prompt") ??
-        document.querySelector("#routine-name"),
+        document.querySelector("#routine-name") ??
+        document.querySelector('button[aria-pressed="true"]'),
     ).not.toBeNull(),
   )
   return { onAdd, onEdit }
@@ -149,6 +151,29 @@ describe("AddRoutineDialog add mode", () => {
       },
       { cols: 2, rows: 2 },
     )
+  })
+
+  it("seeds the picker from initialTemplate — new routine from template (ADR-0029)", async () => {
+    await renderDialog({
+      templates: [repoPulseTemplate],
+      initialTemplate: "repo-pulse",
+    })
+
+    // Pre-picked exactly as a card click: card selected, Next unlocked
+    // without typing a prompt…
+    await vi.waitFor(() => expect(button("Next").disabled).toBe(false))
+    expect(buttonContaining("repo-pulse").getAttribute("aria-pressed")).toBe(
+      "true",
+    )
+    button("Next").click()
+    await vi.waitFor(() =>
+      expect(document.querySelector("#routine-name")).not.toBeNull(),
+    )
+
+    // …with the template's name seeded and the slug uniqued past the
+    // existing repo-pulse routine.
+    expect(input("routine-name").value).toBe("repo-pulse")
+    expect(input("routine-slug").value).toBe("repo-pulse-2")
   })
 
   it("blocks submit while a required template param is empty (ADR-0020)", async () => {
