@@ -174,6 +174,13 @@ describe("every theme clears the contrast floors", () => {
       expect(contrast(t.inkFaint, t.bg)).toBeGreaterThanOrEqual(3)
       expect(contrast(t.inkFaint, t.bg1)).toBeGreaterThanOrEqual(3)
     })
+    it(`${name}: the mark's knot ≥ 3:1 on page and sidebar`, () => {
+      // The bow tie renders tile-less in chrome (wings `ink`, knot `accent`),
+      // so the knot must clear the WCAG graphics floor on the surfaces the
+      // glyph actually sits on: the landing page (bg) and the sidebar (bg1).
+      expect(contrast(t.accent, t.bg)).toBeGreaterThanOrEqual(3)
+      expect(contrast(t.accent, t.bg1)).toBeGreaterThanOrEqual(3)
+    })
     it(`${name}: primary button label ≥ 4.5:1, fill and ring ≥ 3:1`, () => {
       // The button label is bg1 (--primary-foreground) — each palette's
       // brightest/most-neutral surface, which clears full AA on every

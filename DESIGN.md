@@ -94,37 +94,49 @@ tokens only; a literal hex breaks every non-default theme.
 ## Mark
 
 The logo is **the bow tie**: the steward's uniform in three shapes — two
-wings in the neutral ink role and the orange knot at center. The knot is
+wings in the body-ink role and the orange knot at center. The knot is
 the same block that ends the wordmark (the steward's cursor, dressed for
 service), so the mark and the logotype are one system. Symmetric and
 solid, it holds one geometry at every size, from the 16px favicon to the
 landing hero — no small-size cut needed. Several mirrors must stay
-geometrically in sync; the fills differ by surface (context below), but
-never the geometry. The only size-conditional element is the tile's frame
-stroke: display contexts (hero lockup, wordmark SVGs, og card) keep it,
-small chrome and icons drop it (it turns to mush below ~32px).
+geometrically in sync; the fills and framing differ by surface (context
+below), but never the geometry. Wings are always full ink — the secondary
+tones washed the tie out gray at chrome sizes. The tile is
+size-and-surface conditional: display contexts (hero lockup, wordmark
+SVGs, og card) keep the framed tile, everything else renders the bare
+glyph — a tight rectangular crop in-app, a padded square crop on the
+favicon (tab boxes are square); both keep the glyph's center at `y=32`
+so optical alignment is shared.
 
-Two contexts, deliberately split. **In-app** the mark is chrome, so it
-follows the active theme. **As an OS/browser icon** the mark is a fixed
-dark identity tile — a tile has to hold its own on an unknown background
-(a colorful launcher, a light or dark tab strip, a photo wallpaper), where
-a near-white body would melt in and read as a placeholder, so it does _not_
-theme-switch and does _not_ use the light palette. Canonical icon colors:
-`#1d2021` tile, `#ebdbb2` wings, `#fe8019` knot (raised contrast so the
-silhouette reads at 16px; no frame stroke on icons). Rasters are rendered
-from the SVGs with headless Chrome — ImageMagick's SVG delegate is not
-faithful. Static SVGs carry explicit `width`/`height` (favicon renderers
-assume 300×150 and crop without them).
+Three contexts, deliberately split. **In-app** the mark is chrome: the
+bare glyph in theme tokens — a tile behind a chrome mark either vanishes
+(light themes: `bg` on `bg1`) or punches a darker hole in the sidebar
+(dark themes); glyph-only is the mark-in-chrome treatment everywhere else
+(GitHub, Linear, Vercel). **In the browser tab** the mark is also the bare
+glyph, but static: `favicon.svg` swaps its inks with a
+`prefers-color-scheme` media query, so light tab strips get ink wings and
+dark strips get cream — never a black box on a light strip. **On OS
+launcher surfaces** (home screens, docks) the mark keeps the fixed dark
+identity tile — those icons must be opaque and hold their own on unknown
+wallpapers, and a dark tile is the standard move there. Canonical identity
+tile colors: `#1d2021` tile, `#ebdbb2` wings, `#fe8019` knot (raised
+contrast so the silhouette reads small; no frame stroke on icons). Rasters
+are rendered from the SVGs with headless Chrome — ImageMagick's SVG
+delegate is not faithful. Static SVGs carry explicit `width`/`height`
+(favicon renderers assume 300×150 and crop without them).
 
 - `apps/web/app/components/logo.tsx` — `Logo` (mark) and `Wordmark`
   (mark + mono name lockup, scales with font size) for in-app use; token-
-  based, so it follows the active theme. Wings are `muted-foreground`,
-  the knot `primary`; the landing hero passes `display` for the frame's
-  `border` stroke (rendered large enough there). `live` blinks the knot
-  like a terminal caret (landing only).
-- `apps/web/public/favicon.svg` — the browser-tab mark: one fixed dark
-  tile, no frame, no `prefers-color-scheme` swap (see the split above).
-  `favicon.ico` (16/32/48) is the raster fallback, generated from it.
+  based, so it follows the active theme. Wings are `foreground`, the knot
+  `primary`; default is the bare glyph, the landing hero passes `display`
+  for the framed `bg` tile with `border` stroke (rendered large enough
+  there). `live` blinks the knot like a terminal caret (landing only).
+- `apps/web/public/favicon.svg` — the browser-tab mark: bare glyph, inks
+  swapped by a `prefers-color-scheme` style block inside the SVG (light:
+  `#3c3836` wings / `#d65d0e` knot; dark: `#ebdbb2` / `#fe8019`).
+  `favicon.ico` (16/32/48) is the raster fallback; .ico can't media-query,
+  so it renders the glyph in the palette's theme-neutral gray (`#928374`
+  wings, `#d65d0e` knot — legible on either strip).
 - `apps/web/public/apple-touch-icon.png` (180) — iOS home screen: opaque,
   full-bleed dark, no self-rounding (iOS supplies the corner radius).
 - `apps/web/public/manifest.webmanifest` + `icon-{192,512}.png` (`any`)
@@ -135,9 +147,9 @@ assume 300×150 and crop without them).
 - `apps/web/public/wordmark-{dark,light}.svg` — the mark + `Steward`
   lockup for the README, swapped by `prefers-color-scheme` in a `<picture>`.
   These are a document context (a light or dark page), so they keep the
-  theme pair; the wings take the palette's secondary ink for legibility.
-  Text baseline `y=46.5` centers the word's cap band on the tile center —
-  the measured optical alignment of the lockup.
+  theme pair; wings in full ink, like everywhere. Text baseline `y=46.5`
+  centers the word's cap band on the tile center — the measured optical
+  alignment of the lockup.
 - `apps/web/public/og.png` — 1200×630 (@2x) social card in the light
   (gruvbox-light) palette; OG/Twitter meta lives in the home route's
   `meta`. One fixed image for every viewer — OG previews can't theme-switch,
