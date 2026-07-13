@@ -55,7 +55,6 @@ export function DashboardShell({
   return (
     <NavShell
       nav={{
-        dataRepo,
         activeRepo: dataRepo,
         dashboardSlug,
         sidebar,

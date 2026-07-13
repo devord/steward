@@ -1,6 +1,6 @@
 import { useSubmit } from "react-router"
 
-import { ChevronsUpDown, ExternalLink, LogOut, Settings } from "lucide-react"
+import { ChevronsUpDown, LogOut, Settings } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
 import {
@@ -27,10 +27,11 @@ function initialsFor(name: string | null | undefined, login: string): string {
 
 /**
  * The account menu — a GitHub-avatar pill that opens the account-scoped
- * actions that were previously loose in the header: settings, a link out to
- * the data repo, and sign-out. Consolidating them here (the top-right
- * convention) demotes sign-out from a peer of the board actions to where
- * exit actions belong, and gives the signed-in identity a real affordance.
+ * actions that were previously loose in the header: settings and sign-out.
+ * Consolidating them here (the top-right convention) demotes sign-out from a
+ * peer of the board actions to where exit actions belong, and gives the
+ * signed-in identity a real affordance. Strictly account-scoped: repo links
+ * live on each rail group's header (ADR-0026), where the repo is.
  *
  * Identity reads as the person, not the handle: the pill and menu header
  * show the GitHub display name (sans) when we have it, with the `@login`
@@ -44,7 +45,6 @@ function initialsFor(name: string | null | undefined, login: string): string {
 export function AccountMenu({
   login,
   displayName,
-  dataRepo,
   block = false,
   onNavigate,
   className,
@@ -52,8 +52,6 @@ export function AccountMenu({
   login: string
   /** GitHub display name; null/absent on older sessions → login only. */
   displayName?: string | null
-  /** owner/repo — shows the "View data repo" item when present. */
-  dataRepo?: string
   /** Full-width sidebar-footer shape vs. the compact inline pill. */
   block?: boolean
   /** Called when a menu item navigates — lets the mobile drawer close. */
@@ -122,20 +120,6 @@ export function AccountMenu({
           <Settings />
           {t("header.settings")}
         </DropdownMenuItem>
-        {dataRepo && (
-          <DropdownMenuItem
-            render={
-              <a
-                href={`https://github.com/${dataRepo}`}
-                target="_blank"
-                rel="noreferrer"
-              />
-            }
-          >
-            <ExternalLink />
-            {t("account.viewRepo")}
-          </DropdownMenuItem>
-        )}
 
         <DropdownMenuSeparator />
 

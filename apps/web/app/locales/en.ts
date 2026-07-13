@@ -44,7 +44,6 @@ export const en = {
   "nav.routines": "Routines",
   "account.menu": "Account",
   "account.githubAccount": "GitHub account",
-  "account.viewRepo": "View data repo",
 
   "empty.fact": "The grid is empty",
   "empty.hint":
@@ -132,6 +131,9 @@ export const en = {
   "repo.viewOnGitHub": "View {repo} on GitHub",
   "repo.manageOnGitHub": "Manage access on GitHub",
   "repo.openOnGitHub": "View on GitHub",
+  "repo.displayName": "Display name",
+  "repo.saveName": "Save",
+  "repo.renameFailed": "Couldn't save the name — try again.",
 
   "addRepo.title": "Add a data repo",
   "addRepo.description":

@@ -12,11 +12,8 @@ import type { SidebarData } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
 import { useSidebarCollapsed, useSidebarWidth } from "../lib/sidebar-panel.ts"
 
-/** The navigation the rail renders — the boards, the account, the repo home. */
+/** The navigation the rail renders — the boards and the account. */
 export interface ShellNav {
-  /** The account menu's "View data repo" target — the active board's repo,
-      or the home repo on chrome pages. */
-  dataRepo: string
   /** The active board's repo+slug; "" on chrome pages (settings) where no
       board is current, so the rail lights nothing and reads as "off-board". */
   activeRepo: string

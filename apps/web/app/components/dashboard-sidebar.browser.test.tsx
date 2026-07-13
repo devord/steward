@@ -9,7 +9,6 @@ const HOME_REPO = "alice/steward-data"
 const SHARED_REPO = "acme/steward-team"
 
 const base = {
-  dataRepo: HOME_REPO,
   activeRepo: HOME_REPO,
   // `main` is the active board — so `test` and `team-ops` are *not* active,
   // which is exactly the case the per-board menu has to cover.
@@ -19,15 +18,18 @@ const base = {
       {
         repo: HOME_REPO,
         name: "steward-data",
+        displayName: null,
         isHome: true,
         private: true,
         collaborators: null,
         viewerIsAdmin: true,
+        viewerCanPush: true,
         dashboards: ["main", "test"],
       },
       {
         repo: SHARED_REPO,
         name: "steward-team",
+        displayName: null,
         isHome: false,
         private: false,
         collaborators: [
@@ -35,6 +37,7 @@ const base = {
           { login: "bob", avatarUrl: "https://avatars.test/bob" },
         ],
         viewerIsAdmin: false,
+        viewerCanPush: false,
         dashboards: ["team-ops"],
       },
     ],
@@ -167,6 +170,59 @@ describe("DashboardSidebar repo groups", () => {
     await renderSidebar()
     expect(groupHeader(HOME_REPO)?.textContent).toContain("Personal")
     expect(groupHeader(SHARED_REPO)?.textContent).toContain("steward-team")
+  })
+
+  it("prefers the display name from repo.yaml over Personal / the slug", async () => {
+    await renderSidebar({
+      sidebar: {
+        repos: [
+          { ...base.sidebar.repos[0], displayName: "Form Factory" },
+          base.sidebar.repos[1],
+        ],
+        complete: true,
+      },
+    })
+    const header = groupHeader(HOME_REPO)
+    expect(header?.textContent).toContain("Form Factory")
+    expect(header?.textContent).not.toContain("Personal")
+    // The slug survives on the row itself (title attr = the selector above).
+    expect(header).not.toBeNull()
+  })
+
+  it("offers rename to pushers only, inside the access popover", async () => {
+    await renderSidebar()
+
+    // Home (push access): the popover carries the display-name input.
+    groupHeader(HOME_REPO)
+      ?.querySelector<HTMLButtonElement>('[data-slot="popover-trigger"]')
+      ?.click()
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="popover-content"]'),
+      ).not.toBeNull(),
+    )
+    expect(
+      document.querySelector('[data-slot="popover-content"] input'),
+    ).not.toBeNull()
+    document.body.click() // dismiss
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="popover-content"]'),
+      ).toBeNull(),
+    )
+
+    // Shared as a plain reader (no push): no rename form.
+    groupHeader(SHARED_REPO)
+      ?.querySelector<HTMLButtonElement>('[data-slot="popover-trigger"]')
+      ?.click()
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="popover-content"]'),
+      ).not.toBeNull(),
+    )
+    expect(
+      document.querySelector('[data-slot="popover-content"] input'),
+    ).toBeNull()
   })
 
   it("carries repo identity: visibility glyph and collaborator count", async () => {

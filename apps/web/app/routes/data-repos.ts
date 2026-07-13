@@ -1,3 +1,9 @@
+import {
+  REPO_FILE_PATH,
+  REPO_NAME_MAX,
+  serializeRepoFile,
+} from "@steward/schema"
+
 import { data } from "react-router"
 import { z } from "zod"
 
@@ -5,15 +11,17 @@ import { env } from "../lib/env.server.ts"
 import { listDashboards } from "../lib/dashboard.server.ts"
 import {
   addRepoTopic,
+  deleteFile,
   generateFromTemplate,
   getFile,
   GitHubError,
   getRepoMeta,
   listUserOrgs,
+  putFile,
   repoExists,
 } from "../lib/github.server.ts"
 import { DEFAULT_DASHBOARD, parseRepo } from "../lib/repos.ts"
-import { invalidateRepoCache } from "../lib/repos.server.ts"
+import { invalidateRepoCache, requireDataRepo } from "../lib/repos.server.ts"
 import { requireAuth } from "../lib/session.server.ts"
 
 /**
@@ -23,6 +31,10 @@ import { requireAuth } from "../lib/session.server.ts"
  * with the discovery topic. Both end with the topic set and the registry
  * cache dropped, so the rail picks the repo up immediately — no waiting on
  * the search index (requireDataRepo's live check covers the lag).
+ *
+ * *rename* sets the repo's display name (ADR-0026) — a commit to the repo's
+ * own data/repo.yaml, so the name is versioned and shared with everyone who
+ * reads the repo. GitHub's own permissions gate it: no push, no commit.
  */
 
 export interface DataRepoOwners {
@@ -55,7 +67,19 @@ const payloadSchema = z.discriminatedUnion("intent", [
     intent: z.literal("register"),
     repo: z.string(),
   }),
+  z.object({
+    intent: z.literal("rename"),
+    repo: z.string(),
+    /** New display name; blank clears it (back to the repo's short name). */
+    name: z.string().max(REPO_NAME_MAX),
+  }),
 ])
+
+export type RenameRepoResult =
+  | { ok: true }
+  /** denied — no push access (or the repo vanished); conflict — someone
+      else committed repo.yaml between read and write: retry. */
+  | { ok: false; error: "denied" | "conflict" }
 
 export type DataRepoResult =
   | {
@@ -85,6 +109,55 @@ export async function action({ request }: { request: Request }) {
     throw data({ error: "invalid payload" }, { status: 400 })
   }
   const payload = parsed.data
+
+  if (payload.intent === "rename") {
+    // The registry gate first — rename must not be a probe for arbitrary
+    // repos (same 404-indistinguishable contract as every repo-taking action).
+    const repo = await requireDataRepo(
+      auth.token,
+      auth.login,
+      payload.repo,
+      auth.dataRepo,
+    )
+    const name = payload.name.trim()
+    try {
+      const current = await getFile(
+        auth.token,
+        repo.full,
+        REPO_FILE_PATH,
+        "main",
+      )
+      if (name === "") {
+        // Clear: the display name is repo.yaml's only field today, so an
+        // unset name means the file itself goes (absent is the honest blank).
+        if (current) {
+          await deleteFile(auth.token, repo.full, REPO_FILE_PATH, {
+            message: "Clear repo display name",
+            sha: current.sha,
+            branch: "main",
+          })
+        }
+      } else {
+        await putFile(auth.token, repo.full, REPO_FILE_PATH, {
+          content: serializeRepoFile({ name }),
+          message: `Set repo display name to ${name}`,
+          branch: "main",
+          ...(current ? { sha: current.sha } : {}),
+        })
+      }
+    } catch (error) {
+      // 403/404: no push access (a plain reader — GitHub's permissions are
+      // the gate). 409/422: the file moved between read and write — retry.
+      if (error instanceof GitHubError && [403, 404].includes(error.status)) {
+        return { ok: false, error: "denied" } satisfies RenameRepoResult
+      }
+      if (error instanceof GitHubError && [409, 422].includes(error.status)) {
+        return { ok: false, error: "conflict" } satisfies RenameRepoResult
+      }
+      throw error
+    }
+    return { ok: true } satisfies RenameRepoResult
+  }
 
   if (payload.intent === "create") {
     const full = `${payload.owner}/${payload.name}`
