@@ -510,7 +510,12 @@ export function AddRoutineDialog({
             3px focus/invalid ring of any field flush with its edge; the
             negative-margin/padding pair reserves a 4px halo without shifting
             the content off the dialog's column. */}
-        <div className="-m-1 min-h-0 flex-1 overflow-y-auto p-1">
+        {/* overflow-x-clip: setting overflow-y-auto alone makes the browser
+            compute overflow-x to `auto` too (the visible-axis pairing rule),
+            so a stray sub-pixel/focus-ring/negative-margin spill surfaces a
+            horizontal scrollbar. Clipping x keeps the vertical scroll while
+            containing that spill. */}
+        <div className="-m-1 min-h-0 flex-1 overflow-x-clip overflow-y-auto p-1">
           {/* Remount per step: the enter animation plays on the incoming
               panel only (reduced motion: it just appears). */}
           <div

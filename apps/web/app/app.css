@@ -261,6 +261,23 @@
   }
 }
 
+/* Dialog content caps to the popup width on narrow phones. The base popup
+   pins its own column to `minmax(0,1fr)`, but every nested `grid` stack a
+   dialog body uses for vertical rhythm (`grid gap-*`) re-introduces an
+   implicit `auto` column that sizes to its content's max-content — a long
+   mono repo name, a one-line command hint, an un-wrapping template
+   description — and escapes that cap, forcing horizontal scroll. Pinning
+   implicit columns to `minmax(0,1fr)` bounds them to the container so those
+   strings truncate instead. Explicit `grid-cols-*` tracks are untouched:
+   they set grid-template-columns (already `minmax(0,1fr)` in Tailwind), which
+   this doesn't override, and `justify-items-start` stacks keep left-aligning
+   their content-sized items within the now-full-width column. */
+@layer components {
+  [data-slot="dialog-content"] .grid {
+    grid-auto-columns: minmax(0, 1fr);
+  }
+}
+
 /* Dashboard grid (docs/widget-standard.md): the board's own column count
    (--grid-cols, default 4) on desktop, 2 on tablet, 1 on phone; fixed row
    unit; 12px gap. Widgets carry placement as CSS custom properties

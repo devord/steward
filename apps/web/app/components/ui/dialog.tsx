@@ -55,7 +55,14 @@ function DialogContent({
         className={cn(
           // The popup is fixed-positioned, so the body's safe-area padding
           // doesn't reach it: subtract the insets from the mobile width cap.
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%_-_2rem_-_env(safe-area-inset-left)_-_env(safe-area-inset-right))] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-border bg-popover p-4 text-sm text-popover-foreground shadow-lg duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          // `grid-cols-[minmax(0,1fr)]` caps the single content column at the
+          // popup width so wide/unbreakable children (long mono repo names,
+          // full-width inputs) truncate instead of forcing grid tracks past
+          // the max-width cap; `overflow-x-clip` is the belt-and-suspenders
+          // that keeps any residual spill from widening the page and pushing
+          // the centered dialog off-screen on mobile (clip, not hidden, so it
+          // never turns the popup into a vertical scroll container).
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%_-_2rem_-_env(safe-area-inset-left)_-_env(safe-area-inset-right))] -translate-x-1/2 -translate-y-1/2 grid-cols-[minmax(0,1fr)] gap-4 overflow-x-clip rounded-xl border border-border bg-popover p-4 text-sm text-popover-foreground shadow-lg duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className,
         )}
         {...props}
