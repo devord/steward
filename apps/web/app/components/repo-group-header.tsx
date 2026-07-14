@@ -81,8 +81,17 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
       {/* ink-dim, not ink-faint: with N repos the group heading is the rail's
           primary structure, not metadata — it must scan, while the 13px size
           keeps it subordinate to the 15px board rows. The trailing visibility
-          glyphs stay faint (they are metadata, resting quiet). */}
-      <span className="truncate font-mono text-xs font-medium text-ink-dim">
+          glyphs stay faint (they are metadata, resting quiet). Voice follows
+          the account menu's prose-vs-identifier rule: a display name (or
+          "Personal") is prose — sans — which is also what finally separates
+          the heading tier from the mono board slugs two pixels below it; only
+          the bare repo-name fallback is an identifier and keeps mono. */}
+      <span
+        className={cn(
+          "truncate text-xs font-medium text-ink-dim",
+          group.displayName != null || group.isHome ? "font-sans" : "font-mono",
+        )}
+      >
         {group.displayName ??
           (group.isHome ? t("switcher.personal") : group.name)}
       </span>
