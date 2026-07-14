@@ -57,7 +57,9 @@ import {
   useDraft,
 } from "../lib/draft.ts"
 import { useT, type Translate } from "../lib/i18n.tsx"
+import { usePendingRuns, type PendingRun } from "../lib/pending-runs.ts"
 import { boardHref, routineHref } from "../lib/repos.ts"
+import { usePollRevalidate } from "../lib/use-poll-revalidate.ts"
 import {
   claudeRoutineUrl,
   widgetStatus,
@@ -153,9 +155,17 @@ export function RoutinesView({
   const [addingTemplate, setAddingTemplate] = useState<string | null>(null)
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null)
   const [deletingSlug, setDeletingSlug] = useState<string | null>(null)
-  // Runs the client fired this session, so the row shows "running" until a
-  // reload picks up the published artifact (the pool view doesn't poll).
-  const [firedAt, setFiredAt] = useState<Record<string, number>>({})
+  // Client-tracked in-flight runs (ADR-0016: no server-side run state), the
+  // same durable localStorage marks the rail (rail-status.ts) and the board's
+  // widget tiles read — so the pool badge, the rail dot, and the tiles can't
+  // disagree about what's running. Marks survive reloads and cross tabs, and
+  // clear once the published artifact's SHA changes or the fire times out.
+  const { pending, markFired, resolveAgainst, anyPending } = usePendingRuns(
+    repo.full,
+  )
+  // While a run is in flight, poll so the published artifact lands the badge
+  // back on "Ran just now" without a manual reload (matches the board).
+  usePollRevalidate({ fast: anyPending })
 
   // Artifacts stream in after the table paints (ADR-0002): resolve once into
   // state so the state column fills in place, keeping row menus mounted (no
@@ -175,6 +185,11 @@ export function RoutinesView({
       live = false
     }
   }, [artifacts])
+  // A landed publish (its blob SHA now differs from the fire-time SHA) clears
+  // the run mark, dropping the badge and the rail dot together.
+  useEffect(() => {
+    if (resolvedArtifacts) resolveAgainst(resolvedArtifacts)
+  }, [resolvedArtifacts, resolveAgainst])
 
   const effective = draft?.routines ?? base.routines
   const committedSlugs = useMemo(
@@ -312,7 +327,7 @@ export function RoutinesView({
             boardsByRoutine={pool.boardsByRoutine}
             dashboards={pool.dashboards}
             committedSlugs={committedSlugs}
-            firedAt={firedAt}
+            pending={pending}
             repo={repo}
             homeRepo={homeRepo}
             now={now}
@@ -321,7 +336,7 @@ export function RoutinesView({
             onDelete={setDeletingSlug}
             onPlace={placeOnBoard}
             onFired={(slug) =>
-              setFiredAt((prev) => ({ ...prev, [slug]: Date.now() }))
+              markFired(slug, resolvedArtifacts?.[slug]?.sha ?? null)
             }
           />
         )}
@@ -411,7 +426,7 @@ export function RoutinesTable({
   boardsByRoutine,
   dashboards,
   committedSlugs,
-  firedAt,
+  pending,
   repo,
   homeRepo,
   now,
@@ -427,7 +442,9 @@ export function RoutinesTable({
   boardsByRoutine: Record<string, string[]>
   dashboards: string[]
   committedSlugs: Set<string>
-  firedAt: Record<string, number>
+  /** In-flight run marks, keyed by slug (pending-runs.ts) — a routine here
+      renders "Running" until its publish lands. */
+  pending: Record<string, PendingRun>
   repo: RepoInfo
   homeRepo: string
   now: number
@@ -491,7 +508,7 @@ export function RoutinesTable({
               committed: committedSlugs.has(routine.slug),
               hasTrigger: artifact?.hasTrigger,
               artifact,
-              pendingFiredAt: firedAt[routine.slug] ?? null,
+              pendingFiredAt: pending[routine.slug]?.firedAt ?? null,
               now,
             })
             const owner = routine.runner ?? repoOwner

@@ -86,7 +86,7 @@ async function renderTable(
     dashboards: ["main", "ops"],
     // All three are committed by default; a test overrides to cover drafts.
     committedSlugs: new Set(["daily-plan", "changelog", "triage-brief"]),
-    firedAt: {},
+    pending: {},
     repo: { full: HOME_REPO, name: "steward-data", isShared: false },
     homeRepo: HOME_REPO,
     now: NOW,
@@ -131,6 +131,20 @@ describe("RoutinesTable", () => {
     expect(text).toContain("Ran")
     expect(text).toContain("Stale")
     expect(text).toContain("Never ran")
+  })
+
+  it("shows Running for a routine with an in-flight mark, over its artifact", async () => {
+    // The pool reads the same durable pending-run marks as the rail, so a fire
+    // still in flight beats the live artifact's "Ran …" (regression: the two
+    // used to disagree — rail dot spinning while the row read "Ran 1h ago").
+    await renderTable({
+      pending: { [daily.slug]: { firedAt: NOW, sha: null } },
+    })
+    const dailyRow = [...document.querySelectorAll("tr")].find((tr) =>
+      tr.textContent?.includes(daily.name),
+    )
+    expect(dailyRow?.textContent).toContain("Running")
+    expect(dailyRow?.textContent).not.toContain("Ran")
   })
 
   it("surfaces orphans and links placed routines to their boards", async () => {
