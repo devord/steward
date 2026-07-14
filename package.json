@@ -8,11 +8,15 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck && tsc -p scripts",
     "dev": "pnpm --filter @steward/web dev",
-    "routine": "node scripts/routine.ts",
-    "routine:trigger": "node scripts/routine-trigger.ts",
-    "routines:sync": "node scripts/routines-sync.ts"
+    "routine": "node packages/cli/src/cli.ts run",
+    "routine:trigger": "node packages/cli/src/cli.ts trigger",
+    "routines:sync": "node packages/cli/src/cli.ts sync",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm --filter @devord/steward build && changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.0",
     "@steward/schema": "workspace:*",
     "@types/node": "catalog:",
     "lefthook": "^1.13.0",

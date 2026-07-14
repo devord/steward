@@ -40,9 +40,10 @@ stale-base conflict detection. App chrome moved to shadcn/Base UI + cva
 
 ## M4 — Execution loop end-to-end ✅ (code)
 
-`run-routine`, `widget-artifact`, `publish-widget` skills;
-`scripts/routines-sync.ts` (plan by default, `--apply` drives a headless
-claude run). Acceptance still to run live: schedule `daily-plan`, watch the
+`run-routine`, `widget-artifact`, `publish-widget` skills; the `steward` CLI
+(`packages/cli`, published as `@devord/steward`, ADR-0036) — `sync` plans by
+default, `--apply` drives a headless claude run. Acceptance still to run live:
+schedule `daily-plan`, watch the
 widget refresh in the deployed app with no manual step (ADR-0005) — needs
 the deployed app plus a data repo on a real account.
 

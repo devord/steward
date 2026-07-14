@@ -177,7 +177,7 @@ export function launchdPlist(options: {
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- steward-repo: ${xmlEscape(options.repo)} — written by pnpm routines:sync; edits are overwritten -->
+<!-- steward-repo: ${xmlEscape(options.repo)} — written by steward sync; edits are overwritten -->
 <plist version="1.0">
 <dict>
   <key>Label</key>

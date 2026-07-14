@@ -2,6 +2,8 @@
 node_modules
 dist
 build
+# Built into the CLI package by build.mjs (copied from .claude/skills).
+packages/cli/skills/
 .turbo
 .react-router
 .vercel

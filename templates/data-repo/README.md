@@ -25,15 +25,17 @@ Edit in the Steward app or by hand — it's plain YAML, validated on load.
 
 ## Enacting schedules & triggers
 
-The `routines:sync` CLI lives in the Steward repo, not here. From a Steward
-checkout, point it at this repo (the script manages its own clone):
+Run the `steward` CLI (published to npm) and point it at this repo — no
+checkout needed; it manages its own clone:
 
 ```bash
-pnpm routines:sync --repo <owner>/<name>            # dry-run plan
-pnpm routines:sync --repo <owner>/<name> --apply
+npx @devord/steward sync --repo <owner>/<name>            # dry-run plan
+npx @devord/steward sync --repo <owner>/<name> --apply
 ```
 
-The app's per-widget setup cards print these lines pre-filled.
+Scheduled-local routines (launchd) want a stable install —
+`npm i -g @devord/steward`, then `steward sync …`. The app's per-widget setup
+cards print these lines pre-filled.
 
 ## Bootstrapping the artifacts branch
 
