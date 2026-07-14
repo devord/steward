@@ -107,6 +107,43 @@ An artifact MUST:
    repo template can ship its own preview as a
    `templates/routines/<id>.sample.html` sibling.
 
+## Person-relative content (ADR-0039)
+
+An artifact is authored once and rendered for whoever can see the board, so
+"you" is a **render-time** fact, never the routine runner. Two shapes:
+
+- **Person-owned** (a daily plan, a personal digest — one subject): name the
+  owner in the **third person** — "Daniel's Daily Plan," "Daniel has 3 deep
+  blocks left" — resolved at build time, because the subject is fixed at
+  build time. Never "your" — a stranger opening the board must read _whose_
+  it is, not a false second person.
+- **Shared with per-viewer facets** (a PR queue, a repo pulse — meaningful
+  to everyone, but "yours"/"needs your review" differ per reader): publish
+  **viewer-neutral**, then resolve the viewer at render time.
+
+For the shared shape:
+
+1. **The static render is neutral and honest.** Group by an objective axis
+   (e.g. PRs by state), carry no "you"/"yours", and stamp each row with the
+   raw relationship data it needs (`data-author`, directly-requested
+   reviewers) — never a pre-computed "mine". This is what the raw page, and
+   a viewer with no stake, see.
+2. **Read the injected viewer.** On the board the frame sets
+   `window.__STEWARD_VIEWER__ = { login, name? }` inside the iframe (same
+   render-time injection as the theme and font). Read it in a
+   `DOMContentLoaded` handler — never at parse time — and treat it as
+   possibly `undefined` (the raw page injects nothing).
+3. **Enhance progressively, degrade to neutral.** If the viewer participates
+   (authors or is directly requested on a row), re-group into the
+   second-person view ("Needs your review" / "Yours") and relabel; wrap it
+   in `try`/`catch` so a missing viewer, a non-participant, or any failure
+   leaves the neutral render. Never claim a queue is "yours" without a
+   matched viewer.
+
+The file stays self-contained (§1): the viewer is injected, not fetched.
+This is the one sanctioned use of JS for _content_ (not fit/responsiveness);
+the `widget-artifact` skill carries the read snippet.
+
 ## Addressing & freshness
 
 - Address: data repo, `artifacts` branch, `w/<slug>/index.html` — fixed the

@@ -142,6 +142,34 @@ describe("frameArtifactHtml", () => {
     }
   })
 
+  it("injects the viewer identity only when a viewer is given (ADR-0039)", () => {
+    // No viewer → nothing injected: the artifact stays viewer-neutral (raw
+    // page, standalone render).
+    expect(frameArtifactHtml(doc, DEFAULT_THEME)).not.toContain(
+      "data-steward-viewer",
+    )
+    const framed = frameArtifactHtml(doc, DEFAULT_THEME, "tile", "", {
+      login: "danielmoraes",
+    })
+    expect(framed).toContain(
+      "<script data-steward-viewer>window.__STEWARD_VIEWER__=" +
+        '{"login":"danielmoraes"}</script>',
+    )
+    // Injected in both views — the full-view lightbox personalizes too.
+    expect(
+      frameArtifactHtml(doc, DEFAULT_THEME, "full", "", { login: "x" }),
+    ).toContain("data-steward-viewer")
+  })
+
+  it("escapes < in the viewer identity so a name can't break the script", () => {
+    const framed = frameArtifactHtml(doc, DEFAULT_THEME, "tile", "", {
+      login: "danielmoraes",
+      name: "</script><b>x",
+    })
+    expect(framed).not.toContain("</script><b>x")
+    expect(framed).toContain("\\u003c/script>\\u003cb>x")
+  })
+
   it("leaves the full view scrollable — footer hidden, no tile guard", () => {
     const full = frameArtifactHtml(doc, DEFAULT_THEME, "full")
     expect(full).toContain("footer{display:none !important}")

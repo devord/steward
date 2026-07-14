@@ -615,17 +615,42 @@ export function artifactFontStyle(woff2DataUri: string): string {
 /** Where a framed artifact renders: a board cell, or the full-view lightbox. */
 export type ArtifactView = "tile" | "full"
 
+/** The signed-in viewer, resolved at render time for person-relative content. */
+export type ArtifactViewer = { login: string; name?: string }
+
+/**
+ * Render-time viewer identity for person-relative artifacts (ADR-0039).
+ * A shared artifact (e.g. repo-pulse) is published viewer-neutral and
+ * progressively enhances "needs your review" / "yours" against this login;
+ * a raw page, or a viewer with no stake, stays neutral. Injected like the
+ * theme and font overrides (ADR-0009/0031): render-time and in-memory,
+ * nothing reaches the published file. The artifact reads
+ * `window.__STEWARD_VIEWER__` in a DOMContentLoaded handler, so this runs
+ * before then whatever the append order. `<` is escaped so a display name
+ * can never break out of the `<script>`; the value is a bare identity, not
+ * a token — the trigger secret never travels to the iframe.
+ */
+export function artifactViewerScript(viewer: ArtifactViewer): string {
+  const identity = viewer.name
+    ? { login: viewer.login, name: viewer.name }
+    : { login: viewer.login }
+  const json = JSON.stringify(identity).replace(/</g, "\\u003c")
+  return `<script data-steward-viewer>window.__STEWARD_VIEWER__=${json}</script>`
+}
+
 export function frameArtifactHtml(
   html: string,
   name: ThemeName,
   view: ArtifactView = "tile",
   fontStyle = "",
+  viewer?: ArtifactViewer,
 ): string {
   return (
     html +
     EMBED_FRAME_STYLE +
     LINK_GUARD_SCRIPT +
     fontStyle +
+    (viewer ? artifactViewerScript(viewer) : "") +
     (view === "tile"
       ? TILE_GUARD_STYLE + TILE_GUARD_SCRIPT + TILE_FLUSH_STYLE
       : "") +

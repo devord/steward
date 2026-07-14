@@ -121,21 +121,37 @@ export function WidgetCard({
   const theme = useResolvedTheme()
   const [expanded, setExpanded] = useState(false)
   const { position, size } = widget
+  // The signed-in viewer resolves person-relative content at render time
+  // (ADR-0039): repo-pulse's "needs your review" / "yours" enhance against
+  // this login instead of the routine runner's. Absent on standalone renders
+  // → the artifact stays viewer-neutral.
   const html = useMemo(
     () =>
       artifact?.html
-        ? frameArtifactHtml(artifact.html, theme, "tile", ARTIFACT_FONT_STYLE)
+        ? frameArtifactHtml(
+            artifact.html,
+            theme,
+            "tile",
+            ARTIFACT_FONT_STYLE,
+            login ? { login } : undefined,
+          )
         : null,
-    [artifact?.html, theme],
+    [artifact?.html, theme, login],
   )
   // The lightbox is the full-data surface (ADR-0019): same artifact, framed
   // without the tile overflow guard so every row is reachable by scrolling.
   const fullHtml = useMemo(
     () =>
       artifact?.html
-        ? frameArtifactHtml(artifact.html, theme, "full", ARTIFACT_FONT_STYLE)
+        ? frameArtifactHtml(
+            artifact.html,
+            theme,
+            "full",
+            ARTIFACT_FONT_STYLE,
+            login ? { login } : undefined,
+          )
         : null,
-    [artifact?.html, theme],
+    [artifact?.html, theme, login],
   )
   const lastRunAt = artifact?.lastRunAt ?? null
   // Manual routines have no cadence to be stale against (ADR-0016).

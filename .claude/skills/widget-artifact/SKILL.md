@@ -175,6 +175,53 @@ count, not content. Non-list layouts follow the same rule by other means
 (shorter text via `min-height` queries, clamped paragraphs); what matters
 is that nothing overflows a tile silently.
 
+## Person-relative content (ADR-0039)
+
+"You" is resolved when the artifact is _rendered_, not when it is built —
+the same file is shown to everyone who can see the board. Two shapes:
+
+- **Person-owned** (one subject — a daily plan): name the owner in the
+  **third person** ("Daniel's Daily Plan", "Daniel has 3 left"), decided at
+  build time. Never write "your" — a stranger must read whose it is.
+- **Shared, per-viewer facets** ("yours" / "needs your review" differ per
+  reader): publish **viewer-neutral** — group by an objective axis, stamp
+  rows with raw relationship data (`data-author`, requested reviewers), no
+  "you" — then enhance against the injected viewer.
+
+The board injects `window.__STEWARD_VIEWER__ = { login, name? }` into the
+iframe at render time (like the theme/font); the raw page injects nothing.
+Read it in a `DOMContentLoaded` handler, treat it as maybe-undefined, and
+always leave a working neutral render behind:
+
+```html
+<script>
+  // Person-relative enhancement (widget-standard, ADR-0039): the static
+  // markup is viewer-neutral; if a viewer is injected and has a stake,
+  // re-group into "yours" / "needs you". Any failure leaves the neutral
+  // render — never claim a queue is yours without a matched viewer.
+  ;(function () {
+    function personalize() {
+      try {
+        var viewer = window.__STEWARD_VIEWER__
+        if (!viewer || !viewer.login) return // raw page, or signed out
+        var me = viewer.login
+        // …bucket [data-author=me] into "Yours", rows whose requested
+        // reviewers include me into "Needs your review", relabel the
+        // section headings, reorder by actionability, update the KPI.
+        // Bail (leave neutral) if `me` matches no row.
+      } catch (e) {
+        /* neutral render stands */
+      }
+    }
+    addEventListener("DOMContentLoaded", personalize)
+  })()
+</script>
+```
+
+Run `personalize` before `fit` (register it first, or re-fit at its end):
+re-grouping changes what overflows, so the fit-to-height pass must see the
+final DOM.
+
 ## Reference
 
 Two canonical samples in the app repo's `docs/samples/` show the design
@@ -196,3 +243,6 @@ the stat tier, status dots, pills, trailing values, detail nests).
 - [ ] `widget-generated-at` meta + visible footer timestamp
 - [ ] Only palette colors; `color-scheme: dark` set
 - [ ] Empty state designed, not accidental
+- [ ] No "you"/"your" baked into the static render — person-owned artifacts
+      name the owner (third person); shared ones publish viewer-neutral and
+      enhance from `window.__STEWARD_VIEWER__`, degrading to neutral (ADR-0039)

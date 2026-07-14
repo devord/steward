@@ -1,10 +1,16 @@
 <!doctype html>
 <!-- Sample steward artifact (docs/widget-standard.md): the stats/pulse
      archetype of the design language in
-     .claude/skills/widget-artifact/design.md — one-repo shape. Shows the
-     avatar key, links, Jira tickets, PR size, state pills, CI dots, the
-     stat tier, and one grid whose columns align across every section
-     (nested subgrid), so state and age never drift between groups. -->
+     .claude/skills/widget-artifact/design.md — one-repo shape. Person-
+     relative per ADR-0039: the published markup is viewer-neutral — PRs
+     grouped by state (Blocked / In review / Open), each row carrying
+     data-author + data-reviewers and no second person — and a self-
+     contained enhancer re-buckets into Needs your review / Yours / Open
+     against the injected window.__STEWARD_VIEWER__, leaving the neutral
+     render whenever no viewer is injected. Shows the avatar key, links,
+     Jira tickets, PR size, state pills, CI dots, the stat tier, and one
+     grid whose columns align across every section (nested subgrid), so
+     state and age never drift between groups. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -289,6 +295,16 @@
         background: var(--color-red);
       }
 
+      /* The viewer-relative "needs you" marker — 12px mono orange, added
+         by the enhancer to rows requesting the signed-in viewer. Outranked
+         by a bad-state pill; never present in the neutral markup. */
+      .needs-you {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-orange);
+        white-space: nowrap;
+      }
+
       a {
         color: inherit;
         text-decoration: underline;
@@ -354,11 +370,12 @@
         }
       }
 
-      /* Short tiles answer one question — "what needs me" — so below the
-         height that fits a second group honestly, keep only the actionable
-         ledger and drop Yours/Open (a tier is a viewport, not a crop). The
-         raw page and full view carry no tile stamp and always show every
-         group. */
+      /* Short tiles answer one question — "what's actionable" — so below the
+         height that fits a second group honestly, keep only the first
+         ledger (Blocked in the neutral render, Needs your review once a
+         viewer is injected) and drop the rest (a tier is a viewport, not a
+         crop). The raw page and full view carry no tile stamp and always
+         show every group. */
       @media (max-height: 379px) {
         [data-steward-tile] .rows ~ .rows {
           display: none;
@@ -417,13 +434,13 @@
   <body>
     <main>
       <section class="stat">
-        <div class="num">6</div>
-        <div class="label">PRs need your review</div>
+        <div class="num">17</div>
+        <div class="label">open PRs</div>
         <div class="sub"><span class="pill bad">CI ✗ corza</span></div>
       </section>
 
       <section class="rows">
-        <h2>Needs your review <span class="count">6</span></h2>
+        <h2>Blocked <span class="count">2</span></h2>
         <div class="head">
           <span class="pr">pr</span>
           <span class="h-ticket">ticket</span>
@@ -432,7 +449,90 @@
           <span class="h-age">age</span>
         </div>
         <ul data-fit-list>
-          <li>
+          <li
+            data-author="theo-b"
+            data-reviewers=""
+            data-state="blocked"
+            data-created="2026-06-17T14:00:00Z"
+          >
+            <a
+              class="avatar-link"
+              href="https://github.com/theo-b"
+              target="_blank"
+              rel="noopener"
+              title="Theo Brandt"
+              ><span class="avatar">T</span></a
+            >
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/192"
+              target="_blank"
+              rel="noopener"
+              title="skill(corza-good-morning + corza-plan-my-day): morning briefing"
+              >#192 morning briefing</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+210</span><span class="del">−34</span></span
+            >
+            <span class="state"
+              ><span class="dot bad"></span
+              ><span class="pill bad">CI ✗</span></span
+            >
+            <time class="age">26d</time>
+          </li>
+          <li
+            data-author="kai-w"
+            data-reviewers="danielmoraes"
+            data-state="blocked"
+            data-created="2026-07-10T09:00:00Z"
+          >
+            <a
+              class="avatar-link"
+              href="https://github.com/kai-w"
+              target="_blank"
+              rel="noopener"
+              title="Kai Weber"
+              ><span class="avatar">K</span></a
+            >
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/287"
+              target="_blank"
+              rel="noopener"
+              title="kb: link Qase test cases — abandoned-cart-recovery + b2b-registration"
+              >#287 link Qase test cases — abandoned-cart-recovery +
+              b2b-registration</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+36</span><span class="del">−4</span></span
+            >
+            <span class="state"
+              ><span class="dot bad"></span
+              ><span class="pill bad">CI ✗</span></span
+            >
+            <time class="age">3d</time>
+          </li>
+        </ul>
+      </section>
+
+      <section class="rows">
+        <h2>In review <span class="count">9</span></h2>
+        <div class="head">
+          <span class="pr">pr</span>
+          <span class="h-ticket">ticket</span>
+          <span class="h-size">size</span>
+          <span class="h-state">state</span>
+          <span class="h-age">age</span>
+        </div>
+        <ul data-fit-list>
+          <li
+            data-author="hubot"
+            data-reviewers=""
+            data-state="in-review"
+            data-created="2026-06-17T09:00:00Z"
+          >
             <a
               class="avatar-link"
               href="https://github.com/hubot"
@@ -454,9 +554,43 @@
               ><span class="add">+64</span><span class="del">−12</span></span
             >
             <span class="state"></span>
-            <time class="age" data-stale>26d</time>
+            <time class="age">26d</time>
           </li>
-          <li>
+          <li
+            data-author="hubot"
+            data-reviewers=""
+            data-state="in-review"
+            data-created="2026-06-19T09:00:00Z"
+          >
+            <a
+              class="avatar-link"
+              href="https://github.com/hubot"
+              target="_blank"
+              rel="noopener"
+              title="hubot"
+              ><span class="avatar">H</span></a
+            >
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/207"
+              target="_blank"
+              rel="noopener"
+              title="skill(corza-kb-gap-finder): KB gap finder"
+              >#207 KB gap finder</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+380</span><span class="del">−12</span></span
+            >
+            <span class="state"></span>
+            <time class="age">24d</time>
+          </li>
+          <li
+            data-author="rena-k"
+            data-reviewers="danielmoraes"
+            data-state="in-review"
+            data-created="2026-07-01T09:00:00Z"
+          >
             <a
               class="avatar-link"
               href="https://github.com/rena-k"
@@ -485,9 +619,14 @@
               ><span class="add">+820</span><span class="del">−40</span></span
             >
             <span class="state"></span>
-            <time class="age" data-stale>12d</time>
+            <time class="age">12d</time>
           </li>
-          <li>
+          <li
+            data-author="theo-b"
+            data-reviewers=""
+            data-state="in-review"
+            data-created="2026-07-01T14:00:00Z"
+          >
             <a
               class="avatar-link"
               href="https://github.com/theo-b"
@@ -509,9 +648,14 @@
               ><span class="add">+512</span><span class="del">−88</span></span
             >
             <span class="state"></span>
-            <time class="age" data-stale>12d</time>
+            <time class="age">12d</time>
           </li>
-          <li>
+          <li
+            data-author="rena-k"
+            data-reviewers="danielmoraes"
+            data-state="in-review"
+            data-created="2026-07-03T09:00:00Z"
+          >
             <a
               class="avatar-link"
               href="https://github.com/rena-k"
@@ -540,9 +684,14 @@
               ><span class="add">+430</span><span class="del">−16</span></span
             >
             <span class="state"></span>
-            <time class="age" data-stale>10d</time>
+            <time class="age">10d</time>
           </li>
-          <li>
+          <li
+            data-author="mila-s"
+            data-reviewers="danielmoraes theo-b"
+            data-state="in-review"
+            data-created="2026-07-09T09:00:00Z"
+          >
             <a
               class="avatar-link"
               href="https://github.com/mila-s"
@@ -571,270 +720,14 @@
               ><span class="add">+120</span><span class="del">−340</span></span
             >
             <span class="state"></span>
-            <time class="age" data-stale>4d</time>
+            <time class="age">4d</time>
           </li>
-          <li>
-            <a
-              class="avatar-link"
-              href="https://github.com/kai-w"
-              target="_blank"
-              rel="noopener"
-              title="Kai Weber"
-              ><span class="avatar">K</span></a
-            >
-            <a
-              class="title"
-              href="https://github.com/acme/corza/pull/287"
-              target="_blank"
-              rel="noopener"
-              title="kb: link Qase test cases — abandoned-cart-recovery + b2b-registration"
-              >#287 link Qase test cases — abandoned-cart-recovery +
-              b2b-registration</a
-            >
-            <span class="ticket"></span>
-            <span class="size"
-              ><span class="add">+36</span><span class="del">−4</span></span
-            >
-            <span class="state"
-              ><span class="dot bad"></span
-              ><span class="pill bad">CI ✗</span></span
-            >
-            <time class="age" data-stale>3d</time>
-          </li>
-        </ul>
-      </section>
-
-      <section class="rows">
-        <h2>Yours <span class="count">4</span></h2>
-        <div class="head">
-          <span class="pr">pr</span>
-          <span class="h-ticket">ticket</span>
-          <span class="h-size">size</span>
-          <span class="h-state">state</span>
-          <span class="h-age">age</span>
-        </div>
-        <ul data-fit-list>
-          <li data-draft>
-            <a
-              class="avatar-link"
-              href="https://github.com/danielmoraes"
-              target="_blank"
-              rel="noopener"
-              title="Daniel Moraes"
-              ><img
-                class="avatar"
-                src="data:image/png;base64,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"
-                alt="Daniel Moraes"
-            /></a>
-            <a
-              class="title"
-              href="https://github.com/acme/corza/pull/221"
-              target="_blank"
-              rel="noopener"
-              title="docs(CORZA-47): Phase 6 — engineering-KB documentation contribution"
-              >#221 Phase 6 — engineering-KB documentation contribution</a
-            >
-            <span class="ticket"
-              ><a
-                href="https://acme.atlassian.net/browse/CORZA-47"
-                target="_blank"
-                rel="noopener"
-                >CORZA-47</a
-              ></span
-            >
-            <span class="size"
-              ><span class="add">+1240</span><span class="del">−0</span></span
-            >
-            <span class="state"><span class="pill">draft</span></span>
-            <time class="age">22d</time>
-          </li>
-          <li data-draft>
-            <a
-              class="avatar-link"
-              href="https://github.com/danielmoraes"
-              target="_blank"
-              rel="noopener"
-              title="Daniel Moraes"
-              ><img
-                class="avatar"
-                src="data:image/png;base64,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"
-                alt="Daniel Moraes"
-            /></a>
-            <a
-              class="title"
-              href="https://github.com/acme/corza/pull/226"
-              target="_blank"
-              rel="noopener"
-              title="feat(CORZA-44): Lighthouse CI — warn-only budgets, rolling PR comment"
-              >#226 Lighthouse CI — warn-only budgets, rolling PR comment</a
-            >
-            <span class="ticket"
-              ><a
-                href="https://acme.atlassian.net/browse/CORZA-44"
-                target="_blank"
-                rel="noopener"
-                >CORZA-44</a
-              ></span
-            >
-            <span class="size"
-              ><span class="add">+96</span><span class="del">−8</span></span
-            >
-            <span class="state"><span class="pill">draft</span></span>
-            <time class="age">20d</time>
-          </li>
-          <li data-draft>
-            <a
-              class="avatar-link"
-              href="https://github.com/danielmoraes"
-              target="_blank"
-              rel="noopener"
-              title="Daniel Moraes"
-              ><img
-                class="avatar"
-                src="data:image/png;base64,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"
-                alt="Daniel Moraes"
-            /></a>
-            <a
-              class="title"
-              href="https://github.com/acme/corza/pull/227"
-              target="_blank"
-              rel="noopener"
-              title="feat(CORZA-45): Configure Sentry in the Hydrogen storefront"
-              >#227 Configure Sentry in the Hydrogen storefront</a
-            >
-            <span class="ticket"
-              ><a
-                href="https://acme.atlassian.net/browse/CORZA-45"
-                target="_blank"
-                rel="noopener"
-                >CORZA-45</a
-              ></span
-            >
-            <span class="size"
-              ><span class="add">+140</span><span class="del">−22</span></span
-            >
-            <span class="state"><span class="pill">draft</span></span>
-            <time class="age">20d</time>
-          </li>
-          <li data-draft>
-            <a
-              class="avatar-link"
-              href="https://github.com/danielmoraes"
-              target="_blank"
-              rel="noopener"
-              title="Daniel Moraes"
-              ><img
-                class="avatar"
-                src="data:image/png;base64,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"
-                alt="Daniel Moraes"
-            /></a>
-            <a
-              class="title"
-              href="https://github.com/acme/corza/pull/234"
-              target="_blank"
-              rel="noopener"
-              title="feat(storefront): wire Vitest into Qase (CORZAQA)"
-              >#234 wire Vitest into Qase (CORZAQA)</a
-            >
-            <span class="ticket"></span>
-            <span class="size"
-              ><span class="add">+58</span><span class="del">−6</span></span
-            >
-            <span class="state"><span class="pill">draft</span></span>
-            <time class="age">19d</time>
-          </li>
-        </ul>
-      </section>
-
-      <section class="rows">
-        <h2>Open <span class="count">7</span></h2>
-        <div class="head">
-          <span class="pr">pr</span>
-          <span class="h-ticket">ticket</span>
-          <span class="h-size">size</span>
-          <span class="h-state">state</span>
-          <span class="h-age">age</span>
-        </div>
-        <ul data-fit-list>
-          <li>
-            <a
-              class="avatar-link"
-              href="https://github.com/theo-b"
-              target="_blank"
-              rel="noopener"
-              title="Theo Brandt"
-              ><span class="avatar">T</span></a
-            >
-            <a
-              class="title"
-              href="https://github.com/acme/corza/pull/192"
-              target="_blank"
-              rel="noopener"
-              title="skill(corza-good-morning + corza-plan-my-day): morning briefing"
-              >#192 morning briefing</a
-            >
-            <span class="ticket"></span>
-            <span class="size"
-              ><span class="add">+210</span><span class="del">−34</span></span
-            >
-            <span class="state"
-              ><span class="dot bad"></span
-              ><span class="pill bad">CI ✗</span></span
-            >
-            <time class="age">26d</time>
-          </li>
-          <li>
-            <a
-              class="avatar-link"
-              href="https://github.com/hubot"
-              target="_blank"
-              rel="noopener"
-              title="hubot"
-              ><span class="avatar">H</span></a
-            >
-            <a
-              class="title"
-              href="https://github.com/acme/corza/pull/207"
-              target="_blank"
-              rel="noopener"
-              title="skill(corza-kb-gap-finder): KB gap finder"
-              >#207 KB gap finder</a
-            >
-            <span class="ticket"></span>
-            <span class="size"
-              ><span class="add">+380</span><span class="del">−12</span></span
-            >
-            <span class="state"></span>
-            <time class="age">24d</time>
-          </li>
-          <li>
-            <a
-              class="avatar-link"
-              href="https://github.com/danielmoraes"
-              target="_blank"
-              rel="noopener"
-              title="Daniel Moraes"
-              ><img
-                class="avatar"
-                src="data:image/png;base64,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"
-                alt="Daniel Moraes"
-            /></a>
-            <a
-              class="title"
-              href="https://github.com/acme/corza/pull/249"
-              target="_blank"
-              rel="noopener"
-              title="report: 2026-06-29 progress snapshot"
-              >#249 2026-06-29 progress snapshot</a
-            >
-            <span class="ticket"></span>
-            <span class="size"
-              ><span class="add">+64</span><span class="del">−0</span></span
-            >
-            <span class="state"><span class="pill ok">approved</span></span>
-            <time class="age">14d</time>
-          </li>
-          <li>
+          <li
+            data-author="mila-s"
+            data-reviewers=""
+            data-state="in-review"
+            data-created="2026-07-09T12:00:00Z"
+          >
             <a
               class="avatar-link"
               href="https://github.com/mila-s"
@@ -858,7 +751,12 @@
             <span class="state"></span>
             <time class="age">4d</time>
           </li>
-          <li>
+          <li
+            data-author="kai-w"
+            data-reviewers=""
+            data-state="in-review"
+            data-created="2026-07-09T15:00:00Z"
+          >
             <a
               class="avatar-link"
               href="https://github.com/kai-w"
@@ -882,38 +780,12 @@
             <span class="state"></span>
             <time class="age">4d</time>
           </li>
-          <li data-draft>
-            <a
-              class="avatar-link"
-              href="https://github.com/rena-k"
-              target="_blank"
-              rel="noopener"
-              title="Rena Koval"
-              ><span class="avatar">R</span></a
-            >
-            <a
-              class="title"
-              href="https://github.com/acme/corza/pull/286"
-              target="_blank"
-              rel="noopener"
-              title="feat(CORZA-198): OTP single-factor security posture recommendation"
-              >#286 OTP single-factor security posture recommendation</a
-            >
-            <span class="ticket"
-              ><a
-                href="https://acme.atlassian.net/browse/CORZA-198"
-                target="_blank"
-                rel="noopener"
-                >CORZA-198</a
-              ></span
-            >
-            <span class="size"
-              ><span class="add">+72</span><span class="del">−14</span></span
-            >
-            <span class="state"><span class="pill">draft</span></span>
-            <time class="age">3d</time>
-          </li>
-          <li>
+          <li
+            data-author="danielmoraes"
+            data-reviewers="mila-s"
+            data-state="in-review"
+            data-created="2026-07-11T09:00:00Z"
+          >
             <a
               class="avatar-link"
               href="https://github.com/danielmoraes"
@@ -949,11 +821,374 @@
           </li>
         </ul>
       </section>
+
+      <section class="rows">
+        <h2>Open <span class="count">6</span></h2>
+        <div class="head">
+          <span class="pr">pr</span>
+          <span class="h-ticket">ticket</span>
+          <span class="h-size">size</span>
+          <span class="h-state">state</span>
+          <span class="h-age">age</span>
+        </div>
+        <ul data-fit-list>
+          <li
+            data-author="danielmoraes"
+            data-reviewers=""
+            data-state="open"
+            data-created="2026-06-21T09:00:00Z"
+            data-draft
+          >
+            <a
+              class="avatar-link"
+              href="https://github.com/danielmoraes"
+              target="_blank"
+              rel="noopener"
+              title="Daniel Moraes"
+              ><img
+                class="avatar"
+                src="data:image/png;base64,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"
+                alt="Daniel Moraes"
+            /></a>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/221"
+              target="_blank"
+              rel="noopener"
+              title="docs(CORZA-47): Phase 6 — engineering-KB documentation contribution"
+              >#221 Phase 6 — engineering-KB documentation contribution</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-47"
+                target="_blank"
+                rel="noopener"
+                >CORZA-47</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+1240</span><span class="del">−0</span></span
+            >
+            <span class="state"><span class="pill">draft</span></span>
+            <time class="age">22d</time>
+          </li>
+          <li
+            data-author="danielmoraes"
+            data-reviewers=""
+            data-state="open"
+            data-created="2026-06-23T09:00:00Z"
+            data-draft
+          >
+            <a
+              class="avatar-link"
+              href="https://github.com/danielmoraes"
+              target="_blank"
+              rel="noopener"
+              title="Daniel Moraes"
+              ><img
+                class="avatar"
+                src="data:image/png;base64,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"
+                alt="Daniel Moraes"
+            /></a>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/226"
+              target="_blank"
+              rel="noopener"
+              title="feat(CORZA-44): Lighthouse CI — warn-only budgets, rolling PR comment"
+              >#226 Lighthouse CI — warn-only budgets, rolling PR comment</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-44"
+                target="_blank"
+                rel="noopener"
+                >CORZA-44</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+96</span><span class="del">−8</span></span
+            >
+            <span class="state"><span class="pill">draft</span></span>
+            <time class="age">20d</time>
+          </li>
+          <li
+            data-author="danielmoraes"
+            data-reviewers=""
+            data-state="open"
+            data-created="2026-06-23T14:00:00Z"
+            data-draft
+          >
+            <a
+              class="avatar-link"
+              href="https://github.com/danielmoraes"
+              target="_blank"
+              rel="noopener"
+              title="Daniel Moraes"
+              ><img
+                class="avatar"
+                src="data:image/png;base64,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"
+                alt="Daniel Moraes"
+            /></a>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/227"
+              target="_blank"
+              rel="noopener"
+              title="feat(CORZA-45): Configure Sentry in the Hydrogen storefront"
+              >#227 Configure Sentry in the Hydrogen storefront</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-45"
+                target="_blank"
+                rel="noopener"
+                >CORZA-45</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+140</span><span class="del">−22</span></span
+            >
+            <span class="state"><span class="pill">draft</span></span>
+            <time class="age">20d</time>
+          </li>
+          <li
+            data-author="danielmoraes"
+            data-reviewers=""
+            data-state="open"
+            data-created="2026-06-24T09:00:00Z"
+            data-draft
+          >
+            <a
+              class="avatar-link"
+              href="https://github.com/danielmoraes"
+              target="_blank"
+              rel="noopener"
+              title="Daniel Moraes"
+              ><img
+                class="avatar"
+                src="data:image/png;base64,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"
+                alt="Daniel Moraes"
+            /></a>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/234"
+              target="_blank"
+              rel="noopener"
+              title="feat(storefront): wire Vitest into Qase (CORZAQA)"
+              >#234 wire Vitest into Qase (CORZAQA)</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+58</span><span class="del">−6</span></span
+            >
+            <span class="state"><span class="pill">draft</span></span>
+            <time class="age">19d</time>
+          </li>
+          <li
+            data-author="danielmoraes"
+            data-reviewers="rena-k"
+            data-state="open"
+            data-created="2026-06-29T09:00:00Z"
+          >
+            <a
+              class="avatar-link"
+              href="https://github.com/danielmoraes"
+              target="_blank"
+              rel="noopener"
+              title="Daniel Moraes"
+              ><img
+                class="avatar"
+                src="data:image/png;base64,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"
+                alt="Daniel Moraes"
+            /></a>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/249"
+              target="_blank"
+              rel="noopener"
+              title="report: 2026-06-29 progress snapshot"
+              >#249 2026-06-29 progress snapshot</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+64</span><span class="del">−0</span></span
+            >
+            <span class="state"><span class="pill ok">approved</span></span>
+            <time class="age">14d</time>
+          </li>
+          <li
+            data-author="rena-k"
+            data-reviewers=""
+            data-state="open"
+            data-created="2026-07-10T14:00:00Z"
+            data-draft
+          >
+            <a
+              class="avatar-link"
+              href="https://github.com/rena-k"
+              target="_blank"
+              rel="noopener"
+              title="Rena Koval"
+              ><span class="avatar">R</span></a
+            >
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/286"
+              target="_blank"
+              rel="noopener"
+              title="feat(CORZA-198): OTP single-factor security posture recommendation"
+              >#286 OTP single-factor security posture recommendation</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-198"
+                target="_blank"
+                rel="noopener"
+                >CORZA-198</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+72</span><span class="del">−14</span></span
+            >
+            <span class="state"><span class="pill">draft</span></span>
+            <time class="age">3d</time>
+          </li>
+        </ul>
+      </section>
     </main>
     <footer>
       <span>repo-pulse</span>
       <span>2026-07-13 12:00Z</span>
     </footer>
+    <script>
+      // Person-relative enhancement (widget-standard, ADR-0039): the static
+      // markup is viewer-neutral — PRs grouped by state, every row carrying
+      // data-author/data-reviewers. When the board injects a viewer with a
+      // stake in the data, re-bucket the existing rows into
+      // "Needs your review" / "Yours" / "Open" and relabel in the second
+      // person. Any failure — or no injected viewer, or a viewer with no
+      // stake — leaves the neutral render untouched. Registered before the
+      // fit pass below so fitting measures the regrouped DOM.
+      ;(function () {
+        function personalize() {
+          try {
+            var viewer = window.__STEWARD_VIEWER__
+            if (!viewer || !viewer.login) return // raw page, preview, signed out
+            var me = viewer.login
+
+            var main = document.querySelector("main")
+            var sections = [].slice.call(main.querySelectorAll("section.rows"))
+            if (sections.length < 3) return
+
+            var rows = []
+            sections.forEach(function (sec) {
+              var ul = sec.querySelector("ul")
+              ;[].slice.call(ul.children).forEach(function (li) {
+                if (li.tagName === "LI" && !li.hasAttribute("data-fit-more"))
+                  rows.push(li)
+              })
+            })
+
+            var reviewersOf = function (li) {
+              return (li.getAttribute("data-reviewers") || "")
+                .split(/\s+/)
+                .filter(Boolean)
+            }
+            var authorOf = function (li) {
+              return li.getAttribute("data-author") || ""
+            }
+            var createdOf = function (li) {
+              return Date.parse(li.getAttribute("data-created")) || 0
+            }
+
+            // No stake → neutral render is the honest floor.
+            var hasStake = rows.some(function (li) {
+              return authorOf(li) === me || reviewersOf(li).indexOf(me) !== -1
+            })
+            if (!hasStake) return
+
+            // Needs-review (a reviewer) outranks yours (the author).
+            var needs = [],
+              yours = [],
+              open = []
+            rows.forEach(function (li) {
+              if (reviewersOf(li).indexOf(me) !== -1) needs.push(li)
+              else if (authorOf(li) === me) yours.push(li)
+              else open.push(li)
+            })
+
+            var byAge = function (a, b) {
+              return createdOf(a) - createdOf(b) // oldest first
+            }
+            var blockedFirst = function (a, b) {
+              var ab = a.getAttribute("data-state") === "blocked" ? 0 : 1
+              var bb = b.getAttribute("data-state") === "blocked" ? 0 : 1
+              return ab - bb || createdOf(a) - createdOf(b)
+            }
+            needs.sort(byAge)
+            yours.sort(blockedFirst)
+            open.sort(byAge)
+
+            // Re-tenant the three existing groups in place — nodes stay inside
+            // the one <main> grid, so its subgrid columns never re-measure.
+            var groups = [
+              { sec: sections[0], label: "Needs your review", rows: needs },
+              { sec: sections[1], label: "Yours", rows: yours },
+              { sec: sections[2], label: "Open", rows: open },
+            ]
+            var DAY = 864e5
+            // Anchor "now" to the build time the ages were measured against
+            // (a row's "12d" is its age when the artifact was authored), so
+            // the yellow tint tracks the displayed age; on the board that
+            // build time and the render instant are the same recent moment.
+            var meta = document.querySelector(
+              'meta[name="widget-generated-at"]',
+            )
+            var now =
+              (meta && Date.parse(meta.getAttribute("content"))) || Date.now()
+            groups.forEach(function (g) {
+              var ul = g.sec.querySelector("ul")
+              g.rows.forEach(function (li) {
+                ul.appendChild(li) // appendChild moves the node
+              })
+              var h2 = g.sec.querySelector("h2")
+              var count = h2.querySelector(".count")
+              h2.firstChild.textContent = g.label + " "
+              if (count) count.textContent = g.rows.length
+              g.sec.hidden = g.rows.length === 0
+            })
+
+            // Mark needs-you rows: an orange "needs you" tag, and a yellow age
+            // once the wait passes three days (a big number is not the alarm —
+            // old AND waiting on you is).
+            needs.forEach(function (li) {
+              var state = li.querySelector(".state")
+              if (state && !state.querySelector(".needs-you")) {
+                var tag = document.createElement("span")
+                tag.className = "needs-you"
+                tag.textContent = "needs you"
+                state.appendChild(tag)
+              }
+              var age = li.querySelector(".age")
+              if (age && now - createdOf(li) > 3 * DAY)
+                age.setAttribute("data-stale", "")
+            })
+
+            // The 1×1 KPI now answers the viewer's glance.
+            var num = document.querySelector(".stat .num")
+            var label = document.querySelector(".stat .label")
+            if (num) num.textContent = needs.length
+            if (label)
+              label.textContent =
+                needs.length === 1 ? "needs your review" : "need your review"
+          } catch (e) {
+            /* any failure leaves the neutral render untouched */
+          }
+        }
+        addEventListener("DOMContentLoaded", personalize)
+      })()
+    </script>
     <script>
       // Fit lists to the tile (widget-standard §2, ADR-0019): tiles never
       // scroll, so collapse trailing items that overflow into "+N more".
