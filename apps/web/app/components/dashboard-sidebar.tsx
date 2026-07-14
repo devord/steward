@@ -171,8 +171,11 @@ export function DashboardSidebar({
 
               {/* Discovery degraded (search rate limit, GitHub flap): say quietly
               that groups may be missing rather than render a confident lie. */}
+              {/* A prose sentence, so sans and ink-dim — mono is for
+                  identifiers, and ink-faint never carries copy the user is
+                  meant to read. */}
               {!sidebar.complete && (
-                <p className="px-2.5 font-mono text-xs text-ink-faint">
+                <p className="px-2.5 text-xs text-ink-dim">
                   {t("switcher.incomplete")}
                 </p>
               )}

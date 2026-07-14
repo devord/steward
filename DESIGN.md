@@ -76,7 +76,12 @@ tokens only; a literal hex breaks every non-default theme.
   a designed face from the same family as the sans, never the viewer's
   terminal default.
 - Rule of thumb: if git or the schema would care about the string, it's
-  mono. The scale is set at the foundation by two Tailwind size tokens in
+  mono. The rule applies per string, not per slot: the rail's group heading
+  and the account pill are sans when showing a display name ("Personal", a
+  repo.yaml `name`, a GitHub name) and mono only when falling back to the
+  repo name / login — prose vs identifier is also what separates a heading
+  tier from mono content rows when size alone is too subtle at 13px-vs-15px.
+  The scale is set at the foundation by two Tailwind size tokens in
   `app.css` (`--text-sm`/`--text-xs`), one step above Tailwind's defaults:
   **body and interactive labels 15px (`text-sm`)** — nav items, buttons,
   the account name; **secondary labels and metadata 13px (`text-xs`)** — the
