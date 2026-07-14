@@ -385,7 +385,6 @@ export const ptBR: Messages = {
   "dialog.connectorsHint":
     "Connectors MCP que a execução pode usar, pelo nome da conta — ela não recebe nenhum a menos que listado",
   "dialog.repoEmpty": "Digite owner/repo — sugestões vêm dos seus repos",
-  "dialog.connectorEmpty": "Digite o nome de conta de um connector",
   "dialog.addToken": 'Adicionar "{value}"',
   "dialog.removeToken": "Remover {value}",
 

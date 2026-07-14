@@ -119,10 +119,24 @@ function isRepoRef(token: string): boolean {
   return repoRefSchema.safeParse(token).success
 }
 
-/** Connector account names are single tokens (`GitHub`, `Google_Calendar`). */
-function isConnectorName(token: string): boolean {
-  return /^\S+$/.test(token)
-}
+/**
+ * The MCP connectors a cloud run may allow (ADR-0018), by account name. The
+ * set is small and known, so the field offers it as toggles rather than a
+ * free-typed list. Account names are machine strings that must match the
+ * connector on the runner's Claude account exactly (`Google_Calendar`, not
+ * "Google Calendar"), so they render verbatim in mono. Edit this list to
+ * change what's offered; a stored name outside it still renders (see
+ * ConnectorField) so an edit never silently drops one.
+ */
+const CONNECTOR_CATALOG: readonly string[] = [
+  "GitHub",
+  "Gmail",
+  "Google_Calendar",
+  "Google_Drive",
+  "Slack",
+  "Linear",
+  "Notion",
+]
 
 /**
  * The routine wizard, prompt-first (ADR-0013), in two steps. **Intent**:
@@ -795,16 +809,13 @@ export function AddRoutineDialog({
                           </p>
                         </div>
                         <div className="grid gap-2">
-                          <Label htmlFor="routine-connectors">
+                          <Label id="routine-connectors-label">
                             {t("dialog.connectors")}
                           </Label>
-                          <TokenCombobox
-                            id="routine-connectors"
+                          <ConnectorField
+                            labelledBy="routine-connectors-label"
                             value={connectors}
                             onChange={setConnectors}
-                            validate={isConnectorName}
-                            placeholder="Google_Calendar"
-                            emptyHint={t("dialog.connectorEmpty")}
                           />
                           <p className="text-xs text-muted-foreground">
                             {t("dialog.connectorsHint")}
@@ -973,6 +984,71 @@ function TemplateCard({
           {children}
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * The connector allowlist (ADR-0018) as a set of toggles over the known
+ * catalog — the options are predetermined and few, so it's a pick-from-list,
+ * not a free-typed field. Selection follows the app's idiom: a translucent
+ * accent wash and orange border under mono ink, the check reserved on every
+ * chip so toggling never reflows the row. A stored connector the catalog
+ * doesn't list (hand-authored YAML, or a template's suggestion) is appended
+ * so an edit round-trips it instead of dropping it.
+ */
+function ConnectorField({
+  labelledBy,
+  value,
+  onChange,
+}: {
+  labelledBy: string
+  value: string[]
+  onChange: (next: string[]) => void
+}) {
+  const options = [
+    ...CONNECTOR_CATALOG,
+    ...value.filter((name) => !CONNECTOR_CATALOG.includes(name)),
+  ]
+  function toggle(name: string) {
+    onChange(
+      value.includes(name)
+        ? value.filter((entry) => entry !== name)
+        : [...value, name],
+    )
+  }
+  return (
+    <div
+      role="group"
+      aria-labelledby={labelledBy}
+      className="flex flex-wrap gap-1.5"
+    >
+      {options.map((name) => {
+        const on = value.includes(name)
+        return (
+          <button
+            key={name}
+            type="button"
+            aria-pressed={on}
+            onClick={() => toggle(name)}
+            className={cn(
+              "flex cursor-pointer items-center gap-1.5 rounded-md border py-1 pr-2.5 pl-1.5 font-mono text-xs transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              on
+                ? "border-primary bg-primary/10 text-foreground"
+                : "border-border text-muted-foreground hover:bg-primary/5 hover:text-foreground",
+            )}
+          >
+            <CheckIcon
+              aria-hidden
+              className={cn(
+                "size-3.5 shrink-0 text-primary transition-opacity duration-100",
+                on ? "opacity-100" : "opacity-0",
+              )}
+            />
+            {name}
+          </button>
+        )
+      })}
     </div>
   )
 }
