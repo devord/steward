@@ -108,6 +108,17 @@ export function failSearch({
   searchFailure = { status, times, network }
 }
 
+/** Injected failure for the create-from-template endpoint. */
+let generateFailure: Failure | null = null
+
+export function failGenerate({
+  status = 500,
+  times = Infinity,
+  network,
+}: { status?: number; times?: number; network?: boolean } = {}) {
+  generateFailure = { status, times, network }
+}
+
 /** Orgs /user/orgs reports for every token. */
 let userOrgs: string[] = []
 
@@ -138,6 +149,7 @@ export function resetGitHub() {
   pendingCommits.clear()
   gitSeq = 0
   searchFailure = null
+  generateFailure = null
   userOrgs = []
   githubStats.full = 0
   githubStats.conditional = 0
@@ -324,6 +336,27 @@ export const githubHandlers = [
       request,
       userOrgs.map((login) => ({ login })),
     ),
+  ),
+
+  // Create-from-template — the setup wizard's repo create. On success it
+  // registers the new owner/name as an existing repo (so a follow-up
+  // existence probe sees it); failGenerate injects the 422 name-collision,
+  // 401 dead-token, and 5xx/network paths the setup action must degrade
+  // instead of crashing.
+  http.post(
+    "https://api.github.com/repos/:owner/:repo/generate",
+    async ({ request }) => {
+      if (generateFailure && generateFailure.times > 0) {
+        generateFailure.times -= 1
+        return failureResponse(generateFailure)
+      }
+      const body = z
+        .object({ owner: z.string(), name: z.string() })
+        .parse(await request.json())
+      const repo = `${body.owner}/${body.name}`
+      seedRepoMeta(repo, {})
+      return HttpResponse.json({ full_name: repo }, { status: 201 })
+    },
   ),
 
   // Contents API — single file, base64 payload.

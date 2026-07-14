@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest"
 
-import { failPath, seedRepo } from "../mocks/github.ts"
+import { failGenerate, failPath, seedRepo } from "../mocks/github.ts"
 import {
+  createDataRepoOr503,
   loadArtifactVersion,
   loadDashboard,
   loadDashboardStructureOr503,
@@ -346,6 +347,70 @@ describe("repoExistsOr503", () => {
     )) as { init?: ResponseInit }
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(401)
+  })
+})
+
+describe("createDataRepoOr503", () => {
+  const TEMPLATE = "steward/data-template"
+
+  it("creates the data repo from the template", async () => {
+    await createDataRepoOr503(
+      "token",
+      TEMPLATE,
+      "daniel",
+      "steward-data-daniel",
+    )
+    // The freshly created repo is now readable — the redirect back to the
+    // board won't bounce into the wizard.
+    expect(await repoExistsOr503("token", DATA_REPO)).toBe(true)
+  })
+
+  it("degrades a name-collision 422 to an actionable 422, not the generic crash", async () => {
+    // The failure the user actually fixes: a repo of that name already exists,
+    // so GitHub 422s the create. It must reach the boundary as a route error
+    // with a self-service message, never the raw GitHubError generic crash.
+    failGenerate({ status: 422 })
+
+    const thrown = (await createDataRepoOr503(
+      "token",
+      TEMPLATE,
+      "daniel",
+      "steward-data-daniel",
+    ).catch((e) => e)) as { init?: ResponseInit; data?: string }
+    expect(thrown).not.toBeInstanceOf(GitHubError)
+    expect(thrown.init?.status).toBe(422)
+    expect(thrown.data).toContain("daniel/steward-data-daniel")
+  })
+
+  it("degrades a dead-token 401 to a 401 re-auth page", async () => {
+    // A revoked token 401s the create too — the boundary must pair it with a
+    // sign-out (status 401), not the transient-outage refresh.
+    failGenerate({ status: 401 })
+
+    const thrown = (await createDataRepoOr503(
+      "token",
+      TEMPLATE,
+      "daniel",
+      "steward-data-daniel",
+    ).catch((e) => e)) as { init?: ResponseInit }
+    expect(thrown).not.toBeInstanceOf(GitHubError)
+    expect(thrown.init?.status).toBe(401)
+  })
+
+  it("degrades a transient create failure to a 503 refresh, not a crash", async () => {
+    // A 5xx/rate-limit/network blip on the create (a POST, so never retried)
+    // becomes the same "try again" 503 the loaders produce — no repo was made,
+    // so retrying is safe.
+    failGenerate({ status: 500 })
+
+    const thrown = (await createDataRepoOr503(
+      "token",
+      TEMPLATE,
+      "daniel",
+      "steward-data-daniel",
+    ).catch((e) => e)) as { init?: ResponseInit }
+    expect(thrown).not.toBeInstanceOf(GitHubError)
+    expect(thrown.init?.status).toBe(503)
   })
 })
 

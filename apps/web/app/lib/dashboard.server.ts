@@ -20,6 +20,7 @@ import type { RunReceipt } from "./runs.ts"
 import type { DiscoveredTemplate } from "./templates.ts"
 import {
   type Collaborator,
+  generateFromTemplate,
   getFile,
   getLastCommitDate,
   GitHubError,
@@ -167,6 +168,45 @@ export async function repoExistsOr503(
     return await repoExists(token, repo)
   } catch (error) {
     degradeGitHubError(error)
+  }
+}
+
+/**
+ * generateFromTemplate for the setup action. A GitHubError from the create
+ * call is an Error, not a Response, so on its own it escapes the action as the
+ * generic "unexpected error" crash — the same failure mode the loaders already
+ * degrade. Turn it into a route error the boundary can explain: a 422 is the
+ * one the user fixes themselves (a repo of that name already exists), a 401
+ * re-auths, and every other failure is the transient-outage refresh.
+ */
+export async function createDataRepoOr503(
+  token: string,
+  templateRepo: string,
+  owner: string,
+  name: string,
+): Promise<void> {
+  try {
+    await generateFromTemplate(token, templateRepo, owner, name)
+  } catch (error) {
+    if (error instanceof GitHubError) {
+      // A dead token 401s the create too — re-auth, don't pretend it's transient.
+      if (error.status === 401) sessionExpired401()
+      // 422 is the one the user resolves themselves: GitHub rejects the create
+      // because a repo of that name already exists on the account.
+      if (error.status === 422) {
+        throw data(
+          `GitHub already has a repository named ${owner}/${name}, so it can't create a fresh one from the template. Delete or rename it on GitHub and try again — or, if you're signed in as the wrong account, sign out and back in as the owner.`,
+          { status: 422 },
+        )
+      }
+      // Everything else (rate limit, 5xx, network blip) is the transient class:
+      // no repo was created, so retrying is safe.
+      throw data(
+        "GitHub couldn't create your data repo just now. This is usually a passing GitHub hiccup — try again in a moment.",
+        { status: 503 },
+      )
+    }
+    throw error
   }
 }
 

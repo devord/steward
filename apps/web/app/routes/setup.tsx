@@ -4,12 +4,13 @@ import type { Route } from "./+types/setup"
 import { AccountBar } from "../components/account-bar.tsx"
 import { Button } from "~/components/ui/button"
 import {
+  createDataRepoOr503,
   dataRepoExists,
   invalidateSidebarCache,
   repoExistsOr503,
 } from "../lib/dashboard.server.ts"
 import { env } from "../lib/env.server.ts"
-import { addRepoTopic, generateFromTemplate } from "../lib/github.server.ts"
+import { addRepoTopic } from "../lib/github.server.ts"
 import { invalidateRepoCache, resolveHomeRepo } from "../lib/repos.server.ts"
 import { useT } from "../lib/i18n.tsx"
 import { requireAuth } from "../lib/session.server.ts"
@@ -36,7 +37,7 @@ export async function action({ request }: Route.ActionArgs) {
   const name = dataRepo.split("/")[1]
   if (!name) throw new Response("Bad data repo name", { status: 400 })
 
-  await generateFromTemplate(
+  await createDataRepoOr503(
     auth.token,
     env().STEWARD_DATA_REPO_TEMPLATE,
     auth.login,
