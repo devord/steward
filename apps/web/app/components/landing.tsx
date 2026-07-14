@@ -1,22 +1,13 @@
 import { useEffect, useRef, useState } from "react"
-import {
-  Blocks,
-  Check,
-  ChevronsDown,
-  Lock,
-  Monitor,
-  Moon,
-  RefreshCw,
-  Sun,
-} from "lucide-react"
+import { Blocks, Check, ChevronsDown, Lock, RefreshCw } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 import { handleRadioKeydown } from "./appearance-settings.tsx"
 import { Wordmark } from "./logo.tsx"
 import { buttonVariants } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
+import { APPEARANCE_MODES } from "../lib/appearance-modes.ts"
 import { cssVars } from "../lib/css.ts"
-import type { AppearanceMode } from "../lib/theme.ts"
 import { useAppearance } from "../lib/use-appearance.ts"
 import { useT } from "../lib/i18n.tsx"
 
@@ -343,16 +334,6 @@ function SignInButton({
 
 /* --- Mode toggle ---------------------------------------------------------- */
 
-const LANDING_MODES = [
-  { mode: "system", Icon: Monitor, label: "settings.modeAuto" },
-  { mode: "light", Icon: Sun, label: "settings.modeLight" },
-  { mode: "dark", Icon: Moon, label: "settings.modeDark" },
-] as const satisfies ReadonlyArray<{
-  mode: AppearanceMode
-  Icon: typeof Monitor
-  label: string
-}>
-
 /**
  * A compact mode switch for signed-out visitors: auto / light / dark, writing
  * the same device preference the app uses (use-appearance), so the choice
@@ -368,7 +349,7 @@ function LandingModeToggle() {
       aria-label={t("settings.mode")}
       className="absolute top-4 right-4 z-10 flex gap-0.5 rounded-lg border border-border-dim bg-bg1 p-0.5 sm:top-6 sm:right-6"
     >
-      {LANDING_MODES.map(({ mode, Icon, label }) => {
+      {APPEARANCE_MODES.map(({ mode, Icon, labelKey }) => {
         const active = prefs.mode === mode
         return (
           <button
@@ -376,8 +357,8 @@ function LandingModeToggle() {
             type="button"
             role="radio"
             aria-checked={active}
-            aria-label={t(label)}
-            title={t(label)}
+            aria-label={t(labelKey)}
+            title={t(labelKey)}
             tabIndex={active ? 0 : -1}
             onClick={() => update({ mode })}
             onKeyDown={handleRadioKeydown}

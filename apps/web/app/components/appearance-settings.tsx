@@ -15,11 +15,11 @@
  */
 import { useState } from "react"
 
-import { Monitor, Moon, Sun } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 
+import { APPEARANCE_MODES } from "../lib/appearance-modes.ts"
 import { useT } from "../lib/i18n.tsx"
 import {
-  type AppearanceMode,
   familyForPair,
   type Theme,
   type ThemeFamily,
@@ -31,13 +31,6 @@ import {
 import { useAppearance } from "../lib/use-appearance.ts"
 import { cn } from "~/lib/utils"
 
-const MODE_ORDER: AppearanceMode[] = ["system", "light", "dark"]
-const MODE_ICON = { system: Monitor, light: Sun, dark: Moon } as const
-const MODE_LABEL = {
-  system: "settings.modeAuto",
-  light: "settings.modeLight",
-  dark: "settings.modeDark",
-} as const
 const MODE_HINT = {
   system: "settings.modeHintSystem",
   light: "settings.modeHintLight",
@@ -223,8 +216,7 @@ export function AppearanceSettings() {
           aria-label={t("settings.mode")}
           className="inline-grid w-full max-w-xs grid-cols-3 gap-1 rounded-lg border border-border-dim bg-bg1 p-1"
         >
-          {MODE_ORDER.map((mode) => {
-            const Icon = MODE_ICON[mode]
+          {APPEARANCE_MODES.map(({ mode, Icon, labelKey }) => {
             const active = prefs.mode === mode
             return (
               <button
@@ -246,7 +238,7 @@ export function AppearanceSettings() {
                 )}
               >
                 <Icon aria-hidden className="size-3.5" />
-                {t(MODE_LABEL[mode])}
+                {t(labelKey)}
               </button>
             )
           })}
