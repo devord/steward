@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useId, useState } from "react"
 import { useFetcher, useNavigate } from "react-router"
 
-import { slugSchema } from "@steward/schema"
+import { SECTION_NAME_MAX, slugSchema } from "@steward/schema"
 
-import { kebab } from "./add-routine-dialog.tsx"
 import { Button } from "~/components/ui/button"
 import {
   Dialog,
@@ -43,6 +42,7 @@ export function NewDashboardDialog({
   defaultRepo,
   homeRepo,
   takenSlugs,
+  sections,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -53,14 +53,16 @@ export function NewDashboardDialog({
   homeRepo: string
   /** Board slugs already taken, per repo. */
   takenSlugs: Record<string, string[]>
+  /** Existing section names per repo, offered as datalist suggestions. */
+  sections: Record<string, string[]>
 }) {
   const t = useT()
   const navigate = useNavigate()
+  const listId = useId()
   const fetcher = useFetcher<CreateResult>()
   const [repo, setRepo] = useState(defaultRepo)
-  const [name, setName] = useState("")
-  const [slugEdited, setSlugEdited] = useState(false)
   const [slug, setSlug] = useState("")
+  const [section, setSection] = useState("")
 
   // The caller can open the dialog pre-targeted (an empty repo group's
   // create-first row opens it on that repo), so the repo re-arms from the
@@ -73,18 +75,13 @@ export function NewDashboardDialog({
   const slugValid = slugSchema.safeParse(slug).success
   const slugTaken = (takenSlugs[effectiveRepo] ?? []).includes(slug)
   const busy = fetcher.state !== "idle"
-  const canSubmit =
-    name.trim().length > 0 &&
-    slugValid &&
-    !slugTaken &&
-    !busy &&
-    effectiveRepo !== ""
+  const canSubmit = slugValid && !slugTaken && !busy && effectiveRepo !== ""
+  const knownSections = sections[effectiveRepo] ?? []
 
   const reset = useCallback(() => {
     setRepo(defaultRepo)
-    setName("")
-    setSlugEdited(false)
     setSlug("")
+    setSection("")
   }, [defaultRepo])
 
   // A successful create resets + closes the dialog and navigates to the
@@ -113,7 +110,7 @@ export function NewDashboardDialog({
         intent: "create",
         repo: effectiveRepo,
         slug,
-        name: name.trim(),
+        section: section.trim(),
       }),
       { method: "post", action: "/dashboards", encType: "application/json" },
     )
@@ -162,40 +159,48 @@ export function NewDashboardDialog({
               </Select>
             </div>
           )}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="dashboard-name">{t("newDash.name")}</Label>
-              <Input
-                id="dashboard-name"
-                value={name}
-                onChange={(event) => {
-                  setName(event.target.value)
-                  if (!slugEdited) setSlug(kebab(event.target.value))
-                }}
-                placeholder={t("newDash.namePlaceholder")}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="dashboard-slug">{t("newDash.slug")}</Label>
-              <Input
-                id="dashboard-slug"
-                // Open-and-type, like the routine dialog's prompt: initial
-                // focus lands in the slug field.
-                autoFocus
-                value={slug}
-                onChange={(event) => {
-                  setSlugEdited(true)
-                  setSlug(event.target.value)
-                }}
-                aria-invalid={slug.length > 0 && (!slugValid || slugTaken)}
-                className="font-mono"
-              />
-              {slugTaken && (
-                <p className="text-xs text-destructive">
-                  {t("newDash.slugTaken")}
-                </p>
-              )}
-            </div>
+          <div className="grid gap-2">
+            <Label htmlFor="dashboard-slug">{t("newDash.slug")}</Label>
+            <Input
+              id="dashboard-slug"
+              // Open-and-type, like the routine dialog's prompt: initial
+              // focus lands in the slug field.
+              autoFocus
+              value={slug}
+              onChange={(event) => setSlug(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") submit()
+              }}
+              aria-invalid={slug.length > 0 && (!slugValid || slugTaken)}
+              className="font-mono"
+            />
+            {slugTaken && (
+              <p className="text-xs text-destructive">
+                {t("newDash.slugTaken")}
+              </p>
+            )}
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="dashboard-section">{t("newDash.section")}</Label>
+            <Input
+              id="dashboard-section"
+              value={section}
+              list={knownSections.length > 0 ? listId : undefined}
+              maxLength={SECTION_NAME_MAX}
+              onChange={(event) => setSection(event.target.value)}
+              placeholder={t("newDash.sectionPlaceholder")}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") submit()
+              }}
+            />
+            {knownSections.length > 0 && (
+              <datalist id={listId}>
+                {knownSections.map((option) => (
+                  <option key={option} value={option} />
+                ))}
+              </datalist>
+            )}
+            <p className="text-xs text-ink-dim">{t("newDash.sectionHint")}</p>
           </div>
           {fetcher.data?.ok === false && (
             <p className="text-xs text-destructive">

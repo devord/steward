@@ -51,7 +51,7 @@ export function DashboardShell({
   /** Delete a board by repo+slug — wired to the rail's per-board menu. */
   onDeleteBoard: (repo: string, slug: string) => void
   /** Rename a board's display name — same menu; current name for prefill. */
-  onRenameBoard: (repo: string, slug: string, name: string | null) => void
+  onRenameBoard: (repo: string, slug: string) => void
   children: React.ReactNode
 }) {
   const t = useT()

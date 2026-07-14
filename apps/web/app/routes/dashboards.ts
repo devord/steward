@@ -1,8 +1,8 @@
 import {
   dashboardFileSchema,
   dashboardPath,
-  GROUP_NAME_MAX,
   parseDashboardFile,
+  SECTION_NAME_MAX,
   serializeDashboardFile,
   slugSchema,
 } from "@steward/schema"
@@ -31,19 +31,18 @@ const payloadSchema = z.discriminatedUnion("intent", [
     /** Which data repo — gated by requireDataRepo (ADR-0023). */
     repo: z.string(),
     slug: slugSchema,
-    name: z.string().min(1).optional(),
+    /** Optional section to file the new board under (ADR-0039). Empty (after
+        trim) → the repo's unlabeled lead section. */
+    section: z.string().max(SECTION_NAME_MAX).optional(),
   }),
   z.object({
-    intent: z.literal("rename"),
+    intent: z.literal("edit"),
     repo: z.string(),
     slug: slugSchema,
-    /** New display name. Empty (after trim) clears it — the UI falls back to
-        the slug. The slug itself is immutable: it's the filename and the URL. */
-    name: z.string().max(120),
-    /** New section (the board's `group`). Empty (after trim) clears it — the
-        board falls back to its repo's unlabeled lead section. Absent → leave
-        the section untouched (a name-only edit). */
-    group: z.string().max(GROUP_NAME_MAX).optional(),
+    /** New section (the board's `section`). Empty (after trim) clears it — the
+        board falls back to its repo's unlabeled lead section. The slug itself
+        is immutable: it's the filename and the URL. */
+    section: z.string().max(SECTION_NAME_MAX),
   }),
   z.object({
     intent: z.literal("delete"),
@@ -77,9 +76,10 @@ export async function action({ request }: { request: Request }) {
   const path = dashboardPath(payload.slug)
 
   if (payload.intent === "create") {
+    const section = payload.section?.trim()
     const empty = serializeDashboardFile(
       dashboardFileSchema.parse({
-        ...(payload.name ? { name: payload.name } : {}),
+        ...(section ? { section } : {}),
         grid: {},
         widgets: [],
       }),
@@ -112,38 +112,26 @@ export async function action({ request }: { request: Request }) {
     return { ok: true as const, slug: payload.slug }
   }
 
-  if (payload.intent === "rename") {
-    // Rename touches only the display name — a direct commit like the rest of
-    // the lifecycle (ADR-0010). Any open draft on this board sees the base
-    // move and resolves through the sync conflict path (ADR-0003).
+  if (payload.intent === "edit") {
+    // Editing sets the board's section — a direct commit like the rest of the
+    // lifecycle (ADR-0010). Any open draft on this board sees the base move and
+    // resolves through the sync conflict path (ADR-0003).
     const current = await getFile(auth.token, repo, path, "main")
     if (!current) {
       return data({ ok: false as const, error: "missing" }, { status: 404 })
     }
-    const {
-      name: _prevName,
-      group: prevGroup,
-      ...file
-    } = parseDashboardFile(current.text)
-    const name = payload.name.trim()
-    // Absent `group` in the payload is "leave the section alone" (name-only
-    // edit); a present-but-blank value clears it. Both drop the key when empty
-    // so an unset section never serializes as `group: ""`.
-    const group =
-      payload.group === undefined
-        ? prevGroup
-        : payload.group.trim() || undefined
+    const { section: prevSection, ...file } = parseDashboardFile(current.text)
+    // A blank value clears the section; drop the key when empty so an unset
+    // section never serializes as `section: ""`.
+    const section = payload.section.trim() || undefined
     const next = serializeDashboardFile({
       ...file,
-      ...(name ? { name } : {}),
-      ...(group ? { group } : {}),
+      ...(section ? { section } : {}),
     })
     // Name the commit for what actually changed — git is visible here
-    // (principle 3), so "rename" must not appear when only the section moved.
-    const nameChanged = name !== (_prevName ?? "")
-    const groupChanged = (group ?? "") !== (prevGroup ?? "")
-    const verb =
-      nameChanged && groupChanged ? "edit" : groupChanged ? "move" : "rename"
+    // (principle 3): "move" when the section changed, "edit" otherwise.
+    const sectionChanged = (section ?? "") !== (prevSection ?? "")
+    const verb = sectionChanged ? "move" : "edit"
     try {
       await putFile(auth.token, repo, path, {
         content: next,
@@ -166,8 +154,8 @@ export async function action({ request }: { request: Request }) {
       }
       throw error
     }
-    // The rail shows display names — drop its cache so the new name shows on
-    // the very next load.
+    // The rail groups boards by section — drop its cache so the moved board
+    // shows under its new section on the very next load.
     invalidateSidebarCache(auth.token)
     return { ok: true as const, slug: payload.slug }
   }

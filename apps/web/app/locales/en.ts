@@ -268,12 +268,14 @@ export const en = {
 
   "newDash.title": "New dashboard",
   "newDash.description":
-    "A named grid of widgets — its layout file lives in the data repo you pick.",
+    "A grid of widgets — its layout file lives in the data repo you pick.",
   "newDash.repo": "Data repo",
-  "newDash.name": "Name",
-  "newDash.namePlaceholder": "Team Ops",
   "newDash.slug": "Slug",
   "newDash.slugTaken": "Already used by another dashboard",
+  "newDash.section": "Section",
+  "newDash.sectionPlaceholder": "No section",
+  "newDash.sectionHint":
+    "Optional, but recommended — groups this board under a heading in the sidebar.",
   "newDash.create": "Create dashboard",
   "newDash.creating": "Creating…",
   "newDash.exists": "That dashboard already exists in the repo",
@@ -282,9 +284,7 @@ export const en = {
   "board.editDashboard": "Edit dashboard",
   "board.editTitle": "Edit dashboard",
   "board.editBody":
-    "Shown in the sidebar. The slug ({slug}) and its URL don't change.",
-  "board.renameLabel": "Display name",
-  "board.renameHint": "Leave empty to fall back to the slug.",
+    "Files this board under a section in the sidebar. The slug ({slug}) and its URL don't change.",
   "board.sectionLabel": "Section",
   "board.sectionPlaceholder": "No section",
   "board.sectionHint":

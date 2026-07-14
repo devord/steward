@@ -3,8 +3,8 @@
 # (`main` is the default board the app opens).
 # Grid: `columns` on desktop (up to 6), ~`rowHeight`px row unit, `width`
 # fixed|wide canvas. Each widget references a routine slug from
-# routines.yaml.
-name: Main
+# routines.yaml. An optional `section:` files this board under a rail
+# heading; the repo's `data/repo.yaml` `sections:` list orders them.
 grid:
   columns: 4
   rowHeight: 150

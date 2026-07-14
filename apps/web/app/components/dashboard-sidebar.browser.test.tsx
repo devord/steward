@@ -30,19 +30,17 @@ const base = {
         collaborators: null,
         viewerIsAdmin: true,
         viewerCanPush: true,
-        groups: [],
+        sections: [],
         dashboards: [
           {
             slug: "main",
-            name: null,
-            group: null,
+            section: null,
             lastRunAt: null,
             stale: false,
           },
           {
             slug: "test",
-            name: null,
-            group: null,
+            section: null,
             lastRunAt: null,
             stale: false,
           },
@@ -60,12 +58,11 @@ const base = {
         ],
         viewerIsAdmin: false,
         viewerCanPush: false,
-        groups: [],
+        sections: [],
         dashboards: [
           {
             slug: "team-ops",
-            name: null,
-            group: null,
+            section: null,
             lastRunAt: null,
             stale: false,
           },
@@ -114,8 +111,7 @@ async function renderSidebar(
   over: Partial<Parameters<typeof DashboardSidebar>[0]> = {},
 ) {
   const onDeleteBoard = vi.fn<(repo: string, slug: string) => void>()
-  const onRenameBoard =
-    vi.fn<(repo: string, slug: string, name: string | null) => void>()
+  const onRenameBoard = vi.fn<(repo: string, slug: string) => void>()
   // AccountMenu's sign-out uses useSubmit, which needs a data router.
   const router = createMemoryRouter([
     {
@@ -150,8 +146,8 @@ describe("DashboardSidebar per-board menu", () => {
   it("withholds delete (but not rename) from every repo's default board", async () => {
     // A shared repo's `main` is its owner's default board — deleting it is
     // cross-user data loss, so no repo's `main` offers Delete (matches the
-    // server guard). Renaming is display-name only, so `main` keeps its menu
-    // with Rename alone.
+    // server guard). Editing only sets the section, so `main` keeps its menu
+    // with Edit alone.
     await renderSidebar({
       sidebar: {
         repos: [
@@ -161,15 +157,13 @@ describe("DashboardSidebar per-board menu", () => {
             dashboards: [
               {
                 slug: "main",
-                name: null,
-                group: null,
+                section: null,
                 lastRunAt: null,
                 stale: false,
               },
               {
                 slug: "ops",
-                name: null,
-                group: null,
+                section: null,
                 lastRunAt: null,
                 stale: false,
               },
@@ -206,81 +200,24 @@ describe("DashboardSidebar per-board menu", () => {
     expect(onDeleteBoard).toHaveBeenCalledWith(HOME_REPO, "test")
   })
 
-  it("renames the board the menu belongs to, passing its current name", async () => {
-    const { onRenameBoard } = await renderSidebar({
-      sidebar: {
-        repos: [
-          {
-            ...base.sidebar.repos[0],
-            dashboards: [
-              {
-                slug: "main",
-                name: null,
-                group: null,
-                lastRunAt: null,
-                stale: false,
-              },
-              {
-                slug: "test",
-                name: "Test Ops",
-                group: null,
-                lastRunAt: null,
-                stale: false,
-              },
-            ],
-          },
-          base.sidebar.repos[1],
-        ],
-        complete: true,
-        degraded: false,
-      },
-    })
+  it("edits the board the menu belongs to, passing its repo and slug", async () => {
+    const { onRenameBoard } = await renderSidebar()
 
-    requireMenuButton("Test Ops").click()
+    requireMenuButton("test").click()
     await vi.waitFor(() => expect(menuItem("Edit dashboard")).not.toBeNull())
     requireMenuItem("Edit dashboard").click()
 
     expect(onRenameBoard).toHaveBeenCalledTimes(1)
-    // The row's own repo+slug+name — the dialog prefill.
-    expect(onRenameBoard).toHaveBeenCalledWith(HOME_REPO, "test", "Test Ops")
+    // The row's own repo+slug — the dialog looks up the section itself.
+    expect(onRenameBoard).toHaveBeenCalledWith(HOME_REPO, "test")
   })
 
-  it("shows the display name when set, the slug otherwise", async () => {
-    await renderSidebar({
-      sidebar: {
-        repos: [
-          {
-            ...base.sidebar.repos[0],
-            dashboards: [
-              {
-                slug: "main",
-                name: null,
-                group: null,
-                lastRunAt: null,
-                stale: false,
-              },
-              {
-                slug: "test",
-                name: "Test Ops",
-                group: null,
-                lastRunAt: null,
-                stale: false,
-              },
-            ],
-          },
-          base.sidebar.repos[1],
-        ],
-        complete: true,
-        degraded: false,
-      },
-    })
+  it("labels every board by its slug (ADR-0039)", async () => {
+    await renderSidebar()
     const labels = [...document.querySelectorAll("nav a")].map((a) =>
       a.textContent?.trim(),
     )
-    expect(labels).toContain("Test Ops")
-    expect(labels).not.toContain("test")
-    // Unnamed boards keep their slug.
-    expect(labels).toContain("main")
+    expect(labels).toEqual(expect.arrayContaining(["main", "test", "team-ops"]))
   })
 
   it("renders no board menus on chrome pages (no handlers)", async () => {
@@ -309,26 +246,23 @@ describe("DashboardSidebar sections", () => {
             ...base.sidebar.repos[0],
             // Authored order is Projects-before-Clients — not alphabetical,
             // and not the order the boards are listed in.
-            groups: ["Projects", "Clients"],
+            sections: ["Projects", "Clients"],
             dashboards: [
               {
                 slug: "main",
-                name: null,
-                group: null,
+                section: null,
                 lastRunAt: null,
                 stale: false,
               },
               {
                 slug: "corza",
-                name: "Corza",
-                group: "Clients",
+                section: "Clients",
                 lastRunAt: null,
                 stale: false,
               },
               {
                 slug: "steward",
-                name: "Steward",
-                group: "Projects",
+                section: "Projects",
                 lastRunAt: null,
                 stale: false,
               },
@@ -345,7 +279,7 @@ describe("DashboardSidebar sections", () => {
     const labels = [...document.querySelectorAll("nav a")].map((a) =>
       a.textContent?.trim(),
     )
-    expect(labels).toEqual(expect.arrayContaining(["main", "Corza", "Steward"]))
+    expect(labels).toEqual(expect.arrayContaining(["main", "corza", "steward"]))
   })
 })
 
@@ -797,22 +731,19 @@ describe("DashboardSidebar freshness (ADR-0035)", () => {
             dashboards: [
               {
                 slug: "fresh",
-                name: "Fresh",
-                group: null,
+                section: null,
                 lastRunAt: ago(2 * HOUR),
                 stale: false,
               },
               {
                 slug: "old",
-                name: "Old",
-                group: null,
+                section: null,
                 lastRunAt: ago(6 * 24 * HOUR),
                 stale: true,
               },
               {
                 slug: "new",
-                name: "New",
-                group: null,
+                section: null,
                 lastRunAt: null,
                 stale: false,
               },
@@ -848,8 +779,7 @@ describe("DashboardSidebar freshness (ADR-0035)", () => {
             dashboards: [
               {
                 slug: "main",
-                name: null,
-                group: null,
+                section: null,
                 lastRunAt: ago(HOUR),
                 stale: false,
               },

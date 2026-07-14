@@ -263,12 +263,14 @@ export const ptBR: Messages = {
 
   "newDash.title": "Novo painel",
   "newDash.description":
-    "Uma grade nomeada de widgets — o arquivo de layout vive no repo de dados que você escolher.",
+    "Uma grade de widgets — o arquivo de layout vive no repo de dados que você escolher.",
   "newDash.repo": "Repo de dados",
-  "newDash.name": "Nome",
-  "newDash.namePlaceholder": "Ops do Time",
   "newDash.slug": "Slug",
   "newDash.slugTaken": "Já usado por outro painel",
+  "newDash.section": "Seção",
+  "newDash.sectionPlaceholder": "Sem seção",
+  "newDash.sectionHint":
+    "Opcional, mas recomendado — agrupa este painel sob um título na barra lateral.",
   "newDash.create": "Criar painel",
   "newDash.creating": "Criando…",
   "newDash.exists": "Esse painel já existe no repo",
@@ -277,9 +279,7 @@ export const ptBR: Messages = {
   "board.editDashboard": "Editar painel",
   "board.editTitle": "Editar painel",
   "board.editBody":
-    "Aparece na barra lateral. O slug ({slug}) e sua URL não mudam.",
-  "board.renameLabel": "Nome de exibição",
-  "board.renameHint": "Deixe vazio para voltar ao slug.",
+    "Arquiva este painel sob uma seção na barra lateral. O slug ({slug}) e sua URL não mudam.",
   "board.sectionLabel": "Seção",
   "board.sectionPlaceholder": "Sem seção",
   "board.sectionHint":

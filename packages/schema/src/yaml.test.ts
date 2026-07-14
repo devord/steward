@@ -57,14 +57,20 @@ describe("parseRepoFile", () => {
   })
 
   it("parses an ordered section list", () => {
+    expect(parseRepoFile("sections:\n  - Clients\n  - Projects\n")).toEqual({
+      sections: ["Clients", "Projects"],
+    })
+  })
+
+  it("reads a legacy `groups:` list as `sections` (ADR-0039)", () => {
     expect(parseRepoFile("groups:\n  - Clients\n  - Projects\n")).toEqual({
-      groups: ["Clients", "Projects"],
+      sections: ["Clients", "Projects"],
     })
   })
 
   it("round-trips a name and section order through serialize", () => {
     const parsed = parseRepoFile(
-      "name: Form Factory\ngroups:\n  - Clients\n  - Projects\n",
+      "name: Form Factory\nsections:\n  - Clients\n  - Projects\n",
     )
     expect(parseRepoFile(serializeRepoFile(parsed))).toEqual(parsed)
   })
@@ -85,21 +91,31 @@ widgets:
     expect(parsed.widgets).toHaveLength(1)
   })
 
-  it("parses an optional section (`group`)", () => {
+  it("parses an optional section", () => {
     const parsed = parseDashboardFile(
-      `name: Corza
-group: Clients
+      `section: Clients
 grid:
   columns: 4
 widgets: []
 `,
     )
-    expect(parsed.group).toBe("Clients")
+    expect(parsed.section).toBe("Clients")
+  })
+
+  it("reads a legacy `group:` as `section` (ADR-0039)", () => {
+    const parsed = parseDashboardFile(
+      `group: Clients
+grid:
+  columns: 4
+widgets: []
+`,
+    )
+    expect(parsed.section).toBe("Clients")
   })
 
   it("rejects a blank section", () => {
     expect(() =>
-      parseDashboardFile("group: ''\ngrid:\n  columns: 4\nwidgets: []\n"),
+      parseDashboardFile("section: ''\ngrid:\n  columns: 4\nwidgets: []\n"),
     ).toThrow()
   })
 })
