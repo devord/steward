@@ -214,6 +214,12 @@ export const en = {
   "repo.openOnGitHub": "View on GitHub",
   "repo.displayName": "Display name",
   "repo.saveName": "Save",
+  "repo.rename": "Rename repo",
+  "repo.renameTitle": "Rename repo",
+  "repo.renameBody":
+    "Shown as this repo's group in the sidebar. The repo on GitHub ({repo}) is untouched.",
+  "repo.renameHint": "Leave empty to fall back to {name}.",
+  "repo.renaming": "Saving…",
   "repo.renameFailed": "Couldn't save the name — try again.",
 
   "addRepo.title": "Add a data repo",
