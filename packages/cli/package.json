@@ -1,6 +1,6 @@
 {
   "name": "@devord/steward",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Keep your Steward dashboard's routines in sync — cloud routines and local launchd agents from one routines.yaml.",
   "license": "MIT",
   "bin": {
