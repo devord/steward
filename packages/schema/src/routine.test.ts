@@ -254,13 +254,13 @@ describe("dashboardPath", () => {
 })
 
 describe("dashboardFileSchema", () => {
-  it("keeps the optional display name", () => {
+  it("keeps the optional section", () => {
     const parsed = dashboardFileSchema.parse({
-      name: "Team Ops",
+      section: "Clients",
       grid: {},
       widgets: [],
     })
-    expect(parsed.name).toBe("Team Ops")
+    expect(parsed.section).toBe("Clients")
   })
 
   it("rejects a widget wider than the grid", () => {

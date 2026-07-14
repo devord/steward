@@ -28,7 +28,7 @@ import type { SidebarData } from "../lib/dashboard.server.ts"
 import { boardDraftKey, poolDraftKey } from "../lib/draft.ts"
 import { useRailStatus } from "../lib/rail-status.ts"
 import { boardHref, DEFAULT_DASHBOARD, routinesHref } from "../lib/repos.ts"
-import { groupBoards } from "../lib/sidebar-sections.ts"
+import { sectionBoards } from "../lib/sidebar-sections.ts"
 import { agoParts } from "../lib/time.ts"
 import { useNow } from "../lib/use-now.ts"
 import { useT } from "../lib/i18n.tsx"
@@ -96,7 +96,7 @@ export function DashboardSidebar({
   /** Rename a board's display name — offered on every board, including each
       repo's default `main` (only delete is withheld there). The current name
       rides along so the dialog can prefill. Absent on chrome pages. */
-  onRenameBoard?: (repo: string, slug: string, name: string | null) => void
+  onRenameBoard?: (repo: string, slug: string) => void
   /** Fired when a board link is followed — lets the mobile drawer close. */
   onNavigate?: () => void
 }) {
@@ -138,16 +138,16 @@ export function DashboardSidebar({
         ) : (
           <>
             <div className="space-y-4">
-              {sidebar.repos.map((group) => (
+              {sidebar.repos.map((repoGroup) => (
                 <NavGroup
-                  key={group.repo}
-                  header={<RepoGroupHeader group={group} />}
+                  key={repoGroup.repo}
+                  header={<RepoGroupHeader group={repoGroup} />}
                   foot={
                     <PoolNavItem
-                      to={routinesHref(group.repo)}
-                      active={routinesRepo === group.repo}
-                      running={running.has(group.repo)}
-                      draft={drafts.has(poolDraftKey(group.repo))}
+                      to={routinesHref(repoGroup.repo)}
+                      active={routinesRepo === repoGroup.repo}
+                      running={running.has(repoGroup.repo)}
+                      draft={drafts.has(poolDraftKey(repoGroup.repo))}
                       onNavigate={onNavigate}
                     />
                   }
@@ -160,64 +160,59 @@ export function DashboardSidebar({
                       geometry and the parent's row gap both hold; a section is a
                       quiet label followed by boards indented one step under it,
                       the extra indent (not a wrapper) carrying the nesting. */}
-                  {groupBoards(group.dashboards, group.groups).flatMap(
-                    (section, sectionIndex) => [
-                      section.label != null && (
-                        <SectionLabel
-                          key={`section:${section.label}`}
-                          first={sectionIndex === 0}
-                        >
-                          {section.label}
-                        </SectionLabel>
-                      ),
-                      ...section.boards.map((board) => {
-                        const active =
-                          activeRepo === group.repo &&
-                          dashboardSlug === board.slug
-                        // Every repo's `main` is its default board (server-
-                        // protected in all repos) — so no delete on any `main`.
-                        // Rename is harmless (display name only), so every
-                        // board gets it.
-                        return (
-                          <NavItem
-                            key={`${group.repo}:${board.slug}`}
-                            to={boardHref(group.repo, board.slug, homeRepo)}
-                            label={board.name ?? board.slug}
-                            active={active}
-                            // A board inside a named section sits one indent
-                            // deeper than an ungrouped one, nested under its
-                            // label (ADR-0034).
-                            indented={section.label != null}
-                            // Freshness (ADR-0035): the leading dot's colour and
-                            // the trailing age.
-                            lastRunAt={board.lastRunAt}
-                            stale={board.stale}
-                            now={now}
-                            draft={drafts.has(
-                              boardDraftKey(group.repo, board.slug),
-                            )}
-                            onRename={
-                              onRenameBoard
-                                ? () =>
-                                    onRenameBoard(
-                                      group.repo,
-                                      board.slug,
-                                      board.name,
-                                    )
-                                : undefined
-                            }
-                            onDelete={
-                              onDeleteBoard && board.slug !== DEFAULT_DASHBOARD
-                                ? () => onDeleteBoard(group.repo, board.slug)
-                                : undefined
-                            }
-                            onNavigate={onNavigate}
-                          />
-                        )
-                      }),
-                    ],
-                  )}
-                  {group.dashboards.length === 0 && (
+                  {sectionBoards(
+                    repoGroup.dashboards,
+                    repoGroup.sections,
+                  ).flatMap((section, sectionIndex) => [
+                    section.label != null && (
+                      <SectionLabel
+                        key={`section:${section.label}`}
+                        first={sectionIndex === 0}
+                      >
+                        {section.label}
+                      </SectionLabel>
+                    ),
+                    ...section.boards.map((board) => {
+                      const active =
+                        activeRepo === repoGroup.repo &&
+                        dashboardSlug === board.slug
+                      // Every repo's `main` is its default board (server-
+                      // protected in all repos) — so no delete on any `main`.
+                      // Editing only sets the section, so every board gets it.
+                      return (
+                        <NavItem
+                          key={`${repoGroup.repo}:${board.slug}`}
+                          to={boardHref(repoGroup.repo, board.slug, homeRepo)}
+                          label={board.slug}
+                          active={active}
+                          // A board inside a named section sits one indent
+                          // deeper than an ungrouped one, nested under its
+                          // label (ADR-0034).
+                          indented={section.label != null}
+                          // Freshness (ADR-0035): the leading dot's colour and
+                          // the trailing age.
+                          lastRunAt={board.lastRunAt}
+                          stale={board.stale}
+                          now={now}
+                          draft={drafts.has(
+                            boardDraftKey(repoGroup.repo, board.slug),
+                          )}
+                          onRename={
+                            onRenameBoard
+                              ? () => onRenameBoard(repoGroup.repo, board.slug)
+                              : undefined
+                          }
+                          onDelete={
+                            onDeleteBoard && board.slug !== DEFAULT_DASHBOARD
+                              ? () => onDeleteBoard(repoGroup.repo, board.slug)
+                              : undefined
+                          }
+                          onNavigate={onNavigate}
+                        />
+                      )
+                    }),
+                  ])}
+                  {repoGroup.dashboards.length === 0 && (
                     // The group's only child while the repo has no boards: the
                     // next action, sitting where the first board will. The plus
                     // takes the marker-column slot a board's dot uses, so it
@@ -225,7 +220,7 @@ export function DashboardSidebar({
                     <RailAction
                       icon={Plus}
                       label={t("switcher.newHere")}
-                      onClick={() => setCreating(group.repo)}
+                      onClick={() => setCreating(repoGroup.repo)}
                     />
                   )}
                 </NavGroup>
@@ -307,6 +302,21 @@ export function DashboardSidebar({
               sidebar.repos.map((repo) => [
                 repo.repo,
                 repo.dashboards.map((board) => board.slug),
+              ]),
+            )}
+            sections={Object.fromEntries(
+              sidebar.repos.map((repo) => [
+                repo.repo,
+                // The repo's authored section order first, then any a board
+                // names off-list — deduped, to offer in the create dialog.
+                [
+                  ...new Set([
+                    ...repo.sections,
+                    ...repo.dashboards
+                      .map((board) => board.section)
+                      .filter((section): section is string => section != null),
+                  ]),
+                ],
               ]),
             )}
           />

@@ -1,5 +1,11 @@
 # Dashboard sections — grouping a repo's boards in the rail
 
+> **Superseded in part by ADR-0039.** The wire fields were renamed
+> `group:`→`section:` and `groups:`→`sections:` (this ADR's deliberate name
+> split is reversed); the board display `name:` it references was removed. The
+> grouping model below — membership on the board, order in the repo, unlabeled
+> lead section — otherwise stands.
+
 ADR-0023 lists every board in a repo as one flat list under its rail group
 heading; ADR-0025 closes that list with the routine pool. One repo can hold
 many boards — a client per board, a project per board, a team surface per

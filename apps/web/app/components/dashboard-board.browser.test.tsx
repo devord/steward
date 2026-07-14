@@ -11,7 +11,6 @@ function view(): DashboardBase {
     dataRepo: "alice/steward-alice",
     isShared: false,
     dashboardSlug: "main",
-    dashboardName: null,
     routines: {
       routines: [
         {
@@ -64,12 +63,11 @@ async function renderBoard(
                 collaborators: null,
                 viewerIsAdmin: true,
                 viewerCanPush: true,
-                groups: [],
+                sections: [],
                 dashboards: [
                   {
                     slug: "main",
-                    name: null,
-                    group: null,
+                    section: null,
                     lastRunAt: null,
                     stale: false,
                   },
@@ -84,12 +82,11 @@ async function renderBoard(
                 collaborators: null,
                 viewerIsAdmin: null,
                 viewerCanPush: null,
-                groups: [],
+                sections: [],
                 dashboards: [
                   {
                     slug: "team-ops",
-                    name: null,
-                    group: null,
+                    section: null,
                     lastRunAt: null,
                     stale: false,
                   },

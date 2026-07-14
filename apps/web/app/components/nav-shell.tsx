@@ -33,7 +33,7 @@ export interface ShellNav {
   onDeleteBoard?: (repo: string, slug: string) => void
   /** Rename a board's display name — same per-board menu, offered on every
       board (the current name rides along for the dialog's prefill). */
-  onRenameBoard?: (repo: string, slug: string, name: string | null) => void
+  onRenameBoard?: (repo: string, slug: string) => void
 }
 
 /**

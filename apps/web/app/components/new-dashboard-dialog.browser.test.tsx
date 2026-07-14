@@ -19,6 +19,7 @@ async function renderDialog() {
           defaultRepo={REPO}
           homeRepo={REPO}
           takenSlugs={{ [REPO]: ["main"] }}
+          sections={{ [REPO]: ["Clients", "Projects"] }}
         />
       ),
     },
@@ -30,5 +31,17 @@ describe("NewDashboardDialog", () => {
   it("focuses the slug field on open", async () => {
     await renderDialog()
     await expect.poll(() => document.activeElement?.id).toBe("dashboard-slug")
+  })
+
+  it("offers an optional section field with the repo's sections", async () => {
+    await renderDialog()
+    const input = document.querySelector<HTMLInputElement>("#dashboard-section")
+    expect(input).not.toBeNull()
+    // The repo's known sections are offered via a native datalist.
+    const options = [
+      ...(document.querySelectorAll<HTMLOptionElement>("datalist option") ??
+        []),
+    ].map((option) => option.value)
+    expect(options).toEqual(["Clients", "Projects"])
   })
 })

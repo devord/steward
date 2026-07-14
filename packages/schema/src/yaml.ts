@@ -9,14 +9,37 @@ export function parseRoutinesFile(text: string): RoutinesFile {
   return routinesFileSchema.parse(parse(text))
 }
 
+/**
+ * Rename a legacy YAML key to its canonical successor when the object carries
+ * the old name but not the new one (ADR-0039: `group`→`section`,
+ * `groups`→`sections`). Left untouched otherwise, so a file already using the
+ * new key — or carrying both — keeps the canonical value. Serialization only
+ * ever emits the new key, so any edited file rewrites forward.
+ */
+function renameLegacyKey(value: unknown, from: string, to: string): unknown {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return value
+  }
+  const record: Record<string, unknown> = { ...value }
+  if (from in record && !(to in record)) {
+    record[to] = record[from]
+    delete record[from]
+  }
+  return record
+}
+
 /** Parse + validate data/dashboards/<slug>.yaml. Throws ZodError/YAMLParseError. */
 export function parseDashboardFile(text: string): DashboardFile {
-  return dashboardFileSchema.parse(parse(text))
+  return dashboardFileSchema.parse(
+    renameLegacyKey(parse(text), "group", "section"),
+  )
 }
 
 /** Parse + validate data/repo.yaml. An empty file is a valid empty config. */
 export function parseRepoFile(text: string): RepoFile {
-  return repoFileSchema.parse(parse(text) ?? {})
+  return repoFileSchema.parse(
+    renameLegacyKey(parse(text) ?? {}, "groups", "sections"),
+  )
 }
 
 /**

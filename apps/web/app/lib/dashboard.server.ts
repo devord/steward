@@ -87,8 +87,6 @@ export interface DashboardBase {
   /** Mirrors {@link BoardRef.shared} for the client (runner rule, badges). */
   isShared: boolean
   dashboardSlug: string
-  /** Display name from the layout file; UI falls back to the slug. */
-  dashboardName: string | null
   routines: RoutinesFile
   dashboard: DashboardFile
   /** Sibling dashboards in the same repo, for the switcher. */
@@ -190,14 +188,12 @@ export async function listDashboards(
 }
 
 /**
- * listDashboards plus each board's display name, for the rail: one extra
- * ETag-cached read per board, behind the sidebar's SWR window. Every name
- * read is best-effort — a missing or malformed layout file is just "no
- * display name" (the row shows its slug), never a failed group.
+ * listDashboards plus each board's section, for the rail: one extra
+ * ETag-cached read per board, behind the sidebar's SWR window. Every read is
+ * best-effort — a missing or malformed layout file is just "ungrouped, no
+ * freshness" (the row shows its slug), never a failed group.
  *
- * Ordered by what the row *shows* (name, slug as fallback) — the rail must
- * read as sorted, and it displays labels, not slugs. Renaming a board is
- * therefore also how you re-order it.
+ * Ordered by slug — the row's label (ADR-0039), so the rail reads as sorted.
  */
 async function listSidebarBoards(
   token: string,
@@ -207,24 +203,21 @@ async function listSidebarBoards(
   if (!slugs) return null
   const boards = await Promise.all(
     slugs.map(async (slug) => {
-      // One read yields the row's name, its section, and (kept for freshness,
-      // ADR-0035) the routine slugs its widgets render — a malformed or missing
-      // file degrades all three (row shows its slug, ungrouped, no freshness).
+      // One read yields the row's section and (kept for freshness, ADR-0035)
+      // the routine slugs its widgets render — a malformed or missing file
+      // degrades both (ungrouped, no freshness); the row shows its slug.
       const meta = await getFile(token, repo, dashboardPath(slug), "main")
         .then((raw) => (raw ? parseDashboardFile(raw.text) : null))
         .catch(() => null)
       return {
         slug,
-        name: meta?.name ?? null,
-        group: meta?.group ?? null,
+        section: meta?.section ?? null,
         routineSlugs: meta?.widgets.map((widget) => widget.routine) ?? [],
       }
     }),
   )
   return boards.sort((a, b) =>
-    (a.name ?? a.slug).localeCompare(b.name ?? b.slug, undefined, {
-      sensitivity: "base",
-    }),
+    a.slug.localeCompare(b.slug, undefined, { sensitivity: "base" }),
   )
 }
 
@@ -265,12 +258,9 @@ function rollUpFreshness(
 /** One board row in the rail. */
 export interface SidebarBoard {
   slug: string
-  /** Display name from the layout file (best-effort read). null → unset or
-      unreadable: the row falls back to the slug. */
-  name: string | null
-  /** Section this board sits in (the layout file's `group`). null → ungrouped:
-      the board leads its repo group in the unlabeled section. */
-  group: string | null
+  /** Section this board sits in (the layout file's `section`). null →
+      ungrouped: the board leads its repo group in the unlabeled section. */
+  section: string | null
   /** Freshness age: the board's *stalest* widget's last publish, ISO
       (ADR-0035) — a board is only as fresh as its most-behind content. null →
       unknown (no widget, none run, or beyond the read window): the row shows
@@ -288,8 +278,7 @@ export interface SidebarBoard {
     {@link SidebarBoard}, adding `lastRunAt`/`stale`. */
 interface RawSidebarBoard {
   slug: string
-  name: string | null
-  group: string | null
+  section: string | null
   routineSlugs: string[]
 }
 
@@ -315,14 +304,14 @@ export interface SidebarRepo {
   /** Gates the rename affordance — the display name is a commit, so it
       needs push access. null → unknown: affordance withheld. */
   viewerCanPush: boolean | null
-  /** Boards, slug + display name. `[]` — the repo is alive with no boards yet
-      (git prunes `data/dashboards/` with the last file): the group stays,
-      carrying its create-first row. */
+  /** Boards, by slug. `[]` — the repo is alive with no boards yet (git prunes
+      `data/dashboards/` with the last file): the group stays, carrying its
+      create-first row. */
   dashboards: SidebarBoard[]
-  /** Section order for this repo (data/repo.yaml `groups`, ADR-0034). Carries
-      sequence only — membership rides each board's `group`. `[]` → no order
-      authored: sections fall back to alphabetical. */
-  groups: string[]
+  /** Section order for this repo (data/repo.yaml `sections`, ADR-0034/0039).
+      Carries sequence only — membership rides each board's `section`. `[]` →
+      no order authored: sections fall back to alphabetical. */
+  sections: string[]
 }
 
 export interface SidebarData {
@@ -404,7 +393,7 @@ export async function loadSidebar(
         viewerIsAdmin: repo.viewerIsAdmin,
         viewerCanPush: repo.viewerCanPush,
         dashboards,
-        groups: repoFile?.groups ?? [],
+        sections: repoFile?.sections ?? [],
       }
     }),
   )
@@ -490,7 +479,6 @@ export async function loadDashboardStructure(
     dataRepo: ref.repo,
     isShared: ref.shared,
     dashboardSlug: ref.dashboard,
-    dashboardName: dashboard.name ?? null,
     routines,
     dashboard,
     dashboards: dashboards ?? [ref.dashboard],
