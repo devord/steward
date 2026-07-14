@@ -39,12 +39,13 @@ import { useT } from "../lib/i18n.tsx"
  * It carries no surface, width, or positioning of its own — the host owns the
  * border, background, collapse, and resize — so the two placements can't drift.
  *
- * The rail reads as three tiers (ADR-0023/0034): a repo heading anchored by its
- * own glyph (repo-group-header.tsx) and set in the board type size, its boards
- * threaded below on a hairline spine, and — one step deeper — the boards of any
- * named section, under a quiet sub-label. The heading leads by weight, glyph,
- * and full ink; the boards are quiet mono until active. Indent plus the spine
- * read them as the repo's children.
+ * The rail reads as three tiers (ADR-0023/0034): a repo caption (a muted
+ * uppercase "icon · label · count" header — repo-group-header.tsx — the terminal
+ * section-header idiom), its boards threaded below on a hairline spine as the
+ * bright, primary tier, and — one step deeper — the boards of any named section
+ * under a quieter sub-caption. The captions recede (small, tracked, muted); the
+ * boards carry the ink. Indent plus the spine read them as the caption's
+ * children.
  *
  * Board switching lives in this always-visible list: every board is one click,
  * the active one reads from across the room, and "new dashboard" is a peer of
@@ -371,16 +372,17 @@ function RailAction({
 }
 
 /**
- * A dashboard section's sub-heading (ADR-0034) — one tier below the repo
- * heading, set off by size, weight, and indent: the repo heading is 15px
- * full-ink with its own glyph, while this is 13px `ink-dim` medium (navigational
- * text the user reads to steer — it must clear AA at this size, so not the
- * ≥3:1 `ink-faint` metadata role), a quiet sub-label sitting at the board-name
- * column with its own boards indented one step under it. A generous gap opens
- * above each section (tight within a section, air between them) except the
- * first, which tucks straight under the repo heading. The label is the viewer's
- * own words (a display label, ADR-0026), so it's sans and verbatim — truncated,
- * never wrapped, to keep the rail one row per line.
+ * A dashboard section's sub-heading (ADR-0034) — the repo caption's idiom one
+ * tier in: 11px `ink-dim` UPPERCASE tracked, but medium where the repo is
+ * semibold, glyph-less where the repo has one, and indented to the board-name
+ * column with its own boards a step deeper. Same terminal-caption voice, read
+ * as subordinate by weight, the missing glyph, and the indent — not by being
+ * smaller than the boards it heads (the inversion the caption idiom avoids). It
+ * stays `ink-dim`, never the ≥3:1 `ink-faint` metadata role — the user reads it
+ * to steer, so it must clear AA at this size. A generous gap opens above each
+ * section (tight within, air between) except the first, which tucks straight
+ * under the repo heading. The label is the viewer's own words (a display label,
+ * ADR-0026), verbatim but cased up by the caption — truncated, never wrapped.
  */
 function SectionLabel({
   children,
@@ -395,7 +397,7 @@ function SectionLabel({
     <div
       data-testid="rail-section"
       className={cn(
-        "truncate pr-2.5 pl-6 text-xs font-medium text-ink-dim",
+        "truncate pr-2.5 pl-6 text-[11px] font-medium tracking-wider text-ink-dim uppercase",
         !first && "mt-3",
       )}
     >
@@ -546,13 +548,14 @@ function RowStateDot({
 }
 
 /**
- * One board link, indented to hang off its group's spine. The leading slot is
- * pinned to the spine's x so the active accent dot reads as a node on it ("you
+ * One board link, indented to hang off its group's spine. Boards carry full ink
+ * at rest — the bright, primary tier under the muted captions. The leading slot
+ * is pinned to the spine's x so the active accent dot reads as a node on it ("you
  * are here"); inactive rows leave the spine unbroken, and the dot warms to a
- * faint fill on hover. Active also fills the dot to accent and lifts the name to
- * full ink. A board inside a named section (`indented`) hangs one step deeper,
- * its dot on a second column just right of the spine — the extra indent is what
- * nests it under its section label (ADR-0034).
+ * faint fill on hover. Active fills the dot to accent, adds weight, and lays the
+ * selection tint under the row. A board inside a named section (`indented`) hangs
+ * one step deeper, its dot on a second column just right of the spine — the extra
+ * indent is what nests it under its section label (ADR-0034).
  *
  * When `onRename`/`onDelete` are set the row carries a trailing `⋯` menu:
  * board-lifecycle actions live here, beside the board they act on, so any board
@@ -600,9 +603,12 @@ function NavItem({
           "group relative flex min-w-0 flex-1 items-center rounded-md py-1.5 pr-2.5 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
           indented ? "pl-10" : "pl-6",
           hasMenu && "pr-8",
+          // Boards are the bright, primary tier under the muted captions (the
+          // Flow inversion: dim section headers, full-ink content). Active adds
+          // weight, the tint, and the accent dot on top of that same ink.
           active
             ? "bg-primary/10 font-medium text-foreground"
-            : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
+            : "text-ink hover:bg-sidebar-accent/60",
         )}
       >
         <span
