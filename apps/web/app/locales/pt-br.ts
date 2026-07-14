@@ -137,7 +137,7 @@ export const ptBR: Messages = {
 
   "templates.title": "Templates",
   "templates.subtitle":
-    "O que o seletor de rotinas oferece — templates/routines/ em {repo}, mais os nativos.",
+    "O que o seletor de rotinas oferece — {dir} em {repo}, mais os nativos.",
   "templates.colTemplate": "Template",
   "templates.colDescription": "Descrição",
   "templates.colSource": "Origem",

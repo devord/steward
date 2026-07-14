@@ -74,6 +74,10 @@ interface RepoInfo {
   isShared: boolean
 }
 
+/** The subtitle idiom for git-facing links: git is visible, not hidden. */
+const SUBTITLE_LINK =
+  "font-mono underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
+
 interface Pool {
   routines: { routines: Routine[] }
   baseSha: string | null
@@ -286,7 +290,7 @@ export function RoutinesView({
               href={`https://github.com/${repo.full}`}
               target="_blank"
               rel="noreferrer"
-              className="font-mono underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
+              className={SUBTITLE_LINK}
             >
               {repo.name}
             </a>
@@ -845,8 +849,39 @@ export function TemplatesSection({
       <h2 className="font-mono text-base font-medium text-foreground">
         {t("templates.title")}
       </h2>
+      {/* Both slots link out — {dir} to the templates directory itself
+          (templates are authored in git, never the app — ADR-0022), {repo}
+          to the repo root, matching the pool subtitle above. Split from the
+          translated template so the links survive every locale's word
+          order. HEAD lets GitHub resolve the default branch. */}
       <p className="mt-0.5 mb-3 text-sm text-ink-dim">
-        {t("templates.subtitle", { repo: repo.name })}
+        {t("templates.subtitle")
+          .split(/(\{dir\}|\{repo\})/)
+          .map((part, i) =>
+            part === "{dir}" ? (
+              <a
+                key={i}
+                href={`https://github.com/${repo.full}/tree/HEAD/templates/routines`}
+                target="_blank"
+                rel="noreferrer"
+                className={SUBTITLE_LINK}
+              >
+                templates/routines/
+              </a>
+            ) : part === "{repo}" ? (
+              <a
+                key={i}
+                href={`https://github.com/${repo.full}`}
+                target="_blank"
+                rel="noreferrer"
+                className={SUBTITLE_LINK}
+              >
+                {repo.name}
+              </a>
+            ) : (
+              part
+            ),
+          )}
       </p>
       {/* Same -mx-3 bleed as the pool table above: the row wash breathes past
           the content column while the edge cells pad the text back to the
