@@ -71,11 +71,18 @@ export function NavShell({
   const [collapsed, toggleCollapsed] = useSidebarCollapsed()
   const { width, setWidth, persist } = useSidebarWidth()
   const [resizing, setResizing] = useState(false)
-  // Transitions (and the stored collapse/width) apply only after mount, so the
-  // first client paint matches SSR and the initial preference correction
-  // doesn't animate.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  // The width transition is enabled a frame *after* mount — not in a plain
+  // mount effect, which React would batch with the stored-preference
+  // correction (default → localStorage width/collapsed) and animate it. Every
+  // route mounts its own NavShell, so that correction runs on each page
+  // switch; deferring past its paint keeps the rail from snapping to the
+  // default and sliding to the stored width. Transitions still fire for
+  // genuine collapse toggles afterwards.
+  const [animate, setAnimate] = useState(false)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setAnimate(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
 
   const onGutterPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -133,7 +140,7 @@ export function NavShell({
         inert={collapsed || undefined}
         className={cn(
           "sticky top-0 hidden h-dvh shrink-0 overflow-hidden bg-sidebar lg:block",
-          mounted && !resizing
+          animate && !resizing
             ? "transition-[width] duration-200 ease-out motion-reduce:transition-none"
             : "",
         )}
