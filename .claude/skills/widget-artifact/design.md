@@ -77,12 +77,12 @@ media block:
 @media (min-width: 900px) {
   main,
   footer {
+    /* Fill the frame — the artifact takes the full width it's given, and
+       the board sizes the widget. No content-width cap: a ledger/table
+       artifact wants its columns to breathe edge to edge. If a widget is
+       long-form prose, cap the measure on the text block itself (~72ch),
+       never on the whole artifact. */
     width: 100%;
-    max-width: 920px;
-    /* Left-aligned, not centered: on a flush board section the content must
-       line up with the hard-left section header, so the readability cap sits
-       against the left edge and any slack falls to the right. */
-    margin-inline: 0 auto;
   }
   :root:not([data-steward-tile]) body {
     padding: 40px 32px;
@@ -321,19 +321,29 @@ key.)
 
 A person as a ledger key: an 18px round image inlined as a data URI
 (fetched at generation time, ≤48px source — widget-standard rule 1
-forbids images by URL). `alt` and `title` both carry the person's
-name/login, so hover answers _who_; identity never rides on the picture
-alone. When no image could be inlined, fall back to the initial form —
-same footprint, one mono capital. Avatars are the one raster exception
-in an otherwise vector language: earn them (a row genuinely about a
-person), never decorate with them.
+forbids images by URL), wrapped in a link to the person's profile so
+the picture is the click-through to _who_. The link's `title` and the
+img's `alt` carry the person's **display name** (`Daniel Moraes`, not
+the handle `danielmoraes`), so hover answers _who_; identity never
+rides on the picture alone. When no image could be inlined, fall back
+to the initial form — same footprint, one mono capital, still linked.
+Avatars are the one raster exception in an otherwise vector language:
+earn them (a row genuinely about a person), never decorate with them.
 
 ```css
+.avatar-link {
+  align-self: center;
+  display: inline-flex;
+  border-radius: 999px;
+  text-decoration: none;
+}
+.avatar-link:hover .avatar {
+  border-color: var(--color-ink-dim);
+}
 .avatar {
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  align-self: center;
   border: 1px solid var(--color-border);
 }
 span.avatar {
@@ -350,13 +360,24 @@ span.avatar {
 ```
 
 ```html
-<img
-  class="avatar"
-  src="data:image/png;base64,…"
-  alt="octocat"
-  title="octocat"
-/>
-<span class="avatar" title="hubot">H</span>
+<a
+  class="avatar-link"
+  href="https://github.com/octocat"
+  target="_blank"
+  rel="noopener"
+  title="The Octocat"
+>
+  <img class="avatar" src="data:image/png;base64,…" alt="The Octocat" />
+</a>
+<a
+  class="avatar-link"
+  href="https://github.com/hubot"
+  target="_blank"
+  rel="noopener"
+  title="hubot"
+>
+  <span class="avatar">H</span>
+</a>
 ```
 
 ### Meter

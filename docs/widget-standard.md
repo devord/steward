@@ -50,13 +50,16 @@ An artifact MUST:
    - **Full view** (`≥ ~900 px` wide): the dashboard can lift any widget into
      a full-screen overlay — the same sandboxed, theme-injected iframe at
      nearly the whole viewport — so the reader sees every row of data. Author
-     for it: the widest tier must read like a page, not a stretched cell. Cap
-     the content column (a `max-width` around `72ch`/`900 px`, centered) so
-     text never runs edge-to-edge on a wide monitor, and spend the extra
-     height on the fullest detail level (all line items, full history, the
-     large sparkline) rather than scaling one number up. There is no separate
-     full-screen artifact to author — the one published file must serve the
-     1×1 glance and the full page through its `@media` queries alone.
+     for it: the widest tier must read like a page, not a stretched cell. The
+     artifact **fills the full width it is given** — the board controls the
+     widget's width, so the content is never capped; a ledger/table artifact
+     wants its columns to breathe edge to edge. (The one exception is
+     long-form prose: cap the measure on the text block itself, ~`72ch`, not
+     on the whole artifact.) Spend the extra height on the fullest detail
+     level (all line items, full history, the large sparkline) rather than
+     scaling one number up. There is no separate full-screen artifact to
+     author — the one published file must serve the 1×1 glance and the full
+     page through its `@media` queries alone.
 3. **Use the shared theme tokens** — the gruvbox-dark-hard palette as CSS
    custom properties with `color-scheme: dark`. The canonical values live in
    the theme registry (`apps/web/app/lib/theme.ts`, the gruvbox-dark entry);
