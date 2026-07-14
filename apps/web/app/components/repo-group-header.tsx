@@ -72,8 +72,10 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
       // pr-1.5, not pr-1: the ⋯ here is size-5 while the board rows' is
       // size-6 with right-1 — the extra 2px puts both glyphs' optical
       // centers on one column (the buttons are invisible at rest, so the
-      // glyph, not the box edge, is what must align).
-      className="group/repo mb-1 flex h-5 items-center gap-1.5 pr-1.5 pl-2.5"
+      // glyph, not the box edge, is what must align). On coarse pointers
+      // both buttons take the icon-xs size-8 floor, so the 2px compensation
+      // inverts: pr-1 matches the rows' right-1 exactly.
+      className="group/repo mb-1 flex h-5 items-center gap-1.5 pr-1.5 pl-2.5 pointer-coarse:pr-1"
       title={group.repo}
     >
       {/* ink-dim, not ink-faint: with N repos the group heading is the rail's
@@ -222,7 +224,9 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
             aria-label={gitHubLabel}
             title={gitHubLabel}
             className={cn(
-              "flex size-5 items-center justify-center rounded-sm text-ink-faint opacity-0 transition-opacity outline-none",
+              // size-8 on coarse: the same floor the ⋯ buttons get from
+              // icon-xs, so this glyph holds their column and touch target.
+              "flex size-5 items-center justify-center rounded-sm text-ink-faint opacity-0 transition-opacity outline-none pointer-coarse:size-8",
               "group-hover/repo:opacity-100 focus-visible:opacity-100 focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:opacity-100",
               "hover:bg-sidebar-accent hover:text-foreground",
             )}

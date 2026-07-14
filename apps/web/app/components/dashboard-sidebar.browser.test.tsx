@@ -1,3 +1,4 @@
+import { cdp } from "vitest/browser"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { describe, expect, it, vi } from "vitest"
 import { render } from "vitest-browser-react"
@@ -260,6 +261,39 @@ describe("DashboardSidebar repo groups", () => {
       rowGlyph.left + rowGlyph.width / 2,
       1,
     )
+  })
+
+  it("holds the ⋯ column on coarse pointers", async () => {
+    // Under pointer-coarse every icon-xs button floors to size-8, which
+    // inverts the fine-pointer size-5-vs-size-6 compensation — the header
+    // row swaps pr-1.5 for pr-1 to keep both glyphs on one column. This
+    // is the mobile drawer's geometry, so it regresses invisibly on
+    // desktop; emulate touch to pin it.
+    await renderSidebar()
+    await cdp().send("Emulation.setTouchEmulationEnabled", {
+      enabled: true,
+      maxTouchPoints: 1,
+    })
+    try {
+      await vi.waitFor(() =>
+        expect(matchMedia("(pointer: coarse)").matches).toBe(true),
+      )
+      const headerGlyph = groupHeader(HOME_REPO)
+        ?.querySelector('[data-slot="popover-trigger"] svg')
+        ?.getBoundingClientRect()
+      const rowGlyph = requireMenuButton("test")
+        .querySelector("svg")
+        ?.getBoundingClientRect()
+      if (!headerGlyph || !rowGlyph) throw new Error("missing a ⋯ glyph")
+      expect(headerGlyph.left + headerGlyph.width / 2).toBeCloseTo(
+        rowGlyph.left + rowGlyph.width / 2,
+        1,
+      )
+    } finally {
+      await cdp().send("Emulation.setTouchEmulationEnabled", {
+        enabled: false,
+      })
+    }
   })
 
   it("opens an access popover: visibility, people, GitHub link", async () => {
