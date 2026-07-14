@@ -32,13 +32,14 @@ export function loader({ request }: Route.LoaderArgs) {
 const THEME_STYLESHEET = themeStylesheet()
 
 export const links: Route.LinksFunction = () => [
-  // Tab strips get the bare glyph, not a tile: favicon.svg swaps its inks
-  // with prefers-color-scheme (the GitHub/Vercel treatment), and the .ico
-  // fallback (16/32/48) renders the glyph in the palette's theme-neutral
-  // gray, since .ico can't media-query. The dark identity tile survives
-  // only on launcher surfaces (apple-touch + manifest icons), which must
-  // be opaque and hold their own on unknown wallpapers. The manifest gives
-  // Android a real maskable adaptive icon instead of masking apple-touch.
+  // Every icon surface wears the product-icon chip (Fold + Chip,
+  // DESIGN.md § Mark) — the bare glyph floated on arbitrary tab colours.
+  // favicon.svg swaps the chip's tile + inks with prefers-color-scheme;
+  // the .ico fallback (16/32/48) bakes the dark identity chip, since .ico
+  // can't media-query. apple-touch + manifest icons bake the same dark
+  // chip, opaque so they hold their own on unknown wallpapers; the
+  // manifest gives Android a real maskable adaptive icon (full-bleed dark,
+  // bow inside the safe zone) instead of masking apple-touch.
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
   { rel: "icon", href: "/favicon.ico", sizes: "16x16 32x32 48x48" },
   { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
