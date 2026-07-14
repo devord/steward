@@ -468,6 +468,30 @@ describe("DashboardSidebar repo groups", () => {
     expect(value?.textContent ?? "").toContain(SHARED_REPO)
   })
 
+  it("keeps the foot's box stable while the account menu is open", async () => {
+    // The account menu is modal, so Base UI parks hidden focus-guard spans
+    // beside the trigger while it's open. The foot must lay out with flex
+    // gap (out-of-flow children take no slot) — under space-y the guards
+    // earned sibling margins and the foot grew, nudging both rows upward.
+    await renderSidebar()
+    const trigger = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Account"]',
+    )
+    if (!trigger) throw new Error("no account trigger")
+    const foot = trigger.parentElement
+    if (!foot) throw new Error("no foot")
+    const before = foot.getBoundingClientRect()
+
+    trigger.click()
+    await vi.waitFor(() =>
+      expect(document.querySelector('[role="menu"]')).not.toBeNull(),
+    )
+
+    const after = foot.getBoundingClientRect()
+    expect(after.height).toBeCloseTo(before.height, 1)
+    expect(after.top).toBeCloseTo(before.top, 1)
+  })
+
   it("notes when discovery degraded instead of hiding it", async () => {
     await renderSidebar({
       sidebar: { repos: [base.sidebar.repos[0]], complete: false },

@@ -201,7 +201,11 @@ export function DashboardSidebar({
           "Add data repo" grows the rail itself (a new group), so it sits with
           the account — the other whole-workspace control — on a shared column
           keyed to the account avatar. */}
-      <div className="shrink-0 space-y-0.5 border-t border-border-dim p-2">
+      {/* flex+gap, not space-y: the account menu is modal, so Base UI drops
+          hidden focus-guard spans beside the trigger while it's open. space-y's
+          sibling margins would count them and grow the foot 2px; gap ignores
+          out-of-flow children, so the foot holds still. */}
+      <div className="flex shrink-0 flex-col gap-0.5 border-t border-border-dim p-2">
         <button
           type="button"
           onClick={() => setAddingRepo(true)}
