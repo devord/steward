@@ -6,6 +6,10 @@ import { AddRoutineDialog } from "../components/add-routine-dialog.tsx"
 import { Button } from "~/components/ui/button"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
 
+// The real built-in archetype, so the harness previews the picker's sample
+// render exactly as discovery serves it (ADR-0037).
+import dailyPlanSample from "../../../../docs/samples/daily-plan.html?raw"
+
 // Dev-only harness: iterate on the add-routine wizard without a GitHub
 // session or live template discovery behind it.
 const templates: DiscoveredTemplate[] = [
@@ -30,6 +34,7 @@ const templates: DiscoveredTemplate[] = [
       connectors: ["Google_Calendar"],
     },
     source: "builtin",
+    sample: dailyPlanSample,
   },
   {
     id: "repo-pulse",

@@ -39,8 +39,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select"
+import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
 import { useT } from "../lib/i18n.tsx"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
+import { frameArtifactHtml } from "../lib/theme.ts"
+import { useResolvedTheme } from "../lib/use-appearance.ts"
 import type { RepoSearchResult } from "../routes/repos.ts"
 import { TokenCombobox } from "./token-combobox.tsx"
 import { CopyableCommand } from "./widget-card.tsx"
@@ -597,7 +600,19 @@ export function AddRoutineDialog({
                       description={entry.widget.artifact}
                       selected={entry.id === templateId}
                       onPick={() => pickTemplate(entry)}
-                    />
+                    >
+                      {/* Selecting a card reveals its sample render — see what
+                          the template makes before committing a routine to it
+                          (ADR-0037). Nested like the custom card's prompt, so
+                          only the picked card renders (one iframe at a time)
+                          and a template with no sample just has no panel. */}
+                      {entry.id === templateId && entry.sample != null && (
+                        <TemplatePreview
+                          html={entry.sample}
+                          name={entry.name}
+                        />
+                      )}
+                    </TemplateCard>
                   ))}
                 </div>
               </div>
@@ -985,6 +1000,38 @@ function TemplateCard({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * A template's sample render in the picker (ADR-0037): the canned artifact
+ * framed exactly as the board frames a live widget — same `frameArtifactHtml`
+ * tile view, same sandboxed srcdoc iframe, same inlined mono — so the preview
+ * is faithful to what the widget will look like, only the data is an example.
+ * Nested in the selected card, so at most one iframe mounts at a time.
+ */
+function TemplatePreview({ html, name }: { html: string; name: string }) {
+  const t = useT()
+  const theme = useResolvedTheme()
+  const framed = useMemo(
+    () => frameArtifactHtml(html, theme, "tile", ARTIFACT_FONT_STYLE),
+    [html, theme],
+  )
+  return (
+    <figure className="grid gap-1.5">
+      <div className="overflow-hidden rounded-md border border-border-dim">
+        <iframe
+          srcDoc={framed}
+          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+          title={t("dialog.samplePreviewTitle", { name })}
+          loading="lazy"
+          className="h-44 w-full border-0"
+        />
+      </div>
+      <figcaption className="font-mono text-xs text-ink-faint">
+        {t("dialog.samplePreview")}
+      </figcaption>
+    </figure>
   )
 }
 

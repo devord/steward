@@ -52,7 +52,9 @@ the deployed app plus a data repo on a real account.
 Done: staleness badge (now − last run vs schedule interval, on the widget
 footer); drag-and-drop layout; multi-repo/org support via team dashboards
 (ADR-0010: org team data repo, `data/dashboards/<slug>.yaml` layouts,
-`/team/<slug>` routes, `runner:`-scoped `routines:sync`). Open backlog:
+`/team/<slug>` routes, `runner:`-scoped `routines:sync`); template preview
+in the add-routine picker (ADR-0037: built-ins reuse their `docs/samples/`
+archetype, repo templates a `templates/routines/<id>.sample.html` sibling). Open backlog:
 external/PIN-gated artifact sharing (second publish target), artifact
 version browsing (free from git history), `instructionsFile:` for
 long-form routine guidance, dashboard rename (today: delete + recreate),

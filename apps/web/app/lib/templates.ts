@@ -13,4 +13,10 @@ export type DiscoveredTemplate = RoutineTemplate & {
       picker shows one card either way; the templates ledger names the
       override, since nothing else does. */
   shadows?: boolean
+  /** A canned artifact render for the picker's preview (ADR-0037), when the
+      template ships one — a built-in's `docs/samples/<id>.html` archetype or a
+      repo template's `templates/routines/<id>.sample.html` sibling. Raw
+      artifact HTML; the picker frames it exactly as the board frames a live
+      widget. Absent when the template ships no sample. */
+  sample?: string
 }

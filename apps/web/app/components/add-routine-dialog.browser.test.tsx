@@ -43,8 +43,27 @@ const repoPulseTemplate: DiscoveredTemplate = {
   source: "repo",
 }
 
+/** A built-in shipping a sample render — the fixture for the picker preview
+    (ADR-0037). The HTML is a minimal artifact; the preview only needs to frame
+    and mount it. */
+const dailyPlanTemplate: DiscoveredTemplate = {
+  id: "daily-plan",
+  name: "Daily plan",
+  description: "Today's plan: top 3 priorities, time blocks, and carry-overs",
+  widget: {
+    artifact: "Today's plan: top 3 priorities, time blocks, and carry-overs",
+    sizes: { default: { cols: 2, rows: 2 } },
+    schedule: "0 8 * * *",
+  },
+  source: "builtin",
+  sample: "<main><h1>Daily plan</h1><p>Ship the picker preview.</p></main>",
+}
+
 const hasText = (text: string) =>
   document.body.textContent?.includes(text) ?? false
+
+const previewFrame = (): HTMLIFrameElement | null =>
+  document.querySelector<HTMLIFrameElement>('iframe[title$="sample render"]')
 
 const button = (label: string): HTMLButtonElement => {
   const found = [...document.querySelectorAll("button")].find(
@@ -174,6 +193,40 @@ describe("AddRoutineDialog add mode", () => {
     // existing repo-pulse routine.
     expect(input("routine-name").value).toBe("repo-pulse")
     expect(input("routine-slug").value).toBe("repo-pulse-2")
+  })
+
+  it("previews the selected template's sample render, only while picked (ADR-0037)", async () => {
+    await renderDialog({ templates: [dailyPlanTemplate] })
+
+    // Custom is selected on open — no template card is picked, so no preview.
+    expect(previewFrame()).toBeNull()
+
+    buttonContaining("daily-plan").click()
+    await vi.waitFor(() =>
+      expect(buttonContaining("daily-plan").getAttribute("aria-pressed")).toBe(
+        "true",
+      ),
+    )
+    // The sample render mounts in a sandboxed frame, captioned as an example.
+    const frame = await vi.waitFor(() => {
+      const f = previewFrame()
+      if (!f) throw new Error("no preview frame")
+      return f
+    })
+    expect(frame.getAttribute("sandbox")).toContain("allow-scripts")
+    expect(hasText("Sample render")).toBe(true)
+
+    // Clicking the picked card again deselects it — the preview goes with it.
+    buttonContaining("daily-plan").click()
+    await vi.waitFor(() => expect(previewFrame()).toBeNull())
+  })
+
+  it("shows no preview for a template that ships no sample", async () => {
+    await renderDialog({ templates: [repoPulseTemplate] })
+
+    buttonContaining("repo-pulse").click()
+    await vi.waitFor(() => expect(button("Next").disabled).toBe(false))
+    expect(previewFrame()).toBeNull()
   })
 
   it("blocks submit while a required template param is empty (ADR-0020)", async () => {

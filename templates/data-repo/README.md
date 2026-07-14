@@ -19,6 +19,8 @@
 - **`data/repo.yaml`** — optional rail display name and section order.
 - **`data/triggers/<slug>.json`** — API-trigger token for a manual cloud routine.
 - **`templates/routines/<id>.md`** — routine templates, shown in the app's picker.
+- **`templates/routines/<id>.sample.html`** — optional sample render for a
+  template; the picker previews it when adding a routine (ADR-0037).
 - **`artifacts`** branch — published widgets, written via `publish-widget`.
 
 Edit in the Steward app or by hand — it's plain YAML, validated on load.

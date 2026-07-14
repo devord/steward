@@ -356,6 +356,9 @@ export const ptBR: Messages = {
   "dialog.customCard": "Descreva você mesmo — sua descrição é o brief",
   "dialog.sourceRepo": "Deste repo",
   "dialog.sourceBuiltin": "Nativo",
+  "dialog.samplePreview":
+    "Exemplo de renderização — os dados da sua rotina serão outros",
+  "dialog.samplePreviewTitle": "Exemplo de renderização de {name}",
   "dialog.name": "Nome",
   "dialog.namePlaceholder": "Plano do Dia",
   "dialog.slug": "Slug",

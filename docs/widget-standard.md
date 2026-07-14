@@ -102,7 +102,10 @@ An artifact MUST:
    sparklines, empty states — and the per-tier playbook. Artifacts pick
    from it rather than inventing per-routine visuals, so a board of
    widgets from different routines reads as one product; the canonical
-   samples live in `docs/samples/`.
+   samples live in `docs/samples/`. These double as the built-in templates'
+   picker previews (ADR-0037) — keyed to the template by basename — so a
+   repo template can ship its own preview as a
+   `templates/routines/<id>.sample.html` sibling.
 
 ## Addressing & freshness
 
