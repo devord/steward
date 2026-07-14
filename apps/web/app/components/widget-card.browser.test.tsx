@@ -84,6 +84,28 @@ describe("WidgetCard empty states", () => {
     await expect.poll(() => hasText("npx @devord/steward run r")).toBe(true)
   })
 
+  it("opens the run-locally modal from a live local routine's update control", async () => {
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine({ host: "local" })}
+        artifact={artifact({ html: "<h1>live</h1>" })}
+        now={Date.now()}
+        dataRepo="o/r"
+        committed
+      />,
+    )
+    // A local routine can't be fired from the board — its update control opens
+    // the how-to-run-it modal, which names both honest ways in (CLI + prompt).
+    const button = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Run R locally"]',
+    )
+    expect(button).not.toBeNull()
+    button?.click()
+    await expect.poll(() => hasText("npx @devord/steward run r")).toBe(true)
+    expect(hasText("follow the run-routine skill")).toBe(true)
+  })
+
   it("offers the first run for a scheduled routine whose trigger exists", async () => {
     await renderCard(
       <WidgetCard

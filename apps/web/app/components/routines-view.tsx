@@ -28,6 +28,7 @@ import {
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
 import { NavShell } from "./nav-shell.tsx"
 import { SyncPanel } from "./sync-panel.tsx"
+import { RunLocallyDialog } from "./widget-card.tsx"
 import { Button } from "~/components/ui/button"
 import {
   Dialog,
@@ -693,6 +694,11 @@ function RoutineRow({
           {cloud && routine.enabled && status?.kind !== "running" && (
             <RunNowAction routine={routine} repo={repo} onFired={onFired} />
           )}
+          {/* Local routines can't be fired from here — the run button opens
+              the how-to-run-it modal instead of the cloud /run path. */}
+          {!cloud && routine.enabled && (
+            <RunLocallyAction routine={routine} repo={repo} />
+          )}
           <RowMenu
             routine={routine}
             committed={committed}
@@ -1164,6 +1170,41 @@ function RunNowAction({
         {error ?? ""}
       </span>
     </Button>
+  )
+}
+
+/** The pool's run affordance for a local routine (ADR-0012): the board can't
+    fire it — it runs on the user's machine — so the button opens the
+    how-to-run-it modal instead of the cloud /run path. */
+function RunLocallyAction({
+  routine,
+  repo,
+}: {
+  routine: Routine
+  repo: RepoInfo
+}) {
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const label = t("widget.runLocalOpen", { name: routine.name })
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label={label}
+        title={label}
+        className={rowActionCls}
+        onClick={() => setOpen(true)}
+      >
+        <Play />
+      </Button>
+      <RunLocallyDialog
+        routine={routine}
+        dataRepo={repo.full}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
   )
 }
 

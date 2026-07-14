@@ -319,6 +319,12 @@ export const en = {
   "widget.updateFailed": "The run request failed — try again",
   "widget.copyCommand": "Copy the terminal command that runs {name}",
   "widget.copied": "Command copied — run it from your Steward checkout",
+  "widget.runLocalOpen": "Run {name} locally",
+  "widget.runLocalTitle": "Run this routine locally",
+  "widget.runLocalDescription":
+    "{name} runs on your machine, not in the cloud — there's no API trigger to fire from here. Run it from a terminal:",
+  "widget.runLocalCliLabel": "With the Steward CLI",
+  "widget.runLocalPromptLabel": "Or ask Claude Code — no checkout needed:",
   "widget.unreachable": "GitHub unreachable — retries on next refresh",
   "widget.disabled": "Routine disabled",
   "widget.enable": "Enable",

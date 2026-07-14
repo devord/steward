@@ -315,6 +315,13 @@ export const ptBR: Messages = {
   "widget.updateFailed": "A solicitação falhou — tente de novo",
   "widget.copyCommand": "Copiar o comando de terminal que roda {name}",
   "widget.copied": "Comando copiado — rode a partir do seu checkout do Steward",
+  "widget.runLocalOpen": "Rodar {name} localmente",
+  "widget.runLocalTitle": "Rode esta rotina localmente",
+  "widget.runLocalDescription":
+    "{name} roda na sua máquina, não na nuvem — não há gatilho de API para disparar daqui. Rode a partir de um terminal:",
+  "widget.runLocalCliLabel": "Com a CLI do Steward",
+  "widget.runLocalPromptLabel":
+    "Ou peça ao Claude Code — sem precisar de checkout:",
   "widget.unreachable":
     "GitHub inacessível — tentará novamente na próxima atualização",
   "widget.disabled": "Rotina desativada",
