@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import type { SidebarBoard } from "./dashboard.server.ts"
-import { sectionBoards } from "./sidebar-sections.ts"
+import { reorderAfterSectionEdit, sectionBoards } from "./sidebar-sections.ts"
 
 const board = (slug: string, section: string | null = null): SidebarBoard => ({
   slug,
@@ -64,5 +64,50 @@ describe("sectionBoards", () => {
   it("omits the unlabeled section when every board is grouped", () => {
     const sections = sectionBoards([board("corza", "Clients")], [])
     expect(sections.map((s) => s.label)).toEqual(["Clients"])
+  })
+})
+
+describe("reorderAfterSectionEdit", () => {
+  it("renames a listed section in place, keeping its slot", () => {
+    expect(
+      reorderAfterSectionEdit(["Projects", "Clients", "Ops"], {
+        rename: { from: "Clients", to: "Accounts" },
+      }),
+    ).toEqual(["Projects", "Accounts", "Ops"])
+  })
+
+  it("leaves the list untouched when the renamed section isn't listed", () => {
+    expect(
+      reorderAfterSectionEdit(["Projects"], {
+        rename: { from: "Clients", to: "Accounts" },
+      }),
+    ).toEqual(["Projects"])
+  })
+
+  it("merges to one entry when renaming onto an existing section", () => {
+    // Clients folds into the already-listed Projects, which keeps its slot.
+    expect(
+      reorderAfterSectionEdit(["Projects", "Clients"], {
+        rename: { from: "Clients", to: "Projects" },
+      }),
+    ).toEqual(["Projects"])
+  })
+
+  it("removes a section from the list", () => {
+    expect(
+      reorderAfterSectionEdit(["Projects", "Clients"], { remove: "Clients" }),
+    ).toEqual(["Projects"])
+  })
+
+  it("removing an unlisted section is a no-op", () => {
+    expect(
+      reorderAfterSectionEdit(["Projects"], { remove: "Clients" }),
+    ).toEqual(["Projects"])
+  })
+
+  it("does not mutate the input array", () => {
+    const order = ["Projects", "Clients"]
+    reorderAfterSectionEdit(order, { remove: "Clients" })
+    expect(order).toEqual(["Projects", "Clients"])
   })
 })

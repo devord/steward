@@ -141,6 +141,17 @@ export function DashboardBoard({
     section: string | null
     sections: string[]
   } | null>(null)
+  // The section the rail's section-header menu is renaming or dissolving — a
+  // section isn't a board, so these key by repo + the section's current name
+  // (ADR-0039); null closes each dialog.
+  const [renameSectionTarget, setRenameSectionTarget] = useState<{
+    repo: string
+    section: string
+  } | null>(null)
+  const [deleteSectionTarget, setDeleteSectionTarget] = useState<{
+    repo: string
+    section: string
+  } | null>(null)
   const [deletingRoutine, setDeletingRoutine] = useState<string | null>(null)
 
   // Client-tracked in-flight runs (ADR-0016: no server-side run state) and
@@ -529,6 +540,12 @@ export function DashboardBoard({
             sections: [...new Set(known)],
           })
         }}
+        onRenameSection={(repo, section) =>
+          setRenameSectionTarget({ repo, section })
+        }
+        onDeleteSection={(repo, section) =>
+          setDeleteSectionTarget({ repo, section })
+        }
       >
         {editing && (
           <GridSettings
@@ -731,6 +748,24 @@ export function DashboardBoard({
           } else {
             void revalidator.revalidate()
           }
+        }}
+      />
+      <RenameSectionDialog
+        target={renameSectionTarget}
+        onClose={() => setRenameSectionTarget(null)}
+        onRenamed={() => {
+          setRenameSectionTarget(null)
+          // The rail groups by section — revalidate so the renamed heading
+          // (and any merged boards) lands on the next paint.
+          void revalidator.revalidate()
+        }}
+      />
+      <DeleteSectionDialog
+        target={deleteSectionTarget}
+        onClose={() => setDeleteSectionTarget(null)}
+        onDeleted={() => {
+          setDeleteSectionTarget(null)
+          void revalidator.revalidate()
         }}
       />
     </>
@@ -944,6 +979,185 @@ function DeleteDashboardDialog({
             }}
           >
             {busy ? t("board.deleting") : t("board.deleteConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * Rename a section (ADR-0039) — the rail's section-header menu. A section isn't
+ * a record, just a free-text label shared across boards, so this rewrites the
+ * `section` field of every board filed under the old name (and the repo's
+ * `sections` order) in one commit, server-side. `target` names the section
+ * (repo + its current name); null keeps the dialog closed. Renaming onto a name
+ * that already exists merges the two — it's just a string. Prefills the current
+ * name, keyed on the target so a re-render can't clobber typing, and the fetcher
+ * is keyed by target so a prior rename's success can't auto-close the next.
+ */
+function RenameSectionDialog({
+  target,
+  onClose,
+  onRenamed,
+}: {
+  target: { repo: string; section: string } | null
+  onClose: () => void
+  onRenamed: () => void
+}) {
+  const t = useT()
+  const fetcher = useFetcher<DeleteResult>({
+    key: target
+      ? `section-rename:${target.repo}:${target.section}`
+      : "section-rename",
+  })
+  const busy = fetcher.state !== "idle"
+  const [name, setName] = useState("")
+
+  // Prefill from the section's current name each time a new target is set,
+  // keyed on identity so a re-render's fresh object can't clobber the edit.
+  const targetKey = target ? `${target.repo}:${target.section}` : null
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null)
+  if (target && targetKey !== prefilledFor) {
+    setPrefilledFor(targetKey)
+    setName(target.section)
+  }
+  if (!target && prefilledFor !== null) setPrefilledFor(null)
+
+  const renamed = fetcher.data?.ok === true
+  useEffect(() => {
+    if (renamed) onRenamed()
+  }, [renamed, onRenamed])
+
+  const trimmed = name.trim()
+  // Nothing to commit for a blank or unchanged name — keep the button inert.
+  const inert = trimmed === "" || (target != null && trimmed === target.section)
+
+  function submit() {
+    if (!target || busy || inert) return
+    void fetcher.submit(
+      JSON.stringify({
+        intent: "renameSection",
+        repo: target.repo,
+        from: target.section,
+        to: trimmed,
+      }),
+      { method: "post", action: "/dashboards", encType: "application/json" },
+    )
+  }
+
+  return (
+    <Dialog open={target != null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("section.renameTitle")}</DialogTitle>
+          <DialogDescription>
+            {t("section.renameBody", { section: target?.section ?? "" })}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2">
+          <Label htmlFor="section-rename-name">{t("section.nameLabel")}</Label>
+          <Input
+            id="section-rename-name"
+            autoFocus
+            value={name}
+            maxLength={SECTION_NAME_MAX}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={t("section.namePlaceholder")}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") submit()
+            }}
+          />
+          <p className="text-xs text-ink-dim">{t("section.renameHint")}</p>
+        </div>
+        {fetcher.data?.ok === false && (
+          <p className="text-xs text-destructive">
+            {fetcher.data.error === "conflict"
+              ? t("section.conflict")
+              : t("error.generic")}
+          </p>
+        )}
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            {t("dialog.cancel")}
+          </Button>
+          <Button disabled={busy || inert} onClick={submit}>
+            {busy ? t("section.renaming") : t("section.renameConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * Confirm dissolving a section (ADR-0039). Its boards fall back to the repo's
+ * unlabeled lead section — nothing is deleted — so the copy says so plainly.
+ * `target` names it (repo + section); null keeps it closed. The fetcher is
+ * keyed by target so a prior delete's success can't linger and auto-fire.
+ */
+function DeleteSectionDialog({
+  target,
+  onClose,
+  onDeleted,
+}: {
+  target: { repo: string; section: string } | null
+  onClose: () => void
+  onDeleted: () => void
+}) {
+  const t = useT()
+  const fetcher = useFetcher<DeleteResult>({
+    key: target
+      ? `section-delete:${target.repo}:${target.section}`
+      : "section-delete",
+  })
+  const busy = fetcher.state !== "idle"
+
+  const deleted = fetcher.data?.ok === true
+  useEffect(() => {
+    if (deleted) onDeleted()
+  }, [deleted, onDeleted])
+
+  return (
+    <Dialog open={target != null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("section.deleteTitle")}</DialogTitle>
+          <DialogDescription>
+            {t("section.deleteBody", { section: target?.section ?? "" })}
+          </DialogDescription>
+        </DialogHeader>
+        {fetcher.data?.ok === false && (
+          <p className="text-xs text-destructive">
+            {fetcher.data.error === "conflict"
+              ? t("section.conflict")
+              : t("error.generic")}
+          </p>
+        )}
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            {t("dialog.cancel")}
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={busy}
+            onClick={() => {
+              if (!target) return
+              void fetcher.submit(
+                JSON.stringify({
+                  intent: "deleteSection",
+                  repo: target.repo,
+                  section: target.section,
+                }),
+                {
+                  method: "post",
+                  action: "/dashboards",
+                  encType: "application/json",
+                },
+              )
+            }}
+          >
+            {busy ? t("section.deleting") : t("section.deleteConfirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

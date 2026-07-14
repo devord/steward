@@ -76,6 +76,8 @@ export function DashboardSidebar({
   displayName,
   onDeleteBoard,
   onRenameBoard,
+  onRenameSection,
+  onDeleteSection,
   onNavigate,
 }: {
   /** The active board's repo; "" on chrome pages (settings). */
@@ -97,6 +99,14 @@ export function DashboardSidebar({
       repo's default `main` (only delete is withheld there). The current name
       rides along so the dialog can prefill. Absent on chrome pages. */
   onRenameBoard?: (repo: string, slug: string) => void
+  /** Rename a whole section — the section header's own `⋯` menu, keyed by
+      repo + the section's current name. Renames the heading across every board
+      filed under it (ADR-0039). Absent on chrome pages. */
+  onRenameSection?: (repo: string, section: string) => void
+  /** Dissolve a section — same menu; its boards fall back to the repo's
+      unlabeled lead section (the boards themselves stay). Absent on chrome
+      pages. */
+  onDeleteSection?: (repo: string, section: string) => void
   /** Fired when a board link is followed — lets the mobile drawer close. */
   onNavigate?: () => void
 }) {
@@ -163,55 +173,71 @@ export function DashboardSidebar({
                   {sectionBoards(
                     repoGroup.dashboards,
                     repoGroup.sections,
-                  ).flatMap((section, sectionIndex) => [
-                    section.label != null && (
-                      <SectionLabel
-                        key={`section:${section.label}`}
-                        first={sectionIndex === 0}
-                      >
-                        {section.label}
-                      </SectionLabel>
-                    ),
-                    ...section.boards.map((board) => {
-                      const active =
-                        activeRepo === repoGroup.repo &&
-                        dashboardSlug === board.slug
-                      // Every repo's `main` is its default board (server-
-                      // protected in all repos) — so no delete on any `main`.
-                      // Editing only sets the section, so every board gets it.
-                      return (
-                        <NavItem
-                          key={`${repoGroup.repo}:${board.slug}`}
-                          to={boardHref(repoGroup.repo, board.slug, homeRepo)}
-                          label={board.slug}
-                          active={active}
-                          // A board inside a named section sits one indent
-                          // deeper than an ungrouped one, nested under its
-                          // label (ADR-0034).
-                          indented={section.label != null}
-                          // Freshness (ADR-0035): the leading dot's colour and
-                          // the trailing age.
-                          lastRunAt={board.lastRunAt}
-                          stale={board.stale}
-                          now={now}
-                          draft={drafts.has(
-                            boardDraftKey(repoGroup.repo, board.slug),
-                          )}
+                  ).flatMap((section, sectionIndex) => {
+                    // Hoisted so the menu closures capture a narrowed string,
+                    // not the section's string | null label.
+                    const label = section.label
+                    return [
+                      label != null && (
+                        <SectionLabel
+                          key={`section:${label}`}
+                          label={label}
+                          first={sectionIndex === 0}
                           onRename={
-                            onRenameBoard
-                              ? () => onRenameBoard(repoGroup.repo, board.slug)
+                            onRenameSection
+                              ? () => onRenameSection(repoGroup.repo, label)
                               : undefined
                           }
                           onDelete={
-                            onDeleteBoard && board.slug !== DEFAULT_DASHBOARD
-                              ? () => onDeleteBoard(repoGroup.repo, board.slug)
+                            onDeleteSection
+                              ? () => onDeleteSection(repoGroup.repo, label)
                               : undefined
                           }
-                          onNavigate={onNavigate}
                         />
-                      )
-                    }),
-                  ])}
+                      ),
+                      ...section.boards.map((board) => {
+                        const active =
+                          activeRepo === repoGroup.repo &&
+                          dashboardSlug === board.slug
+                        // Every repo's `main` is its default board (server-
+                        // protected in all repos) — so no delete on any `main`.
+                        // Editing only sets the section, so every board gets it.
+                        return (
+                          <NavItem
+                            key={`${repoGroup.repo}:${board.slug}`}
+                            to={boardHref(repoGroup.repo, board.slug, homeRepo)}
+                            label={board.slug}
+                            active={active}
+                            // A board inside a named section sits one indent
+                            // deeper than an ungrouped one, nested under its
+                            // label (ADR-0034).
+                            indented={section.label != null}
+                            // Freshness (ADR-0035): the leading dot's colour and
+                            // the trailing age.
+                            lastRunAt={board.lastRunAt}
+                            stale={board.stale}
+                            now={now}
+                            draft={drafts.has(
+                              boardDraftKey(repoGroup.repo, board.slug),
+                            )}
+                            onRename={
+                              onRenameBoard
+                                ? () =>
+                                    onRenameBoard(repoGroup.repo, board.slug)
+                                : undefined
+                            }
+                            onDelete={
+                              onDeleteBoard && board.slug !== DEFAULT_DASHBOARD
+                                ? () =>
+                                    onDeleteBoard(repoGroup.repo, board.slug)
+                                : undefined
+                            }
+                            onNavigate={onNavigate}
+                          />
+                        )
+                      }),
+                    ]
+                  })}
                   {repoGroup.dashboards.length === 0 && (
                     // The group's only child while the repo has no boards: the
                     // next action, sitting where the first board will. The plus
@@ -411,25 +437,77 @@ function RailAction({
  * section (tight within, air between) except the first, which tucks straight
  * under the repo heading. The label is the viewer's own words (a display label,
  * ADR-0026), verbatim but cased up by the caption — truncated, never wrapped.
+ *
+ * When `onRename`/`onDelete` are set the heading carries a trailing `⋯` menu —
+ * the same idiom the board rows ({@link NavItem}) and the repo caption
+ * (repo-group-header.tsx) already teach, one tier apart. A section isn't a
+ * record, so both actions are batch edits across the boards filed under it
+ * (ADR-0039): Rename retitles the heading, Delete dissolves it (the boards move
+ * up to the ungrouped lead, none deleted). Sized to the repo caption's `⋯`
+ * (size-5), not the rows' size-6 — this is a caption tier, not a board row — and
+ * rests as faint as the rest of the caption until the pointer nears.
  */
 function SectionLabel({
-  children,
+  label,
   first,
+  onRename,
+  onDelete,
 }: {
-  children: React.ReactNode
+  label: string
   /** The section leads the group (no ungrouped boards above it): drop the top
       gap so it sits directly under the repo heading. */
   first?: boolean
+  onRename?: () => void
+  onDelete?: () => void
 }) {
+  const t = useT()
+  const hasMenu = onRename != null || onDelete != null
   return (
     <div
       data-testid="rail-section"
       className={cn(
-        "truncate pr-2.5 pl-6 text-[11px] font-medium tracking-wider text-ink-dim uppercase",
+        "group/section relative flex items-center pr-1.5 pl-6",
         !first && "mt-3",
       )}
     >
-      {children}
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate text-[11px] font-medium tracking-wider text-ink-dim uppercase",
+          hasMenu && "pr-6",
+        )}
+      >
+        {label}
+      </span>
+      {hasMenu && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("section.menu")}
+                className="absolute right-1 size-5 text-ink-faint transition-colors group-hover/section:text-ink-dim hover:bg-sidebar-accent hover:text-foreground focus-visible:text-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-foreground"
+              />
+            }
+          >
+            <MoreHorizontal />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" sideOffset={4} className="w-48">
+            {onRename && (
+              <DropdownMenuItem onClick={onRename}>
+                <Pencil />
+                {t("section.rename")}
+              </DropdownMenuItem>
+            )}
+            {onDelete && (
+              <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                <Trash2 />
+                {t("section.delete")}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   )
 }

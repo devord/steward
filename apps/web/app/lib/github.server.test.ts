@@ -8,6 +8,7 @@ import {
 } from "../mocks/github.ts"
 import {
   addRepoTopic,
+  commitFiles,
   getFile,
   getRepoTopics,
   GitHubError,
@@ -130,5 +131,55 @@ describe("listCollaborators", () => {
     // GitHub answers 403 for plain readers; the UI just omits the stack.
     seedRepoMeta(REPO, { collaborators: "forbidden" })
     expect(await listCollaborators("token", REPO)).toBeNull()
+  })
+})
+
+describe("commitFiles", () => {
+  it("writes every file in one commit — the whole batch lands", async () => {
+    seedRepo(REPO, {
+      "data/dashboards/corza.yaml": "section: Clients\ngrid: {}\nwidgets: []\n",
+      "data/dashboards/acme.yaml": "section: Clients\ngrid: {}\nwidgets: []\n",
+      "data/repo.yaml": "sections:\n  - Clients\n",
+    })
+
+    await commitFiles("token", REPO, {
+      branch: "main",
+      message: "config: rename section Clients → Accounts via steward",
+      files: [
+        {
+          path: "data/dashboards/corza.yaml",
+          content: "section: Accounts\ngrid: {}\nwidgets: []\n",
+        },
+        {
+          path: "data/dashboards/acme.yaml",
+          content: "section: Accounts\ngrid: {}\nwidgets: []\n",
+        },
+        { path: "data/repo.yaml", content: "sections:\n  - Accounts\n" },
+      ],
+    })
+
+    // All three paths reflect the new content — an atomic multi-file commit,
+    // not a half-applied sequence.
+    expect(
+      (await getFile("token", REPO, "data/dashboards/corza.yaml"))?.text,
+    ).toContain("Accounts")
+    expect(
+      (await getFile("token", REPO, "data/dashboards/acme.yaml"))?.text,
+    ).toContain("Accounts")
+    expect((await getFile("token", REPO, "data/repo.yaml"))?.text).toContain(
+      "Accounts",
+    )
+  })
+
+  it("surfaces a GitHubError the route can classify, never a raw throw", async () => {
+    // No repo seeded → the branch-head read 404s. commitFiles must let it
+    // arrive as a GitHubError so the caller maps it (denied/conflict) instead
+    // of crashing — the same contract the single-file writes keep.
+    const error = await commitFiles("token", "daniel/does-not-exist", {
+      branch: "main",
+      message: "noop",
+      files: [{ path: "data/repo.yaml", content: "sections: []\n" }],
+    }).catch((e) => e)
+    expect(error).toBeInstanceOf(GitHubError)
   })
 })

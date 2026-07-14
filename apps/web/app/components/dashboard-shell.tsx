@@ -33,6 +33,8 @@ export function DashboardShell({
   onToggleEdit,
   onDeleteBoard,
   onRenameBoard,
+  onRenameSection,
+  onDeleteSection,
   children,
 }: {
   dataRepo: string
@@ -52,6 +54,10 @@ export function DashboardShell({
   onDeleteBoard: (repo: string, slug: string) => void
   /** Rename a board's display name — same menu; current name for prefill. */
   onRenameBoard: (repo: string, slug: string) => void
+  /** Rename a section — the rail's section-header menu, keyed by repo+name. */
+  onRenameSection: (repo: string, section: string) => void
+  /** Dissolve a section — same menu; its boards move to the ungrouped lead. */
+  onDeleteSection: (repo: string, section: string) => void
   children: React.ReactNode
 }) {
   const t = useT()
@@ -69,6 +75,10 @@ export function DashboardShell({
         // default `main`.
         onDeleteBoard,
         onRenameBoard,
+        // Section lifecycle rides the section header's own menu (ADR-0039),
+        // keyed by repo + the section's current name.
+        onRenameSection,
+        onDeleteSection,
       }}
       // Canvas cap: `wide` fills a large monitor (still bounded so the board
       // stays composed, not stretched edge-to-edge); `fixed` keeps the

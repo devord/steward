@@ -2,17 +2,25 @@ import {
   dashboardFileSchema,
   dashboardPath,
   parseDashboardFile,
+  parseRepoFile,
+  REPO_FILE_PATH,
   SECTION_NAME_MAX,
   serializeDashboardFile,
+  serializeRepoFile,
   slugSchema,
 } from "@steward/schema"
 import { data } from "react-router"
 import { z } from "zod"
 
-import { invalidateSidebarCache } from "../lib/dashboard.server.ts"
+import {
+  invalidateSidebarCache,
+  listDashboards,
+} from "../lib/dashboard.server.ts"
 import { DEFAULT_DASHBOARD } from "../lib/repos.ts"
 import { requireDataRepo } from "../lib/repos.server.ts"
+import { reorderAfterSectionEdit } from "../lib/sidebar-sections.ts"
 import {
+  commitFiles,
   deleteFile,
   getFile,
   GitHubError,
@@ -49,6 +57,23 @@ const payloadSchema = z.discriminatedUnion("intent", [
     repo: z.string(),
     slug: slugSchema,
   }),
+  z.object({
+    intent: z.literal("renameSection"),
+    /** Which data repo — gated by requireDataRepo (ADR-0023). */
+    repo: z.string(),
+    /** The section being renamed and its new name — both non-blank (the rail
+        only offers the menu on a real, named section). Every board filed under
+        `from` moves to `to`; if `to` already exists they merge (ADR-0039). */
+    from: z.string().min(1).max(SECTION_NAME_MAX),
+    to: z.string().min(1).max(SECTION_NAME_MAX),
+  }),
+  z.object({
+    intent: z.literal("deleteSection"),
+    repo: z.string(),
+    /** The section to dissolve: its boards fall back to the repo's unlabeled
+        lead section (the boards themselves are untouched). */
+    section: z.string().min(1).max(SECTION_NAME_MAX),
+  }),
 ])
 
 export async function action({ request }: { request: Request }) {
@@ -73,6 +98,125 @@ export async function action({ request }: { request: Request }) {
     auth.dataRepo,
   )
   const repo = dataRepo.full
+
+  // Section rename/delete (ADR-0039) is a batch: a section isn't a record, just
+  // a free-text `section` shared across boards, so editing it rewrites that
+  // field on every board filed under it — plus the repo's `sections` order —
+  // in one atomic commit (commitFiles). Handled here, ahead of the slug-based
+  // paths, since these intents name a section, not a board.
+  if (
+    payload.intent === "renameSection" ||
+    payload.intent === "deleteSection"
+  ) {
+    const from =
+      payload.intent === "renameSection"
+        ? payload.from.trim()
+        : payload.section.trim()
+    // null → delete: matching boards fall back to the unlabeled lead section.
+    const to = payload.intent === "renameSection" ? payload.to.trim() : null
+    if (!from || (payload.intent === "renameSection" && !to)) {
+      return data({ ok: false as const, error: "invalid" }, { status: 400 })
+    }
+    // Renaming a section to its own name changes nothing — skip the reads and
+    // the empty commit.
+    if (to === from) return { ok: true as const }
+
+    try {
+      const slugs = (await listDashboards(auth.token, repo)) ?? []
+      // Read every board so we can find the ones under `from`. A real read
+      // failure (5xx/403/401) throws and is translated below — never a silent
+      // half-rename; a 404 (file vanished) or a malformed layout is skipped
+      // (it isn't safely rewritable, and the rail already treats it as
+      // ungrouped).
+      const boards = await Promise.all(
+        slugs.map(async (slug) => {
+          const raw = await getFile(
+            auth.token,
+            repo,
+            dashboardPath(slug),
+            "main",
+          )
+          if (!raw) return null
+          try {
+            return { slug, file: parseDashboardFile(raw.text) }
+          } catch {
+            return null
+          }
+        }),
+      )
+
+      const files: { path: string; content: string }[] = []
+      for (const board of boards) {
+        if (!board || board.file.section !== from) continue
+        const { section: _was, ...rest } = board.file
+        files.push({
+          path: dashboardPath(board.slug),
+          content: serializeDashboardFile(to ? { ...rest, section: to } : rest),
+        })
+      }
+
+      // The `sections` order half: rename maps `from`→`to` in place (merging if
+      // `to` is already listed), delete drops it. Best-effort on repo.yaml — a
+      // malformed one is treated as no order, never a failed rename.
+      const repoRaw = await getFile(auth.token, repo, REPO_FILE_PATH, "main")
+      let repoFile
+      try {
+        repoFile = repoRaw ? parseRepoFile(repoRaw.text) : null
+      } catch {
+        repoFile = null
+      }
+      const order = repoFile?.sections ?? []
+      const nextOrder = reorderAfterSectionEdit(
+        order,
+        to ? { rename: { from, to } } : { remove: from },
+      )
+      if (nextOrder.join("\0") !== order.join("\0")) {
+        const { sections: _drop, ...restRepo } = repoFile ?? {}
+        files.push({
+          path: REPO_FILE_PATH,
+          content: serializeRepoFile(
+            nextOrder.length ? { ...restRepo, sections: nextOrder } : restRepo,
+          ),
+        })
+      }
+
+      // Nothing filed under the section and no order entry — a no-op (the
+      // section was already gone). Refresh the rail and report success so the
+      // dialog closes cleanly.
+      if (files.length > 0) {
+        await commitFiles(auth.token, repo, {
+          branch: "main",
+          message: to
+            ? `config: rename section ${from} → ${to} via steward`
+            : `config: remove section ${from} via steward`,
+          files,
+        })
+      }
+    } catch (error) {
+      // Someone else pushed between the head read and the ref update — the
+      // commit is no longer a fast-forward: a conflict, retry (mirrors the
+      // single-file sha check).
+      if (
+        error instanceof GitHubError &&
+        (error.status === 409 || error.status === 422)
+      ) {
+        return data({ ok: false as const, error: "conflict" }, { status: 409 })
+      }
+      // Read-only collaborator on a shared repo: a clean "denied".
+      if (
+        error instanceof GitHubError &&
+        (error.status === 403 || error.status === 404)
+      ) {
+        return data({ ok: false as const, error: "denied" }, { status: 403 })
+      }
+      throw error
+    }
+    // The rail groups boards by section — drop its cache so the change shows on
+    // the very next load.
+    invalidateSidebarCache(auth.token)
+    return { ok: true as const }
+  }
+
   const path = dashboardPath(payload.slug)
 
   if (payload.intent === "create") {

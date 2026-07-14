@@ -54,6 +54,27 @@ interface MockRepoMeta {
 
 const repoMeta = new Map<string, Partial<MockRepoMeta>>()
 
+/**
+ * Git Data API scratch state (commitFiles). A tree POST parks its file set
+ * under a fresh sha; a commit POST parks its {tree, parents}; the ref PATCH
+ * looks the commit up, checks the parent is still the branch head (else it's a
+ * non-fast-forward, GitHub's 422), and applies the parked files to the store.
+ * Applying only on the ref update mirrors GitHub: the tree/commit objects exist
+ * before the branch moves. */
+const pendingTrees = new Map<string, { path: string; content: string }[]>()
+const pendingCommits = new Map<string, { tree: string; parents: string[] }>()
+let gitSeq = 0
+
+/** A branch head sha derived from its main-ref files, so it changes whenever a
+    file does — giving the fast-forward check something real to compare. */
+function headSha(repo: string): string {
+  const parts = [...(repos.get(repo)?.entries() ?? [])]
+    .filter(([key]) => key.startsWith("main:"))
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, file]) => `${key}=${file.text}`)
+  return `commit:${createHash("sha1").update(parts.join("\n")).digest("hex").slice(0, 12)}`
+}
+
 const DEFAULT_META: MockRepoMeta = {
   private: true,
   permissions: { admin: true, push: true },
@@ -113,6 +134,9 @@ export function resetGitHub() {
   repos.clear()
   failures.clear()
   repoMeta.clear()
+  pendingTrees.clear()
+  pendingCommits.clear()
+  gitSeq = 0
   searchFailure = null
   userOrgs = []
   githubStats.full = 0
@@ -421,6 +445,75 @@ export const githubHandlers = [
           },
         },
       ])
+    },
+  ),
+
+  // Git Data API — the atomic multi-file commit (commitFiles). A branch head
+  // read, then create-tree / create-commit / fast-forward-ref, applied to the
+  // same store every other handler serves.
+  http.get(
+    "https://api.github.com/repos/:owner/:repo/git/ref/heads/:branch",
+    ({ params, request }) => {
+      const repo = `${params.owner}/${params.repo}`
+      if (!repos.has(repo)) return new HttpResponse(null, { status: 404 })
+      return json(request, { object: { sha: headSha(repo) } })
+    },
+  ),
+  http.get(
+    "https://api.github.com/repos/:owner/:repo/git/commits/:sha",
+    ({ params, request }) =>
+      json(request, {
+        sha: params.sha,
+        tree: { sha: `tree:${params.sha}` },
+      }),
+  ),
+  http.post(
+    "https://api.github.com/repos/:owner/:repo/git/trees",
+    async ({ request }) => {
+      const body = z
+        .object({
+          tree: z.array(z.object({ path: z.string(), content: z.string() })),
+        })
+        .parse(await request.json())
+      const sha = `tree:new:${(gitSeq += 1)}`
+      pendingTrees.set(sha, body.tree)
+      return HttpResponse.json({ sha })
+    },
+  ),
+  http.post(
+    "https://api.github.com/repos/:owner/:repo/git/commits",
+    async ({ request }) => {
+      const body = z
+        .object({ tree: z.string(), parents: z.array(z.string()) })
+        .parse(await request.json())
+      const sha = `commit:new:${(gitSeq += 1)}`
+      pendingCommits.set(sha, { tree: body.tree, parents: body.parents })
+      return HttpResponse.json({ sha })
+    },
+  ),
+  http.patch(
+    "https://api.github.com/repos/:owner/:repo/git/refs/heads/:branch",
+    async ({ params, request }) => {
+      const repo = `${params.owner}/${params.repo}`
+      const body = z
+        .object({ sha: z.string(), force: z.boolean().optional() })
+        .parse(await request.json())
+      const commit = pendingCommits.get(body.sha)
+      if (!commit) return new HttpResponse(null, { status: 422 })
+      // Non-fast-forward: someone else moved the branch since the head read.
+      if (commit.parents[0] !== headSha(repo) && !body.force) {
+        return new HttpResponse(null, { status: 422 })
+      }
+      const store = repos.get(repo) ?? new Map<string, MockFile>()
+      for (const { path, content } of pendingTrees.get(commit.tree) ?? []) {
+        const existing = store.get(`main:${path}`)
+        store.set(`main:${path}`, {
+          text: content,
+          lastCommit: existing?.lastCommit ?? null,
+        })
+      }
+      repos.set(repo, store)
+      return HttpResponse.json({ object: { sha: body.sha } })
     },
   ),
 ]
