@@ -386,13 +386,64 @@ export async function getFile(
   return { text: Buffer.from(content, "base64").toString("utf8"), sha }
 }
 
-const commitsSchema = z.array(
+const pathCommitsSchema = z.array(
   z.object({
+    sha: z.string(),
+    html_url: z.string(),
     commit: z.object({
       committer: z.object({ date: z.string() }).nullable(),
+      author: z.object({ name: z.string() }).nullable(),
     }),
   }),
 )
+
+export interface PathCommit {
+  sha: string
+  /** The commit page on GitHub — where the receipt's diff lives. */
+  htmlUrl: string
+  /** ISO committer date. */
+  date: string
+  author: string | null
+}
+
+/**
+ * Commits touching `path` on `ref`, newest first — the publish receipts a
+ * routine's run history derives from (ADR-0033). Returns null for no such
+ * ref (404) or an empty repo (409) — both mean "never ran". One page only;
+ * `limit` caps how much history the caller wants.
+ */
+export async function listPathCommits(
+  token: string,
+  repo: string,
+  path: string,
+  ref: string,
+  limit: number,
+): Promise<PathCommit[] | null> {
+  const search = new URLSearchParams({
+    path,
+    sha: ref,
+    per_page: String(limit),
+  })
+  const res = await gh(token, `/repos/${repo}/commits?${search}`)
+  if (res.status === 404 || res.status === 409) return null
+  if (!res.ok) {
+    throw new GitHubError(res.status, `${repo} commits → ${res.status}`)
+  }
+  // A dateless commit (committer null) can't be placed on a timeline, so it
+  // can't be a receipt — dropped rather than surfaced with a broken clock.
+  return pathCommitsSchema.parse(await res.json()).flatMap((entry) =>
+    entry.commit.committer
+      ? [
+          {
+            sha: entry.sha,
+            htmlUrl: entry.html_url,
+            date: entry.commit.committer.date,
+            author: entry.commit.author?.name ?? null,
+          },
+        ]
+      : [],
+  )
+}
 
 /** ISO date of the last commit touching `path` on `ref`, or null. */
 export async function getLastCommitDate(
@@ -401,15 +452,8 @@ export async function getLastCommitDate(
   path: string,
   ref: string,
 ): Promise<string | null> {
-  const search = new URLSearchParams({ path, sha: ref, per_page: "1" })
-  const res = await gh(token, `/repos/${repo}/commits?${search}`)
-  // 404: no such ref; 409: empty repository — both mean "never ran".
-  if (res.status === 404 || res.status === 409) return null
-  if (!res.ok) {
-    throw new GitHubError(res.status, `${repo} commits → ${res.status}`)
-  }
-  const [first] = commitsSchema.parse(await res.json())
-  return first?.commit.committer?.date ?? null
+  const commits = await listPathCommits(token, repo, path, ref, 1)
+  return commits?.[0]?.date ?? null
 }
 
 /**

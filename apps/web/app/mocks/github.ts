@@ -397,7 +397,8 @@ export const githubHandlers = [
     },
   ),
 
-  // Commits list — only the shape getLastCommitDate reads.
+  // Commits list — only the shape listPathCommits reads (the publish
+  // receipts, ADR-0033; getLastCommitDate rides the same client).
   http.get(
     "https://api.github.com/repos/:owner/:repo/commits",
     ({ params, request }) => {
@@ -411,7 +412,14 @@ export const githubHandlers = [
       if (!file) return new HttpResponse(null, { status: 404 })
       if (!file.lastCommit) return json(request, [])
       return json(request, [
-        { commit: { committer: { date: file.lastCommit } } },
+        {
+          sha: "0000000000000000000000000000000000000000",
+          html_url: `https://github.com/${repo}/commit/0000000`,
+          commit: {
+            committer: { date: file.lastCommit },
+            author: { name: "Steward" },
+          },
+        },
       ])
     },
   ),

@@ -135,6 +135,25 @@ export const ptBR: Messages = {
   "routines.emptyHint":
     "Uma rotina produz um widget — adicione uma e coloque-a num painel.",
 
+  "runs.back": "Todas as rotinas",
+  "runs.heading": "Execuções",
+  "runs.subtitle":
+    "Toda execução termina publicando o artifact — um commit por execução no branch artifacts. Este é esse histórico.",
+  "runs.claudeNote":
+    "Execuções que falham não deixam recibo — sessões, logs e falhas vivem no {claude}.",
+  "runs.colRan": "Rodou",
+  "runs.colGap": "Após",
+  "runs.colBy": "Por",
+  "runs.colReceipt": "Recibo",
+  "runs.count": "{n} execuções",
+  "runs.capped": "últimas {n} execuções",
+  "runs.firstTag": "primeira execução",
+  "runs.lateTag": "atrasada",
+  "runs.empty": "Nenhuma execução ainda — nada publicou este widget.",
+  "runs.unreachable":
+    "GitHub inacessível — o histórico de execuções não carregou. Tenta de novo ao atualizar.",
+  "runs.loading": "Carregando histórico de execuções…",
+
   "templates.title": "Templates",
   "templates.subtitle":
     "O que o seletor de rotinas oferece — {dir} em {repo}, mais os nativos.",
@@ -302,6 +321,11 @@ export const ptBR: Messages = {
   "time.minutes": "há {n}m",
   "time.hours": "há {n}h",
   "time.days": "há {n}d",
+
+  "duration.now": "<1m",
+  "duration.minutes": "{n}m",
+  "duration.hours": "{n}h",
+  "duration.days": "{n}d",
 
   "dialog.title": "Adicionar uma rotina",
   "dialog.description":

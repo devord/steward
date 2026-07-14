@@ -67,3 +67,9 @@ export function boardHref(
 export function routinesHref(repo: string): string {
   return `/r/${repo}/routines`
 }
+
+/** Route of one routine's detail view — its facts and run history
+    (ADR-0033), a child of the pool's reserved segment. */
+export function routineHref(repo: string, slug: string): string {
+  return `/r/${repo}/routines/${slug}`
+}

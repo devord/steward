@@ -52,7 +52,7 @@ import { cn } from "~/lib/utils"
 import type { ArtifactInfo, SidebarData } from "../lib/dashboard.server.ts"
 import { removeRoutine, type ServerConfig, useDraft } from "../lib/draft.ts"
 import { useT, type Translate } from "../lib/i18n.tsx"
-import { boardHref } from "../lib/repos.ts"
+import { boardHref, routineHref } from "../lib/repos.ts"
 import {
   claudeRoutineUrl,
   widgetStatus,
@@ -529,8 +529,9 @@ export function RoutinesTable({
 const rowActionCls =
   "size-6 text-ink-faint opacity-0 transition-opacity group-hover:opacity-100 hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 pointer-coarse:opacity-100"
 
-/** The dotted-underline cross-reference both ledgers share (boards, used-by). */
-const rowLinkCls =
+/** The dotted-underline cross-reference the ledgers and the routine detail
+    view (ADR-0033) share (boards, used-by, receipts). */
+export const rowLinkCls =
   "font-mono text-xs text-ink-dim underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
 
 function RoutineRow({
@@ -577,6 +578,13 @@ function RoutineRow({
 }) {
   const t = useT()
   const cloud = routineHost(routine) === "cloud"
+  const nameCls = "truncate font-mono text-sm font-medium text-foreground"
+  const name = (
+    <>
+      {routine.name}
+      <span className="sr-only"> — {routine.slug}</span>
+    </>
+  )
 
   return (
     // The id anchors the templates ledger's used-by links — one page, one
@@ -589,17 +597,29 @@ function RoutineRow({
           glance target. The slug usually just repeats the kebab-cased name,
           so it rides as a hover tooltip (native title, the chrome's tooltip
           idiom) plus an sr-only echo — not a second line doubling every row's
-          height. It stays a first-class string elsewhere (Used by, menus). */}
+          height. It stays a first-class string elsewhere (Used by, menus).
+          A committed routine's name links to its detail view — facts + run
+          history (ADR-0033); a draft-only routine has no server-side page
+          to land on, so its name stays inert until synced. */}
       <td className="px-3 py-2 align-top">
         <div className="flex min-w-0 items-center gap-2">
           <StateDot status={status} />
-          <div
-            className="truncate font-mono text-sm font-medium text-foreground"
-            title={routine.slug}
-          >
-            {routine.name}
-            <span className="sr-only"> — {routine.slug}</span>
-          </div>
+          {committed ? (
+            <Link
+              to={routineHref(repo.full, routine.slug)}
+              className={cn(
+                nameCls,
+                "underline-offset-2 outline-none hover:underline focus-visible:underline",
+              )}
+              title={routine.slug}
+            >
+              {name}
+            </Link>
+          ) : (
+            <div className={nameCls} title={routine.slug}>
+              {name}
+            </div>
+          )}
         </div>
       </td>
 
@@ -670,7 +690,7 @@ function RoutineRow({
 /** The leading node: green = fresh, yellow = stale/attention, accent = running,
     red = unreachable, hollow = never-run/manual, dim hollow = disabled. Never
     the only carrier of state — the label beside it always names it. */
-function StateDot({
+export function StateDot({
   status,
   className,
 }: {
@@ -725,7 +745,7 @@ function dotTone(status: WidgetStatus): string {
 const chipBase =
   "inline-flex items-center rounded px-1.5 py-0.5 font-mono text-xs leading-none"
 
-function StateLabel({
+export function StateLabel({
   status,
   lastRunAt,
   now,

@@ -184,6 +184,22 @@ describe("RoutinesTable", () => {
     ).toBeNull()
   })
 
+  it("links a committed routine's name to its detail view (ADR-0033)", async () => {
+    await renderTable()
+    const nameLink = [...document.querySelectorAll("a")].find(
+      (a) => a.getAttribute("href") === `/r/${HOME_REPO}/routines/daily-plan`,
+    )
+    expect(nameLink?.textContent).toContain("Daily plan")
+  })
+
+  it("keeps a draft-only routine's name inert — no page to land on yet", async () => {
+    await renderTable({ committedSlugs: new Set(["daily-plan", "changelog"]) })
+    const triageLink = [...document.querySelectorAll("a")].find(
+      (a) => a.getAttribute("href") === `/r/${HOME_REPO}/routines/triage-brief`,
+    )
+    expect(triageLink).toBeUndefined()
+  })
+
   it("deletes the routine the menu belongs to", async () => {
     const { onDelete } = await renderTable()
     await openMenu("Changelog")
