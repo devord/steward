@@ -293,10 +293,16 @@
         font-size: 12px;
         color: var(--color-ink-faint);
       }
+      /* Page heading — the artifact's title line, matching the app's own
+         page headings (font-mono, 18px, medium): the date this plan is for
+         (distinct from the chrome's "ran Xm ago"). Hidden at the glance
+         tiers; shown from the wide grid up (below). */
       .date {
         display: none;
-        font-size: 16px;
-        font-weight: 600;
+        font-family: var(--font-mono);
+        font-size: 18px;
+        font-weight: 500;
+        color: var(--color-ink);
       }
       /* Progressive disclosure per grid size (widget standard §2):
          1×1 shows the stat essence; wider/taller adds detail. */
@@ -400,7 +406,10 @@
           padding: 40px 32px;
           overflow: auto;
         }
-        :root:not([data-steward-tile]) .date {
+        /* Shown on every wide surface — the wide tile as well as the raw
+           page and full view — so the reserved "date" grid row carries the
+           heading instead of sitting empty (which read as dead top margin). */
+        .date {
           display: block;
         }
       }

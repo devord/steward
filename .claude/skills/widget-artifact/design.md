@@ -92,11 +92,46 @@ media block:
 ```
 
 Width alone cannot tell a wide tile from the full view — a 4-column tile
-is also ≥900px. Layout (columns, roomier rows) keys on the media query;
-page generosity (outer padding, page-only elements like a date headline)
-keys on `:root:not([data-steward-tile])`.
+is also ≥900px. Layout (columns, roomier rows) and the page heading key on
+the media query; only the generosity that would break a tile — outer
+padding, `overflow: auto` — keys on `:root:not([data-steward-tile])`. Never
+gate an element on the stamp while still reserving its grid row: on a wide
+tile the row then sits empty and reads as dead top margin (show it from the
+wide grid up instead).
 
 ## Components
+
+### Heading
+
+The artifact's own page title, matching the app's page headings so a wide
+tile, raw page, or full view reads like the rest of the product: mono, 18px,
+medium weight, full ink — with an optional ink-dim subtitle (14px sans) for a
+caption. The glance tiers lean on the chrome's title bar (name + freshness)
+and skip it; show it from the wide grid up (≥900px) and on the raw/full page,
+where there's room. Distinct from the chrome's freshness — carry the content
+the title bar can't: for daily-plan the day the plan is _for_, not when it ran.
+
+```css
+.heading {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+.heading .sub {
+  margin-top: 2px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--color-ink-dim);
+}
+```
+
+```html
+<p class="heading">Monday, July 13</p>
+```
+
+(The daily-plan sample names this element `.date` — the class is the
+artifact's to pick; the treatment is the shared one above.)
 
 ### Section
 
@@ -554,10 +589,11 @@ Design each tier deliberately — a tier is a viewport, not a crop:
 - **2×2** — the full ledger set or detail nests; fit-lists trim from the
   bottom.
 - **Wide tile (3–4 cols)** — spend width on columns (two sections side by
-  side, or trailing-value columns), not on longer lines.
+  side, or trailing-value columns), not on longer lines; the page heading
+  earns its row here.
 - **Full view / raw page** — a page: capped column, top-anchored,
-  hairline-separated rows, every item shown, page-only elements (a date
-  headline) allowed.
+  hairline-separated rows, every item shown, the page heading and page-only
+  generosity (outer padding, scroll) allowed.
 
 Bans, on top of the board's own: no invented colors or fonts; no boxes
 inside the tile (the card is the box — sections separate with rules and
