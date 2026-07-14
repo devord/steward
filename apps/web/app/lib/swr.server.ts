@@ -60,6 +60,11 @@ export async function swr<T>(
   ttlMs: number,
   load: () => Promise<T>,
   maxAgeMs = ttlMs * 10,
+  /** Gate on the loaded value: return false to serve it but skip caching, so
+      a degraded result is never written and then re-served stale as if good.
+      Applies to both the miss path and the background refresh. Defaults to
+      caching every resolved value. */
+  cacheable: (value: T) => boolean = () => true,
 ): Promise<T> {
   const entry = cache.get(key)
   if (entry && entry.expiresAt > Date.now()) {
@@ -69,7 +74,12 @@ export async function swr<T>(
     if (entry.staleAt <= Date.now() && !entry.refreshing) {
       entry.refreshing = true
       void load().then(
-        (value) => write(key, value, ttlMs, maxAgeMs),
+        (value) => {
+          // A degraded refresh must not overwrite the good stale value — clear
+          // the flag so the next read retries instead.
+          if (cacheable(value)) write(key, value, ttlMs, maxAgeMs)
+          else entry.refreshing = false
+        },
         () => {
           entry.refreshing = false
         },
@@ -82,7 +92,7 @@ export async function swr<T>(
     return entry.value as T
   }
   const value = await load()
-  write(key, value, ttlMs, maxAgeMs)
+  if (cacheable(value)) write(key, value, ttlMs, maxAgeMs)
   return value
 }
 

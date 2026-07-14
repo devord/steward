@@ -271,6 +271,12 @@ export interface SidebarData {
   /** false → discovery degraded: groups may be missing. The rail renders a
       quiet notice, never an error. */
   complete: boolean
+  /** true → data behind the rail failed to load transiently: a repo's board
+      listing (an empty group here is indistinguishable from a real one) or
+      partial discovery. Best-effort is still returned to render, but a
+      degraded rail is never cached (streamSidebar), so the next navigation
+      retries live instead of stranding the gap for the SWR window. */
+  degraded: boolean
 }
 
 /**
@@ -284,10 +290,19 @@ export async function loadSidebar(
   override?: string,
 ): Promise<SidebarData> {
   const listing = await listDataRepos(token, login, override)
+  // A failed board listing (rate limit, 5xx, network) stays isolated to its
+  // own repo group per ADR-0023, but it marks the whole load degraded so the
+  // empty group it produces is never cached as if the repo simply had no
+  // boards (streamSidebar). Collaborators/repo.yaml are best-effort by
+  // contract — their absence is expected, not a degrade.
+  let degraded = false
   const repos = await Promise.all(
     listing.repos.map(async (repo) => {
       const [dashboards, collaborators, repoFile] = await Promise.all([
-        listSidebarBoards(token, repo.full).catch(() => null),
+        listSidebarBoards(token, repo.full).catch(() => {
+          degraded = true
+          return null
+        }),
         // Best-effort by contract (403 for plain readers → null).
         listCollaborators(token, repo.full),
         // Best-effort too: an absent or malformed repo.yaml is just "no
@@ -310,7 +325,7 @@ export async function loadSidebar(
       }
     }),
   )
-  return { repos, complete: listing.complete }
+  return { repos, complete: listing.complete, degraded }
 }
 
 /** SWR key prefix for one viewer's sidebar entries (ADR-0030). */
@@ -339,7 +354,16 @@ export function streamSidebar(
     `${sidebarKeyPrefix(token)}:${override ?? ""}`,
     SIDEBAR_TTL_MS,
     () => loadSidebar(token, login, override),
-  ).catch(() => ({ repos: [], complete: false }))
+    SIDEBAR_TTL_MS * 10,
+    // Only a fully-successful rail is cached. A degraded load is still returned
+    // so the render stays best-effort, but writing it would let SWR serve that
+    // empty rail stale for the whole max-age window — and a refresh (which
+    // repairs only in the background) would keep showing it, the exact bug
+    // where the rail's boards vanish and only re-auth or another navigation
+    // brings them back. Skipping the write makes the next navigation retry live
+    // and self-heal.
+    (data) => data.complete && !data.degraded,
+  ).catch(() => ({ repos: [], complete: false, degraded: true }))
 }
 
 /**

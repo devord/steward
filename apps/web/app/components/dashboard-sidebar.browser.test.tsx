@@ -53,6 +53,7 @@ const base = {
       },
     ],
     complete: true,
+    degraded: false,
   },
   login: "alice",
   displayName: "Alice",
@@ -144,6 +145,7 @@ describe("DashboardSidebar per-board menu", () => {
           },
         ],
         complete: true,
+        degraded: false,
       },
     })
     requireMenuButton("main").click()
@@ -186,6 +188,7 @@ describe("DashboardSidebar per-board menu", () => {
           base.sidebar.repos[1],
         ],
         complete: true,
+        degraded: false,
       },
     })
 
@@ -212,6 +215,7 @@ describe("DashboardSidebar per-board menu", () => {
           base.sidebar.repos[1],
         ],
         complete: true,
+        degraded: false,
       },
     })
     const labels = [...document.querySelectorAll("nav a")].map((a) =>
@@ -259,6 +263,7 @@ describe("DashboardSidebar sections", () => {
           base.sidebar.repos[1],
         ],
         complete: true,
+        degraded: false,
       },
     })
     expect(sectionLabels()).toEqual(["Projects", "Clients"])
@@ -294,6 +299,7 @@ describe("DashboardSidebar repo groups", () => {
           base.sidebar.repos[1],
         ],
         complete: true,
+        degraded: false,
       },
     })
     const header = groupHeader(HOME_REPO)
@@ -469,6 +475,7 @@ describe("DashboardSidebar repo groups", () => {
           },
         ],
         complete: true,
+        degraded: false,
       },
     })
     const shared = groupHeader(SHARED_REPO)
@@ -488,6 +495,7 @@ describe("DashboardSidebar repo groups", () => {
           { ...base.sidebar.repos[1], dashboards: [] },
         ],
         complete: true,
+        degraded: false,
       },
     })
     expect(groupHeader(SHARED_REPO)).not.toBeNull()
@@ -502,6 +510,7 @@ describe("DashboardSidebar repo groups", () => {
           { ...base.sidebar.repos[1], dashboards: [] },
         ],
         complete: true,
+        degraded: false,
       },
     })
     createFirstRow()?.click()
@@ -541,7 +550,11 @@ describe("DashboardSidebar repo groups", () => {
 
   it("notes when discovery degraded instead of hiding it", async () => {
     await renderSidebar({
-      sidebar: { repos: [base.sidebar.repos[0]], complete: false },
+      sidebar: {
+        repos: [base.sidebar.repos[0]],
+        complete: false,
+        degraded: false,
+      },
     })
     expect(
       [...document.querySelectorAll("nav p")].some((el) =>

@@ -81,6 +81,7 @@ async function renderBoard(
               },
             ],
             complete: true,
+            degraded: false,
           }}
         />
       ),

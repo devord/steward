@@ -57,7 +57,7 @@ async function renderView(over: {
     <RoutineRunsView
       repo={{ full: HOME_REPO, name: "steward-data", isShared: false }}
       homeRepo={HOME_REPO}
-      sidebar={{ repos: [], complete: true }}
+      sidebar={{ repos: [], complete: true, degraded: false }}
       login="alice"
       displayName="Alice"
       now={NOW}
