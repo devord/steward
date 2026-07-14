@@ -5,8 +5,13 @@ export interface AgoParts {
 }
 
 export function agoParts(iso: string, now: number): AgoParts {
-  const delta = Math.max(0, now - Date.parse(iso))
-  const minutes = Math.floor(delta / 60_000)
+  return durationParts(now - Date.parse(iso))
+}
+
+/** The same compact vocabulary for a bare duration (a run's gap to the
+    previous one) — "now" means under a minute. */
+export function durationParts(deltaMs: number): AgoParts {
+  const minutes = Math.floor(Math.max(0, deltaMs) / 60_000)
   if (minutes < 1) return { unit: "now", n: 0 }
   if (minutes < 60) return { unit: "minutes", n: minutes }
   const hours = Math.floor(minutes / 60)

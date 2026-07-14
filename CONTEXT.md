@@ -29,6 +29,17 @@ read local data: launchd plists written by `routines:sync` when scheduled,
 a plain interactive session when manual. Interactive skills (they ask
 questions before authoring) are necessarily `local` + manual.
 
+**Run**:
+One execution of a routine on its host — a schedule fires, the app fires
+the API trigger, or a terminal session runs the pointer prompt. Every run
+ends by publishing, so its evidence is its **publish receipt**: the one
+commit touching `w/<slug>/index.html` on the artifacts branch
+(ADR-0002/0026). The routine detail view derives run history from those
+receipts (ADR-0033); a run that fails before publishing leaves no receipt —
+its session log lives on the routine's claude.ai page, which the app links
+to but cannot read (the trigger token is trigger-only, ADR-0016).
+_Avoid_: execution, invocation, job run
+
 **Dashboard**:
 A named grid of widgets — one layout file per dashboard at
 `data/dashboards/<slug>.yaml` in a data repo (optional `name:` for

@@ -136,6 +136,29 @@ export const en = {
   "routines.emptyHint":
     "A routine produces a widget — add one, then place it on a board.",
 
+  // One routine's detail view (ADR-0033): its facts, then its run history —
+  // the publish receipts on the artifacts branch. Voice: receipts and
+  // commits are called what they are (git words plain, DESIGN.md).
+  "runs.back": "All routines",
+  "runs.heading": "Runs",
+  "runs.subtitle":
+    "Every run ends by publishing the artifact — one commit per run on the artifacts branch. This is that history.",
+  // {claude} renders as a link to the routine on claude.ai.
+  "runs.claudeNote":
+    "Failed runs leave no receipt — sessions, logs, and failures live on {claude}.",
+  "runs.colRan": "Ran",
+  "runs.colGap": "After",
+  "runs.colBy": "By",
+  "runs.colReceipt": "Receipt",
+  "runs.count": "{n} runs",
+  "runs.capped": "last {n} runs",
+  "runs.firstTag": "first run",
+  "runs.lateTag": "late",
+  "runs.empty": "No runs yet — nothing has published this widget.",
+  "runs.unreachable":
+    "GitHub unreachable — run history couldn't load. It retries on refresh.",
+  "runs.loading": "Loading run history…",
+
   "templates.title": "Templates",
   "templates.subtitle":
     "What the routine picker offers — {dir} in {repo}, plus the built-ins.",
@@ -299,6 +322,13 @@ export const en = {
   "time.minutes": "{n}m ago",
   "time.hours": "{n}h ago",
   "time.days": "{n}d ago",
+
+  // Bare durations (a run's gap to the previous one) — same vocabulary as
+  // time.* without the "ago"; "now" is the under-a-minute case.
+  "duration.now": "<1m",
+  "duration.minutes": "{n}m",
+  "duration.hours": "{n}h",
+  "duration.days": "{n}d",
 
   "dialog.title": "Add a routine",
   "dialog.description":

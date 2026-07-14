@@ -15,6 +15,7 @@ import {
 
 import { data } from "react-router"
 
+import type { RunReceipt } from "./runs.ts"
 import type { DiscoveredTemplate } from "./templates.ts"
 import {
   type Collaborator,
@@ -23,6 +24,7 @@ import {
   GitHubError,
   listCollaborators,
   listDirectory,
+  listPathCommits,
   repoExists,
 } from "./github.server.ts"
 import { listDataRepos } from "./repos.server.ts"
@@ -558,6 +560,51 @@ export async function loadRoutinesPool(
     baseFile: routinesRaw?.text ?? null,
     boardsByRoutine,
     dashboards,
+  }
+}
+
+/** How much run history the detail view reads — one commits-API page. */
+export const RUNS_LIMIT = 30
+
+export interface RoutineRuns {
+  /** Publish receipts, newest first (ADR-0033). Empty → never ran. */
+  receipts: RunReceipt[]
+  /** The read hit RUNS_LIMIT — older receipts exist beyond this page. */
+  capped: boolean
+  /** GitHub couldn't serve the history right now — render the retry line,
+      never an error page (the same per-cell degrade loadArtifacts uses). */
+  unreachable?: boolean
+}
+
+/**
+ * A routine's run history: the commits touching its artifact on the
+ * artifacts branch — every run's mandatory last step is exactly one such
+ * commit (ADR-0002/0026), so this reads the receipts themselves rather than
+ * keeping a parallel run log honest. Streamed by the detail route
+ * (ADR-0030); failures degrade in-band, so the promise never rejects.
+ */
+export async function loadRoutineRuns(
+  token: string,
+  repo: string,
+  slug: string,
+): Promise<RoutineRuns> {
+  try {
+    const commits = await listPathCommits(
+      token,
+      repo,
+      `w/${slug}/index.html`,
+      "artifacts",
+      RUNS_LIMIT,
+    )
+    const receipts = (commits ?? []).map((commit) => ({
+      sha: commit.sha,
+      htmlUrl: commit.htmlUrl,
+      at: commit.date,
+      author: commit.author,
+    }))
+    return { receipts, capped: receipts.length >= RUNS_LIMIT }
+  } catch {
+    return { receipts: [], capped: false, unreachable: true }
   }
 }
 
