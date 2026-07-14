@@ -648,6 +648,79 @@ export async function putFile(
 
 const refSchema = z.object({ object: z.object({ sha: z.string() }) })
 
+const commitSchema = z.object({
+  sha: z.string(),
+  tree: z.object({ sha: z.string() }),
+})
+const shaSchema = z.object({ sha: z.string() })
+
+/**
+ * Commit several files to `branch` in one atomic commit via the Git Data API.
+ * The contents API ({@link putFile}) writes exactly one file per commit, so a
+ * batch edit — renaming a section rewrites the `section` field of every board
+ * filed under it, plus the repo's `sections` order (routes/dashboards.ts) —
+ * would otherwise be N separate commits that can half-apply, stranding the rail
+ * mid-rename. This reads the branch head, lays the new file contents over its
+ * tree, commits with the head as parent, and fast-forwards the ref.
+ *
+ * The ref update is non-force: if anyone else pushed since the head read, the
+ * new commit is no longer a fast-forward and GitHub rejects it (422) — the same
+ * stale-base conflict a single-file PUT's `sha` check catches (ADR-0003), so
+ * callers translate it the identical way. Every path is a file write (create or
+ * overwrite); deletions aren't needed here (clearing a section rewrites the
+ * board file, it doesn't remove it).
+ */
+export async function commitFiles(
+  token: string,
+  repo: string,
+  options: {
+    branch: string
+    message: string
+    files: { path: string; content: string }[]
+  },
+): Promise<{ commitSha: string }> {
+  const head = await ghJson(
+    token,
+    `/repos/${repo}/git/ref/heads/${options.branch}`,
+    refSchema,
+  )
+  const base = await ghJson(
+    token,
+    `/repos/${repo}/git/commits/${head.object.sha}`,
+    commitSchema,
+  )
+  const tree = await ghJson(token, `/repos/${repo}/git/trees`, shaSchema, {
+    method: "POST",
+    body: JSON.stringify({
+      base_tree: base.tree.sha,
+      tree: options.files.map((file) => ({
+        path: file.path,
+        mode: "100644",
+        type: "blob",
+        content: file.content,
+      })),
+    }),
+  })
+  const commit = await ghJson(token, `/repos/${repo}/git/commits`, shaSchema, {
+    method: "POST",
+    body: JSON.stringify({
+      message: options.message,
+      tree: tree.sha,
+      parents: [head.object.sha],
+    }),
+  })
+  await ghJson(
+    token,
+    `/repos/${repo}/git/refs/heads/${options.branch}`,
+    z.unknown(),
+    {
+      method: "PATCH",
+      body: JSON.stringify({ sha: commit.sha, force: false }),
+    },
+  )
+  return { commitSha: commit.sha }
+}
+
 /** Create `branch` pointing at the current head of `fromBranch`. */
 export async function createBranch(
   token: string,

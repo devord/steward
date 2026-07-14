@@ -305,6 +305,25 @@ export const en = {
   "board.widgetsLoaded": "Widgets loaded",
   "board.widgetsUnreachable": "Widgets couldn't load — retrying shortly",
 
+  "section.menu": "Section options",
+  "section.rename": "Rename section",
+  "section.delete": "Delete section",
+  "section.nameLabel": "Section name",
+  "section.namePlaceholder": "Section name",
+  "section.renameTitle": "Rename section",
+  "section.renameBody":
+    "Renames the “{section}” heading across every dashboard filed under it.",
+  "section.renameHint":
+    "Renaming to a section that already exists merges the two.",
+  "section.renameConfirm": "Rename",
+  "section.renaming": "Renaming…",
+  "section.deleteTitle": "Delete this section?",
+  "section.deleteBody":
+    "Removes the “{section}” heading. Its dashboards move to the top of the repo, ungrouped — nothing is deleted.",
+  "section.deleteConfirm": "Delete section",
+  "section.deleting": "Deleting…",
+  "section.conflict": "The repo changed just now — close and retry",
+
   "widget.stale": "Stale",
   "widget.staleTitle": "Overdue relative to its schedule",
   "widget.ran": "Ran {ago}",

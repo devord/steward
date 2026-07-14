@@ -112,6 +112,8 @@ async function renderSidebar(
 ) {
   const onDeleteBoard = vi.fn<(repo: string, slug: string) => void>()
   const onRenameBoard = vi.fn<(repo: string, slug: string) => void>()
+  const onRenameSection = vi.fn<(repo: string, section: string) => void>()
+  const onDeleteSection = vi.fn<(repo: string, section: string) => void>()
   // AccountMenu's sign-out uses useSubmit, which needs a data router.
   const router = createMemoryRouter([
     {
@@ -121,14 +123,93 @@ async function renderSidebar(
           {...base}
           onDeleteBoard={onDeleteBoard}
           onRenameBoard={onRenameBoard}
+          onRenameSection={onRenameSection}
+          onDeleteSection={onDeleteSection}
           {...over}
         />
       ),
     },
   ])
   await render(<RouterProvider router={router} />)
-  return { onDeleteBoard, onRenameBoard }
+  return { onDeleteBoard, onRenameBoard, onRenameSection, onDeleteSection }
 }
+
+/** A repo with two named sections — the fixture the section-menu cases drive. */
+const groupedOver: Partial<Parameters<typeof DashboardSidebar>[0]> = {
+  sidebar: {
+    repos: [
+      {
+        ...base.sidebar.repos[0],
+        sections: ["Projects", "Clients"],
+        dashboards: [
+          { slug: "main", section: null, lastRunAt: null, stale: false },
+          { slug: "corza", section: "Clients", lastRunAt: null, stale: false },
+          {
+            slug: "steward",
+            section: "Projects",
+            lastRunAt: null,
+            stale: false,
+          },
+        ],
+      },
+      base.sidebar.repos[1],
+    ],
+    complete: true,
+    degraded: false,
+  },
+}
+
+/** The `⋯` trigger inside a section heading, found by the section's label. */
+const sectionMenuButton = (label: string): HTMLButtonElement | null => {
+  const heading = [
+    ...document.querySelectorAll<HTMLElement>('[data-testid="rail-section"]'),
+  ].find((el) => el.textContent?.trim() === label)
+  return (
+    heading?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Section options"]',
+    ) ?? null
+  )
+}
+
+const requireSectionMenuButton = (label: string): HTMLButtonElement => {
+  const btn = sectionMenuButton(label)
+  if (!btn) throw new Error(`no menu button for section "${label}"`)
+  return btn
+}
+
+describe("DashboardSidebar section menu", () => {
+  it("renames the section the menu belongs to, passing its repo and name", async () => {
+    const { onRenameSection } = await renderSidebar(groupedOver)
+
+    requireSectionMenuButton("Clients").click()
+    await vi.waitFor(() => expect(menuItem("Rename section")).not.toBeNull())
+    requireMenuItem("Rename section").click()
+
+    expect(onRenameSection).toHaveBeenCalledTimes(1)
+    expect(onRenameSection).toHaveBeenCalledWith(HOME_REPO, "Clients")
+  })
+
+  it("dissolves the section the menu belongs to", async () => {
+    const { onDeleteSection } = await renderSidebar(groupedOver)
+
+    requireSectionMenuButton("Projects").click()
+    await vi.waitFor(() => expect(menuItem("Delete section")).not.toBeNull())
+    requireMenuItem("Delete section").click()
+
+    expect(onDeleteSection).toHaveBeenCalledTimes(1)
+    expect(onDeleteSection).toHaveBeenCalledWith(HOME_REPO, "Projects")
+  })
+
+  it("renders no section menu on chrome pages (no handlers)", async () => {
+    await renderSidebar({
+      ...groupedOver,
+      onRenameSection: undefined,
+      onDeleteSection: undefined,
+    })
+    expect(sectionMenuButton("Clients")).toBeNull()
+    expect(sectionMenuButton("Projects")).toBeNull()
+  })
+})
 
 describe("DashboardSidebar per-board menu", () => {
   it("shows a menu on every deletable board, active or not", async () => {

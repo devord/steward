@@ -54,3 +54,24 @@ export function sectionBoards(
   }
   return sections
 }
+
+/**
+ * The repo's `sections` order list (data/repo.yaml, ADR-0034/0039) after a
+ * section is renamed or removed — the ordering half of a section edit, run
+ * alongside rewriting each board's own `section` (membership rides there, not
+ * here). `rename` maps the old name to the new in place, then dedupes, so a
+ * rename onto a name already in the list merges to one entry keeping the
+ * earlier slot (the allow-merge case). `remove` drops the name. Order is
+ * otherwise preserved. A name not in the list is a no-op — the list carries
+ * only sequence, so an unlisted section simply had none. Returns a new array;
+ * the input is untouched.
+ */
+export function reorderAfterSectionEdit(
+  order: string[],
+  edit: { rename: { from: string; to: string } } | { remove: string },
+): string[] {
+  if ("remove" in edit) return order.filter((label) => label !== edit.remove)
+  const { from, to } = edit.rename
+  const mapped = order.map((label) => (label === from ? to : label))
+  return mapped.filter((label, i) => mapped.indexOf(label) === i)
+}

@@ -34,6 +34,12 @@ export interface ShellNav {
   /** Rename a board's display name — same per-board menu, offered on every
       board (the current name rides along for the dialog's prefill). */
   onRenameBoard?: (repo: string, slug: string) => void
+  /** Rename a section — the section header's own `⋯` menu in the rail, keyed
+      by repo + the section's current name. Absent on chrome pages. */
+  onRenameSection?: (repo: string, section: string) => void
+  /** Dissolve a section — same menu; its boards fall back to the repo's
+      unlabeled lead section. Absent on chrome pages. */
+  onDeleteSection?: (repo: string, section: string) => void
 }
 
 /**

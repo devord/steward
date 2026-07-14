@@ -301,6 +301,24 @@ export const ptBR: Messages = {
   "board.widgetsUnreachable":
     "Os widgets não carregaram — tentando de novo em instantes",
 
+  "section.menu": "Opções da seção",
+  "section.rename": "Renomear seção",
+  "section.delete": "Excluir seção",
+  "section.nameLabel": "Nome da seção",
+  "section.namePlaceholder": "Nome da seção",
+  "section.renameTitle": "Renomear seção",
+  "section.renameBody":
+    "Renomeia o título “{section}” em todos os painéis arquivados sob ele.",
+  "section.renameHint": "Renomear para uma seção que já existe mescla as duas.",
+  "section.renameConfirm": "Renomear",
+  "section.renaming": "Renomeando…",
+  "section.deleteTitle": "Excluir esta seção?",
+  "section.deleteBody":
+    "Remove o título “{section}”. Seus painéis sobem para o topo do repo, sem grupo — nada é excluído.",
+  "section.deleteConfirm": "Excluir seção",
+  "section.deleting": "Excluindo…",
+  "section.conflict": "O repo acabou de mudar — feche e tente de novo",
+
   "widget.stale": "Atrasado",
   "widget.staleTitle": "Atrasado em relação ao agendamento",
   "widget.ran": "Rodou {ago}",
