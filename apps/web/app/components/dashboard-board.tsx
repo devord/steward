@@ -452,6 +452,7 @@ export function DashboardBoard({
             onFired={() =>
               markFired(widget.routine, data[widget.routine]?.sha ?? null)
             }
+            onSync={() => setSyncing(true)}
             editing={editing}
             onEdit={() => setEditingRoutine(routine)}
             onToggleEnabled={() =>

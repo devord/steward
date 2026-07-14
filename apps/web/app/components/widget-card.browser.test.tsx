@@ -54,6 +54,26 @@ describe("WidgetCard empty states", () => {
     await expect.poll(() => hasText("In your draft")).toBe(true)
   })
 
+  it("commits a draft routine from the Sync-to-commit button", async () => {
+    let synced = false
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine()}
+        artifact={undefined}
+        now={Date.now()}
+        committed={false}
+        onSync={() => {
+          synced = true
+        }}
+      />,
+    )
+    const sync = document.querySelector<HTMLButtonElement>("button")
+    expect(sync?.textContent).toContain("Sync to commit")
+    sync?.click()
+    await expect.poll(() => synced).toBe(true)
+  })
+
   it("shows the trigger setup command when the trigger is missing", async () => {
     await renderCard(
       <WidgetCard

@@ -68,6 +68,9 @@ export interface WidgetCardProps {
   pendingFiredAt?: number | null
   /** Called when the update button successfully fires a cloud run. */
   onFired?: () => void
+  /** Open the Sync panel — powers the draft tile's "Sync to commit" button,
+      the same action as the header's unsynced chip (ADR-0003). */
+  onSync?: () => void
   /** Edit mode: drag to move, corner handle to resize, × to remove. */
   editing?: boolean
   /** Open the routine editor for this card (edit-mode title bar pencil). */
@@ -108,6 +111,7 @@ export function WidgetCard({
   committed = true,
   pendingFiredAt = null,
   onFired,
+  onSync,
   editing = false,
   onEdit,
   onToggleEnabled,
@@ -471,6 +475,7 @@ export function WidgetCard({
             login={login}
             now={now}
             onFired={onFired}
+            onSync={onSync}
             onEnable={onToggleEnabled}
           />
         )}
@@ -828,6 +833,7 @@ function WidgetEmptyState({
   login,
   now,
   onFired,
+  onSync,
   onEnable,
 }: {
   status: WidgetStatus
@@ -842,6 +848,8 @@ function WidgetEmptyState({
   now: number
   /** Called when the run-now button successfully fires a cloud run. */
   onFired?: () => void
+  /** Open the Sync panel — the draft tile's "Sync to commit" button. */
+  onSync?: () => void
   /** Flip the routine back on — the disabled tile's escape hatch. */
   onEnable?: () => void
 }) {
@@ -937,6 +945,15 @@ function WidgetEmptyState({
         <Button variant="outline" onClick={() => onEnable()}>
           <Power />
           {t("widget.enable")}
+        </Button>
+      )}
+      {/* A fresh draft's only path forward is committing it — surface that as a
+          button here (same action as the header's unsynced chip, ADR-0003)
+          instead of prose pointing at the toolbar. */}
+      {status.kind === "draft" && onSync && (
+        <Button variant="outline" onClick={() => onSync()}>
+          <RefreshCw />
+          {t("widget.draftSync")}
         </Button>
       )}
       {cta && dataRepo != null && (

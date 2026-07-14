@@ -329,6 +329,7 @@ export const ptBR: Messages = {
   "widget.runningTitle": "Execução em andamento — abra no claude.ai",
   "widget.runningSince": "Rodando — começou {ago}",
   "widget.draftHint": "No seu rascunho — sincronize para commitar",
+  "widget.draftSync": "Sincronizar para commitar",
   "widget.needsTriggerHint":
     "Precisa de um gatilho de API para que a atualização funcione — no seu checkout do Steward:",
   "widget.awaitEnact": "Commitado — ative no seu checkout do Steward:",

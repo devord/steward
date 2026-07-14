@@ -332,6 +332,7 @@ export const en = {
   "widget.runningTitle": "Run in flight — open it in claude.ai",
   "widget.runningSince": "Running — started {ago}",
   "widget.draftHint": "In your draft — sync to commit it",
+  "widget.draftSync": "Sync to commit",
   "widget.needsTriggerHint":
     "Needs an API trigger before update works — from your Steward checkout:",
   "widget.awaitEnact": "Committed — enact it from your Steward checkout:",
