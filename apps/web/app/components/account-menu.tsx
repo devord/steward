@@ -7,11 +7,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioTile,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
+import { APPEARANCE_MODES } from "../lib/appearance-modes.ts"
+import { useAppearance } from "../lib/use-appearance.ts"
 import { useT } from "../lib/i18n.tsx"
 
 /** Two-letter monogram fallback: initials of a real name, else the login. */
@@ -27,7 +31,8 @@ function initialsFor(name: string | null | undefined, login: string): string {
 
 /**
  * The account menu — a GitHub-avatar pill that opens the account-scoped
- * actions that were previously loose in the header: settings and sign-out.
+ * actions that were previously loose in the header: settings, the quick
+ * appearance-mode row, and sign-out.
  * Consolidating them here (the top-right convention) demotes sign-out from a
  * peer of the board actions to where exit actions belong, and gives the
  * signed-in identity a real affordance. Strictly account-scoped: repo links
@@ -42,6 +47,44 @@ function initialsFor(name: string | null | undefined, login: string): string {
  * grows, chevron pins right); the default compact pill sits inline in the
  * pre-board top bars. Sign-out posts to the same `/auth/logout` action.
  */
+/**
+ * The account menu's quick mode row: the settings mode control's three
+ * choices as icon tiles beside their label, one menu row tall. Real menu
+ * radio items (arrow keys walk them, `menuitemradio` semantics), and
+ * selecting keeps the menu open so the board re-themes in place — the
+ * device preference the landing toggle and /settings write (theme pairing
+ * stays on /settings; this row is only the mode).
+ */
+function ModeRow() {
+  const t = useT()
+  const [prefs, update] = useAppearance()
+  return (
+    <DropdownMenuRadioGroup
+      aria-label={t("settings.mode")}
+      value={prefs.mode}
+      onValueChange={(value) => {
+        const next = APPEARANCE_MODES.find(({ mode }) => mode === value)
+        if (next) update({ mode: next.mode })
+      }}
+      className="flex items-center gap-0.5 px-1.5 py-1"
+    >
+      <span aria-hidden className="flex-1 text-sm text-ink-dim">
+        {t("settings.mode")}
+      </span>
+      {APPEARANCE_MODES.map(({ mode, Icon, labelKey }) => (
+        <DropdownMenuRadioTile
+          key={mode}
+          value={mode}
+          aria-label={t(labelKey)}
+          title={t(labelKey)}
+        >
+          <Icon aria-hidden className="size-3.5" />
+        </DropdownMenuRadioTile>
+      ))}
+    </DropdownMenuRadioGroup>
+  )
+}
+
 export function AccountMenu({
   login,
   displayName,
@@ -120,6 +163,10 @@ export function AccountMenu({
           <Settings />
           {t("header.settings")}
         </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <ModeRow />
 
         <DropdownMenuSeparator />
 

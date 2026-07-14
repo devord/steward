@@ -224,6 +224,29 @@ function DropdownMenuRadioItem({
   )
 }
 
+/**
+ * A compact, indicator-less radio item for icon tiles laid out in a row
+ * (e.g. the account menu's mode switch): selection reads from the tile
+ * fill, not a trailing check. Keyboard still walks it as a menu item;
+ * clicking keeps the menu open (Base UI's radio-item default) so the
+ * choice previews live.
+ */
+function DropdownMenuRadioTile({
+  className,
+  ...props
+}: MenuPrimitive.RadioItem.Props) {
+  return (
+    <MenuPrimitive.RadioItem
+      data-slot="dropdown-menu-radio-tile"
+      className={cn(
+        "flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-hidden select-none pointer-coarse:size-8 focus:bg-accent focus:text-accent-foreground data-checked:bg-secondary data-checked:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
 function DropdownMenuSeparator({
   className,
   ...props
@@ -264,6 +287,7 @@ export {
   DropdownMenuCheckboxItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuRadioTile,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuSub,
