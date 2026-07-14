@@ -100,18 +100,17 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
         data-testid="repo-glyph"
         className="absolute top-1/2 left-[13px] size-3.5 -translate-x-1/2 -translate-y-1/2 text-ink-dim"
       />
-      {/* foreground, not ink-dim: with N repos the group heading is the rail's
-          primary structure, and at ink-dim it sat at the same brightness as the
-          inactive boards and the section labels — three tiers at one value, the
-          blur this pass fixes. Lifting it to full ink makes it the clear anchor
-          (the 15px mono boards still hold weight by size). The trailing
-          visibility glyphs stay faint (metadata, resting quiet). Voice follows
-          the account menu's prose-vs-identifier rule: a display name (or
-          "Personal") is prose — sans — separating the heading tier from the
-          mono board slugs below; only the bare repo-name fallback keeps mono. */}
+      {/* text-sm + semibold + foreground: the group heading is the rail's
+          primary structure. Sized to the 15px board rows (not under them — a
+          heading smaller than what it heads reads upside-down) and made the
+          clear anchor by weight, glyph, and full ink rather than by size. The
+          trailing visibility glyphs stay faint (metadata, resting quiet). Voice
+          follows the account menu's prose-vs-identifier rule: a display name (or
+          "Personal") is prose — sans — separating the heading tier from the mono
+          board slugs below; only the bare repo-name fallback keeps mono. */}
       <span
         className={cn(
-          "truncate text-xs font-medium text-foreground",
+          "truncate text-sm font-semibold text-foreground",
           group.displayName != null || group.isHome ? "font-sans" : "font-mono",
         )}
       >
