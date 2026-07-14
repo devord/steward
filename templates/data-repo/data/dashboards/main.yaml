@@ -2,17 +2,14 @@
 # dashboard in data/dashboards/; the filename is the dashboard's slug
 # (`main` is the default board the app opens).
 # Grid: `columns` on desktop (up to 6), ~`rowHeight`px row unit, `width`
-# fixed|wide canvas (docs/widget-standard.md). Each widget references a
-# routine slug from routines.yaml.
+# fixed|wide canvas. Each widget references a routine slug from
+# routines.yaml.
 name: Main
 grid:
   columns: 4
   rowHeight: 150
   width: fixed
 widgets:
-  - routine: daily-plan
+  - routine: my-widget
     position: { col: 1, row: 1 }
-    size: { cols: 2, rows: 2 }
-  - routine: meeting-prep
-    position: { col: 3, row: 1 }
     size: { cols: 2, rows: 2 }

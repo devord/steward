@@ -1,39 +1,48 @@
-# steward-data
+<p align="center">
+  <a href="https://github.com/devord/steward">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset=".github/wordmark-dark.svg" />
+      <source media="(prefers-color-scheme: light)" srcset=".github/wordmark-light.svg" />
+      <img alt="Steward" src=".github/wordmark-dark.svg" width="240" />
+    </picture>
+  </a>
+</p>
 
-Your private [Steward](https://github.com/devord/steward) data repo,
-created from the template by the app's first-run wizard — or, for a team,
-the shared team data repo everyone with access can see (ADR-0010).
-Everything Steward knows about this dashboard's owner lives here — the app
-itself stores nothing (ADR-0001).
+<p align="center">
+  Your data repo — Steward stores nothing itself; everything it knows lives here.
+</p>
 
-- `main` holds config: [`data/routines.yaml`](./data/routines.yaml) (what
-  runs, on what schedule or on demand) and one grid layout per dashboard
-  under [`data/dashboards/`](./data/dashboards/) (`main.yaml` is the
-  default board; add a file to add a dashboard).
-- `templates/routines/<id>.md` files are your **private routine
-  templates** (ADR-0021): frontmatter with a `widget:` block (artifact
-  line, sizes, schedule, params), body = the authoring procedure. They
-  show up in the app's add-routine picker badged "private", alongside
-  Steward's built-ins — a same-named private template wins.
-- `data/triggers/<slug>.json` holds the API-trigger token for a manual
-  cloud routine (ADR-0016) — trigger-only scoped, committed on purpose:
-  everyone who can read this repo is exactly the set entitled to trigger.
-- The orphan `artifacts` branch holds published widget artifacts at
-  `w/<slug>/index.html` — written by routines via the `publish-widget`
-  skill, never by hand (except once, to prove the render path).
+## Layout
 
-Edit config through the Steward app (drafts → Sync panel → commit or PR),
-or by hand — it's plain YAML, and the app validates on load.
+- **`data/routines.yaml`** — what runs, and when.
+- **`data/dashboards/<slug>.yaml`** — one grid layout per board (`main` is the default).
+- **`data/repo.yaml`** — optional rail display name and section order.
+- **`data/triggers/<slug>.json`** — API-trigger token for a manual cloud routine.
+- **`templates/routines/<id>.md`** — routine templates, shown in the app's picker.
+- **`artifacts`** branch — published widgets, written via `publish-widget`.
+
+Edit in the Steward app or by hand — it's plain YAML, validated on load.
+
+## Enacting schedules & triggers
+
+The `routines:sync` CLI lives in the Steward repo, not here. From a Steward
+checkout, point it at this repo (the script manages its own clone):
+
+```bash
+pnpm routines:sync --repo <owner>/<name>            # dry-run plan
+pnpm routines:sync --repo <owner>/<name> --apply
+```
+
+The app's per-widget setup cards print these lines pre-filled.
 
 ## Bootstrapping the artifacts branch
 
-The wizard creates this repo with `main` only. The first `publish-widget`
-run creates the `artifacts` orphan branch automatically; to hand-publish a
-sample artifact before any routine exists:
+The first `publish-widget` run creates the `artifacts` orphan branch
+automatically. To hand-publish a sample before any routine exists:
 
 ```bash
 git checkout --orphan artifacts && git rm -rf .
-mkdir -p w/daily-plan
-# author w/daily-plan/index.html per docs/widget-standard.md
-git add w && git commit -m "publish: daily-plan (sample)" && git push -u origin artifacts
+mkdir -p w/my-widget
+# author w/my-widget/index.html per the widget standard
+git add w && git commit -m "publish: my-widget (sample)" && git push -u origin artifacts
 ```
