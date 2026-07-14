@@ -1,10 +1,15 @@
 import { cdp } from "vitest/browser"
 import { createMemoryRouter, RouterProvider } from "react-router"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { render } from "vitest-browser-react"
 
 import "../app.css"
 import { DashboardSidebar } from "./dashboard-sidebar.tsx"
+import { DRAFT_EVENT, DRAFT_KEY_PREFIX } from "../lib/draft.ts"
+import {
+  PENDING_RUN_EVENT,
+  PENDING_RUN_KEY_PREFIX,
+} from "../lib/pending-runs.ts"
 
 const HOME_REPO = "alice/steward-data"
 const SHARED_REPO = "acme/steward-team"
@@ -501,5 +506,105 @@ describe("DashboardSidebar repo groups", () => {
         (el.textContent ?? "").includes("may be missing"),
       ),
     ).toBe(true)
+  })
+})
+
+/** The board/pool row containing `label`, or null. */
+const rowFor = (label: string): HTMLAnchorElement | null =>
+  [...document.querySelectorAll<HTMLAnchorElement>("nav a")].find((a) =>
+    (a.textContent ?? "").includes(label),
+  ) ?? null
+
+const draftDots = (row: HTMLElement | null) =>
+  row?.querySelectorAll('[data-testid="rail-draft"]').length ?? 0
+
+const runningDots = (row: HTMLElement | null) =>
+  row?.querySelectorAll('[data-testid="rail-running"]').length ?? 0
+
+describe("DashboardSidebar state markers", () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it("marks boards and the pool with unsynced drafts, and only those", async () => {
+    // A board draft, on a board that is NOT active — the whole point: unsynced
+    // work is visible without switching to it. Payload content is irrelevant
+    // to the rail; only the key's existence is read.
+    localStorage.setItem(`${DRAFT_KEY_PREFIX}${HOME_REPO}:test`, "{}")
+    // The repo pool's own draft (ADR-0025) marks the Routines row.
+    localStorage.setItem(`${DRAFT_KEY_PREFIX}${SHARED_REPO}:__routines__`, "{}")
+    await renderSidebar()
+
+    await vi.waitFor(() => expect(draftDots(rowFor("test"))).toBe(1))
+    expect(draftDots(rowFor("main"))).toBe(0)
+    expect(draftDots(rowFor("team-ops"))).toBe(0)
+
+    // Exactly one Routines row marked: the shared repo's.
+    const routineRows = [
+      ...document.querySelectorAll<HTMLAnchorElement>("nav a"),
+    ].filter((a) => (a.textContent ?? "").includes("Routines"))
+    expect(routineRows.map((row) => draftDots(row))).toEqual([0, 1])
+
+    // The marker names its state for readers, not color alone.
+    expect(rowFor("test")?.textContent).toContain("Unsynced changes")
+  })
+
+  it("marks the repo's Routines row while a client-fired run is in flight", async () => {
+    localStorage.setItem(
+      `${PENDING_RUN_KEY_PREFIX}${HOME_REPO}:repo-pulse`,
+      JSON.stringify({ firedAt: Date.now(), sha: null }),
+    )
+    await renderSidebar()
+
+    const routineRows = [
+      ...document.querySelectorAll<HTMLAnchorElement>("nav a"),
+    ].filter((a) => (a.textContent ?? "").includes("Routines"))
+    await vi.waitFor(() =>
+      expect(routineRows.map((row) => runningDots(row))).toEqual([1, 0]),
+    )
+    expect(routineRows[0]?.textContent).toContain("Run in flight")
+    // Board rows never claim "running" — runs belong to the pool.
+    expect(runningDots(rowFor("main"))).toBe(0)
+  })
+
+  it("ignores a run mark that has already timed out", async () => {
+    localStorage.setItem(
+      `${PENDING_RUN_KEY_PREFIX}${HOME_REPO}:repo-pulse`,
+      JSON.stringify({ firedAt: Date.now() - 11 * 60_000, sha: null }),
+    )
+    await renderSidebar()
+    // Give the hydration scan a tick, then assert nothing lit up.
+    await vi.waitFor(() => expect(rowFor("main")).not.toBeNull())
+    expect(
+      document.querySelectorAll('[data-testid="rail-running"]').length,
+    ).toBe(0)
+  })
+
+  it("updates live on the draft and pending-run change events", async () => {
+    await renderSidebar()
+    await vi.waitFor(() => expect(rowFor("test")).not.toBeNull())
+    expect(draftDots(rowFor("test"))).toBe(0)
+
+    // A draft appears (the board's useDraft writes then notifies) …
+    localStorage.setItem(`${DRAFT_KEY_PREFIX}${HOME_REPO}:test`, "{}")
+    window.dispatchEvent(new Event(DRAFT_EVENT))
+    await vi.waitFor(() => expect(draftDots(rowFor("test"))).toBe(1))
+
+    // … and clears on commit/discard.
+    localStorage.removeItem(`${DRAFT_KEY_PREFIX}${HOME_REPO}:test`)
+    window.dispatchEvent(new Event(DRAFT_EVENT))
+    await vi.waitFor(() => expect(draftDots(rowFor("test"))).toBe(0))
+
+    // Same live path for runs.
+    localStorage.setItem(
+      `${PENDING_RUN_KEY_PREFIX}${HOME_REPO}:repo-pulse`,
+      JSON.stringify({ firedAt: Date.now(), sha: null }),
+    )
+    window.dispatchEvent(new Event(PENDING_RUN_EVENT))
+    await vi.waitFor(() =>
+      expect(
+        document.querySelectorAll('[data-testid="rail-running"]').length,
+      ).toBe(1),
+    )
   })
 })

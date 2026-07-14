@@ -15,9 +15,21 @@ import type { ArtifactInfo } from "./dashboard.server.ts"
  * spinning "Running" long after its artifact had already updated. We record
  * the SHA on file at fire time and clear once the loaded SHA differs from it.
  */
-const PENDING_TIMEOUT_MS = 10 * 60_000
+export const PENDING_TIMEOUT_MS = 10 * 60_000
 
-const PREFIX = "steward:pending-run:"
+/** localStorage key prefix for in-flight run marks — the rail scans it
+    (rail-status.ts) to mark repos with a run in flight. */
+export const PENDING_RUN_KEY_PREFIX = "steward:pending-run:"
+
+/** Fired on every pending-run write/remove so same-document observers (the
+    rail) can re-scan; `storage` events only reach *other* tabs. */
+export const PENDING_RUN_EVENT = "steward:pending-run-change"
+
+function notifyPendingRunChange() {
+  // Deferred: writes happen inside React state updaters, and a synchronous
+  // dispatch there would set listeners' state mid-render.
+  queueMicrotask(() => window.dispatchEvent(new Event(PENDING_RUN_EVENT)))
+}
 
 /** What we remember about an in-flight run: when it fired and the artifact
     SHA at that moment (null → nothing published yet), so a later load can tell
@@ -28,7 +40,7 @@ export interface PendingRun {
 }
 
 function storageKey(dataRepo: string, slug: string): string {
-  return `${PREFIX}${dataRepo}:${slug}`
+  return `${PENDING_RUN_KEY_PREFIX}${dataRepo}:${slug}`
 }
 
 /**
@@ -63,7 +75,7 @@ export function usePendingRuns(dataRepo: string) {
   useEffect(() => {
     const now = Date.now()
     const next: Record<string, PendingRun> = {}
-    const prefix = `${PREFIX}${dataRepo}:`
+    const prefix = `${PENDING_RUN_KEY_PREFIX}${dataRepo}:`
     const keys: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i)
@@ -96,6 +108,7 @@ export function usePendingRuns(dataRepo: string) {
         next[slug] = run
       } else {
         localStorage.removeItem(k)
+        notifyPendingRunChange()
       }
     }
     setPending(next)
@@ -105,6 +118,7 @@ export function usePendingRuns(dataRepo: string) {
     (slug: string, sha: string | null) => {
       const run: PendingRun = { firedAt: Date.now(), sha }
       localStorage.setItem(storageKey(dataRepo, slug), JSON.stringify(run))
+      notifyPendingRunChange()
       setPending((prev) => ({ ...prev, [slug]: run }))
     },
     [dataRepo],
@@ -120,6 +134,7 @@ export function usePendingRuns(dataRepo: string) {
           delete next[slug]
           localStorage.removeItem(storageKey(dataRepo, slug))
         }
+        notifyPendingRunChange()
         return next
       })
     },

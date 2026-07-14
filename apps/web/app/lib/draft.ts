@@ -26,6 +26,33 @@ export type BaseShas = z.infer<typeof baseShasSchema>
 /** The two config files a board's draft can touch. */
 export type SyncKind = "routines" | "dashboard"
 
+/** localStorage key prefix for drafts — the rail scans it (rail-status.ts) to
+    mark boards carrying unsynced work. */
+export const DRAFT_KEY_PREFIX = "steward:draft:"
+
+/** Fired on every draft write/remove so same-document observers (the rail)
+    can re-scan; `storage` events only reach *other* tabs. */
+export const DRAFT_EVENT = "steward:draft-change"
+
+function notifyDraftChange() {
+  // Deferred: writes happen inside React state updaters, and a synchronous
+  // dispatch there would set listeners' state mid-render.
+  queueMicrotask(() => window.dispatchEvent(new Event(DRAFT_EVENT)))
+}
+
+/** One draft per board (ADR-0003): two dashboards in the same repo are
+    separate edit surfaces even though they share routines.yaml. */
+export function boardDraftKey(repo: string, slug: string): string {
+  return `${repo}:${slug}`
+}
+
+/** The repo pool's own draft key (ADR-0025) — `__routines__` can't collide
+    with a board slug (real slugs are kebab-case), so the pool's draft never
+    crosses a board's. */
+export function poolDraftKey(repo: string): string {
+  return `${repo}:__routines__`
+}
+
 const draftSchema = z.object({
   baseShas: baseShasSchema,
   routines: routinesFileSchema,
@@ -36,7 +63,7 @@ export type Draft = z.infer<typeof draftSchema>
 
 /** `boardKey` is `<owner>/<repo>:<dashboard-slug>` — one draft per board. */
 function storageKey(boardKey: string) {
-  return `steward:draft:${boardKey}`
+  return `${DRAFT_KEY_PREFIX}${boardKey}`
 }
 
 function readDraft(boardKey: string): Draft | null {
@@ -52,6 +79,7 @@ function readDraft(boardKey: string): Draft | null {
     // A draft from an older schema version is not worth migrating: the
     // canonical state is one commit away (ADR-0003). Drop it.
     localStorage.removeItem(storageKey(boardKey))
+    notifyDraftChange()
     return null
   }
 }
@@ -221,6 +249,7 @@ export function useDraft(boardKey: string, view: ServerConfig) {
         }
         const next = mutate(structuredClone(start))
         localStorage.setItem(storageKey(boardKey), JSON.stringify(next))
+        notifyDraftChange()
         return next
       })
     },
@@ -229,6 +258,7 @@ export function useDraft(boardKey: string, view: ServerConfig) {
 
   const clear = useCallback(() => {
     localStorage.removeItem(storageKey(boardKey))
+    notifyDraftChange()
     setDraft(null)
   }, [boardKey])
 
@@ -250,6 +280,7 @@ export function useDraft(boardKey: string, view: ServerConfig) {
         })
       }
       localStorage.removeItem(storageKey(boardKey))
+      notifyDraftChange()
       setDraft(null)
     },
     [boardKey, draft],
