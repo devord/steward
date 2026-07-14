@@ -320,8 +320,7 @@ export const ptBR: Messages = {
   "widget.runLocalDescription":
     "{name} roda na sua máquina, não na nuvem — não há gatilho de API para disparar daqui. Rode a partir de um terminal:",
   "widget.runLocalCliLabel": "Com a CLI do Steward",
-  "widget.runLocalPromptLabel":
-    "Ou peça ao Claude Code — sem precisar de checkout:",
+  "widget.runLocalPromptLabel": "Ou peça ao Claude Code",
   "widget.unreachable":
     "GitHub inacessível — tentará novamente na próxima atualização",
   "widget.disabled": "Rotina desativada",

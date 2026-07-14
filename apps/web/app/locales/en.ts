@@ -324,7 +324,7 @@ export const en = {
   "widget.runLocalDescription":
     "{name} runs on your machine, not in the cloud — there's no API trigger to fire from here. Run it from a terminal:",
   "widget.runLocalCliLabel": "With the Steward CLI",
-  "widget.runLocalPromptLabel": "Or ask Claude Code — no checkout needed:",
+  "widget.runLocalPromptLabel": "Or ask Claude Code",
   "widget.unreachable": "GitHub unreachable — retries on next refresh",
   "widget.disabled": "Routine disabled",
   "widget.enable": "Enable",
