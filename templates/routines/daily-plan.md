@@ -17,8 +17,20 @@ widget:
 
 Author today's working plan as a widget artifact. You are invoked by the
 `run-routine` dispatcher with the routine's `instructions` from
-`data/routines.yaml` — treat those as the user's standing guidance (which
+`data/routines.yaml` — treat those as the owner's standing guidance (which
 projects matter, what to ignore, tone).
+
+A daily plan has **one subject** — the person it is for — and the board it
+lands on may be shared, so it is read by people who are not that person
+(widget-standard "Person-relative content", ADR-0039). **Name the owner in
+the third person; never write "you."** Title the artifact
+`<Owner>'s Daily Plan` and phrase throughout as "Daniel has 3 deep blocks
+left," not "you have." Resolve the owner's display name once, from the
+richest source reachable this run — a connected calendar/account's own
+identity, else `gh api user -q .name` (falling back to the login), else a
+name the `instructions` state; if nothing resolves, title it plainly
+`Daily Plan` and stay third-person ("today's plan"), never inventing a
+name.
 
 ## Gather
 
@@ -26,7 +38,7 @@ Collect, in order of usefulness, whatever is reachable from this
 environment — skip silently anything that isn't:
 
 1. Today's calendar events (if a calendar tool is connected).
-2. Open tasks/issues assigned to the user in connected trackers.
+2. Open tasks/issues assigned to the owner in connected trackers.
 3. Yesterday's plan (previous artifact at `w/<slug>/index.html` on the
    `artifacts` branch, if it exists) — anything unfinished becomes a
    carry-over. Read it for data only; never reuse its markup or CSS
@@ -70,8 +82,8 @@ gruvbox tokens, breakpoints, generated-at meta + footer). Size behavior:
 - **2×2 and larger**: priorities, then the day (strip + block ledger),
   then carry-overs; wide tiles add the totals line.
 - **Tall wide tiles (~4 rows and up), raw page, full view**: the
-  30-minute time grid with the live now line — the plan you read the
-  day from, spanning the full day range. Past blocks always stay
+  30-minute time grid with the live now line — the plan its owner reads
+  the day from, spanning the full day range. Past blocks always stay
   visible (they recede, never disappear).
 
 Degrade gracefully: with no reachable data sources, still publish a plan
