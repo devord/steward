@@ -95,8 +95,13 @@ path is derived from it, never from the template name.
 
 Whatever the content source, the artifact MUST follow the
 `widget-artifact` skill (self-contained HTML, gruvbox tokens, breakpoints,
-generated-at meta + footer, graceful empty state). Then publish it with the
-`publish-widget` skill to `w/<slug>/index.html` on the `artifacts` branch.
+generated-at meta + footer, graceful empty state) — **authored fresh from
+that skill's current design language on every run**. A previous artifact a
+template gathers is a data source (carry-overs, the last generated-at),
+never an authoring base: reusing its markup or CSS freezes the widget at
+whatever design the first run shipped, and design fixes never reach the
+board. Then publish it with the `publish-widget` skill to
+`w/<slug>/index.html` on the `artifacts` branch.
 
 ## Dry runs (ADR-0017)
 

@@ -29,7 +29,8 @@ environment — skip silently anything that isn't:
 2. Open tasks/issues assigned to the user in connected trackers.
 3. Yesterday's plan (previous artifact at `w/<slug>/index.html` on the
    `artifacts` branch, if it exists) — anything unfinished becomes a
-   carry-over.
+   carry-over. Read it for data only; never reuse its markup or CSS
+   (`run-routine` § 4).
 
 ## Compose
 
