@@ -383,40 +383,58 @@ describe("DashboardSidebar repo groups", () => {
     expect(header).not.toBeNull()
   })
 
-  it("offers rename to pushers only, inside the access popover", async () => {
+  it("offers rename to pushers only, as a dialog off the access popover", async () => {
     await renderSidebar()
 
-    // Home (push access): the popover carries the display-name input.
+    // Home (push access): the popover offers a Rename action, not an inline
+    // field — editing is a write, kept off the read-only sharing disclosure.
     groupHeader(HOME_REPO)
       ?.querySelector<HTMLButtonElement>('[data-slot="popover-trigger"]')
       ?.click()
-    await vi.waitFor(() =>
-      expect(
-        document.querySelector('[data-slot="popover-content"]'),
-      ).not.toBeNull(),
+    const homePop = await vi.waitFor(() => {
+      const pop = document.querySelector('[data-slot="popover-content"]')
+      if (!pop) throw new Error("popover not open")
+      return pop
+    })
+    // No inline input lives in the sharing panel anymore.
+    expect(homePop.querySelector("input")).toBeNull()
+    const renameBtn = [...homePop.querySelectorAll("button")].find((b) =>
+      /rename repo/i.test(b.textContent ?? ""),
     )
-    expect(
-      document.querySelector('[data-slot="popover-content"] input'),
-    ).not.toBeNull()
-    document.body.click() // dismiss
+    expect(renameBtn).toBeTruthy()
+
+    // Launching it closes the popover and opens the rename dialog with a field.
+    renameBtn?.click()
     await vi.waitFor(() =>
-      expect(
-        document.querySelector('[data-slot="popover-content"]'),
-      ).toBeNull(),
+      expect(document.querySelector('[role="dialog"] input')).not.toBeNull(),
     )
 
-    // Shared as a plain reader (no push): no rename form.
+    // Dismiss the dialog (its Cancel button) before probing the other repo.
+    ;[
+      ...(document.querySelectorAll<HTMLButtonElement>(
+        '[role="dialog"] button',
+      ) ?? []),
+    ]
+      .find((b) => /cancel/i.test(b.textContent ?? ""))
+      ?.click()
+    await vi.waitFor(() =>
+      expect(document.querySelector('[role="dialog"]')).toBeNull(),
+    )
+
+    // Shared as a plain reader (no push): no rename action at all.
     groupHeader(SHARED_REPO)
       ?.querySelector<HTMLButtonElement>('[data-slot="popover-trigger"]')
       ?.click()
-    await vi.waitFor(() =>
-      expect(
-        document.querySelector('[data-slot="popover-content"]'),
-      ).not.toBeNull(),
-    )
+    const sharedPop = await vi.waitFor(() => {
+      const pop = document.querySelector('[data-slot="popover-content"]')
+      if (!pop) throw new Error("popover not open")
+      return pop
+    })
     expect(
-      document.querySelector('[data-slot="popover-content"] input'),
-    ).toBeNull()
+      [...sharedPop.querySelectorAll("button")].find((b) =>
+        /rename repo/i.test(b.textContent ?? ""),
+      ),
+    ).toBeUndefined()
   })
 
   it("carries repo identity: a single exposure glyph, no bare count", async () => {

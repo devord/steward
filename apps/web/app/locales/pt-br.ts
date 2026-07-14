@@ -209,6 +209,12 @@ export const ptBR: Messages = {
   "repo.openOnGitHub": "Ver no GitHub",
   "repo.displayName": "Nome de exibição",
   "repo.saveName": "Salvar",
+  "repo.rename": "Renomear repo",
+  "repo.renameTitle": "Renomear repo",
+  "repo.renameBody":
+    "Aparece como o grupo deste repo na barra lateral. O repo no GitHub ({repo}) não muda.",
+  "repo.renameHint": "Deixe em branco para voltar a {name}.",
+  "repo.renaming": "Salvando…",
   "repo.renameFailed": "Não foi possível salvar o nome — tente de novo.",
 
   "addRepo.title": "Adicionar um repo de dados",

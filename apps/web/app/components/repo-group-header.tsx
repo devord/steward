@@ -9,12 +9,22 @@ import {
   Globe,
   Lock,
   MoreHorizontal,
+  Pencil,
   Users,
 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
 import { Button } from "~/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog"
 import { Input } from "~/components/ui/input"
+import { Label } from "~/components/ui/label"
 import {
   Popover,
   PopoverContent,
@@ -45,12 +55,15 @@ const MAX_LISTED = 12
  * says how exposed the repo is. Beside it, a **`⋯` control** opens the
  * access popover — the same status-vs-actions split, and the same `⋯` glyph,
  * the board rows already carry one line down, so the rail teaches the idiom
- * once. The popover holds the full repo slug, visibility in words, who has
- * access at a readable size, and a jump to GitHub — access settings for
- * admins, the repo page otherwise. For sharing, indicators and a link out
- * only: GitHub's own screen is the source of truth. The display name is the
- * one thing managed here, because it is ours — a commit to the repo's own
- * config, offered only to viewers who can push.
+ * once. The popover splits along the same seam as the rail's status-vs-actions
+ * cluster: a **read-only disclosure** up top (the full repo slug, visibility in
+ * words, who has access at a readable size) sits over an **actions** row — a
+ * jump to GitHub for sharing (its own screen is the source of truth), and, for
+ * viewers who can push, a **Rename repo** launcher. Renaming the display name is
+ * the one thing managed here, because it is ours — a commit to the repo's own
+ * config — but it is a *write*, so it opens a focused dialog ({@link
+ * RenameRepoDialog}) the way a board's rename does, never an inline field
+ * wedged inside the sharing panel.
  *
  * The rail itself stays a status cluster plus one `⋯` wide — the name owns
  * the row; the people moved into the popover where 20px avatars and logins
@@ -65,6 +78,10 @@ const MAX_LISTED = 12
  */
 export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
   const t = useT()
+  // The ⋯ popover's own open state, so picking "Rename repo" can close the
+  // disclosure before the write dialog takes over the surface.
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [renaming, setRenaming] = useState(false)
   const collaborators = group.collaborators ?? []
   // A count of one is noise — you know you have access; people appear only
   // when the repo is actually shared with someone.
@@ -178,11 +195,11 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
         )}
 
         {group.private != null || shared || group.viewerCanPush ? (
-          <Popover>
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
             {/* The board rows' ⋯ idiom (NavItem), shrunk to the heading's
                 20px: same glyph, same faint-at-rest → brighten-as-the-pointer-
                 nears → fill-when-open behavior. A real control, so the panel it
-                opens (access, name, GitHub) is findable — where the lock alone
+                opens (access, rename, GitHub) is findable — where the lock alone
                 only ever said "private". */}
             <PopoverTrigger
               render={
@@ -202,7 +219,10 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
               className="w-64 gap-0 p-0"
             >
               <PopoverHeader className="px-3 py-2.5">
-                <PopoverTitle className="font-mono text-xs font-medium break-all">
+                {/* overflow-wrap:anywhere, not break-all: the slug wraps at its
+                    own `/` and hyphens rather than snapping mid-word (break-all
+                    split "…-formfactory" into "for / mformfactory"). */}
+                <PopoverTitle className="font-mono text-xs font-medium [overflow-wrap:anywhere]">
                   {group.repo}
                 </PopoverTitle>
                 {group.private != null && (
@@ -213,7 +233,6 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
                   </PopoverDescription>
                 )}
               </PopoverHeader>
-              {group.viewerCanPush && <RenameForm group={group} />}
               {shared && (
                 <ul
                   aria-label={t("repo.collaborators", {
@@ -241,6 +260,25 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
                     </li>
                   )}
                 </ul>
+              )}
+              {/* Actions, under the read-only disclosure: a write we own
+                  (rename → a focused dialog, pushers only) and a jump to
+                  GitHub's own screen for everything about sharing. */}
+              {group.viewerCanPush && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    setRenaming(true)
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 border-t border-border-dim px-3 py-2 text-left text-xs text-ink-dim transition-colors outline-none",
+                    "hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
+                  )}
+                >
+                  <Pencil aria-hidden className="size-3 text-ink-faint" />
+                  {t("repo.rename")}
+                </button>
               )}
               <a
                 href={gitHubHref}
@@ -280,82 +318,120 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
           </a>
         )}
       </span>
+
+      {group.viewerCanPush && (
+        <RenameRepoDialog
+          group={group}
+          open={renaming}
+          onClose={() => setRenaming(false)}
+        />
+      )}
     </div>
   )
 }
 
 /**
- * The display-name editor (ADR-0026) — one labeled input in the access
- * popover, shown only to viewers who can push (saving is a commit to the
- * repo's data/repo.yaml, and GitHub's permissions are the real gate). Blank
- * falls back to the placeholder: the short repo name the group would carry
- * anyway. The typed draft stays local until the sidebar loader confirms the
- * committed value, so the input never flashes stale between commit and
- * revalidation.
+ * The display-name editor (ADR-0026), now a focused dialog launched from the
+ * access popover — the same shape a board's rename takes ({@link
+ * RenameDashboardDialog}), so the rail teaches one rename gesture instead of
+ * an inline popover field for repos and a dialog for boards. Offered only to
+ * viewers who can push (saving is a commit to the repo's data/repo.yaml, and
+ * GitHub's permissions are the real gate). Blank falls back to the placeholder:
+ * the short repo name the group would carry anyway. On a committed save the
+ * dialog closes and the sidebar loader revalidation lands the new name; a stale
+ * success from a prior rename can't auto-close a freshly reopened dialog
+ * (`submitted` gates the close to this session's own write).
  */
-function RenameForm({ group }: { group: SidebarRepo }) {
+function RenameRepoDialog({
+  group,
+  open,
+  onClose,
+}: {
+  group: SidebarRepo
+  open: boolean
+  onClose: () => void
+}) {
   const t = useT()
   const inputId = useId()
-  const fetcher = useFetcher<RenameRepoResult>()
+  const fetcher = useFetcher<RenameRepoResult>({
+    key: `repo-rename:${group.repo}`,
+  })
   const committed = group.displayName ?? ""
-  // null → no local edit: the input mirrors the committed name.
-  const [draft, setDraft] = useState<string | null>(null)
+  const [name, setName] = useState(committed)
+  // Prefill from the committed name each time the dialog opens, keyed on `open`
+  // so a re-render's fresh props can't clobber what the user is typing.
+  const [armed, setArmed] = useState(false)
+  // Only this open session's own submit may auto-close on success — the fetcher
+  // keeps its last result, so reopening must not fire an old {ok:true}.
+  const [submitted, setSubmitted] = useState(false)
+  if (open && !armed) {
+    setArmed(true)
+    setSubmitted(false)
+    setName(committed)
+  }
+  if (!open && armed) setArmed(false)
 
   const busy = fetcher.state !== "idle"
-  const value = draft ?? committed
-  const dirty = draft != null && draft.trim() !== committed
   const failed = !busy && fetcher.data?.ok === false
 
-  // Hand the input back to the committed value once the loader catches up
-  // with what was saved — never before, so the draft covers the gap.
+  const renamed = fetcher.data?.ok === true
   useEffect(() => {
-    if (fetcher.data?.ok && draft != null && draft.trim() === committed) {
-      setDraft(null)
-    }
-  }, [fetcher.data, draft, committed])
+    if (renamed && submitted) onClose()
+  }, [renamed, submitted, onClose])
 
-  function save(event: React.SubmitEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!dirty || busy) return
+  function submit() {
+    if (busy) return
+    setSubmitted(true)
     void fetcher.submit(
       JSON.stringify({
         intent: "rename",
         repo: group.repo,
-        name: value.trim(),
+        name: name.trim(),
       }),
       { method: "post", action: "/data-repos", encType: "application/json" },
     )
   }
 
   return (
-    <form onSubmit={save} className="border-t border-border-dim px-3 py-2.5">
-      <label htmlFor={inputId} className="text-xs font-medium text-ink-dim">
-        {t("repo.displayName")}
-      </label>
-      <div className="mt-1.5 flex items-center gap-1.5">
-        <Input
-          id={inputId}
-          value={value}
-          maxLength={REPO_NAME_MAX}
-          placeholder={group.name}
-          disabled={busy}
-          onChange={(event) => setDraft(event.target.value)}
-          className="h-7 flex-1"
-        />
-        <Button
-          type="submit"
-          size="sm"
-          variant="secondary"
-          disabled={!dirty || busy}
-        >
-          {t("repo.saveName")}
-        </Button>
-      </div>
-      {failed && (
-        <p role="alert" className="mt-1.5 text-xs text-destructive">
-          {t("repo.renameFailed")}
-        </p>
-      )}
-    </form>
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("repo.renameTitle")}</DialogTitle>
+          <DialogDescription>
+            {t("repo.renameBody", { repo: group.repo })}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2">
+          <Label htmlFor={inputId}>{t("repo.displayName")}</Label>
+          <Input
+            id={inputId}
+            autoFocus
+            value={name}
+            maxLength={REPO_NAME_MAX}
+            placeholder={group.name}
+            onChange={(event) => setName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") submit()
+            }}
+          />
+          <p className="text-xs text-ink-dim">
+            {t("repo.renameHint", { name: group.name })}
+          </p>
+        </div>
+        {failed && (
+          <p role="alert" className="text-xs text-destructive">
+            {t("repo.renameFailed")}
+          </p>
+        )}
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            {t("dialog.cancel")}
+          </Button>
+          <Button disabled={busy} onClick={submit}>
+            {busy ? t("repo.renaming") : t("repo.saveName")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
