@@ -134,6 +134,18 @@
   --sidebar-accent-foreground: var(--palette-ink);
   --sidebar-border: var(--palette-border-dim);
   --sidebar-ring: var(--palette-accent-deep);
+  /* Bow-tie wings read as folded fabric: brighter at the flared tips,
+     deeper where the fabric gathers at the knot. Which accent is the
+     "brighter" one flips by mode — a light palette's accent is the deep
+     rust and its accent-deep the brighter orange — so the pairing swaps
+     under .dark below. Aliases only; no literal color at this layer. */
+  --mark-wing-tip: var(--palette-accent-deep);
+  --mark-wing-fold: var(--palette-accent);
+}
+
+.dark {
+  --mark-wing-tip: var(--palette-accent);
+  --mark-wing-fold: var(--palette-accent-deep);
 }
 
 @layer base {
@@ -197,6 +209,13 @@
     .logo-cursor {
       animation: none;
     }
+  }
+
+  /* The display chip is a product icon, so it casts a soft ambient shadow —
+     it sits above the surface it's placed on (landing hero, lockups). Bare
+     chrome glyphs never get this; they're ink on the page, not an object. */
+  .logo-tile {
+    filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.18));
   }
 
   /* The scroll cue is lucide's double chevron; its two strokes brighten in

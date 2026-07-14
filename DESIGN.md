@@ -112,60 +112,70 @@ old small knot the whole mark washed out muted, worst in light themes
 whose accents are dark); the knot is the same block that ends the
 wordmark (the steward's cursor, dressed for service — and a terminal
 caret takes the foreground color, so ink made the caret story literal).
-Symmetric and solid, it holds one geometry at every size, from the 16px
-favicon to the landing hero — no small-size cut needed: proud wings
-(deep pinch at the knot) and a 13×16 knot sized to survive 16px. Several
-mirrors must stay geometrically in sync; the fills and framing differ by
-surface (context below), but never the geometry. The wings tuck under
-the knot (drawn last) so the two fills never show a background hairline.
-The tile is size-and-surface conditional: display contexts (hero lockup,
-wordmark SVGs, og card) keep the framed tile, everything else renders
-the bare glyph — a tight rectangular crop in-app, a padded square crop
-on the favicon (tab boxes are square); both keep the glyph's center at
-`y=32` so optical alignment is shared.
+Depth is **material, not decorative** (terminal-calm bans gradient glass):
+each wing carries a fold gradient — brighter at the flared tip, deeper
+where the fabric gathers at the knot, so the tie reads as a tied object,
+not two flat chevrons. The stops are `--mark-wing-tip` → `--mark-wing-fold`,
+aliases that swap which accent is the bright one per mode (a light palette's
+`accent` is the deep rust, its `accent-deep` the brighter orange). The knot
+stays solid ink; folding it would blur the caret story. Symmetric and solid,
+it holds one geometry at every size, from the 16px favicon to the landing
+hero. Several mirrors must stay geometrically in sync; the fills and framing
+differ by surface (context below), but never the geometry. The wings tuck
+under the knot (drawn last) so the fills never show a background hairline;
+framed contexts draw the tie's own contact shadow first, so the bow sits on
+the surface instead of being painted into it.
 
-Three contexts, deliberately split. **In-app** the mark is chrome: the
-bare glyph in theme tokens — a tile behind a chrome mark either vanishes
-(light themes: `bg` on `bg1`) or punches a darker hole in the sidebar
-(dark themes); glyph-only is the mark-in-chrome treatment everywhere else
-(GitHub, Linear, Vercel). **In the browser tab** the mark is also the bare
-glyph, but static: `favicon.svg` swaps its inks with a
-`prefers-color-scheme` media query, so both strips get orange wings at
-the brightness that reads there — never a black box on a light strip.
-**On OS launcher surfaces** (home screens, docks) the mark keeps the
-fixed dark identity tile — those icons must be opaque and hold their own
-on unknown wallpapers, and a dark tile is the standard move there.
-Canonical identity tile colors: `#1d2021` tile, `#fe8019` wings,
-`#ebdbb2` knot (raised contrast so the silhouette reads small; no frame
-stroke on icons). Rasters
-are rendered from the SVGs with headless Chrome — ImageMagick's SVG
-delegate is not faithful. Static SVGs carry explicit `width`/`height`
-(favicon renderers assume 300×150 and crop without them).
+Two contexts, deliberately split. **In-app** the mark is chrome: the bare
+glyph in theme tokens (fold wings, ink knot, no tile) — a tile behind a
+chrome mark either vanishes (light themes: `card` on `bg`) or punches a
+darker hole in the sidebar (dark themes); glyph-only is the mark-in-chrome
+treatment everywhere else (GitHub, Linear, Vercel). **On every uncontrolled
+surface** — browser tab, OS launcher, social card, README lockup — the mark
+wears the **product-icon chip**: a top-lit tile (`card`→`bg`), a crisp full
+`border`, a bevel highlight, and the tie's contact shadow. The chip is what
+holds contrast on any ground; the bare glyph floated on pale and gray tab
+strips. `favicon.svg` swaps the chip's tile + inks with a
+`prefers-color-scheme` block (flat fills — the fold is invisible at 16px);
+the `.ico` and OS launcher icons can't media-query, so they bake the fixed
+**dark identity chip** (`#282828`→`#1d2021` tile, `#fe8019`→`#d65d0e` fold
+wings, `#ebdbb2` knot). Launcher sources live at `scripts/icon.svg` (rounded
+— apple-touch + `icon-{192,512}`) and `scripts/icon-maskable.svg` (full-bleed
+dark, bow inside the ~80% safe zone); each carries its headless-Chrome render
+recipe — ImageMagick's SVG delegate is not faithful to the gradients and
+filters. Static SVGs carry explicit `width`/`height` (favicon renderers
+assume 300×150 and crop without them).
 
 - `apps/web/app/components/logo.tsx` — `Logo` (mark) and `Wordmark`
   (mark + mono name lockup, scales with font size) for in-app use; token-
-  based, so it follows the active theme. Wings are `primary`, the knot
-  `foreground`; default is the bare glyph, the landing hero passes
-  `display` for the framed `bg` tile with `border` stroke (rendered large
-  enough there). `live` blinks the knot like a terminal caret (landing
-  only).
-- `apps/web/public/favicon.svg` — the browser-tab mark: bare glyph, inks
-  swapped by a `prefers-color-scheme` style block inside the SVG (light:
-  `#d65d0e` wings / `#3c3836` knot; dark: `#fe8019` / `#ebdbb2`).
-  `favicon.ico` (16/32/48) is the raster fallback; .ico can't media-query,
-  so it renders the glyph in one static pair legible on either strip
-  (`#d65d0e` wings, `#928374` theme-neutral gray knot).
-- `apps/web/public/apple-touch-icon.png` (180) — iOS home screen: opaque,
-  full-bleed dark, no self-rounding (iOS supplies the corner radius).
-- `apps/web/public/manifest.webmanifest` + `icon-{192,512}.png` (`any`)
-  and `icon-maskable-512.png` (`maskable`, mark inside the 66% safe zone)
-  — the PWA/Android adaptive icon, so launchers build a real adaptive tile
-  instead of masking apple-touch into a flat squircle. Linked from
-  `root.tsx`; `theme_color`/`background_color` are the dark `#1d2021`.
-- `apps/web/public/wordmark-{dark,light}.svg` — the mark + `Steward`
-  lockup for the README, swapped by `prefers-color-scheme` in a `<picture>`.
-  These are a document context (a light or dark page), so they keep the
-  theme pair; wings in the accent, knot in ink, like everywhere. Text
+  based, so it follows the active theme. Wings take the fold gradient
+  (`--mark-wing-tip`→`--mark-wing-fold`), the knot `foreground`; `useId`
+  keeps the gradient/filter ids unique across the header/rail/account-bar
+  instances. Default is the bare glyph; the landing hero passes `display`
+  for the chip — a `card`→`bg` tile, full `border`, and the tie's contact
+  shadow, with a `.logo-tile` drop-shadow so it sits on the page. `live`
+  blinks the knot like a terminal caret (landing only).
+- `apps/web/public/favicon.svg` — the browser-tab mark: the product-icon
+  chip, tile + inks swapped by a `prefers-color-scheme` style block inside
+  the SVG (light: `#f9f5d7` tile / `#d65d0e` wings / `#3c3836` knot; dark:
+  `#282828` / `#fe8019` / `#ebdbb2`). Flat fills — the fold is invisible at
+  16px. `favicon.ico` (16/32/48) is the raster fallback; .ico can't
+  media-query, so it bakes the dark identity chip.
+- `apps/web/public/apple-touch-icon.png` (180) + `icon-{192,512}.png`
+  (`any`) — the dark identity chip, opaque, rendered from `scripts/icon.svg`
+  (rounded corners on transparent; iOS/Android re-mask).
+- `apps/web/public/manifest.webmanifest` + `icon-maskable-512.png`
+  (`maskable`, from `scripts/icon-maskable.svg` — full-bleed dark, bow
+  scaled to ~0.82 so it survives a circle/squircle crop) — the PWA/Android
+  adaptive icon, so launchers build a real adaptive tile instead of masking
+  apple-touch into a flat squircle. Linked from `root.tsx`;
+  `theme_color`/`background_color` are the dark `#1d2021`.
+- `apps/web/public/wordmark-{dark,light}.svg` — the mark (chip: fold wings,
+  contact shadow, bevel, `border`) + `Steward` lockup for the README,
+  swapped by `prefers-color-scheme` in a `<picture>`. These are a document
+  context (a light or dark page), so they keep the theme pair. Mirrored to
+  each data repo's `.github/` (built-in template + team/private repos).
+  Text
   baseline `y=46.5` centers the word's cap band on the tile center — the
   measured optical alignment of the lockup. The word is **outlined paths**
   (Geist Mono 600, 40px, tracking −1), not a `<text>` node — GitHub's image
