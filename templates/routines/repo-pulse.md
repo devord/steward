@@ -10,6 +10,9 @@ widget:
     default: { cols: 2, rows: 1 }
     min: { cols: 1, rows: 1 }
   schedule: "0 */4 * * *"
+  # Instances slug themselves <first-repo>-pulse (ADR-0040); `kind` defaults
+  # to `pulse` from the template id.
+  subjectParam: repos
   params:
     - key: repos
       label: Repositories to watch

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { parseRoutineTemplate, widgetMetaSchema } from "./template.ts"
+import {
+  parseRoutineTemplate,
+  templateKind,
+  widgetMetaSchema,
+} from "./template.ts"
 
 describe("widgetMetaSchema", () => {
   it("accepts the full hint shape", () => {
@@ -124,5 +128,46 @@ widget:
         required: true,
       },
     ])
+  })
+
+  it("reads subjectParam and kind from the widget block (ADR-0040)", () => {
+    const md = `---
+description: d
+widget:
+  artifact: a
+  subjectParam: repos
+  kind: pulse
+  params:
+    - key: repos
+      label: Repositories to watch
+      type: repos
+      required: true
+---
+`
+    const template = parseRoutineTemplate("repo-pulse", md)
+    expect(template?.widget.subjectParam).toBe("repos")
+    expect(template?.widget.kind).toBe("pulse")
+  })
+})
+
+describe("templateKind (ADR-0040)", () => {
+  const make = (id: string, kind?: string) => ({
+    id,
+    name: id,
+    description: "d",
+    widget: { artifact: "a", ...(kind ? { kind } : {}) },
+  })
+
+  it("prefers an explicit kind", () => {
+    expect(templateKind(make("repo-pulse", "heartbeat"))).toBe("heartbeat")
+  })
+
+  it("defaults to the template id's last hyphen segment", () => {
+    expect(templateKind(make("repo-pulse"))).toBe("pulse")
+    expect(templateKind(make("ci-status-watch"))).toBe("watch")
+  })
+
+  it("falls back to the whole id when it has no hyphen", () => {
+    expect(templateKind(make("digest"))).toBe("digest")
   })
 })
