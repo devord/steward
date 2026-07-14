@@ -65,7 +65,9 @@ describe("WidgetCard empty states", () => {
         committed
       />,
     )
-    await expect.poll(() => hasText("pnpm routines:sync --apply")).toBe(true)
+    await expect
+      .poll(() => hasText("npx @devord/steward sync --apply"))
+      .toBe(true)
   })
 
   it("shows the run command for a local manual routine", async () => {
@@ -79,7 +81,7 @@ describe("WidgetCard empty states", () => {
         committed
       />,
     )
-    await expect.poll(() => hasText("pnpm routine r")).toBe(true)
+    await expect.poll(() => hasText("npx @devord/steward run r")).toBe(true)
   })
 
   it("offers the first run for a scheduled routine whose trigger exists", async () => {
