@@ -1,6 +1,7 @@
 import {
   dashboardFileSchema,
   dashboardPath,
+  GROUP_NAME_MAX,
   parseDashboardFile,
   serializeDashboardFile,
   slugSchema,
@@ -39,6 +40,10 @@ const payloadSchema = z.discriminatedUnion("intent", [
     /** New display name. Empty (after trim) clears it — the UI falls back to
         the slug. The slug itself is immutable: it's the filename and the URL. */
     name: z.string().max(120),
+    /** New section (the board's `group`). Empty (after trim) clears it — the
+        board falls back to its repo's unlabeled lead section. Absent → leave
+        the section untouched (a name-only edit). */
+    group: z.string().max(GROUP_NAME_MAX).optional(),
   }),
   z.object({
     intent: z.literal("delete"),
@@ -115,13 +120,34 @@ export async function action({ request }: { request: Request }) {
     if (!current) {
       return data({ ok: false as const, error: "missing" }, { status: 404 })
     }
-    const { name: _replaced, ...file } = parseDashboardFile(current.text)
+    const {
+      name: _prevName,
+      group: prevGroup,
+      ...file
+    } = parseDashboardFile(current.text)
     const name = payload.name.trim()
-    const next = serializeDashboardFile(name ? { ...file, name } : file)
+    // Absent `group` in the payload is "leave the section alone" (name-only
+    // edit); a present-but-blank value clears it. Both drop the key when empty
+    // so an unset section never serializes as `group: ""`.
+    const group =
+      payload.group === undefined
+        ? prevGroup
+        : payload.group.trim() || undefined
+    const next = serializeDashboardFile({
+      ...file,
+      ...(name ? { name } : {}),
+      ...(group ? { group } : {}),
+    })
+    // Name the commit for what actually changed — git is visible here
+    // (principle 3), so "rename" must not appear when only the section moved.
+    const nameChanged = name !== (_prevName ?? "")
+    const groupChanged = (group ?? "") !== (prevGroup ?? "")
+    const verb =
+      nameChanged && groupChanged ? "edit" : groupChanged ? "move" : "rename"
     try {
       await putFile(auth.token, repo, path, {
         content: next,
-        message: `config: rename dashboard ${payload.slug} via steward`,
+        message: `config: ${verb} dashboard ${payload.slug} via steward`,
         branch: "main",
         sha: current.sha,
       })

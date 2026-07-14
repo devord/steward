@@ -203,14 +203,18 @@ async function listSidebarBoards(
   const slugs = await listDashboards(token, repo)
   if (!slugs) return null
   const boards = await Promise.all(
-    slugs.map(async (slug) => ({
-      slug,
-      name: await getFile(token, repo, dashboardPath(slug), "main")
-        .then((raw) =>
-          raw ? (parseDashboardFile(raw.text).name ?? null) : null,
-        )
-        .catch(() => null),
-    })),
+    slugs.map(async (slug) => {
+      // One read yields both the row's name and its section — a malformed or
+      // missing file degrades both to null (row shows its slug, ungrouped).
+      const meta = await getFile(token, repo, dashboardPath(slug), "main")
+        .then((raw) => (raw ? parseDashboardFile(raw.text) : null))
+        .catch(() => null)
+      return {
+        slug,
+        name: meta?.name ?? null,
+        group: meta?.group ?? null,
+      }
+    }),
   )
   return boards.sort((a, b) =>
     (a.name ?? a.slug).localeCompare(b.name ?? b.slug, undefined, {
@@ -225,6 +229,9 @@ export interface SidebarBoard {
   /** Display name from the layout file (best-effort read). null → unset or
       unreadable: the row falls back to the slug. */
   name: string | null
+  /** Section this board sits in (the layout file's `group`). null → ungrouped:
+      the board leads its repo group in the unlabeled section. */
+  group: string | null
 }
 
 /** One rail group: a data repo and its boards. */
@@ -253,6 +260,10 @@ export interface SidebarRepo {
       (git prunes `data/dashboards/` with the last file): the group stays,
       carrying its create-first row. */
   dashboards: SidebarBoard[]
+  /** Section order for this repo (data/repo.yaml `groups`, ADR-0034). Carries
+      sequence only — membership rides each board's `group`. `[]` → no order
+      authored: sections fall back to alphabetical. */
+  groups: string[]
 }
 
 export interface SidebarData {
@@ -295,6 +306,7 @@ export async function loadSidebar(
         viewerIsAdmin: repo.viewerIsAdmin,
         viewerCanPush: repo.viewerCanPush,
         dashboards: dashboards ?? [],
+        groups: repoFile?.groups ?? [],
       }
     }),
   )
