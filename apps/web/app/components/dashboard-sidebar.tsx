@@ -25,6 +25,8 @@ import { Link } from "~/components/ui/link"
 import { Skeleton } from "~/components/ui/skeleton"
 import { cn } from "~/lib/utils"
 import type { SidebarData } from "../lib/dashboard.server.ts"
+import { boardDraftKey, poolDraftKey } from "../lib/draft.ts"
+import { useRailStatus } from "../lib/rail-status.ts"
 import { boardHref, DEFAULT_DASHBOARD, routinesHref } from "../lib/repos.ts"
 import { useT } from "../lib/i18n.tsx"
 
@@ -46,6 +48,12 @@ import { useT } from "../lib/i18n.tsx"
  *
  * A repo group with no boards keeps a create-first row in place of the board
  * list — deleting the last board must not make the repo disappear from the app.
+ *
+ * Rows carry honest client-local state ({@link RowStateDot}): a yellow dot
+ * trailing a name marks unsynced draft edits (boards and the pool alike), a
+ * pulsing accent dot on the pool row marks a client-fired run in flight.
+ * Both read straight from localStorage (rail-status.ts) — no server call,
+ * and nothing decorative: no state, no dot.
  */
 export function DashboardSidebar({
   activeRepo,
@@ -85,6 +93,9 @@ export function DashboardSidebar({
   // empty group's create-first row opens it pre-targeted at that repo.
   const [creating, setCreating] = useState<string | null>(null)
   const [addingRepo, setAddingRepo] = useState(false)
+  // Client-local state the rail can honestly mark rows with: unsynced drafts
+  // per board / pool, in-flight client-fired runs per repo (rail-status.ts).
+  const { drafts, running } = useRailStatus()
 
   const homeRepo = sidebar?.repos.find((repo) => repo.isHome)?.repo ?? ""
 
@@ -120,6 +131,8 @@ export function DashboardSidebar({
                     <PoolNavItem
                       to={routinesHref(group.repo)}
                       active={routinesRepo === group.repo}
+                      running={running.has(group.repo)}
+                      draft={drafts.has(poolDraftKey(group.repo))}
                       onNavigate={onNavigate}
                     />
                   }
@@ -136,6 +149,9 @@ export function DashboardSidebar({
                         to={boardHref(group.repo, board.slug, homeRepo)}
                         label={board.name ?? board.slug}
                         active={active}
+                        draft={drafts.has(
+                          boardDraftKey(group.repo, board.slug),
+                        )}
                         onRename={
                           onRenameBoard
                             ? () =>
@@ -377,10 +393,17 @@ function NavGroup({
 function PoolNavItem({
   to,
   active,
+  running,
+  draft,
   onNavigate,
 }: {
   to: string
   active: boolean
+  /** A client-fired run is in flight somewhere in this repo's pool
+      (rail-status.ts) — runs belong to the pool, so this is their honest row. */
+  running?: boolean
+  /** The pool view holds unsynced routine edits (its own draft, ADR-0025). */
+  draft?: boolean
   onNavigate?: () => void
 }) {
   const t = useT()
@@ -404,7 +427,49 @@ function PoolNavItem({
         )}
       />
       {t("nav.routines")}
+      {(running || draft) && (
+        <span className="ml-2 flex shrink-0 items-center gap-1.5">
+          {running && (
+            <RowStateDot tone="running" label={t("nav.runInFlight")} />
+          )}
+          {draft && <RowStateDot tone="draft" label={t("nav.unsynced")} />}
+        </span>
+      )}
     </Link>
+  )
+}
+
+/**
+ * A rail row's state marker — the routines ledger's StateDot vocabulary
+ * (accent = running, yellow = unsynced) shrunk to the rail's whisper: one
+ * 6px dot trailing the row's name, exactly the header chip's unsynced dot.
+ * It trails the label rather than riding the spine's marker column, so the
+ * spine keeps its one meaning ("you are here") and the marker survives
+ * every row state (active, hover) without negotiation. Never color alone:
+ * the sr-only label names the state for readers, and the two tones also
+ * differ in motion (running pulses; honors reduced motion by resting solid).
+ */
+function RowStateDot({
+  tone,
+  label,
+}: {
+  tone: "running" | "draft"
+  label: string
+}) {
+  return (
+    <>
+      <span
+        aria-hidden
+        data-testid={`rail-${tone}`}
+        className={cn(
+          "size-1.5 shrink-0 rounded-full",
+          tone === "running"
+            ? "animate-pulse bg-primary motion-reduce:animate-none"
+            : "bg-yellow",
+        )}
+      />
+      <span className="sr-only">, {label}</span>
+    </>
   )
 }
 
@@ -427,6 +492,7 @@ function NavItem({
   to,
   label,
   active,
+  draft,
   onRename,
   onDelete,
   onNavigate,
@@ -434,6 +500,11 @@ function NavItem({
   to: string
   label: string
   active: boolean
+  /** This board holds unsynced edits (a localStorage draft, ADR-0003) — it
+      carries the header chip's yellow dot, trailing the name
+      ({@link RowStateDot}), so unsynced work is visible without switching
+      to the board. */
+  draft?: boolean
   onRename?: () => void
   onDelete?: () => void
   onNavigate?: () => void
@@ -464,6 +535,11 @@ function NavItem({
           )}
         />
         <span className="truncate">{label}</span>
+        {draft && (
+          <span className="ml-2 flex shrink-0 items-center">
+            <RowStateDot tone="draft" label={t("nav.unsynced")} />
+          </span>
+        )}
       </Link>
       {hasMenu && (
         <DropdownMenu>

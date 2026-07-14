@@ -42,7 +42,12 @@ import type {
   DashboardBase,
   SidebarData,
 } from "../lib/dashboard.server.ts"
-import { removeRoutine, type SyncKind, useDraft } from "../lib/draft.ts"
+import {
+  boardDraftKey,
+  removeRoutine,
+  type SyncKind,
+  useDraft,
+} from "../lib/draft.ts"
 import { useT } from "../lib/i18n.tsx"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
 import { useStreamed } from "../lib/use-streamed.ts"
@@ -92,7 +97,7 @@ export function DashboardBoard({
 
   // One draft per board: two dashboards in the same repo are separate edit
   // surfaces even though they share routines.yaml (ADR-0003/0010).
-  const boardKey = `${view.dataRepo}:${view.dashboardSlug}`
+  const boardKey = boardDraftKey(view.dataRepo, view.dashboardSlug)
   const { draft, base, update, clear, rebase, applyCommit, patchBaseShas } =
     useDraft(boardKey, {
       routines: view.routines,

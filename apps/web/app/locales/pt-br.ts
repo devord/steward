@@ -79,6 +79,8 @@ export const ptBR: Messages = {
   "nav.expand": "Expandir a barra lateral",
   "nav.resize": "Redimensionar a barra lateral",
   "nav.routines": "Rotinas",
+  "nav.unsynced": "Mudanças não sincronizadas",
+  "nav.runInFlight": "Execução em andamento",
   "account.menu": "Conta",
   "account.githubAccount": "Conta do GitHub",
 

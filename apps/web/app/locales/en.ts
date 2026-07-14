@@ -80,6 +80,8 @@ export const en = {
   "nav.expand": "Expand sidebar",
   "nav.resize": "Resize sidebar",
   "nav.routines": "Routines",
+  "nav.unsynced": "Unsynced changes",
+  "nav.runInFlight": "Run in flight",
   "account.menu": "Account",
   "account.githubAccount": "GitHub account",
 

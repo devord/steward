@@ -50,7 +50,12 @@ import {
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
 import type { ArtifactInfo, SidebarData } from "../lib/dashboard.server.ts"
-import { removeRoutine, type ServerConfig, useDraft } from "../lib/draft.ts"
+import {
+  poolDraftKey,
+  removeRoutine,
+  type ServerConfig,
+  useDraft,
+} from "../lib/draft.ts"
 import { useT, type Translate } from "../lib/i18n.tsx"
 import { boardHref } from "../lib/repos.ts"
 import {
@@ -127,7 +132,7 @@ export function RoutinesView({
 
   // A repo-scoped draft key — `__routines__` can't collide with a board slug
   // (real slugs are kebab-case), so the pool's draft never crosses a board's.
-  const draftKey = `${repo.full}:__routines__`
+  const draftKey = poolDraftKey(repo.full)
   const serverConfig = useMemo<ServerConfig>(
     () => ({
       routines: pool.routines,
