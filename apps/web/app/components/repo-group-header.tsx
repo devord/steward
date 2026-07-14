@@ -9,6 +9,7 @@ import {
   Globe,
   Lock,
   MoreHorizontal,
+  Users,
 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
@@ -34,9 +35,14 @@ const MAX_LISTED = 12
  * A rail group's identity row (ADR-0023): the repo's display name — its
  * data/repo.yaml `name`, else "Personal" / the short repo name (ADR-0026) —
  * in the group-heading voice, then two distinct trailing marks. A **quiet
- * visibility glyph plus collaborator count** is status, not a control: it
- * reads at a glance and never acts (a lock that secretly opened a menu was
- * the affordance lying about its job). Beside it, a **`⋯` control** opens the
+ * exposure glyph** is status, not a control: it reads at a glance and never
+ * acts (a lock that secretly opened a menu was the affordance lying about
+ * its job). One glyph on a private → shared → public ladder answers the only
+ * at-a-glance question — who can see this: `Lock` (only you), `Users` (shared
+ * with specific people), `Globe` (public, where "anyone can see it" subsumes
+ * the count). The exact people — a bare "6" floats without a noun — leave the
+ * rail for the popover, where avatars and logins actually read; the rail just
+ * says how exposed the repo is. Beside it, a **`⋯` control** opens the
  * access popover — the same status-vs-actions split, and the same `⋯` glyph,
  * the board rows already carry one line down, so the rail teaches the idiom
  * once. The popover holds the full repo slug, visibility in words, who has
@@ -65,6 +71,27 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
   const shared = collaborators.length > 1
   const listed = collaborators.slice(0, MAX_LISTED)
   const overflow = collaborators.length - listed.length
+
+  // The exposure ladder the rail glyph rides (private → shared → public).
+  // Public wins outright — "anyone can see it" makes the collaborator count
+  // moot; otherwise sharing (private, or visibility not yet known) reads as
+  // people, and a solo private repo as the lock.
+  // Screen readers get the words and the count the single glyph can't carry,
+  // joined without a leading dash when the visibility word is absent.
+  const visibilityWord =
+    group.private == null
+      ? null
+      : group.private
+        ? t("repo.private")
+        : t("repo.public")
+  const statusLabel = [
+    visibilityWord,
+    shared
+      ? t("repo.collaborators", { n: collaborators.length, repo: group.repo })
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" — ")
 
   const gitHubHref = group.viewerIsAdmin
     ? `https://github.com/${group.repo}/settings/access`
@@ -118,47 +145,35 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
       </span>
 
       <span className="ml-auto flex shrink-0 items-center gap-1">
-        {/* Status, not a control: visibility and how many can see it, resting
-            quiet. It reads at a glance and never acts — the actions live under
-            the ⋯ beside it. Screen readers get the words; the glyph is the
-            at-a-glance shorthand. */}
+        {/* Status, not a control: one exposure glyph on the private → shared →
+            public ladder, resting quiet. It reads at a glance and never acts —
+            the actions live under the ⋯ beside it. Screen readers get the
+            words and the count; the glyph is the at-a-glance shorthand. */}
         {(group.private != null || shared) && (
           <span
             data-testid="repo-status"
-            className="flex items-center gap-1 text-ink-faint"
+            className="flex items-center text-ink-faint"
           >
-            {group.private != null &&
-              (group.private ? (
-                <Lock
-                  aria-hidden
-                  className="size-3 shrink-0"
-                  data-testid="repo-private"
-                />
-              ) : (
-                <Globe
-                  aria-hidden
-                  className="size-3 shrink-0"
-                  data-testid="repo-public"
-                />
-              ))}
-            {shared && (
-              // Mono digits sit ~0.75px above the line box's center (the
-              // baseline lands at (ascent−descent)/2, and digits have no
-              // descender), so flexbox centering leaves the count riding
-              // high against the glyph. Nudge it onto the optical center.
-              <span className="translate-y-[0.75px] font-mono text-[11px] tabular-nums">
-                {collaborators.length}
-              </span>
+            {group.private === false ? (
+              <Globe
+                aria-hidden
+                className="size-3 shrink-0"
+                data-testid="repo-public"
+              />
+            ) : shared ? (
+              <Users
+                aria-hidden
+                className="size-3 shrink-0"
+                data-testid="repo-shared"
+              />
+            ) : (
+              <Lock
+                aria-hidden
+                className="size-3 shrink-0"
+                data-testid="repo-private"
+              />
             )}
-            <span className="sr-only">
-              {group.private != null &&
-                (group.private ? t("repo.private") : t("repo.public"))}
-              {shared &&
-                ` — ${t("repo.collaborators", {
-                  n: collaborators.length,
-                  repo: group.repo,
-                })}`}
-            </span>
+            <span className="sr-only">{statusLabel}</span>
           </span>
         )}
 

@@ -419,22 +419,26 @@ describe("DashboardSidebar repo groups", () => {
     ).toBeNull()
   })
 
-  it("carries repo identity: visibility glyph and collaborator count", async () => {
+  it("carries repo identity: a single exposure glyph, no bare count", async () => {
     await renderSidebar()
 
-    // Home: private lock; solo (collaborators null) — glyph only, no count,
-    // and no avatars anywhere in the rail (people live in the popover now).
+    // Home: private, solo (collaborators null) — the lock; no avatars in the
+    // rail and no floating number anywhere (people live in the popover now).
     const home = groupHeader(HOME_REPO)
     expect(home?.querySelector('[data-testid="repo-private"]')).not.toBeNull()
     expect(home?.querySelector('[data-slot="avatar"]')).toBeNull()
     expect(home?.textContent).not.toContain("2")
 
-    // Shared: public globe plus the people count — both in the status
-    // cluster, which is not the control (the ⋯ popover-trigger sits beside it).
+    // Shared but public: the globe wins the ladder — "anyone can see it"
+    // subsumes the collaborator count, so the rail shows no "2". The status
+    // is not the control (the ⋯ popover-trigger sits beside it), and the
+    // count still reaches screen readers via the sr-only label.
     const shared = groupHeader(SHARED_REPO)
     const status = shared?.querySelector('[data-testid="repo-status"]')
     expect(status?.querySelector('[data-testid="repo-public"]')).not.toBeNull()
-    expect(status?.textContent).toContain("2")
+    expect(status?.querySelector('[data-testid="repo-shared"]')).toBeNull()
+    expect(status?.querySelector("svg + :not(.sr-only)")).toBeNull()
+    expect(status?.textContent).toContain("2 people have access")
   })
 
   it("sets the group ⋯ glyph on the board rows' ⋯ column", async () => {
