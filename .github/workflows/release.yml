@@ -13,7 +13,8 @@ name: Release
 # Auth is OIDC trusted publishing (no stored npm token): npm exchanges the
 # job's short-lived id-token for a publish credential, gated by the trusted
 # publisher configured on npmjs.com for @devord/steward (this repo +
-# release.yml). Needs npm >= 11.5.1, hence the upgrade step.
+# release.yml). Needs npm >= 11.5.1, which the pinned Node (.node-version)
+# already bundles.
 #
 # The private web app is never published; only `@devord/steward` has a public
 # access + version, so publish touches nothing else. No npm provenance: it
@@ -48,7 +49,6 @@ jobs:
           cache: pnpm
           registry-url: "https://registry.npmjs.org" # points npm at the registry
       - run: pnpm install --frozen-lockfile
-      - run: npm install -g npm@latest # OIDC trusted publishing needs npm >= 11.5.1
       - name: Create Version PR or publish
         uses: changesets/action@v1
         with:
