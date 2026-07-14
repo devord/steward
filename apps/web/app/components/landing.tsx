@@ -41,9 +41,6 @@ export function Landing() {
             <p className="mt-3 leading-relaxed text-pretty text-ink-dim">
               {t("landing.tagline")}
             </p>
-            <p className="mt-3 font-mono text-sm text-ink-dim">
-              {t("landing.sub")}
-            </p>
 
             <SignInButton size="lg" className="mt-8" />
             <p className="mt-4 max-w-xs text-xs leading-relaxed text-ink-faint">

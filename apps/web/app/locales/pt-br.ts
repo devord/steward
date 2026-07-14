@@ -9,8 +9,7 @@ import type { Messages } from "./en.ts"
 export const ptBR: Messages = {
   "landing.headline": "Relatórios que se atualizam sozinhos.",
   "landing.tagline":
-    "Um painel de widgets vivos — plano do dia, saúde dos repos, changelogs — cada um regenerado conforme o agendamento por uma rotina e servido a você aqui.",
-  "landing.sub": "Seus resultados, servidos.",
+    "Um painel de widgets vivos — planos diários e semanais, relatórios de projeto, status dos repos, changelogs — cada um mantido fresco por uma rotina que roda conforme o agendamento.",
   "landing.signIn": "Entrar com GitHub",
   "landing.privacy":
     "Seus dados são seus — vivem em um repo privado do GitHub que é seu; o app não guarda nada.",
@@ -20,21 +19,21 @@ export const ptBR: Messages = {
 
   "landing.loop.title": "Como um widget se mantém fresco",
   "landing.loop.cron":
-    "Um agendamento dispara — ou você clica em Atualizar no widget, ou roda uma linha no terminal. Todo caminho inicia a mesma rotina.",
+    "Um agendamento dispara e a rotina roda.",
   "landing.loop.skill":
     "O Claude Code executa a rotina: segue seu template ou instruções e escreve um único arquivo HTML autocontido.",
   "landing.loop.push":
-    "Publicar é um git push — o arquivo é commitado na branch artifacts do seu repo de dados. Sem upload, sem CDN, e histórico de versões de graça.",
+    "Publicar é um git push. Sem upload, sem CDN, e histórico de versões de graça.",
   "landing.loop.widget":
-    'O painel renderiza o arquivo em um frame isolado; o último commit vira o "Rodou há 2h".',
+    "O painel renderiza o arquivo em um frame isolado.",
   "landing.loop.prereqs":
-    "Só é preciso uma conta no GitHub e o Claude Code — rotinas rodam na sua assinatura Claude, na nuvem ou na sua máquina.",
+    "Só é preciso uma conta no GitHub e o Claude Code — rotinas rodam na nuvem ou na sua máquina.",
 
   "landing.data.title": "Seus dados são seus",
   "landing.data.repo":
-    "Um repo privado guarda tudo — rotinas, layouts, widgets publicados. Só você tem acesso; a privacidade é a fronteira do repo no GitHub, não lógica do app.",
+    "Um repo privado guarda tudo — rotinas, layouts, widgets publicados. A privacidade é a fronteira do repo no GitHub.",
   "landing.data.stateless":
-    "Sem banco de dados, sem CDN — o app é um renderizador sem estado: lê seu repo com seu token e não guarda nada em nenhum outro lugar. Publicar é só um git push.",
+    "Sem banco de dados, sem CDN — o app lê seu repo e não guarda nada em nenhum outro lugar. Publicar é só um git push.",
   "landing.data.leave":
     "Sair é apagar um repo. Nada para exportar, nada deixado para trás.",
 
@@ -44,10 +43,10 @@ export const ptBR: Messages = {
     "Comece de um template embutido — plano do dia, pulso dos repos — e preencha os campos, ou descreva o widget que você quer em palavras simples. Uma rotina são poucas linhas de YAML no seu repo.",
   "landing.features.hosts.title": "Nuvem ou local, agendado ou manual",
   "landing.features.hosts.body":
-    "Rode na nuvem da Anthropic com o laptop fechado, ou na sua máquina junto dos dados locais. Rotinas manuais esperam o botão Atualizar; dry runs renderizam para um arquivo local primeiro.",
+    "Rode na nuvem da Anthropic com o laptop fechado, ou na sua máquina junto dos dados locais.",
   "landing.features.fresh.title": "Frescor confiável",
   "landing.features.fresh.body":
-    '"Rodou há 2h" vem do histórico de commits e widgets atrasados avisam. Edições são rascunhos que você sincroniza como commit ou PR — nunca um salvar silencioso.',
+    'Todo widget mostra quando rodou pela última vez, direto do histórico de commits — e um atrasado avisa.',
 
   "landing.cta": "Bata o olho em vez de cavar.",
 
