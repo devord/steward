@@ -32,8 +32,20 @@ const base = {
         viewerCanPush: true,
         groups: [],
         dashboards: [
-          { slug: "main", name: null, group: null },
-          { slug: "test", name: null, group: null },
+          {
+            slug: "main",
+            name: null,
+            group: null,
+            lastRunAt: null,
+            stale: false,
+          },
+          {
+            slug: "test",
+            name: null,
+            group: null,
+            lastRunAt: null,
+            stale: false,
+          },
         ],
       },
       {
@@ -49,7 +61,15 @@ const base = {
         viewerIsAdmin: false,
         viewerCanPush: false,
         groups: [],
-        dashboards: [{ slug: "team-ops", name: null, group: null }],
+        dashboards: [
+          {
+            slug: "team-ops",
+            name: null,
+            group: null,
+            lastRunAt: null,
+            stale: false,
+          },
+        ],
       },
     ],
     complete: true,
@@ -139,8 +159,20 @@ describe("DashboardSidebar per-board menu", () => {
           {
             ...base.sidebar.repos[1],
             dashboards: [
-              { slug: "main", name: null, group: null },
-              { slug: "ops", name: null, group: null },
+              {
+                slug: "main",
+                name: null,
+                group: null,
+                lastRunAt: null,
+                stale: false,
+              },
+              {
+                slug: "ops",
+                name: null,
+                group: null,
+                lastRunAt: null,
+                stale: false,
+              },
             ],
           },
         ],
@@ -181,8 +213,20 @@ describe("DashboardSidebar per-board menu", () => {
           {
             ...base.sidebar.repos[0],
             dashboards: [
-              { slug: "main", name: null, group: null },
-              { slug: "test", name: "Test Ops", group: null },
+              {
+                slug: "main",
+                name: null,
+                group: null,
+                lastRunAt: null,
+                stale: false,
+              },
+              {
+                slug: "test",
+                name: "Test Ops",
+                group: null,
+                lastRunAt: null,
+                stale: false,
+              },
             ],
           },
           base.sidebar.repos[1],
@@ -208,8 +252,20 @@ describe("DashboardSidebar per-board menu", () => {
           {
             ...base.sidebar.repos[0],
             dashboards: [
-              { slug: "main", name: null, group: null },
-              { slug: "test", name: "Test Ops", group: null },
+              {
+                slug: "main",
+                name: null,
+                group: null,
+                lastRunAt: null,
+                stale: false,
+              },
+              {
+                slug: "test",
+                name: "Test Ops",
+                group: null,
+                lastRunAt: null,
+                stale: false,
+              },
             ],
           },
           base.sidebar.repos[1],
@@ -255,9 +311,27 @@ describe("DashboardSidebar sections", () => {
             // and not the order the boards are listed in.
             groups: ["Projects", "Clients"],
             dashboards: [
-              { slug: "main", name: null, group: null },
-              { slug: "corza", name: "Corza", group: "Clients" },
-              { slug: "steward", name: "Steward", group: "Projects" },
+              {
+                slug: "main",
+                name: null,
+                group: null,
+                lastRunAt: null,
+                stale: false,
+              },
+              {
+                slug: "corza",
+                name: "Corza",
+                group: "Clients",
+                lastRunAt: null,
+                stale: false,
+              },
+              {
+                slug: "steward",
+                name: "Steward",
+                group: "Projects",
+                lastRunAt: null,
+                stale: false,
+              },
             ],
           },
           base.sidebar.repos[1],
@@ -661,5 +735,93 @@ describe("DashboardSidebar state markers", () => {
         document.querySelectorAll('[data-testid="rail-running"]').length,
       ).toBe(1),
     )
+  })
+})
+
+describe("DashboardSidebar freshness (ADR-0035)", () => {
+  const ago = (ms: number) => new Date(Date.now() - ms).toISOString()
+  const HOUR = 3600_000
+
+  it("marks each board's freshness with a dot and an age", async () => {
+    // No active board here, so the freshness colours show rather than the
+    // active-accent override.
+    await renderSidebar({
+      activeRepo: "nobody/none",
+      dashboardSlug: "none",
+      sidebar: {
+        repos: [
+          {
+            ...base.sidebar.repos[0],
+            dashboards: [
+              {
+                slug: "fresh",
+                name: "Fresh",
+                group: null,
+                lastRunAt: ago(2 * HOUR),
+                stale: false,
+              },
+              {
+                slug: "old",
+                name: "Old",
+                group: null,
+                lastRunAt: ago(6 * 24 * HOUR),
+                stale: true,
+              },
+              {
+                slug: "new",
+                name: "New",
+                group: null,
+                lastRunAt: null,
+                stale: false,
+              },
+            ],
+          },
+        ],
+        complete: true,
+        degraded: false,
+      },
+    })
+
+    // One dot per board, in render order, coloured by state.
+    const dots = [
+      ...document.querySelectorAll('[data-testid="freshness-dot"]'),
+    ].map((d) => d.getAttribute("data-freshness"))
+    expect(dots).toEqual(["fresh", "stale", "unknown"])
+
+    // Ages read for known boards; the unknown board shows none.
+    expect(document.body.textContent).toContain("2h")
+    expect(document.body.textContent).toContain("6d")
+    // The stale board names its state for readers, never colour alone.
+    expect(document.body.textContent).toContain("Stale")
+  })
+
+  it("overrides freshness with the accent on the active board", async () => {
+    // base's active board is HOME_REPO/main — give it a fresh timestamp and it
+    // must still read "active", not "fresh" (you-are-here outranks freshness).
+    await renderSidebar({
+      sidebar: {
+        repos: [
+          {
+            ...base.sidebar.repos[0],
+            dashboards: [
+              {
+                slug: "main",
+                name: null,
+                group: null,
+                lastRunAt: ago(HOUR),
+                stale: false,
+              },
+            ],
+          },
+          base.sidebar.repos[1],
+        ],
+        complete: true,
+        degraded: false,
+      },
+    })
+    const active = document.querySelector(
+      '[data-testid="freshness-dot"][data-freshness="active"]',
+    )
+    expect(active).not.toBeNull()
   })
 })

@@ -7,6 +7,8 @@ const board = (slug: string, group: string | null = null): SidebarBoard => ({
   slug,
   name: null,
   group,
+  lastRunAt: null,
+  stale: false,
 })
 
 describe("groupBoards", () => {

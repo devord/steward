@@ -393,6 +393,7 @@ const pathCommitsSchema = z.array(
     commit: z.object({
       committer: z.object({ date: z.string() }).nullable(),
       author: z.object({ name: z.string() }).nullable(),
+      message: z.string().optional(),
     }),
   }),
 )
@@ -454,6 +455,42 @@ export async function getLastCommitDate(
 ): Promise<string | null> {
   const commits = await listPathCommits(token, repo, path, ref, 1)
   return commits?.[0]?.date ?? null
+}
+
+const PUBLISH_MESSAGE = /^publish:\s*(\S+)/
+
+/**
+ * Last publish time per widget slug on the `artifacts` branch, from one
+ * commits page — the rail's cheap freshness source (ADR-0035). Every run's
+ * mandatory last step commits `publish: <slug>` touching `w/<slug>/index.html`
+ * (ADR-0002/0026), one slug per commit, so the newest such message dates each
+ * slug. Commits come newest-first, so the first match per slug wins.
+ *
+ * Empty map for a missing branch / empty repo (nothing published yet). `null`
+ * on any other failure so the caller degrades the whole repo's freshness to
+ * "unknown" rather than lie — freshness is chrome, never a failed rail
+ * (ADR-0030). A commit that breaks the `publish:` convention is simply skipped,
+ * leaving its slug unknown.
+ */
+export async function listArtifactPublishDates(
+  token: string,
+  repo: string,
+  limit: number,
+): Promise<Map<string, string> | null> {
+  const search = new URLSearchParams({
+    sha: "artifacts",
+    per_page: String(limit),
+  })
+  const res = await gh(token, `/repos/${repo}/commits?${search}`)
+  if (res.status === 404 || res.status === 409) return new Map()
+  if (!res.ok) return null
+  const dates = new Map<string, string>()
+  for (const entry of pathCommitsSchema.parse(await res.json())) {
+    const date = entry.commit.committer?.date
+    const slug = entry.commit.message?.match(PUBLISH_MESSAGE)?.[1]
+    if (date && slug && !dates.has(slug)) dates.set(slug, date)
+  }
+  return dates
 }
 
 /**
