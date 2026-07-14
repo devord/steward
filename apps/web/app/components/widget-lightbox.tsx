@@ -1,4 +1,3 @@
-import { useEffect } from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { X } from "lucide-react"
 
@@ -7,19 +6,7 @@ import { Button } from "~/components/ui/button"
 import { DialogOverlay } from "~/components/ui/dialog"
 import { cn } from "~/lib/utils"
 import { useT } from "../lib/i18n.tsx"
-
-/**
- * Escape inside the artifact never reaches the parent: the iframe is
- * sandboxed with a null origin, so its keydowns fire in its own document and
- * Base UI's dialog handler (which listens on the parent) can't see them. This
- * appended listener forwards Escape back out via postMessage — the only
- * channel a no-same-origin sandbox leaves open — so the key closes the
- * lightbox whether focus sits on the chrome or inside the artifact.
- */
-const CLOSE_MESSAGE = "steward:lightbox:close"
-const ESCAPE_BRIDGE = `<script>document.addEventListener("keydown",function(e){if(e.key==="Escape"){e.preventDefault();parent.postMessage(${JSON.stringify(
-  CLOSE_MESSAGE,
-)},"*")}})</script>`
+import { SandboxedArtifact, useArtifactEscape } from "./artifact-frame.tsx"
 
 export interface WidgetLightboxProps {
   open: boolean
@@ -59,15 +46,8 @@ export function WidgetLightbox({
 }: WidgetLightboxProps) {
   const t = useT()
   // The artifact can't call onOpenChange directly; it posts CLOSE_MESSAGE and
-  // we translate that into the same close the chrome triggers.
-  useEffect(() => {
-    if (!open) return
-    const onMessage = (event: MessageEvent) => {
-      if (event.data === CLOSE_MESSAGE) onOpenChange(false)
-    }
-    window.addEventListener("message", onMessage)
-    return () => window.removeEventListener("message", onMessage)
-  }, [open, onOpenChange])
+  // the bridge hook translates that into the same close the chrome triggers.
+  useArtifactEscape(open, () => onOpenChange(false))
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -120,11 +100,10 @@ export function WidgetLightbox({
               </DialogPrimitive.Close>
             </div>
           </header>
-          <iframe
-            srcDoc={html + ESCAPE_BRIDGE}
-            sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+          <SandboxedArtifact
+            html={html}
             title={name}
-            className="min-h-0 w-full flex-1 border-0 bg-bg1"
+            className="min-h-0 flex-1"
           />
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>

@@ -1,5 +1,5 @@
 import { createMemoryRouter, RouterProvider } from "react-router"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { render } from "vitest-browser-react"
 
 import type { Routine } from "@steward/schema"
@@ -78,6 +78,28 @@ async function waitForText(text: string) {
   )
 }
 
+/** Stub the version resource route so opening a run resolves an artifact body
+    without a real request. Returns the mock to assert the fetched URL. */
+function stubVersionFetch(html = "<p>version body</p>") {
+  const fetchMock = vi.fn(
+    async () =>
+      new Response(JSON.stringify({ html }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+  )
+  vi.stubGlobal("fetch", fetchMock)
+  return fetchMock
+}
+
+function byText(tag: string, text: string) {
+  return [...document.querySelectorAll<HTMLElement>(tag)].find(
+    (el) => el.textContent?.trim() === text,
+  )
+}
+
+afterEach(() => vi.unstubAllGlobals())
+
 describe("RoutineRunsView", () => {
   it("shows the routine's facts: schedule, host, owner, account, boards", async () => {
     await renderView({})
@@ -149,5 +171,74 @@ describe("RoutineRunsView", () => {
   it("labels a capped listing as the last N runs", async () => {
     await renderView({ runs: { receipts, capped: true } })
     await waitForText("last 3 runs")
+  })
+
+  it("opens a run's published artifact in a full-size frame", async () => {
+    const fetchMock = stubVersionFetch("<p>old render</p>")
+    await renderView({})
+    await waitForText("first run")
+
+    // The newest run ran 2h ago — its row's time is the door to its render.
+    const ranButton = [...document.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("2h ago"),
+    )
+    ranButton?.click()
+
+    await vi.waitFor(() => {
+      const frame = [...document.querySelectorAll("iframe")].find(
+        (f) => f.getAttribute("title") === "Corza Pulse",
+      )
+      expect(frame).toBeDefined()
+    })
+    // Fetched from the resource route at that receipt's commit.
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/r/alice/steward-data/routines/corza-pulse/at/2abc0000deadbeef",
+      expect.anything(),
+    )
+  })
+
+  it("compares two runs side by side with a GitHub text-diff link", async () => {
+    stubVersionFetch()
+    await renderView({})
+    await waitForText("first run")
+
+    byText("button", "Compare")?.click()
+
+    await vi.waitFor(() => {
+      const boxes = document.querySelectorAll(
+        '[aria-label="Select this run to compare"]',
+      )
+      expect(boxes.length).toBe(3)
+    })
+    const boxes = [
+      ...document.querySelectorAll<HTMLElement>(
+        '[aria-label="Select this run to compare"]',
+      ),
+    ]
+    boxes[0].click() // newest (2h, sha 2abc…)
+    boxes[1].click() // older (6h, sha 6abc…)
+
+    await vi.waitFor(() => {
+      const open = byText("button", "Compare runs")
+      expect(open?.hasAttribute("disabled")).toBe(false)
+    })
+    byText("button", "Compare runs")?.click()
+
+    await vi.waitFor(() => {
+      const diff = [...document.querySelectorAll("a")].find((a) =>
+        a.getAttribute("href")?.includes("/compare/"),
+      )
+      expect(diff).toBeDefined()
+    })
+    // Older on the left → the compare range is older...newer.
+    const diff = [...document.querySelectorAll("a")].find((a) =>
+      a.getAttribute("href")?.includes("/compare/"),
+    )
+    expect(diff?.getAttribute("href")).toBe(
+      "https://github.com/alice/steward-data/compare/6abc0000deadbeef...2abc0000deadbeef",
+    )
+    const text = document.body.textContent ?? ""
+    expect(text).toContain("older")
+    expect(text).toContain("newer")
   })
 })
