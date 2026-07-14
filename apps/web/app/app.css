@@ -199,22 +199,29 @@
     }
   }
 
-  /* The scroll cue's ▾ breathes in the run-pulse family — a hint kept
-     quieter than the caret blink, which stays the hero's one hard motion. */
-  @keyframes landing-cue-pulse {
+  /* The scroll cue is lucide's double chevron; its two strokes brighten in
+     sequence, top to bottom — a downward cascade in the run-pulse family,
+     kept quieter than the caret blink, which stays the hero's one hard
+     motion. The stagger equals the wave's travel, so the pair reads as one
+     pulse rolling through, not two blinking lights. */
+  @keyframes landing-cue-cascade {
     0%,
+    55%,
     100% {
-      opacity: 1;
-    }
-    50% {
       opacity: 0.4;
     }
+    18% {
+      opacity: 1;
+    }
   }
-  .landing-cue-glyph {
-    animation: landing-cue-pulse 2.4s ease-in-out infinite;
+  .landing-cue-glyph path {
+    animation: landing-cue-cascade 2.4s ease-in-out infinite;
+  }
+  .landing-cue-glyph path + path {
+    animation-delay: 430ms;
   }
   @media (prefers-reduced-motion: reduce) {
-    .landing-cue-glyph {
+    .landing-cue-glyph path {
       animation: none;
     }
   }

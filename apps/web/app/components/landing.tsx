@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from "react"
-import { Check, Monitor, Moon, Sun } from "lucide-react"
+import {
+  Blocks,
+  Check,
+  ChevronsDown,
+  Lock,
+  Monitor,
+  Moon,
+  RefreshCw,
+  Sun,
+} from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
 import { handleRadioKeydown } from "./appearance-settings.tsx"
 import { Wordmark } from "./logo.tsx"
@@ -12,7 +22,7 @@ import { useT } from "../lib/i18n.tsx"
 
 /**
  * The signed-out front door. Viewport one shows the product (pitch + live
- * demo board) and ends on a pager-style `▾ more` cue, since a large screen
+ * demo board) and ends on a pager-style `more` cue, since a large screen
  * makes the hero look like the whole page; the sections below argue the
  * product for a reader who has never heard of Steward: the loop, ownership,
  * what's built in. Terminal-calm per PRODUCT.md — the hero itself has no
@@ -80,10 +90,18 @@ export function Landing() {
 /* --- Scroll cue ----------------------------------------------------------- */
 
 /**
- * A pager prompt at the foot of viewport one: `▾ more` — the section marker
- * turned downward — telling a reader on a tall screen that the argument
- * continues below. It anchors to the first section and fades out the moment
- * the page scrolls; a hint, not chrome.
+ * Landing glyphs (section markers, the scroll cue) sharpen lucide's default
+ * rounding to square caps and miter joins — the terminal-crisp voice the old
+ * ▸/▾ characters carried. Control icons (mode toggle, demo board) keep the
+ * stock rounding so they match their twins in the app chrome.
+ */
+const sharp = { strokeLinecap: "square", strokeLinejoin: "miter" } as const
+
+/**
+ * A pager prompt at the foot of viewport one: a double chevron cascading
+ * downward (app.css pulses its two strokes in sequence), telling a reader on
+ * a tall screen that the argument continues below. It anchors to the first
+ * section and fades out the moment the page scrolls; a hint, not chrome.
  */
 function ScrollCue() {
   const t = useT()
@@ -108,13 +126,15 @@ function ScrollCue() {
         })
       }}
       className={cn(
-        "absolute inset-x-0 bottom-4 z-10 mx-auto flex w-fit items-center gap-2 rounded-md px-3 py-2 font-mono text-xs text-ink-faint transition-opacity duration-200 outline-none hover:text-ink-dim focus-visible:ring-3 focus-visible:ring-ring/50",
+        "group absolute inset-x-0 bottom-4 z-10 mx-auto flex w-fit items-center gap-2 rounded-md px-3 py-2 font-mono text-xs text-ink-faint transition-opacity duration-200 outline-none hover:text-ink-dim focus-visible:ring-3 focus-visible:ring-ring/50",
         scrolled && "pointer-events-none opacity-0",
       )}
     >
-      <span aria-hidden className="landing-cue-glyph text-primary/70">
-        ▾
-      </span>
+      <ChevronsDown
+        aria-hidden
+        {...sharp}
+        className="landing-cue-glyph size-4 text-primary/70 transition-colors group-hover:text-primary"
+      />
       {t("landing.more")}
     </a>
   )
@@ -153,13 +173,26 @@ function useReveal() {
   return ref
 }
 
-/** Section headings all reveal, so the title is always cascade item 0. */
-function SectionTitle({ children }: { children: React.ReactNode }) {
+/**
+ * Section headings all reveal, so the title is always cascade item 0. Each
+ * marker names its section's subject in the app's own icon vocabulary:
+ * RefreshCw is the widget update action (widget-card), Lock is the private
+ * repo (repo-group-header), Blocks the built-in parts.
+ */
+function SectionTitle({
+  icon: Icon,
+  children,
+}: {
+  icon: LucideIcon
+  children: React.ReactNode
+}) {
   return (
-    <h2 className="landing-reveal-item text-lg font-medium text-foreground">
-      <span aria-hidden className="mr-2 font-mono text-primary/70">
-        ▸
-      </span>
+    <h2 className="landing-reveal-item flex items-center gap-2.5 text-lg font-medium text-foreground">
+      <Icon
+        aria-hidden
+        {...sharp}
+        className="size-4 shrink-0 text-primary/70"
+      />
       {children}
     </h2>
   )
@@ -180,7 +213,7 @@ function LoopSection() {
   ]
   return (
     <section id="how" ref={reveal}>
-      <SectionTitle>{t("landing.loop.title")}</SectionTitle>
+      <SectionTitle icon={RefreshCw}>{t("landing.loop.title")}</SectionTitle>
       <ol className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
         {steps.map((body, i) => (
           <li
@@ -215,7 +248,7 @@ function DataSection() {
   ]
   return (
     <section ref={reveal}>
-      <SectionTitle>{t("landing.data.title")}</SectionTitle>
+      <SectionTitle icon={Lock}>{t("landing.data.title")}</SectionTitle>
       <ul className="mt-6 space-y-4 text-sm leading-relaxed text-ink-dim">
         {points.map((point, i) => (
           <li
@@ -250,7 +283,7 @@ function FeaturesSection() {
   const reveal = useReveal()
   return (
     <section ref={reveal}>
-      <SectionTitle>{t("landing.features.title")}</SectionTitle>
+      <SectionTitle icon={Blocks}>{t("landing.features.title")}</SectionTitle>
       <div className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-3">
         {features.map((feature, i) => (
           <div
