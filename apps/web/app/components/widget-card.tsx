@@ -16,6 +16,14 @@ import {
 
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog"
 import { cn } from "~/lib/utils"
 import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
@@ -602,37 +610,32 @@ function UpdateAction({
 }) {
   const t = useT()
   const { fire, busy, result } = useFireRoutine(routine, dataRepo, onFired)
-  const [copied, setCopied] = useState(false)
+  const [runLocalOpen, setRunLocalOpen] = useState(false)
 
   if (routineHost(routine) === "local") {
-    // Works without a steward checkout — the raw pointer prompt (ADR-0005).
-    // Always name the repo: with N data repos (ADR-0023) "the" data repo is
-    // ambiguous, so every command is explicit.
-    const command = `claude "Run the steward routine \`${routine.slug}\` in \`${dataRepo}\` — follow the run-routine skill."`
-    const label = copied
-      ? t("widget.copied")
-      : t("widget.copyCommand", { name: routine.name })
+    // A local routine has no cloud resource the board can fire (ADR-0012), so
+    // the update control opens the how-to-run-it modal rather than silently
+    // copying a command or dead-ending on the cloud "no trigger" message.
+    const label = t("widget.runLocalOpen", { name: routine.name })
     return (
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        aria-label={label}
-        title={label}
-        className={cn(
-          BAR_ACTION,
-          copied || forceVisible ? "opacity-100" : "opacity-0",
-        )}
-        onClick={() => {
-          void navigator.clipboard.writeText(command)
-          setCopied(true)
-          window.setTimeout(() => setCopied(false), 2500)
-        }}
-      >
-        {copied ? <Check /> : <Copy />}
-        <span role="status" className="sr-only">
-          {copied ? t("widget.copied") : ""}
-        </span>
-      </Button>
+      <>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label={label}
+          title={label}
+          className={cn(BAR_ACTION, forceVisible ? "opacity-100" : "opacity-0")}
+          onClick={() => setRunLocalOpen(true)}
+        >
+          <RefreshCw />
+        </Button>
+        <RunLocallyDialog
+          routine={routine}
+          dataRepo={dataRepo}
+          open={runLocalOpen}
+          onOpenChange={setRunLocalOpen}
+        />
+      </>
     )
   }
 
@@ -739,6 +742,59 @@ export function CopyableCommand({ command }: { command: string }) {
       )}
       <span className="min-w-0 truncate">{command}</span>
     </button>
+  )
+}
+
+/**
+ * How to run a local routine (ADR-0012): the board can't fire it — it lives on
+ * the user's machine — so instead of a dead update button this modal names the
+ * two honest ways in. The Steward CLI one-liner, and the raw pointer prompt
+ * that works from any Claude Code session without a checkout (ADR-0005). The
+ * repo is always named: with N data repos (ADR-0023) "the data repo" is
+ * ambiguous, so every command is explicit.
+ */
+export function RunLocallyDialog({
+  routine,
+  dataRepo,
+  open,
+  onOpenChange,
+}: {
+  routine: Routine
+  dataRepo: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const t = useT()
+  const cli = setupCommands(routine, dataRepo).runOnce
+  const prompt = `claude "Run the steward routine \`${routine.slug}\` in \`${dataRepo}\` — follow the run-routine skill."`
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("widget.runLocalTitle")}</DialogTitle>
+          <DialogDescription>
+            {t("widget.runLocalDescription", { name: routine.name })}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4">
+          {cli && (
+            <div className="grid gap-2">
+              <span className="text-xs font-medium text-ink-dim">
+                {t("widget.runLocalCliLabel")}
+              </span>
+              <CopyableCommand command={cli} />
+            </div>
+          )}
+          <div className="grid gap-2">
+            <span className="text-xs font-medium text-ink-dim">
+              {t("widget.runLocalPromptLabel")}
+            </span>
+            <CopyableCommand command={prompt} />
+          </div>
+        </div>
+        <DialogFooter showCloseButton />
+      </DialogContent>
+    </Dialog>
   )
 }
 
