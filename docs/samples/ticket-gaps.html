@@ -26,8 +26,8 @@
         --color-purple: #d3869b;
         --color-red: #fb4934;
         --font-sans: system-ui, sans-serif;
-        --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo,
-          monospace;
+        --font-mono:
+          "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
       }
 
       * {
@@ -343,7 +343,9 @@
           >
             <span class="pill">gap</span>
             <span>
-              <span class="title">Add a staleness badge to overdue widgets</span>
+              <span class="title"
+                >Add a staleness badge to overdue widgets</span
+              >
               <span class="evidence"
                 >widget-standard §Freshness<span class="arrow">→</span
                 ><span class="code">widget-card.tsx</span></span
@@ -351,7 +353,9 @@
             </span>
             <span class="trail">
               <span class="conf">high</span>
-              <span class="jira none" title="No Jira ticket found">no ticket</span>
+              <span class="jira none" title="No Jira ticket found"
+                >no ticket</span
+              >
               <button type="button" class="copy">Copy</button>
             </span>
           </li>
@@ -369,7 +373,9 @@
             </span>
             <span class="trail">
               <span class="conf">high</span>
-              <span class="jira none" title="No Jira ticket found">no ticket</span>
+              <span class="jira none" title="No Jira ticket found"
+                >no ticket</span
+              >
               <button type="button" class="copy">Copy</button>
             </span>
           </li>
@@ -406,7 +412,9 @@
           >
             <span class="pill">gap</span>
             <span>
-              <span class="title">Surface the dry-run clause on the receipt</span>
+              <span class="title"
+                >Surface the dry-run clause on the receipt</span
+              >
               <span class="evidence"
                 >ADR-0017 §Dry runs<span class="arrow">→</span
                 ><span class="code">routine-detail.tsx</span></span
@@ -414,7 +422,9 @@
             </span>
             <span class="trail">
               <span class="conf">med</span>
-              <span class="jira none" title="No Jira ticket found">no ticket</span>
+              <span class="jira none" title="No Jira ticket found"
+                >no ticket</span
+              >
               <button type="button" class="copy">Copy</button>
             </span>
           </li>
@@ -517,7 +527,8 @@
       // scroll, so collapse trailing items that overflow into "+N more".
       ;(function () {
         function fit() {
-          if (!document.documentElement.hasAttribute("data-steward-tile")) return
+          if (!document.documentElement.hasAttribute("data-steward-tile"))
+            return
           var doc = document.documentElement
           var lists = [].slice
             .call(document.querySelectorAll("[data-fit-list]"))
@@ -544,7 +555,10 @@
             }
             var hidden = 0
             while (over() && hidden < items.length) {
-              var before = Math.max(doc.scrollHeight, document.body.scrollHeight)
+              var before = Math.max(
+                doc.scrollHeight,
+                document.body.scrollHeight,
+              )
               var el = items[items.length - ++hidden]
               el.hidden = true
               if (

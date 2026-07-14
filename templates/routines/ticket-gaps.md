@@ -136,7 +136,7 @@ Size behavior:
 - **2×2**: the ledger with per-row copy buttons; the fit-list trims to
   `+N more`.
 - **Wide tile / full view**: a table — `state · title · spec · code ·
-  confidence · jira · copy` — every row shown, with the Copy-all header.
+confidence · jira · copy` — every row shown, with the Copy-all header.
   Spend the width on the evidence columns.
 
 Degrade gracefully: no knowledge-base folder reachable → an empty state
