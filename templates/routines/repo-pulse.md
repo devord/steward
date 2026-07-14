@@ -16,6 +16,10 @@ widget:
       type: repos
       required: true
       hint: Each run reports PRs, new issues, and CI for these
+    - key: jira
+      label: Jira base URL
+      placeholder: https://acme.atlassian.net
+      hint: Ticket keys found in PR titles link into this site
 ---
 
 # Repo pulse
@@ -40,7 +44,7 @@ For each watched repo, via `gh` (preferred) or the GitHub API:
 
    ```bash
    gh pr list --repo "$repo" --limit 50 \
-     --json number,title,url,author,isDraft,reviewDecision,reviewRequests,statusCheckRollup,createdAt
+     --json number,title,url,author,isDraft,reviewDecision,reviewRequests,statusCheckRollup,createdAt,additions,deletions
    ```
 
    Derive per PR: **mine** (`author.login == login`), **needs me**
@@ -49,7 +53,25 @@ For each watched repo, via `gh` (preferred) or the GitHub API:
    (`draft` / `changes requested` / `approved` / `review required`,
    from `isDraft` + `reviewDecision`), **CI** (worst conclusion in
    `statusCheckRollup`: failing > pending > passing; no checks →
-   none), and **age** from `createdAt`.
+   none), **age** from `createdAt`, **size** from
+   `additions`/`deletions`, **ticket** — the first Jira-style key
+   (`[A-Z][A-Z0-9]+-\d+`) in the title, if any — and **display
+   title**: the title with any conventional-commit prefix
+   (`type(scope):` / `type:`) stripped; keep the raw title too, it
+   becomes the row's tooltip. If stripping leaves nothing, keep the
+   raw title.
+
+   Then inline each unique author's avatar once, so the artifact
+   stays self-contained (widget-standard rule 1 — no images by URL):
+
+   ```bash
+   curl -fsSL "https://github.com/$author.png?size=48" -o "$tmp/$author"
+   ```
+
+   Verify it is an image (`file -b --mime-type`), base64 it into a
+   `data:<mime>;base64,…` URI, and reuse it on every row by that
+   author. A failed fetch (or a bot author) degrades to the initial
+   fallback — never a broken image.
 
 2. Issues opened since the last run (previous artifact's generated-at time,
    else the last 24h).
@@ -80,30 +102,58 @@ group — old _and_ waiting on you is the emergency.
 ## Author the artifact
 
 Follow the `widget-artifact` skill for the HTML contract; compose from
-its design language (ledger rows, pills, dots, links). Row anatomy —
-a PR is a ledger row:
+its design language (ledger rows, avatars, pills, dots, links). Row
+anatomy — a PR is a ledger row with these columns, in order:
 
-- `#num title` is a **link** to the PR (`target="_blank"
-rel="noopener"`, widget-standard §7); repo names link to the repo's
-  PR list.
-- Key column marks ownership: `you` in orange on review-requested rows,
-  `mine` in faint ink on the user's own, empty otherwise.
-- Trailing meta, right-aligned: a state pill only when the state
-  demands action (`changes requested` bad, `approved` ok, `draft`
-  neutral — and dim the whole draft row; plain `review required` needs
-  no pill), a CI dot when the PR has checks, age in 12px mono. Age
-  colors yellow only when the wait is on the user (needs-you rows
-  older than 3 days) — a big number alone is not an alarm.
+- **Avatar key**: the author's avatar (design-language avatar
+  component — 18px round `<img>` from the inlined data URI, `alt` and
+  `title` carry the author's login so hover answers _whose PR is
+  this_; initial-circle fallback when the fetch failed). Never a
+  `you`/`mine` word — ownership is already the section grouping, and
+  a bare pronoun reads as noise.
+- **Title**: `#num display-title` (conventional-commit prefix
+  stripped) as a **link** to the PR (`target="_blank" rel="noopener"`,
+  widget-standard §7), with the raw title in the `title` attribute so
+  the prefix is one hover away. Repo names link to the repo's PR
+  list.
+- **Ticket**: the Jira key in 12px mono ink-dim; when the `jira`
+  param is set, a link to `<jira>/browse/<KEY>`. Empty cell when the
+  title carries no key.
+- **Size**: `+adds −dels` in 12px mono ink-faint (tabular, U+2212
+  minus). A fact, not an alarm — no color.
+- **State**: a pill only when the state demands action
+  (`changes requested` bad, `approved` ok, `draft` neutral — and dim
+  the whole draft row; plain `review required` needs no pill), a CI
+  dot when the PR has checks. In the several-repos shape, where no
+  section carries ownership, a review-requested row states it here —
+  `needs you`, 12px mono orange — outranked by a bad-state pill.
+- **Age** in 12px mono. Yellow only when the wait is on the user
+  (needs-you rows older than 3 days) — a big number alone is not an
+  alarm.
+
+Columns must align **across the whole artifact, not per section**: one
+grid on `main`, sections and their lists laid in with `subgrid`, so
+every state pill and age sits on the same vertical down the page. A
+per-`<ul>` grid gives each section its own column widths — the
+misaligned-state smell. Ticket and size are wide-tier columns: reveal
+them at 3-column widths and up (`min-width: 700px`) and in the full
+view; 1–2-column tiles keep avatar · title · state · age.
 
 Size behavior:
 
 - **1×1**: total count of PRs needing the user's review, plus worst CI state.
-- **2×1**: per-repo summary rows (or the top group when one repo).
-- **2×2 and larger**: the grouped PR rows.
+- **Short tiles** (any width, under ~380px tall — 2×1 and 4×2 included):
+  one ledger only, the actionable group — `Needs your review` when one
+  repo, the review-requested repos when several — with the rest trimmed
+  to `+N more`. A short tile answers "what needs me", not "show me
+  everything"; hide the lower groups outright rather than collapsing each
+  to a header + `+N more`, which spends the height on empty section
+  chrome. Gate this on the tile stamp so the raw page keeps every group.
+- **Tall tiles** (~380px+): every group, each fit-trimmed from the bottom.
 - **Wide tile / full view**: a real table — the same ledger grid with a
-  12px mono header row (`pr · state · ci · age`), columns aligned by
-  subgrid, hairline-separated rows. Spend width on columns, not longer
-  lines.
+  12px mono header row (`pr · ticket · size · state · age`), columns
+  aligned by subgrid, hairline-separated rows. Spend width on columns,
+  not longer lines.
 
 Degrade gracefully: a repo that can't be read gets an "unreachable" row, not
 an error; no watched repos configured → an empty state telling the user to

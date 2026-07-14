@@ -1,13 +1,15 @@
 <!doctype html>
 <!-- Sample steward artifact (docs/widget-standard.md): the stats/pulse
      archetype of the design language in
-     .claude/skills/widget-artifact/design.md — the stat tier, status
-     dots, pills, links, trailing values, and nested detail rows. -->
+     .claude/skills/widget-artifact/design.md — one-repo shape. Shows the
+     avatar key, links, Jira tickets, PR size, state pills, CI dots, the
+     stat tier, and one grid whose columns align across every section
+     (nested subgrid), so state and age never drift between groups. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="widget-generated-at" content="2026-07-09T12:00:00Z" />
+    <meta name="widget-generated-at" content="2026-07-13T12:00:00Z" />
     <title>Repo Pulse</title>
     <style>
       /* Gruvbox dark hard — identical to the @theme block in
@@ -58,49 +60,182 @@
         font-variant-numeric: tabular-nums;
         overflow: hidden;
       }
+
+      /* One grid for the whole ledger: sections, their column headers, and
+         every row are subgrid, so the ticket/size/state/age columns share
+         one set of widths down the artifact — no section sizes its own
+         table, so nothing drifts between groups. Columns:
+         avatar · title · ticket · size · state · age. Ticket and size are
+         wide-tier columns (revealed ≥700px); tiles keep the other four. */
       main {
         display: grid;
-        gap: 12px;
+        grid-template-columns:
+          max-content minmax(0, 1fr) max-content max-content;
+        column-gap: 12px;
+        row-gap: 14px;
+        align-content: start;
         min-height: 0;
       }
-      /* Content top-aligned so rows read top-down; only the one-row glance
-         tier centers its lone stat so it isn't adrift. */
-      @media (max-height: 160px) {
-        [data-steward-tile] main {
-          margin-block: auto;
-        }
+      section {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: subgrid;
+        row-gap: 5px;
       }
-      /* Links (widget-standard §7, ADR-0028): every named object opens its
-         source in a new tab. Ink register — hairline underline, no blue. */
-      a {
-        color: inherit;
-        text-decoration: underline;
-        text-decoration-color: var(--color-border);
-        text-underline-offset: 2px;
-      }
-      a:hover {
-        text-decoration-color: var(--color-ink-dim);
-      }
-      /* The 1×1 stat: the one number that answers the glance. */
-      .stat {
-        display: none;
-      }
-      .stat .num {
+
+      /* Section rule — a 12px mono label, a count, a hairline filling the
+         width. Spans all columns. */
+      h2 {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
         font-family: var(--font-mono);
-        font-size: 32px;
+        font-size: 12px;
         font-weight: 700;
-        line-height: 1.1;
-        letter-spacing: -0.02em;
-        color: var(--color-orange);
-      }
-      .stat .label {
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
         color: var(--color-ink-dim);
       }
-      .stat .sub {
-        margin-top: 8px;
+      h2 .count {
+        font-weight: 400;
+        color: var(--color-ink-faint);
       }
-      /* Status pill — mirrors the chrome's tag vocabulary (tone/10 fill,
-         tone/40 border, mono 12px). Color only when it means something. */
+      h2::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--color-border-dim);
+      }
+
+      /* Column header row: a quiet mono legend, hidden on tiles, shown once
+         per section on the wide/full table so the columns are named. */
+      .head {
+        grid-column: 1 / -1;
+        display: none;
+        grid-template-columns: subgrid;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-faint);
+        padding-bottom: 2px;
+      }
+      .head .pr {
+        grid-column: 2;
+      }
+      .head .h-ticket {
+        grid-column: 3;
+      }
+      .head .h-size {
+        grid-column: 4;
+      }
+      .head .h-state {
+        grid-column: 5;
+        text-align: right;
+      }
+      .head .h-age {
+        grid-column: 6;
+        text-align: right;
+      }
+
+      /* Rows. Each li is a subgrid row so its cells land in the shared
+         columns; wrapped titles keep a hanging indent under the title
+         column, never under the avatar. */
+      ul {
+        grid-column: 1 / -1;
+        list-style: none;
+        padding: 0;
+        display: grid;
+        grid-template-columns: subgrid;
+        row-gap: 6px;
+      }
+      li {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: subgrid;
+        align-items: baseline;
+      }
+
+      /* Avatar key — the PR author. The picture answers "whose?" on hover
+         via title/alt; identity never rides on the image alone. */
+      .avatar {
+        grid-column: 1;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        align-self: center;
+        border: 1px solid var(--color-border);
+      }
+      span.avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: 1;
+        color: var(--color-ink-dim);
+        background: var(--color-bg3);
+      }
+
+      /* Title — the PR, prefix stripped, linking out; raw title on hover. */
+      .title {
+        grid-column: 2;
+        min-width: 0;
+        color: var(--color-ink);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Ticket + size — wide-tier facts. Mono, quiet, never colored. */
+      .ticket {
+        grid-column: 3;
+        display: none;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-dim);
+        white-space: nowrap;
+      }
+      .size {
+        grid-column: 4;
+        display: none;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-faint);
+        white-space: nowrap;
+      }
+      .size .del {
+        margin-left: 5px;
+      }
+
+      /* State — a pill only when the state asks for action, plus a CI dot
+         when the PR has checks. On tiles this is column 3. */
+      .state {
+        grid-column: 3;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        align-self: center;
+        justify-content: flex-end;
+      }
+      .age {
+        grid-column: 4;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-faint);
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      /* Yellow age only when the wait is on the user: needs-you rows > 3d. */
+      .age[data-stale] {
+        color: var(--color-yellow);
+      }
+
+      /* Drafts read as parked, not pending. */
+      li[data-draft] .title {
+        color: var(--color-ink-faint);
+      }
+
       .pill {
         display: inline-flex;
         align-items: center;
@@ -111,6 +246,7 @@
         font-family: var(--font-mono);
         font-size: 12px;
         line-height: 1;
+        white-space: nowrap;
         color: var(--color-ink-dim);
         border: 1px solid
           color-mix(in srgb, var(--color-ink-faint) 40%, transparent);
@@ -126,107 +262,56 @@
         border-color: color-mix(in srgb, var(--color-red) 40%, transparent);
         background: color-mix(in srgb, var(--color-red) 10%, transparent);
       }
-      /* Repo ledger: dot · repo · counts · what needs you, columns shared
-         across rows so the table reads in one vertical sweep. */
-      ul {
-        list-style: none;
-        padding: 0;
-        display: grid;
-        grid-template-columns: max-content max-content 1fr max-content;
-        gap: 6px 10px;
-      }
-      li {
-        grid-column: 1 / -1;
-        display: grid;
-        grid-template-columns: subgrid;
-        align-items: baseline;
-      }
       .dot {
         width: 7px;
         height: 7px;
         border-radius: 999px;
-        align-self: center;
         background: var(--color-green);
       }
       .dot.bad {
         background: var(--color-red);
       }
-      .repo {
-        font-family: var(--font-mono);
-        font-size: 13px;
-        color: var(--color-ink);
+
+      a {
+        color: inherit;
+        text-decoration: underline;
+        text-decoration-color: var(--color-border);
+        text-underline-offset: 2px;
       }
-      .counts {
-        color: var(--color-ink-dim);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+      a:hover {
+        text-decoration-color: var(--color-ink-dim);
       }
-      .need {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--color-orange);
-        white-space: nowrap;
+      .ticket a {
+        text-decoration-color: var(--color-border-dim);
       }
-      .need[data-zero] {
-        color: var(--color-ink-faint);
-      }
-      /* PR detail rows nest under the repo column and only exist on taller
-         tiers: who · title (link) · state/CI meta · age — a real table, the
-         key columns aligned down the whole nest by subgrid. */
-      .detail {
-        grid-column: 2 / -1;
-        display: none;
-        grid-template-columns: max-content 1fr max-content max-content;
-        gap: 3px 10px;
-        padding: 4px 0 6px;
-      }
-      .detail li {
-        grid-template-columns: subgrid;
-      }
-      .who {
-        grid-column: 1;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--color-ink-faint);
-      }
-      .who.you {
-        color: var(--color-orange);
-      }
-      .detail .title {
-        grid-column: 2;
-        color: var(--color-ink-dim);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .detail .meta {
-        grid-column: 3;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .detail .age {
-        grid-column: 4;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--color-ink-faint);
-      }
-      /* Yellow only when the wait is on the user: needs-you rows > 3d. */
-      .detail .age[data-stale] {
-        color: var(--color-yellow);
-      }
-      /* Drafts read as parked, not pending. */
-      .detail li[data-draft] .title,
-      .detail li[data-draft] .who {
-        color: var(--color-ink-faint);
-      }
+
       [data-fit-more] {
-        display: block;
+        grid-column: 2 / -1;
         font-family: var(--font-mono);
         font-size: 12px;
         color: var(--color-ink-dim);
       }
+
+      /* The 1×1 stat: the one number that answers the glance. */
+      .stat {
+        display: none;
+        grid-column: 1 / -1;
+      }
+      .stat .num {
+        font-family: var(--font-mono);
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        color: var(--color-orange);
+      }
+      .stat .label {
+        color: var(--color-ink-dim);
+      }
+      .stat .sub {
+        margin-top: 8px;
+      }
+
       footer {
         margin-top: auto;
         padding-top: 8px;
@@ -236,7 +321,8 @@
         font-size: 12px;
         color: var(--color-ink-faint);
       }
-      /* Progressive disclosure per grid size (widget standard §2). */
+
+      /* 1×1 — the stat replaces the table. */
       @media (max-width: 340px) and (max-height: 160px) {
         .stat {
           display: block;
@@ -245,45 +331,58 @@
           display: none;
         }
       }
-      @media (max-width: 340px) {
-        .counts {
+
+      /* Short tiles answer one question — "what needs me" — so below the
+         height that fits a second group honestly, keep only the actionable
+         ledger and drop Yours/Open (a tier is a viewport, not a crop). The
+         raw page and full view carry no tile stamp and always show every
+         group. */
+      @media (max-height: 379px) {
+        [data-steward-tile] .rows ~ .rows {
           display: none;
         }
       }
-      @media (min-height: 300px) {
-        .detail {
+
+      /* ≥700px (3-col tiles and up): reveal ticket + size, name the
+         columns. The row's state/age shift to columns 5/6. */
+      @media (min-width: 700px) {
+        main {
+          grid-template-columns:
+            max-content minmax(0, 1fr)
+            max-content max-content max-content max-content;
+        }
+        .head {
           display: grid;
         }
+        .ticket,
+        .size {
+          display: block;
+        }
+        .state {
+          grid-column: 5;
+        }
+        .age {
+          grid-column: 6;
+        }
       }
-      /* Wide (~900px+): the ledger becomes a page table — roomier rows,
-         hairlines, detail always on. */
+
+      /* Wide/full (~900px+): a page table — roomier rows, hairlines, titles
+         wrap. Page chrome (outer padding) keys on the un-stamped raw page,
+         not width, so a 4-col board tile stays compact. */
       @media (min-width: 900px) {
         main,
         footer {
           width: 100%;
-          max-width: 880px;
+          max-width: 900px;
           margin-inline: auto;
         }
-        .stat {
-          display: none;
-        }
-        .rows {
-          display: grid;
-        }
-        .detail {
-          display: grid;
-        }
         li {
-          padding-block: 8px;
+          padding-block: 7px;
         }
         li + li {
           border-top: 1px solid var(--color-border-dim);
         }
-        .detail li {
-          padding-block: 0;
-          border: 0;
-        }
-        .detail .title {
+        .title {
           white-space: normal;
         }
         :root:not([data-steward-tile]) body {
@@ -296,128 +395,450 @@
   <body>
     <main>
       <section class="stat">
-        <div class="num">11</div>
+        <div class="num">6</div>
         <div class="label">PRs need your review</div>
-        <div class="sub"><span class="pill bad">CI ✗ elf-shopify</span></div>
+        <div class="sub"><span class="pill bad">CI ✗ corza</span></div>
       </section>
-      <ul class="rows" data-fit-list>
-        <li>
-          <span class="dot"></span>
-          <a
-            class="repo"
-            href="https://github.com/acme/corza/pulls"
-            target="_blank"
-            rel="noopener"
-            >corza</a
-          >
-          <span class="counts">22 PRs · 0 new issues</span>
-          <span class="need">9 need you</span>
-          <ul class="detail">
-            <li>
-              <span class="who you">you</span>
-              <a
-                class="title"
-                href="https://github.com/acme/corza/pull/249"
+
+      <section class="rows">
+        <h2>Needs your review <span class="count">6</span></h2>
+        <div class="head">
+          <span class="pr">pr</span>
+          <span class="h-ticket">ticket</span>
+          <span class="h-size">size</span>
+          <span class="h-state">state</span>
+          <span class="h-age">age</span>
+        </div>
+        <ul data-fit-list>
+          <li>
+            <span class="avatar" title="hubot">H</span>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/194"
+              target="_blank"
+              rel="noopener"
+              title="fix(reporting): let report prose fill its container"
+              >#194 let report prose fill its container</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+64</span
+              ><span class="del">−12</span></span
+            >
+            <span class="state"></span>
+            <time class="age" data-stale>26d</time>
+          </li>
+          <li>
+            <span class="avatar" title="rena-k">R</span>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/252"
+              target="_blank"
+              rel="noopener"
+              title="feat(CORZA-130): Request Access form + login trigger + account-portal UI"
+              >#252 Request Access form + login trigger + account-portal UI</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-130"
                 target="_blank"
                 rel="noopener"
-                >#249 Quoting flow: stories in outreach emails</a
-              >
-              <time class="age">2d</time>
-            </li>
-            <li>
-              <span class="who you">you</span>
-              <a
-                class="title"
-                href="https://github.com/acme/corza/pull/234"
+                >CORZA-130</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+820</span
+              ><span class="del">−40</span></span
+            >
+            <span class="state"></span>
+            <time class="age" data-stale>12d</time>
+          </li>
+          <li>
+            <span class="avatar" title="theo-b">T</span>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/256"
+              target="_blank"
+              rel="noopener"
+              title="skill(corza-progress-report): decision-provenance lens + plan-span Gantt"
+              >#256 decision-provenance lens + plan-span Gantt</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+512</span
+              ><span class="del">−88</span></span
+            >
+            <span class="state"></span>
+            <time class="age" data-stale>12d</time>
+          </li>
+          <li>
+            <span class="avatar" title="rena-k">R</span>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/261"
+              target="_blank"
+              rel="noopener"
+              title="feat(CORZA-130): Request Access backend — Admin API client"
+              >#261 Request Access backend — Admin API client</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-130"
                 target="_blank"
                 rel="noopener"
-                >#234 De-conflict overdue drafts (CORZA-136)</a
-              >
-              <span class="meta"
-                ><span class="pill bad">changes requested</span></span
-              >
-              <time class="age" data-stale>24d</time>
-            </li>
-            <li>
-              <span class="who">mine</span>
-              <a
-                class="title"
-                href="https://github.com/acme/corza/pull/226"
+                >CORZA-130</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+430</span
+              ><span class="del">−16</span></span
+            >
+            <span class="state"></span>
+            <time class="age" data-stale>10d</time>
+          </li>
+          <li>
+            <span class="avatar" title="mila-s">M</span>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/285"
+              target="_blank"
+              rel="noopener"
+              title="refactor(CORZA-139): centralize Pack CMS link handling"
+              >#285 centralize Pack CMS link handling</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-139"
                 target="_blank"
                 rel="noopener"
-                >#226 Draft review queue: CORZA-44</a
-              >
-              <span class="meta"><span class="pill ok">approved</span></span>
-              <time class="age">31d</time>
-            </li>
-            <li data-draft>
-              <span class="who">mine</span>
-              <a
-                class="title"
-                href="https://github.com/acme/corza/pull/251"
+                >CORZA-139</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+120</span
+              ><span class="del">−340</span></span
+            >
+            <span class="state"></span>
+            <time class="age" data-stale>4d</time>
+          </li>
+          <li>
+            <span class="avatar" title="kai-w">K</span>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/287"
+              target="_blank"
+              rel="noopener"
+              title="kb: link Qase test cases — abandoned-cart-recovery + b2b-registration"
+              >#287 link Qase test cases — abandoned-cart-recovery +
+              b2b-registration</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+36</span
+              ><span class="del">−4</span></span
+            >
+            <span class="state"><span class="dot bad"></span
+              ><span class="pill bad">CI ✗</span></span
+            >
+            <time class="age" data-stale>3d</time>
+          </li>
+        </ul>
+      </section>
+
+      <section class="rows">
+        <h2>Yours <span class="count">4</span></h2>
+        <div class="head">
+          <span class="pr">pr</span>
+          <span class="h-ticket">ticket</span>
+          <span class="h-size">size</span>
+          <span class="h-state">state</span>
+          <span class="h-age">age</span>
+        </div>
+        <ul data-fit-list>
+          <li data-draft>
+            <img
+              class="avatar"
+              src="data:image/png;base64,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"
+              alt="danielmoraes"
+              title="danielmoraes"
+            />
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/221"
+              target="_blank"
+              rel="noopener"
+              title="docs(CORZA-47): Phase 6 — engineering-KB documentation contribution"
+              >#221 Phase 6 — engineering-KB documentation contribution</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-47"
                 target="_blank"
                 rel="noopener"
-                >#251 Spike: quote PDF theming</a
-              >
-              <span class="meta"><span class="pill">draft</span></span>
-              <time class="age">1d</time>
-            </li>
-          </ul>
-        </li>
-        <li>
-          <span class="dot bad"></span>
-          <a
-            class="repo"
-            href="https://github.com/acme/elf-shopify/pulls"
-            target="_blank"
-            rel="noopener"
-            >elf-shopify</a
-          >
-          <span class="counts">7 PRs · 1 new issue</span>
-          <span class="need">2 need you</span>
-          <ul class="detail">
-            <li>
-              <span class="who">mine</span>
-              <a
-                class="title"
-                href="https://github.com/acme/elf-shopify/pull/2635"
+                >CORZA-47</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+1240</span
+              ><span class="del">−0</span></span
+            >
+            <span class="state"><span class="pill">draft</span></span>
+            <time class="age">22d</time>
+          </li>
+          <li data-draft>
+            <img
+              class="avatar"
+              src="data:image/png;base64,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"
+              alt="danielmoraes"
+              title="danielmoraes"
+            />
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/226"
+              target="_blank"
+              rel="noopener"
+              title="feat(CORZA-44): Lighthouse CI — warn-only budgets, rolling PR comment"
+              >#226 Lighthouse CI — warn-only budgets, rolling PR comment</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-44"
                 target="_blank"
                 rel="noopener"
-                >#2635 Cart upsell regression fix</a
-              >
-              <span class="meta"><span class="pill bad">CI ✗</span></span>
-              <time class="age">12d</time>
-            </li>
-            <li>
-              <span class="who"></span>
-              <a
-                class="title"
-                href="https://github.com/acme/elf-shopify/pull/2641"
+                >CORZA-44</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+96</span
+              ><span class="del">−8</span></span
+            >
+            <span class="state"><span class="pill">draft</span></span>
+            <time class="age">20d</time>
+          </li>
+          <li data-draft>
+            <img
+              class="avatar"
+              src="data:image/png;base64,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"
+              alt="danielmoraes"
+              title="danielmoraes"
+            />
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/227"
+              target="_blank"
+              rel="noopener"
+              title="feat(CORZA-45): Configure Sentry in the Hydrogen storefront"
+              >#227 Configure Sentry in the Hydrogen storefront</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-45"
                 target="_blank"
                 rel="noopener"
-                >#2641 Checkout i18n strings</a
-              >
-              <time class="age">1d</time>
-            </li>
-          </ul>
-        </li>
-        <li>
-          <span class="dot"></span>
-          <a
-            class="repo"
-            href="https://github.com/acme/steward/pulls"
-            target="_blank"
-            rel="noopener"
-            >steward</a
-          >
-          <span class="counts">3 PRs · 0 new issues</span>
-          <span class="need" data-zero>—</span>
-        </li>
-      </ul>
+                >CORZA-45</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+140</span
+              ><span class="del">−22</span></span
+            >
+            <span class="state"><span class="pill">draft</span></span>
+            <time class="age">20d</time>
+          </li>
+          <li data-draft>
+            <img
+              class="avatar"
+              src="data:image/png;base64,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"
+              alt="danielmoraes"
+              title="danielmoraes"
+            />
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/234"
+              target="_blank"
+              rel="noopener"
+              title="feat(storefront): wire Vitest into Qase (CORZAQA)"
+              >#234 wire Vitest into Qase (CORZAQA)</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+58</span
+              ><span class="del">−6</span></span
+            >
+            <span class="state"><span class="pill">draft</span></span>
+            <time class="age">19d</time>
+          </li>
+        </ul>
+      </section>
+
+      <section class="rows">
+        <h2>Open <span class="count">7</span></h2>
+        <div class="head">
+          <span class="pr">pr</span>
+          <span class="h-ticket">ticket</span>
+          <span class="h-size">size</span>
+          <span class="h-state">state</span>
+          <span class="h-age">age</span>
+        </div>
+        <ul data-fit-list>
+          <li>
+            <span class="avatar" title="theo-b">T</span>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/192"
+              target="_blank"
+              rel="noopener"
+              title="skill(corza-good-morning + corza-plan-my-day): morning briefing"
+              >#192 morning briefing</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+210</span
+              ><span class="del">−34</span></span
+            >
+            <span class="state"><span class="dot bad"></span
+              ><span class="pill bad">CI ✗</span></span
+            >
+            <time class="age">26d</time>
+          </li>
+          <li>
+            <span class="avatar" title="hubot">H</span>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/207"
+              target="_blank"
+              rel="noopener"
+              title="skill(corza-kb-gap-finder): KB gap finder"
+              >#207 KB gap finder</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+380</span
+              ><span class="del">−12</span></span
+            >
+            <span class="state"></span>
+            <time class="age">24d</time>
+          </li>
+          <li>
+            <img
+              class="avatar"
+              src="data:image/png;base64,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"
+              alt="danielmoraes"
+              title="danielmoraes"
+            />
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/249"
+              target="_blank"
+              rel="noopener"
+              title="report: 2026-06-29 progress snapshot"
+              >#249 2026-06-29 progress snapshot</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+64</span
+              ><span class="del">−0</span></span
+            >
+            <span class="state"><span class="pill ok">approved</span></span>
+            <time class="age">14d</time>
+          </li>
+          <li>
+            <span class="avatar" title="mila-s">M</span>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/280"
+              target="_blank"
+              rel="noopener"
+              title="fix(corza-kb-regenerate): make blast-radius question mandatory"
+              >#280 make blast-radius question mandatory</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+18</span
+              ><span class="del">−6</span></span
+            >
+            <span class="state"></span>
+            <time class="age">4d</time>
+          </li>
+          <li>
+            <span class="avatar" title="kai-w">K</span>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/284"
+              target="_blank"
+              rel="noopener"
+              title="feat(data-migration): base-data migration pipeline"
+              >#284 base-data migration pipeline</a
+            >
+            <span class="ticket"></span>
+            <span class="size"
+              ><span class="add">+900</span
+              ><span class="del">−120</span></span
+            >
+            <span class="state"></span>
+            <time class="age">4d</time>
+          </li>
+          <li data-draft>
+            <span class="avatar" title="rena-k">R</span>
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/286"
+              target="_blank"
+              rel="noopener"
+              title="feat(CORZA-198): OTP single-factor security posture recommendation"
+              >#286 OTP single-factor security posture recommendation</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-198"
+                target="_blank"
+                rel="noopener"
+                >CORZA-198</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+72</span
+              ><span class="del">−14</span></span
+            >
+            <span class="state"><span class="pill">draft</span></span>
+            <time class="age">3d</time>
+          </li>
+          <li>
+            <img
+              class="avatar"
+              src="data:image/png;base64,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"
+              alt="danielmoraes"
+              title="danielmoraes"
+            />
+            <a
+              class="title"
+              href="https://github.com/acme/corza/pull/291"
+              target="_blank"
+              rel="noopener"
+              title="feat(CORZA-147): serve /search results page from algolia"
+              >#291 serve /search results page from algolia</a
+            >
+            <span class="ticket"
+              ><a
+                href="https://acme.atlassian.net/browse/CORZA-147"
+                target="_blank"
+                rel="noopener"
+                >CORZA-147</a
+              ></span
+            >
+            <span class="size"
+              ><span class="add">+260</span
+              ><span class="del">−40</span></span
+            >
+            <span class="state"></span>
+            <time class="age">2d</time>
+          </li>
+        </ul>
+      </section>
     </main>
     <footer>
       <span>repo-pulse</span>
-      <span>2026-07-09 12:00Z</span>
+      <span>2026-07-13 12:00Z</span>
     </footer>
     <script>
       // Fit lists to the tile (widget-standard §2, ADR-0019): tiles never
@@ -425,8 +846,7 @@
       // Runs only on the board — the frame stamps data-steward-tile.
       ;(function () {
         function fit() {
-          if (!document.documentElement.hasAttribute("data-steward-tile"))
-            return
+          if (!document.documentElement.hasAttribute("data-steward-tile")) return
           var doc = document.documentElement
           // Bottom-most lists give way first — the top of the tile is the glance.
           var lists = [].slice
@@ -440,14 +860,14 @@
               list.appendChild(more)
             }
             var items = [].filter.call(list.children, function (el) {
-              return el !== more
+              return el !== more && !el.classList.contains("now")
             })
             items.forEach(function (el) {
               el.hidden = false
             })
             more.hidden = true
-            // Overflow lives on <body> — html/body pin overflow:hidden, so
-            // it never surfaces on documentElement.scrollHeight.
+            // Overflow lives on <body> — html/body pin overflow:hidden, so the
+            // clipped region never surfaces on documentElement.scrollHeight.
             var over = function () {
               return (
                 Math.max(doc.scrollHeight, document.body.scrollHeight) >
@@ -456,7 +876,18 @@
             }
             var hidden = 0
             while (over() && hidden < items.length) {
-              items[items.length - ++hidden].hidden = true
+              var before = Math.max(doc.scrollHeight, document.body.scrollHeight)
+              var el = items[items.length - ++hidden]
+              el.hidden = true
+              // In multi-column tiers hiding a short-column item frees no
+              // height — revert and leave this list whole.
+              if (
+                Math.max(doc.scrollHeight, document.body.scrollHeight) >= before
+              ) {
+                el.hidden = false
+                hidden--
+                break
+              }
               more.hidden = false
               more.textContent = "+" + hidden + " more"
             }
