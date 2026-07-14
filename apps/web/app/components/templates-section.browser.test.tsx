@@ -103,17 +103,18 @@ describe("TemplatesSection", () => {
     expect(onUse).toHaveBeenCalledWith("daily-plan")
   })
 
-  it("links repo templates to their file on GitHub; built-ins have no file", async () => {
+  it("links a repo template's name to its file on GitHub; a built-in's name is inert", async () => {
     await renderSection()
+    // The name itself is the link — repo templates carry the file href.
     const fileLink = document.querySelector(
-      'a[aria-label="View team-okrs.md on GitHub"]',
+      'a[href="https://github.com/alice/steward-data/blob/HEAD/templates/routines/team-okrs.md"]',
     )
-    expect(fileLink?.getAttribute("href")).toBe(
-      "https://github.com/alice/steward-data/blob/HEAD/templates/routines/team-okrs.md",
+    expect(fileLink?.textContent).toContain("team-okrs")
+    // A built-in ships in the app bundle, so its name is not a link.
+    const links = [...document.querySelectorAll("a")]
+    expect(links.some((a) => a.textContent?.includes(dailyPlan.name))).toBe(
+      false,
     )
-    expect(
-      document.querySelector('a[aria-label="View daily-plan.md on GitHub"]'),
-    ).toBeNull()
   })
 
   it("renders nothing with no templates", async () => {

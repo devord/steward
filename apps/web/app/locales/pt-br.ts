@@ -170,7 +170,6 @@ export const ptBR: Messages = {
   "templates.shadows": "sobrepõe o nativo",
   "templates.unused": "sem uso",
   "templates.use": "Nova rotina a partir de {name}",
-  "templates.viewFile": "Ver {id}.md no GitHub",
 
   "grid.columnsLabel": "Colunas",
   "grid.width": "Largura",

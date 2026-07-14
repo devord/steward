@@ -992,20 +992,43 @@ function TemplateRow({
   onUse: () => void
 }) {
   const t = useT()
+  const nameCls = "truncate font-mono text-sm font-medium text-foreground"
+  const name = (
+    <>
+      {template.name}
+      <span className="sr-only"> — {template.id}</span>
+    </>
+  )
   return (
     <tr className="group border-b border-border-dim last:border-0 hover:bg-bg1/60">
       {/* Mono name, the routine rows' glance shape. The id — what
           routines.yaml's `template:` references — is the name itself for
           every built-in, so like the routine slug it rides as a title
-          tooltip + sr-only echo instead of a duplicated second line. */}
+          tooltip + sr-only echo instead of a duplicated second line. A repo
+          template's name links to its file on GitHub (ADR-0029), the same
+          way a routine's name links to its detail view; a built-in ships in
+          the app bundle and has no file in the viewer's repos, so its name
+          stays inert. */}
       <td className="px-3 py-2 align-top">
-        <div
-          className="truncate font-mono text-sm font-medium text-foreground"
-          title={template.id}
-        >
-          {template.name}
-          <span className="sr-only"> — {template.id}</span>
-        </div>
+        {template.source === "repo" ? (
+          <a
+            href={templateFileUrl(repo.full, template.id)}
+            target="_blank"
+            rel="noreferrer"
+            title={template.id}
+            className={cn(
+              "block",
+              nameCls,
+              "underline-offset-2 outline-none hover:underline focus-visible:underline",
+            )}
+          >
+            {name}
+          </a>
+        ) : (
+          <div className={nameCls} title={template.id}>
+            {name}
+          </div>
+        )}
       </td>
 
       <td className="hidden max-w-96 py-2 pr-3 align-top text-ink-dim md:table-cell">
@@ -1056,24 +1079,6 @@ function TemplateRow({
 
       <td className="py-1.5 pr-3 align-top">
         <div className="flex justify-end gap-0.5">
-          {template.source === "repo" && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              nativeButton={false}
-              aria-label={t("templates.viewFile", { id: template.id })}
-              className={rowActionCls}
-              render={
-                <a
-                  href={templateFileUrl(repo.full, template.id)}
-                  target="_blank"
-                  rel="noreferrer"
-                />
-              }
-            >
-              <ExternalLink />
-            </Button>
-          )}
           <Button
             variant="ghost"
             size="icon-xs"

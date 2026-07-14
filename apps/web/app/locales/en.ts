@@ -175,7 +175,6 @@ export const en = {
   "templates.shadows": "overrides built-in",
   "templates.unused": "unused",
   "templates.use": "New routine from {name}",
-  "templates.viewFile": "View {id}.md on GitHub",
 
   "grid.columnsLabel": "Columns",
   "grid.width": "Width",
