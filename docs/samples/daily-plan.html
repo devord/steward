@@ -513,7 +513,10 @@
           border-top: 1px solid var(--color-orange-deep);
         }
         /* The time chip sits in the ruler gutter, calendar-style, so it
-           never collides with a block's content. */
+           never collides with a block's content. It masks the now line
+           where the text crosses it, so its background must match the page
+           surface it sits on — the authored bg1 on the raw page and full
+           view. */
         .nowline span {
           position: absolute;
           left: 0;
@@ -525,6 +528,12 @@
           line-height: 14px;
           font-weight: 700;
           color: var(--color-orange);
+        }
+        /* On a board tile the frame flushes the page to --color-bg
+           (theme.ts TILE_FLUSH_STYLE); the gutter isn't an elevated panel,
+           so the chip tracks that flush or it reads as a pale block. */
+        html[data-steward-tile] .nowline span {
+          background: var(--color-bg);
         }
         /* Tiles never scroll (ADR-0019): the day flexes to spend exactly
            the tile's height, slots dividing what the section gets (22px

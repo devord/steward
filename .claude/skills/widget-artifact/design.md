@@ -516,7 +516,12 @@ One block list, three renderings (see `docs/samples/daily-plan.html`):
   nothing truncated is lost. The now line crosses the grid at the
   current time, its mono chip sitting in the ruler gutter,
   calendar-style; the script measures a ruler row for its position (the
-  tile tier's `--slot` is a container expression, not a length).
+  tile tier's `--slot` is a container expression, not a length). The chip
+  masks the line where the text crosses it, so its background matches the
+  page surface — the authored `--color-bg1` on the raw page and full view,
+  but `--color-bg` on a tile (`html[data-steward-tile] .nowline span`),
+  which the frame flushes the page to; the gutter is bare page, not an
+  elevated `bg1` panel, so a fixed `bg1` chip reads as a pale block there.
 
 A `.totals` line (12px mono, tone dots) states the process metric on
 wide tiers: `4.5h deep · 1h meetings · 3h shallow · 30m free`.
