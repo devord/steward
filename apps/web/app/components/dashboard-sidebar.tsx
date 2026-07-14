@@ -445,7 +445,14 @@ function RailAction({
  * (ADR-0039): Rename retitles the heading, Delete dissolves it (the boards move
  * up to the ungrouped lead, none deleted). Sized to the repo caption's `⋯`
  * (size-5), not the rows' size-6 — this is a caption tier, not a board row — and
- * rests as faint as the rest of the caption until the pointer nears.
+ * rests as faint as the rest of the caption until the pointer nears. Its `⋯`
+ * borrows the repo caption's trailing geometry (an in-flow button on a `pr-1.5
+ * pointer-coarse:pr-1` row, height fixed to `h-5`), so the glyph lands on the
+ * same trailing column the repo caption and board rows already share — in both
+ * pointer modes — instead of drifting right the way a size-5 button pinned at
+ * the rows' size-6 `right-1` would. The vertical rhythm stays the section's own,
+ * though: air above (`mt-3`) sets each section off, but its boards hug it below
+ * (the group's `gap-0.5`, no caption `mb-1`) so they read as its children.
  */
 function SectionLabel({
   label,
@@ -465,17 +472,17 @@ function SectionLabel({
   return (
     <div
       data-testid="rail-section"
+      // h-5 + an in-flow ⋯, matching the repo caption (repo-group-header.tsx):
+      // the button centers in the caption's own height rather than overhanging
+      // an auto-height text row, and pr-1.5 (pr-1 on coarse, where both buttons
+      // hit the icon-xs size-8 floor) lands the size-5 glyph on the same
+      // trailing column the size-6 board rows use.
       className={cn(
-        "group/section relative flex items-center pr-1.5 pl-6",
+        "group/section relative flex h-5 items-center pr-1.5 pl-6 pointer-coarse:pr-1",
         !first && "mt-3",
       )}
     >
-      <span
-        className={cn(
-          "min-w-0 flex-1 truncate text-[11px] font-medium tracking-wider text-ink-dim uppercase",
-          hasMenu && "pr-6",
-        )}
-      >
+      <span className="min-w-0 flex-1 truncate text-[11px] font-medium tracking-wider text-ink-dim uppercase">
         {label}
       </span>
       {hasMenu && (
@@ -486,7 +493,7 @@ function SectionLabel({
                 variant="ghost"
                 size="icon-xs"
                 aria-label={t("section.menu")}
-                className="absolute right-1 size-5 text-ink-faint transition-colors group-hover/section:text-ink-dim hover:bg-sidebar-accent hover:text-foreground focus-visible:text-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-foreground"
+                className="size-5 text-ink-faint transition-colors group-hover/section:text-ink-dim hover:bg-sidebar-accent hover:text-foreground focus-visible:text-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-foreground"
               />
             }
           >

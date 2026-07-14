@@ -209,6 +209,75 @@ describe("DashboardSidebar section menu", () => {
     expect(sectionMenuButton("Clients")).toBeNull()
     expect(sectionMenuButton("Projects")).toBeNull()
   })
+
+  it("sets the section ⋯ glyph on the board rows' ⋯ column", async () => {
+    // The section caption carries the same ⋯ idiom the board rows do one
+    // tier down, so the two glyphs must share a column. The buttons rest
+    // invisible — it's the glyphs' optical centers that align, not the box
+    // edges (the caption button is size-5 against the rows' size-6).
+    await renderSidebar(groupedOver)
+    const sectionGlyph = requireSectionMenuButton("Clients")
+      .querySelector("svg")
+      ?.getBoundingClientRect()
+    const rowGlyph = requireMenuButton("corza")
+      .querySelector("svg")
+      ?.getBoundingClientRect()
+    if (!sectionGlyph || !rowGlyph) throw new Error("missing a ⋯ glyph")
+    expect(sectionGlyph.left + sectionGlyph.width / 2).toBeCloseTo(
+      rowGlyph.left + rowGlyph.width / 2,
+      1,
+    )
+  })
+
+  it("holds the section ⋯ column on coarse pointers", async () => {
+    // Under pointer-coarse every icon-xs button floors to size-8, inverting
+    // the fine-pointer size-5-vs-size-6 compensation — the caption swaps
+    // pr-1.5 for pr-1 to keep both glyphs on one column. This is the mobile
+    // drawer's geometry, so pin it the way the repo caption's is pinned.
+    await renderSidebar(groupedOver)
+    await cdp().send("Emulation.setTouchEmulationEnabled", {
+      enabled: true,
+      maxTouchPoints: 1,
+    })
+    try {
+      await vi.waitFor(() =>
+        expect(matchMedia("(pointer: coarse)").matches).toBe(true),
+      )
+      const sectionGlyph = requireSectionMenuButton("Clients")
+        .querySelector("svg")
+        ?.getBoundingClientRect()
+      const rowGlyph = requireMenuButton("corza")
+        .querySelector("svg")
+        ?.getBoundingClientRect()
+      if (!sectionGlyph || !rowGlyph) throw new Error("missing a ⋯ glyph")
+      expect(sectionGlyph.left + sectionGlyph.width / 2).toBeCloseTo(
+        rowGlyph.left + rowGlyph.width / 2,
+        1,
+      )
+    } finally {
+      await cdp().send("Emulation.setTouchEmulationEnabled", {
+        enabled: false,
+      })
+    }
+  })
+
+  it("vertically centers the section ⋯ in its caption row", async () => {
+    // The ⋯ is in-flow in an h-5 row (not an absolute button overhanging an
+    // auto-height text line, which sat off-center and pushed the caption's
+    // vertical rhythm out of step with the boards).
+    await renderSidebar(groupedOver)
+    const button = requireSectionMenuButton("Clients")
+    const heading = button.closest<HTMLElement>('[data-testid="rail-section"]')
+    const svg = button.querySelector("svg")
+    if (!heading || !svg)
+      throw new Error("missing the section caption or glyph")
+    const row = heading.getBoundingClientRect()
+    const glyph = svg.getBoundingClientRect()
+    expect(glyph.top + glyph.height / 2).toBeCloseTo(
+      row.top + row.height / 2,
+      0,
+    )
+  })
 })
 
 describe("DashboardSidebar per-board menu", () => {
