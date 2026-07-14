@@ -382,6 +382,23 @@ describe("createDataRepoOr503", () => {
     expect(thrown.data).toContain("daniel/steward-data-daniel")
   })
 
+  it("degrades a template-not-found 404 to an actionable 404, not a retry loop", async () => {
+    // A private template hides from an out-of-org token as 404. Classifying it
+    // as the transient 503 traps the user in a "try again" that never succeeds,
+    // so it must reach the boundary as a distinct 404 that names the template.
+    failGenerate({ status: 404 })
+
+    const thrown = (await createDataRepoOr503(
+      "token",
+      TEMPLATE,
+      "daniel",
+      "steward-data-daniel",
+    ).catch((e) => e)) as { init?: ResponseInit; data?: string }
+    expect(thrown).not.toBeInstanceOf(GitHubError)
+    expect(thrown.init?.status).toBe(404)
+    expect(thrown.data).toContain(TEMPLATE)
+  })
+
   it("degrades a dead-token 401 to a 401 re-auth page", async () => {
     // A revoked token 401s the create too — the boundary must pair it with a
     // sign-out (status 401), not the transient-outage refresh.
