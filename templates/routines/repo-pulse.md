@@ -61,17 +61,23 @@ For each watched repo, via `gh` (preferred) or the GitHub API:
    becomes the row's tooltip. If stripping leaves nothing, keep the
    raw title.
 
-   Then inline each unique author's avatar once, so the artifact
-   stays self-contained (widget-standard rule 1 — no images by URL):
+   Then, for each unique author, resolve two things once and reuse
+   them on every row by that author:
 
-   ```bash
-   curl -fsSL "https://github.com/$author.png?size=48" -o "$tmp/$author"
-   ```
+   - **Display name** — `gh api users/$author -q .name` (fall back to
+     the login when it is null/empty, e.g. most bots). This is the
+     avatar's hover label, so a row answers _who_ with a real name
+     (`Daniel Moraes`), not a handle (`danielmoraes`).
+   - **Avatar** — inline it as a data URI so the artifact stays
+     self-contained (widget-standard rule 1 — no images by URL):
 
-   Verify it is an image (`file -b --mime-type`), base64 it into a
-   `data:<mime>;base64,…` URI, and reuse it on every row by that
-   author. A failed fetch (or a bot author) degrades to the initial
-   fallback — never a broken image.
+     ```bash
+     curl -fsSL "https://github.com/$author.png?size=48" -o "$tmp/$author"
+     ```
+
+     Verify it is an image (`file -b --mime-type`) and base64 it into
+     a `data:<mime>;base64,…` URI. A failed fetch (or a bot author)
+     degrades to the initial fallback — never a broken image.
 
 2. Issues opened since the last run (previous artifact's generated-at time,
    else the last 24h).
@@ -105,22 +111,29 @@ Follow the `widget-artifact` skill for the HTML contract; compose from
 its design language (ledger rows, avatars, pills, dots, links). Row
 anatomy — a PR is a ledger row with these columns, in order:
 
-- **Avatar key**: the author's avatar (design-language avatar
-  component — 18px round `<img>` from the inlined data URI, `alt` and
-  `title` carry the author's login so hover answers _whose PR is
-  this_; initial-circle fallback when the fetch failed). Never a
-  `you`/`mine` word — ownership is already the section grouping, and
-  a bare pronoun reads as noise.
+- **Avatar key**: the author's avatar, wrapped in a link to their
+  GitHub profile (`https://github.com/<login>`, `target="_blank"
+rel="noopener"`) — the picture is the click-through to the person.
+  The design-language avatar component: 18px round `<img>` from the
+  inlined data URI; the link's `title` (and the img's `alt`) carry the
+  author's **display name**, so hover answers _whose PR is this_ with
+  a real name; initial-circle fallback when the fetch failed. Never a
+  `you`/`mine` word — ownership is already the section grouping, and a
+  bare pronoun reads as noise.
 - **Title**: `#num display-title` (conventional-commit prefix
   stripped) as a **link** to the PR (`target="_blank" rel="noopener"`,
   widget-standard §7), with the raw title in the `title` attribute so
   the prefix is one hover away. Repo names link to the repo's PR
   list.
-- **Ticket**: the Jira key in 12px mono ink-dim; when the `jira`
-  param is set, a link to `<jira>/browse/<KEY>`. Empty cell when the
-  title carries no key.
-- **Size**: `+adds −dels` in 12px mono ink-faint (tabular, U+2212
-  minus). A fact, not an alarm — no color.
+- **Ticket**: the Jira key in 12px mono, tinted reference-blue
+  (`--color-blue`) so the column scans as "linked, tracked work";
+  when the `jira` param is set, a link to `<jira>/browse/<KEY>`. Empty
+  cell when the title carries no key.
+- **Size**: `+adds −dels` in 12px mono (tabular, U+2212 minus),
+  diff-colored — additions a muted `--color-green`, deletions a muted
+  `--color-red`, each mixed toward `--color-ink` so it reads as the
+  familiar diffstat and stays calm, never the alarm-red of a failing
+  pill.
 - **State**: a pill only when the state demands action
   (`changes requested` bad, `approved` ok, `draft` neutral — and dim
   the whole draft row; plain `review required` needs no pill), a CI
