@@ -7,7 +7,7 @@ import type {
   WidgetParam,
   WidgetSize,
 } from "@steward/schema"
-import { repoRefSchema, slugSchema } from "@steward/schema"
+import { repoRefSchema, slugSchema, templateKind } from "@steward/schema"
 import {
   Activity,
   CheckIcon,
@@ -118,6 +118,38 @@ function paramText(value: ParamValue | undefined): string {
   return typeof value === "string" ? value : ""
 }
 
+/** Title-case a kebab or spaced token for a display name: `corza` →
+    `Corza`, `my-repo` → `My Repo`. */
+function titleCase(token: string): string {
+  return token
+    .split(/[-\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
+}
+
+/**
+ * The subject a template slugs its instances after (ADR-0040): the value of
+ * its `subjectParam`, reduced to a bare token — a repo's name without its
+ * owner (`Form-Factory/corza` → `corza`), or a string param's trimmed text.
+ * "" when the template names no subject, the param isn't declared, or it's
+ * unanswered — callers fall back to name-seeding.
+ */
+function subjectToken(
+  template: DiscoveredTemplate | null,
+  params: Record<string, ParamValue>,
+): string {
+  const key = template?.widget.subjectParam
+  if (!key) return ""
+  const param = template.widget.params?.find((entry) => entry.key === key)
+  if (!param) return ""
+  if (param.type === "repos") {
+    const first = paramList(params[key])[0] ?? ""
+    return first.split("/").at(-1) ?? ""
+  }
+  return paramText(params[key]).trim()
+}
+
 function isRepoRef(token: string): boolean {
   return repoRefSchema.safeParse(token).success
 }
@@ -205,6 +237,9 @@ export function AddRoutineDialog({
   const [nameEdited, setNameEdited] = useState(false)
   const [slugEdited, setSlugEdited] = useState(false)
   const [slug, setSlug] = useState("")
+  // A subject template shows its derived slug as a read-only chip; this
+  // reveals the editable field for the rare deliberate override (ADR-0040).
+  const [customizingSlug, setCustomizingSlug] = useState(false)
   const [schedule, setSchedule] = useState<string>(DEFAULT_SCHEDULE)
   const [scheduleEdited, setScheduleEdited] = useState(false)
   const [customCron, setCustomCron] = useState("")
@@ -222,6 +257,30 @@ export function AddRoutineDialog({
   /** The picked template's declared inputs (ADR-0020); [] when prompt-only or
       the template isn't currently discoverable. */
   const declaredParams = template?.widget.params ?? []
+
+  // The subject a subject-param template slugs its instance after (ADR-0040)
+  // — corza, not repo-pulse. "" until the subject param is answered (or the
+  // template names none), which routes seeding back to the template name.
+  const subject = useMemo(
+    () => subjectToken(template, params),
+    [template, params],
+  )
+  // True while the wizard owns the slug from the subject: a picked subject
+  // template, in add mode, that the user hasn't chosen to hand-edit.
+  const derivesSlug = !isEdit && template?.widget.subjectParam != null
+
+  // Re-derive slug and name from the subject as it changes, until the user
+  // takes over either field. This is what makes two routines from one
+  // template distinct by default (corza-pulse, acme-pulse) rather than
+  // counter-suffixed (ADR-0040). Guarded off in edit mode (slug is fixed).
+  useEffect(() => {
+    if (!derivesSlug || subject.length === 0 || template == null) return
+    if (!nameEdited) setName(titleCase(subject))
+    if (!slugEdited) {
+      const base = `${kebab(subject)}-${templateKind(template)}`
+      setSlug(uniqueSlug(base, existingSlugsRef.current))
+    }
+  }, [derivesSlug, subject, template, nameEdited, slugEdited])
 
   // Typeahead pool for repo pickers: the viewer's own repos via /repos.
   // Failures resolve to [] — the pickers accept typed owner/repo anyway.
@@ -259,8 +318,12 @@ export function AddRoutineDialog({
     if (suggested.length > 0) {
       setConnectors((current) => [...new Set([...current, ...suggested])])
     }
-    setName(entry.name)
-    setSlug(uniqueSlug(kebab(entry.name), existingSlugsRef.current))
+    // A subject template fills name/slug from the entered subject (the
+    // derivation effect); seed from the template name only otherwise (ADR-0040).
+    if (entry.widget.subjectParam == null) {
+      setName(entry.name)
+      setSlug(uniqueSlug(kebab(entry.name), existingSlugsRef.current))
+    }
   }, [open, editRoutine, initialTemplate])
 
   // Opening in edit mode seeds the fields from the routine and jumps to the
@@ -324,6 +387,7 @@ export function AddRoutineDialog({
     setExtraRepos([])
     setConnectors([])
     setAdvancedOpen(false)
+    setCustomizingSlug(false)
   }
 
   function pickTemplate(next: DiscoveredTemplate) {
@@ -352,9 +416,17 @@ export function AddRoutineDialog({
     }
     // Re-fill from the newly picked template unless the user typed their own
     // name — otherwise switching templates leaves the first template's name/slug.
+    // A subject template names its instance after the subject the user is
+    // about to enter (the derivation effect), not the template — so clear the
+    // seed and let that effect fill it (ADR-0040).
     if (!nameEdited) {
-      setName(next.name)
-      if (!slugEdited) setSlug(uniqueSlug(kebab(next.name), existingSlugs))
+      if (next.widget.subjectParam != null) {
+        setName("")
+        if (!slugEdited) setSlug("")
+      } else {
+        setName(next.name)
+        if (!slugEdited) setSlug(uniqueSlug(kebab(next.name), existingSlugs))
+      }
     }
   }
 
@@ -657,7 +729,9 @@ export function AddRoutineDialog({
                       onChange={(event) => {
                         setNameEdited(true)
                         setName(event.target.value)
-                        if (!slugEdited)
+                        // For subject templates the slug tracks the subject,
+                        // not the name (ADR-0040) — leave it be.
+                        if (!slugEdited && !derivesSlug)
                           setSlug(
                             uniqueSlug(
                               kebab(event.target.value),
@@ -670,21 +744,51 @@ export function AddRoutineDialog({
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="routine-slug">{t("dialog.slug")}</Label>
-                    <Input
-                      id="routine-slug"
-                      value={slug}
-                      onChange={(event) => {
-                        setSlugEdited(true)
-                        setSlug(event.target.value)
-                      }}
-                      // The slug keys widgets and the artifact path — fixed
-                      // once the routine exists (delete + re-add to rename).
-                      disabled={isEdit}
-                      aria-invalid={
-                        slug.length > 0 && (!slugValid || slugTaken)
-                      }
-                      className="font-mono disabled:opacity-70"
-                    />
+                    {derivesSlug && !customizingSlug ? (
+                      // A subject template auto-slugs <subject>-<kind>
+                      // (ADR-0040); show the result, don't solicit it. The
+                      // slug is fixed once created, so a text field here just
+                      // invites a permanent typo.
+                      <>
+                        <div className="flex min-h-9 items-center justify-between gap-2 rounded-md border border-input bg-muted/40 px-3">
+                          <code
+                            id="routine-slug-display"
+                            className="truncate font-mono text-sm text-muted-foreground"
+                          >
+                            {slug || t("dialog.slugPending")}
+                          </code>
+                          <button
+                            type="button"
+                            className="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                            onClick={() => {
+                              setCustomizingSlug(true)
+                              setSlugEdited(true)
+                            }}
+                          >
+                            {t("dialog.customize")}
+                          </button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {t("dialog.slugDerivedHint")}
+                        </p>
+                      </>
+                    ) : (
+                      <Input
+                        id="routine-slug"
+                        value={slug}
+                        onChange={(event) => {
+                          setSlugEdited(true)
+                          setSlug(event.target.value)
+                        }}
+                        // The slug keys widgets and the artifact path — fixed
+                        // once the routine exists (delete + re-add to rename).
+                        disabled={isEdit}
+                        aria-invalid={
+                          slug.length > 0 && (!slugValid || slugTaken)
+                        }
+                        className="font-mono disabled:opacity-70"
+                      />
+                    )}
                     {slugTaken && (
                       <p className="text-xs text-destructive">
                         {t("dialog.slugTaken")}

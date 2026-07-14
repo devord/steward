@@ -1,3 +1,4 @@
+import { userEvent } from "vitest/browser"
 import type { Routine, WidgetSize } from "@steward/schema"
 import { describe, expect, it, vi } from "vitest"
 import { render } from "vitest-browser-react"
@@ -31,6 +32,8 @@ const repoPulseTemplate: DiscoveredTemplate = {
     artifact: "Open PRs awaiting review, new issues, and CI status per repo",
     sizes: { default: { cols: 2, rows: 1 } },
     schedule: "0 */4 * * *",
+    // Instances slug themselves <first-repo>-pulse (ADR-0040).
+    subjectParam: "repos",
     params: [
       {
         key: "repos",
@@ -99,6 +102,17 @@ function typeInto(el: HTMLInputElement | HTMLTextAreaElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set
   setter?.call(el, value)
   el.dispatchEvent(new Event("input", { bubbles: true }))
+}
+
+/** Commit a repo token into the repos combobox the way a user does: type
+    it (real browser events so Base UI reacts), then Enter to accept the
+    auto-highlighted "Add …" candidate. */
+async function addRepo(repo: string) {
+  const el = input("routine-param-repos")
+  await userEvent.click(el)
+  await userEvent.type(el, repo)
+  await userEvent.keyboard("{Enter}")
+  await vi.waitFor(() => expect(hasText(repo)).toBe(true))
 }
 
 const textarea = (id: string): HTMLTextAreaElement => {
@@ -189,10 +203,12 @@ describe("AddRoutineDialog add mode", () => {
       expect(document.querySelector("#routine-name")).not.toBeNull(),
     )
 
-    // …with the template's name seeded and the slug uniqued past the
-    // existing repo-pulse routine.
-    expect(input("routine-name").value).toBe("repo-pulse")
-    expect(input("routine-slug").value).toBe("repo-pulse-2")
+    // repo-pulse slugs its instance after the subject (ADR-0040), so name
+    // and slug stay empty until a repo is entered — no template-name seed,
+    // no counter. The slug shows as a read-only chip, not a text field.
+    expect(input("routine-name").value).toBe("")
+    expect(document.querySelector("#routine-slug")).toBeNull()
+    expect(hasText("Set from the subject above")).toBe(true)
   })
 
   it("previews the selected template's sample render, only while picked (ADR-0037)", async () => {
@@ -239,15 +255,66 @@ describe("AddRoutineDialog add mode", () => {
       expect(document.querySelector("#routine-param-repos")).not.toBeNull(),
     )
 
-    // Name/slug/schedule are pre-filled by the template; the slug
-    // auto-uniques past the existing repo-pulse routine instead of
-    // erroring. Only the required repos param is missing.
-    expect(input("routine-name").value).toBe("repo-pulse")
-    expect(input("routine-slug").value).toBe("repo-pulse-2")
+    // Name/slug derive from the subject (ADR-0040), so both stay empty until
+    // a repo is entered — the required repos param is missing, and there's
+    // no collision to warn about.
+    expect(input("routine-name").value).toBe("")
+    expect(hasText("Set from the subject above")).toBe(true)
     expect(hasText("Already used by another routine")).toBe(false)
     expect(hasText("Repositories to watch")).toBe(true)
     expect(button("Add to draft").disabled).toBe(true)
     expect(onAdd).not.toHaveBeenCalled()
+  })
+
+  it("slugs a subject template <subject>-<kind> from its first repo (ADR-0040)", async () => {
+    const { onAdd } = await renderDialog({ templates: [repoPulseTemplate] })
+
+    buttonContaining("repo-pulse").click()
+    await vi.waitFor(() => expect(button("Next").disabled).toBe(false))
+    button("Next").click()
+    await vi.waitFor(() =>
+      expect(document.querySelector("#routine-param-repos")).not.toBeNull(),
+    )
+
+    await addRepo("Form-Factory/corza")
+
+    // The subject is the repo name without its owner; slug = corza-pulse
+    // (kind defaults to the template id's last segment), name = Corza. No
+    // counter, no hand-typing.
+    await vi.waitFor(() => expect(input("routine-name").value).toBe("Corza"))
+    expect(hasText("corza-pulse")).toBe(true)
+
+    button("Add to draft").click()
+    expect(onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ slug: "corza-pulse", name: "Corza" }),
+      expect.anything(),
+    )
+  })
+
+  it("reveals an editable slug via Customize on a subject template (ADR-0040)", async () => {
+    await renderDialog({ templates: [repoPulseTemplate] })
+
+    buttonContaining("repo-pulse").click()
+    await vi.waitFor(() => expect(button("Next").disabled).toBe(false))
+    button("Next").click()
+    await vi.waitFor(() =>
+      expect(document.querySelector("#routine-param-repos")).not.toBeNull(),
+    )
+    await addRepo("Form-Factory/corza")
+    await vi.waitFor(() => expect(hasText("corza-pulse")).toBe(true))
+
+    // No slug field until the user opts into editing.
+    expect(document.querySelector("#routine-slug")).toBeNull()
+    button("Customize").click()
+
+    const field = await vi.waitFor(() => input("routine-slug"))
+    // The revealed field carries the derived slug forward to tweak.
+    expect(field.value).toBe("corza-pulse")
+    // Once customized, the derivation no longer touches the slug — a later
+    // params change leaves the hand-typed value intact.
+    typeInto(field, "corza-pulse-staging")
+    await addRepo("Form-Factory/acme")
+    expect(input("routine-slug").value).toBe("corza-pulse-staging")
   })
 })
 

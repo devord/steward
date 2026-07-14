@@ -64,6 +64,22 @@ export const widgetMetaSchema = z.object({
    * `connectors:` allowlist, which otherwise defaults to none (ADR-0018).
    */
   connectors: z.array(z.string().min(1)).optional(),
+  /**
+   * Key of the param that carries the routine's *subject* — the thing an
+   * instance is about (repo-pulse's `repos`). The wizard slugs instances
+   * `<subject>-<kind>` (`corza-pulse`) instead of after the template, so
+   * routines from one template don't collide on a counter (ADR-0040). Must
+   * name a declared param. Absent = the template has no natural subject
+   * (the `custom` built-in); the wizard falls back to a name-seeded slug.
+   */
+  subjectParam: z.string().min(1).optional(),
+  /**
+   * The stem appended after the subject in an instance slug — repo-pulse's
+   * `pulse` yields `corza-pulse` (ADR-0040). Defaults to the template id's
+   * last hyphen segment (`repo-pulse` → `pulse`), so most templates need
+   * not set it; resolve via `templateKind`.
+   */
+  kind: slugSchema.optional(),
 })
 
 /** One routine template as the picker consumes it — parsed from
@@ -114,6 +130,17 @@ export function parseRoutineTemplate(
   }
   const validated = routineTemplateSchema.safeParse(candidate)
   return validated.success ? validated.data : null
+}
+
+/**
+ * The slug stem for a template's instances (ADR-0040): its explicit
+ * `widget.kind`, else the template id's last hyphen segment (`repo-pulse`
+ * → `pulse`). The wizard slugs a routine `<subject>-<kind>`.
+ */
+export function templateKind(template: RoutineTemplate): string {
+  if (template.widget.kind) return template.widget.kind
+  const segments = template.id.split("-").filter(Boolean)
+  return segments.at(-1) ?? template.id
 }
 
 export type WidgetParam = z.infer<typeof widgetParamSchema>
