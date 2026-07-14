@@ -7,8 +7,10 @@ import { cssVars } from "../lib/css.ts"
  * A widget cell while its artifact streams in from GitHub (ADR-0002). The
  * board structure loads first, so this sits in the widget's real grid slot at
  * its real size — the silhouette is already correct; only the body is
- * pending. Mirrors WidgetCard's frame (border, card surface, top title bar)
- * so the swap to the loaded card doesn't shift the layout.
+ * pending. Mirrors WidgetCard's view-mode frame (frameless section header over
+ * a flush, page-colored body, transparent border) so the swap to the loaded
+ * card neither shifts the layout nor flashes a card outline that then
+ * dissolves.
  */
 export function WidgetSkeleton({ widget }: { widget: Widget }) {
   const { position, size } = widget
@@ -18,7 +20,7 @@ export function WidgetSkeleton({ widget }: { widget: Widget }) {
   return (
     <div
       aria-hidden
-      className="widget-cell flex flex-col overflow-hidden rounded-lg border bg-card"
+      className="widget-cell flex flex-col overflow-hidden rounded-lg border border-transparent"
       style={cssVars({
         "--col": position.col,
         "--row": position.row,
@@ -27,7 +29,7 @@ export function WidgetSkeleton({ widget }: { widget: Widget }) {
         "--rows": size.rows,
       })}
     >
-      <div className="flex min-h-8 items-center justify-between gap-2 border-b border-border-dim px-2.5 py-1.5">
+      <div className="flex min-h-8 items-center justify-between gap-2 px-2.5 py-1.5">
         <Skeleton className="h-2.5 w-24" />
         <Skeleton className="h-2.5 w-12" />
       </div>

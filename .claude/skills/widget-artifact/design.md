@@ -79,7 +79,10 @@ media block:
   footer {
     width: 100%;
     max-width: 920px;
-    margin-inline: auto;
+    /* Left-aligned, not centered: on a flush board section the content must
+       line up with the hard-left section header, so the readability cap sits
+       against the left edge and any slack falls to the right. */
+    margin-inline: 0 auto;
   }
   :root:not([data-steward-tile]) body {
     padding: 40px 32px;

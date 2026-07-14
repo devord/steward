@@ -205,8 +205,22 @@ export function WidgetCard({
           // in the static edit state, so the header's z-20 leaks to the root
           // and — tying the app header's own z-20 but later in the DOM — paints
           // over the sticky page header when a tall card scrolls up under it.
-          "widget-cell group relative isolate flex flex-col overflow-hidden rounded-lg border bg-card",
-          editing && "focus-visible:outline-2 focus-visible:-outline-offset-1",
+          "widget-cell group relative isolate flex flex-col overflow-hidden rounded-lg border",
+          // The widget reads as a section of the page, not an elevated card:
+          // the artifact is repainted flush to the board (TILE_FLUSH_STYLE) and
+          // the title/freshness float frameless over it (see the view header),
+          // so the border is the widget's *only* frame. View mode reveals that
+          // border on hover/focus — the cell tracing back into a thing you act
+          // on; edit mode keeps it lit, since there you handle widgets as
+          // tangible objects. No surface fill in either mode (the flush artifact
+          // is the surface). The border is present-but-transparent at rest so
+          // revealing it never shifts layout. `hover:`/`focus-within:` sit on
+          // the article itself (not `group-hover:`, which only styles a group's
+          // *descendants* — an element is never its own descendant, so it would
+          // never fire on the article that carries the class).
+          editing
+            ? "border-border focus-visible:outline-2 focus-visible:-outline-offset-1"
+            : "border-transparent transition-colors hover:border-border focus-within:border-border",
           drag && "shadow-xl shadow-black/50",
         )}
         tabIndex={editing ? 0 : undefined}
@@ -309,15 +323,20 @@ export function WidgetCard({
             </span>
           </header>
         ) : (
-          /* View-mode title bar: name (left), then a right-aligned cluster of
-             hover-revealed actions followed by the freshness/state readout.
-             Actions sit *before* the readout so the timestamp stays pinned to
-             the card's edge (symmetric with the title inset) and the reserved
-             action width is absorbed by the flex gap — no idle dead space, no
-             layout shift on reveal. The name is the board's two-second glance
-             target, so it rides a step above the 12px metadata floor in the
-             mono terminal voice; state reads as pills, not prose (ADR-0009). */
-          <header className="flex min-h-8 items-center gap-2 border-b border-border-dim py-1.5 pr-2.5 pl-2.5">
+          /* View-mode section header: name (left), then a right-aligned cluster
+             of hover-revealed actions followed by the freshness/state readout.
+             Frameless — no divider, no fill — so it reads as a heading over the
+             board rather than a widget's title bar, floating above the bg1
+             content panel below. Freshness and state stay put at rest (the
+             product's core signal, glanceable in two seconds); only the actions
+             reveal on hover. Actions sit *before* the readout so the timestamp
+             stays pinned to the card's edge (symmetric with the title inset)
+             and the reserved action width is absorbed by the flex gap — no idle
+             dead space, no layout shift on reveal. The name is the board's
+             two-second glance target, so it rides a step above the 12px metadata
+             floor in the mono terminal voice; state reads as pills, not prose
+             (ADR-0009). */
+          <header className="flex min-h-8 items-center gap-2 py-1.5 pr-2.5 pl-2.5">
             <span className="min-w-0 truncate font-mono text-sm font-medium text-foreground">
               {routine.name}
             </span>
