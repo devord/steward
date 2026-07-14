@@ -387,7 +387,6 @@ export const en = {
   "dialog.connectorsHint":
     "MCP connectors the run may use, by account name — it gets none unless listed",
   "dialog.repoEmpty": "Type owner/repo — suggestions come from your repos",
-  "dialog.connectorEmpty": "Type a connector's account name",
   "dialog.addToken": 'Add "{value}"',
   "dialog.removeToken": "Remove {value}",
 

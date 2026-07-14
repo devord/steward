@@ -256,6 +256,29 @@ describe("AddRoutineDialog edit mode", () => {
     })
   })
 
+  it("toggles a connector from the catalog and saves the updated allowlist", async () => {
+    // editable already allows GitHub; the Advanced section auto-opens because
+    // it has content. Toggling Gmail on adds it to the allowlist.
+    const { onEdit } = await renderDialog({ editRoutine: editable })
+    await vi.waitFor(() =>
+      expect(input("routine-name").value).toBe("Repo Pulse"),
+    )
+
+    // The catalog renders as toggles; GitHub is pre-selected.
+    expect(button("GitHub").getAttribute("aria-pressed")).toBe("true")
+    expect(button("Gmail").getAttribute("aria-pressed")).toBe("false")
+
+    button("Gmail").click()
+    await vi.waitFor(() =>
+      expect(button("Gmail").getAttribute("aria-pressed")).toBe("true"),
+    )
+    button("Save changes").click()
+
+    expect(onEdit).toHaveBeenCalledWith(
+      expect.objectContaining({ connectors: ["GitHub", "Gmail"] }),
+    )
+  })
+
   it("applies an edited field on save", async () => {
     const { onEdit } = await renderDialog({ editRoutine: editable })
     await vi.waitFor(() =>
