@@ -65,7 +65,12 @@ import {
 import { ghLogin, inferRepo, repoTag, routinesFileFor } from "./data-repo.ts"
 import { cronToLaunchd, launchdPlist, plistRepo } from "./launchd.ts"
 import { contractSkillsDir } from "./skills.ts"
-import { promptTriggerToken } from "./trigger-token.ts"
+import {
+  claudeAccountEmail,
+  promptTriggerToken,
+  setTriggerAccount,
+  triggerNeedsAccount,
+} from "./trigger-token.ts"
 
 /**
  * Where the contract skills (run-routine, widget-artifact, publish-widget)
@@ -520,6 +525,33 @@ export function main(argv: string[]): void {
       for (const routine of missingTriggers) {
         promptTriggerToken(routine.slug, dataRepoDir)
       }
+    }
+  }
+
+  // --- Apply: backfill blank owning accounts (ADR-0029) --------------------------
+  // Triggers minted before the account field carry no owner. `--apply` runs on
+  // the runner's machine — the account authority — so stamp the signed-in one
+  // automatically (never overwriting a present account). Newly minted triggers
+  // above already carry it, so this only catches the older ones.
+  const unstamped = [...cloudScheduled, ...cloudManual].filter((routine) =>
+    triggerNeedsAccount(routine.slug, dataRepoDir),
+  )
+  if (unstamped.length > 0) {
+    const account = claudeAccountEmail()
+    if (account) {
+      console.log(
+        `\nStamping the owning Claude account (${account}) on` +
+          ` ${unstamped.length} trigger(s) that predate it (ADR-0029):`,
+      )
+      for (const routine of unstamped) {
+        setTriggerAccount(routine.slug, dataRepoDir, account)
+      }
+    } else {
+      console.log(
+        `\n# ${unstamped.length} trigger(s) carry no owning Claude account and` +
+          " none is signed in here — stamp with" +
+          " `steward trigger <slug> --account <email>`.",
+      )
     }
   }
 

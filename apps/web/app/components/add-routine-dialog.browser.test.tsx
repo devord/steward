@@ -270,6 +270,18 @@ describe("AddRoutineDialog edit mode", () => {
     expect(hasText("Save changes")).toBe(true)
   })
 
+  it("surfaces the owning Claude account from the trigger receipt (ADR-0029)", async () => {
+    await renderDialog({ editRoutine: editable, account: "work@example.org" })
+    await vi.waitFor(() =>
+      expect(input("routine-name").value).toBe("Repo Pulse"),
+    )
+
+    // The real account, verbatim — not the runner login ("alice") dressed up
+    // as an account.
+    expect(hasText("work@example.org")).toBe(true)
+    expect(hasText("alice's Claude account")).toBe(false)
+  })
+
   it("saves the merged routine, keeping slug and fields the form doesn't own", async () => {
     // templates is empty, so the routine's template isn't discoverable — it must
     // still be retained, still count as a valid source, and its params must

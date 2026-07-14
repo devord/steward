@@ -406,8 +406,10 @@ export const ptBR: Messages = {
     "Rotinas locais rodam na sua máquina: as agendadas são ativadas via steward sync --apply (requer npm i -g @devord/steward); as manuais rodam com npx @devord/steward run <slug>",
   "dialog.manualCloudHint":
     "Rotinas manuais na nuvem disparam pelo botão de atualizar do widget via gatilho de API — npx @devord/steward sync configura",
+  "dialog.accountHint":
+    "Conta Claude responsável: {account} — uma rotina na nuvem pertence a uma conta; re-sincronize de outra para reatribuir",
   "dialog.runnerHint":
-    "O recurso na nuvem roda na conta Claude de {login} — depois do commit, rode npx @devord/steward sync contra o repo do time",
+    "Depois do commit, rode npx @devord/steward sync contra o repo do time — quem rodar ativa o recurso na nuvem na própria conta Claude",
   "dialog.cancel": "Cancelar",
   "dialog.add": "Adicionar ao rascunho",
   "dialog.save": "Salvar mudanças",

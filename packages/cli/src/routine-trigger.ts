@@ -13,6 +13,13 @@
  *
  * Usage: steward trigger <slug> [--repo <owner/repo>]
  *                               [--file <path/to/routines.yaml>]
+ *                               [--account [<email>]]
+ *
+ * --account sets just the owning Claude account on an existing trigger
+ * (ADR-0029) and skips the token flow — the backfill for triggers minted
+ * before the account field, or an account correction. Bare `--account` prompts
+ * (defaulting to this machine's signed-in account); `--account <email>` sets it
+ * outright, so it works non-interactively.
  *
  * --repo (the copy-pasteable form the app shows) uses a script-managed
  * clone under ~/.cache/steward/repos/; --file targets your own checkout;
@@ -29,22 +36,37 @@ import {
 } from "@steward/schema"
 
 import { ghLogin, inferRepo, repoTag, routinesFileFor } from "./data-repo.ts"
-import { promptTriggerToken } from "./trigger-token.ts"
+import {
+  claudeAccountEmail,
+  promptTriggerToken,
+  question,
+  setTriggerAccount,
+} from "./trigger-token.ts"
 
 export function main(argv: string[]): void {
   const args = argv
   const fileFlag = args.indexOf("--file")
   const repoFlag = args.indexOf("--repo")
-  const slug = args.find(
-    (arg, i) =>
-      !arg.startsWith("--") &&
-      (fileFlag === -1 || i !== fileFlag + 1) &&
-      (repoFlag === -1 || i !== repoFlag + 1),
+  const accountFlag = args.indexOf("--account")
+  // --account's optional value is the next arg when it isn't another flag.
+  const accountValue =
+    accountFlag !== -1 &&
+    args[accountFlag + 1] != null &&
+    !args[accountFlag + 1].startsWith("--")
+      ? args[accountFlag + 1]
+      : null
+  const consumed = new Set(
+    [
+      fileFlag === -1 ? null : fileFlag + 1,
+      repoFlag === -1 ? null : repoFlag + 1,
+      accountValue == null ? null : accountFlag + 1,
+    ].filter((i): i is number => i != null),
   )
+  const slug = args.find((arg, i) => !arg.startsWith("--") && !consumed.has(i))
 
   if (!slug) {
     console.error(
-      "Usage: steward trigger <slug> [--repo <owner/repo>] [--file <path/to/routines.yaml>]",
+      "Usage: steward trigger <slug> [--repo <owner/repo>] [--file <path/to/routines.yaml>] [--account [<email>]]",
     )
     process.exit(1)
   }
@@ -128,6 +150,28 @@ export function main(argv: string[]): void {
 
   if (!routine.enabled) {
     console.warn(`# ${slug} is disabled — the trigger will sit unused.\n`)
+  }
+
+  // --account: stamp the owning account on the existing receipt and stop —
+  // no token flow (ADR-0029). An explicit value works non-interactively; a
+  // bare flag prompts, defaulting to this machine's signed-in account.
+  if (accountFlag !== -1) {
+    const detected = claudeAccountEmail()
+    const account =
+      accountValue ??
+      (process.stdin.isTTY
+        ? question(
+            `${slug} — claude account${detected ? ` [${detected}]` : ""}: `,
+          ).trim() || detected
+        : detected)
+    if (!account) {
+      console.error(
+        "routine-trigger: no account given and none signed in on this machine" +
+          " — pass `--account <email>`.",
+      )
+      process.exit(1)
+    }
+    process.exit(setTriggerAccount(slug, dataRepoDir, account) ? 0 : 1)
   }
 
   if (!process.stdin.isTTY) {

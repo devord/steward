@@ -43,3 +43,30 @@ runner login in the Owner cell.
 - The email is repo-visible, like everything else in a data repo
   (ADR-0001) — anyone who can read the repo can already fire the trigger
   on that account's quota; naming the account adds no new exposure.
+
+## Amendment (2026-07): every enactor stamps the receipt
+
+The receipt is only useful if it's kept filled, and a cloud routine can be
+enacted two ways — `steward sync --apply` or a Claude Code session driving
+the code-triggers API directly. **The rule: whichever path writes
+`data/triggers/<slug>.json` stamps `account:`; a cloud routine is associated
+with exactly one Claude account, and that association lives in its receipt.**
+
+- **Minting** (`promptTriggerToken`) already defaults `account:` to the
+  machine's signed-in account, so both `sync --apply` and `steward trigger`
+  fill it on write.
+- **Backfill** closes the original gap ("no tool re-mints just to stamp the
+  account"): `steward trigger <slug> --account [<email>]` sets _only_ the
+  account on an existing receipt, never touching the token, and
+  `sync --apply` auto-stamps any blank-account trigger with the signed-in
+  account (never overwriting a present one) — the runner's machine is the
+  account authority, so the default is right.
+- **Enacting via Claude Code**: no in-repo skill writes trigger receipts —
+  `run-routine` only _executes_ a routine and publishes its artifact. Any
+  future path that writes `data/triggers/<slug>.json` from a session (rather
+  than the CLI) must include `account:` from the signed-in
+  `oauthAccount.emailAddress`, or route through `steward trigger` so the
+  stamp isn't skipped.
+- The app surfaces the receipt's account verbatim — the pool table's Owner
+  cell and the Edit-routine dialog — rather than inferring it from the runner
+  login, which can't tell one person's Claude accounts apart.

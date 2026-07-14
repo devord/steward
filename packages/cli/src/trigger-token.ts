@@ -15,18 +15,22 @@
  * single consumer of stdin.
  */
 import { execFileSync } from "node:child_process"
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import path from "node:path"
 
-import { triggerFileSchema, triggerPath } from "@steward/schema"
+import {
+  type TriggerFile,
+  triggerFileSchema,
+  triggerPath,
+} from "@steward/schema"
 
 /**
  * The Claude account signed into this machine (~/.claude.json), best-effort.
  * Offered as the default for the trigger's `account` field — the runner mints
  * the trigger under their own account, which on their machine is this one.
  */
-function claudeAccountEmail(): string | undefined {
+export function claudeAccountEmail(): string | undefined {
   try {
     const config: { oauthAccount?: { emailAddress?: string } } = JSON.parse(
       readFileSync(path.join(homedir(), ".claude.json"), "utf8"),
@@ -104,15 +108,83 @@ export function promptTriggerToken(slug: string, dataRepoDir: string): void {
       2,
     ) + "\n",
   )
+  commitTrigger(dataRepoDir, relPath, `config: add API trigger for ${slug}`)
+}
+
+/**
+ * Set (or replace) just the `account` on an existing trigger receipt
+ * (ADR-0029), leaving its token untouched — the backfill path for triggers
+ * minted before the account field, or an account correction. The token can't
+ * be re-read from the web UI, so this never creates a trigger: returns false
+ * (with a message) when there's none to stamp. Returns true when the file now
+ * names `account` (including a no-op when it already did).
+ */
+export function setTriggerAccount(
+  slug: string,
+  dataRepoDir: string,
+  account: string,
+): boolean {
+  const relPath = triggerPath(slug)
+  const absPath = path.join(dataRepoDir, relPath)
+  let existing: TriggerFile
+  try {
+    existing = triggerFileSchema.parse(
+      JSON.parse(readFileSync(absPath, "utf8")),
+    )
+  } catch {
+    console.error(
+      `  no valid trigger at ${relPath} — mint one first with` +
+        ` \`steward trigger ${slug}\`.`,
+    )
+    return false
+  }
+  if (existing.account === account) {
+    console.log(`  ${relPath} already names ${account}`)
+    return true
+  }
+  writeFileSync(
+    absPath,
+    JSON.stringify(triggerFileSchema.parse({ ...existing, account }), null, 2) +
+      "\n",
+  )
+  commitTrigger(
+    dataRepoDir,
+    relPath,
+    `config: set Claude account for ${slug} trigger`,
+  )
+  return true
+}
+
+/** True when a trigger receipt exists but carries no `account` (ADR-0029) —
+    the backfill target. A missing or malformed file is not unstamped: there's
+    no trigger there to stamp. */
+export function triggerNeedsAccount(
+  slug: string,
+  dataRepoDir: string,
+): boolean {
+  const absPath = path.join(dataRepoDir, triggerPath(slug))
+  if (!existsSync(absPath)) return false
+  try {
+    return (
+      triggerFileSchema.parse(JSON.parse(readFileSync(absPath, "utf8")))
+        .account == null
+    )
+  } catch {
+    return false
+  }
+}
+
+/** Stage, commit, and push one trigger file; a failed git step leaves the
+    written file in place for a hand commit. Shared by the mint and
+    account-backfill paths. */
+function commitTrigger(
+  dataRepoDir: string,
+  relPath: string,
+  message: string,
+): void {
   try {
     execFileSync("git", ["-C", dataRepoDir, "add", relPath])
-    execFileSync("git", [
-      "-C",
-      dataRepoDir,
-      "commit",
-      "-m",
-      `config: add API trigger for ${slug}`,
-    ])
+    execFileSync("git", ["-C", dataRepoDir, "commit", "-m", message])
     execFileSync("git", ["-C", dataRepoDir, "push"], { stdio: "pipe" })
     console.log(`  committed + pushed ${relPath}`)
   } catch {

@@ -166,6 +166,7 @@ export function AddRoutineDialog({
   editRoutine,
   onEdit,
   runner,
+  account,
   initialTemplate,
 }: {
   open: boolean
@@ -182,9 +183,14 @@ export function AddRoutineDialog({
   /** Called on submit in edit mode with the updated routine (slug unchanged). */
   onEdit?: (routine: Routine) => void
   /** Set on team boards: the login whose Claude account owns the routine's
-      cloud resource (ADR-0010/0016). Stamped on the routine and surfaced
-      as a hint. */
+      cloud resource (ADR-0010/0016). Stamped on the routine and gates the
+      sync hint. */
   runner?: string
+  /** Edit mode: the Claude account the routine is currently enacted under,
+      read from its trigger receipt (ADR-0029). The login can't carry this —
+      one runner, several accounts — so it's surfaced verbatim, not inferred
+      from `runner`. Null until the routine has been enacted. */
+  account?: string | null
   /** Add mode only: pre-select this template on open — the "new routine
       from template" entry point (templates ledger, ADR-0029). Ignored in
       edit mode; the picker stays fully editable after seeding. */
@@ -779,9 +785,18 @@ export function AddRoutineDialog({
                   </p>
                 )}
 
-                {runner && (
+                {/* The account the receipt actually names (ADR-0029) — not
+                    the runner login, which can't tell one person's Claude
+                    accounts apart. Shown only once a routine is enacted. */}
+                {host === "cloud" && account && (
                   <p className="text-xs text-muted-foreground">
-                    {t("dialog.runnerHint", { login: runner })}
+                    {t("dialog.accountHint", { account })}
+                  </p>
+                )}
+
+                {host === "cloud" && runner && (
+                  <p className="text-xs text-muted-foreground">
+                    {t("dialog.runnerHint")}
                   </p>
                 )}
 
