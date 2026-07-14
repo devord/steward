@@ -60,11 +60,12 @@ import { useT } from "../lib/i18n.tsx"
  * A repo group with no boards keeps a create-first row in place of the board
  * list — deleting the last board must not make the repo disappear from the app.
  *
- * Rows carry honest client-local state ({@link RowStateDot}): a yellow dot
- * trailing a name marks unsynced draft edits (boards and the pool alike), a
- * pulsing accent dot on the pool row marks a client-fired run in flight.
- * Both read straight from localStorage (rail-status.ts) — no server call,
- * and nothing decorative: no state, no dot.
+ * Rows carry honest client-local state (rail-status.ts): a yellow dot
+ * ({@link UnsyncedDot}) trailing a name marks unsynced draft edits (boards and
+ * the pool alike), and a client-fired run in flight pulses the pool's ledger
+ * glyph in the accent — status stays in the leading marker column the way a
+ * board's freshness dot does. Both read straight from localStorage — no server
+ * call, and nothing decorative: no state, no marker.
  */
 export function DashboardSidebar({
   activeRepo,
@@ -512,20 +513,24 @@ function PoolNavItem({
           : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
       )}
     >
+      {/* The pool's live state rides its own marker, not a trailing dot: an
+          in-flight run pulses the ledger glyph in the accent, so status sits in
+          the leading column where a board's freshness dot sits (honors reduced
+          motion by resting solid). */}
       <ListTodo
         aria-hidden
+        data-testid={running ? "rail-running" : undefined}
         className={cn(
           "absolute top-1/2 left-[13px] size-3 -translate-x-1/2 -translate-y-1/2 transition-colors",
-          active ? "text-primary" : "text-ink-faint",
+          active || running ? "text-primary" : "text-ink-faint",
+          running && "animate-pulse motion-reduce:animate-none",
         )}
       />
       {t("nav.routines")}
-      {(running || draft) && (
+      {running && <span className="sr-only">, {t("nav.runInFlight")}</span>}
+      {draft && (
         <span className="ml-2 flex shrink-0 items-center gap-1.5">
-          {running && (
-            <RowStateDot tone="running" label={t("nav.runInFlight")} />
-          )}
-          {draft && <RowStateDot tone="draft" label={t("nav.unsynced")} />}
+          <UnsyncedDot label={t("nav.unsynced")} />
         </span>
       )}
     </Link>
@@ -533,33 +538,22 @@ function PoolNavItem({
 }
 
 /**
- * A rail row's state marker — the routines ledger's StateDot vocabulary
- * (accent = running, yellow = unsynced) shrunk to the rail's whisper: one
- * 6px dot trailing the row's name, exactly the header chip's unsynced dot.
- * It trails the label rather than riding the spine's marker column, so the
- * spine keeps its one meaning ("you are here") and the marker survives every row
- * state (active, hover) without negotiation. Never color alone:
- * the sr-only label names the state for readers, and the two tones also
- * differ in motion (running pulses; honors reduced motion by resting solid).
+ * The rail's unsynced marker — one 6px yellow dot trailing a row's name, exactly
+ * the header chip's unsynced dot, on boards and the routine pool alike. It
+ * trails the label rather than riding the spine's marker column, so the leading
+ * column keeps its one meaning (a board's freshness / "you are here" dot, the
+ * pool's ledger glyph) and the marker survives every row state (active, hover)
+ * without negotiation. The trailing dot means exactly one thing — unsynced;
+ * live-run state lives on the pool glyph instead. Never colour alone: the
+ * sr-only label names the state for readers.
  */
-function RowStateDot({
-  tone,
-  label,
-}: {
-  tone: "running" | "draft"
-  label: string
-}) {
+function UnsyncedDot({ label }: { label: string }) {
   return (
     <>
       <span
         aria-hidden
-        data-testid={`rail-${tone}`}
-        className={cn(
-          "size-1.5 shrink-0 rounded-full",
-          tone === "running"
-            ? "animate-pulse bg-primary motion-reduce:animate-none"
-            : "bg-yellow",
-        )}
+        data-testid="rail-draft"
+        className="size-1.5 shrink-0 rounded-full bg-yellow"
       />
       <span className="sr-only">, {label}</span>
     </>
@@ -617,7 +611,7 @@ function NavItem({
   now: number
   /** This board holds unsynced edits (a localStorage draft, ADR-0003) — it
       carries the header chip's yellow dot, trailing the name
-      ({@link RowStateDot}), so unsynced work is visible without switching
+      ({@link UnsyncedDot}), so unsynced work is visible without switching
       to the board. */
   draft?: boolean
   onRename?: () => void
@@ -668,15 +662,17 @@ function NavItem({
                   : "unknown"
           }
           className={cn(
-            "absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all",
+            // One size for every freshness dot — active is marked by the accent,
+            // the selection tint, and heavier ink, not a larger dot.
+            "absolute top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors",
             indented ? "left-[29px]" : "left-[13px]",
             active
-              ? "size-2 bg-primary"
+              ? "bg-primary"
               : stale
-                ? "size-1.5 bg-red"
+                ? "bg-red"
                 : lastRunAt != null
-                  ? "size-1.5 bg-green"
-                  : "size-1.5 bg-ink-faint/40 group-hover:bg-ink-faint",
+                  ? "bg-green"
+                  : "bg-ink-faint/40 group-hover:bg-ink-faint",
           )}
         />
         <span className="min-w-0 flex-1 truncate">{label}</span>
@@ -701,7 +697,7 @@ function NavItem({
                 {age}
               </span>
             )}
-            {draft && <RowStateDot tone="draft" label={t("nav.unsynced")} />}
+            {draft && <UnsyncedDot label={t("nav.unsynced")} />}
           </span>
         )}
       </Link>
