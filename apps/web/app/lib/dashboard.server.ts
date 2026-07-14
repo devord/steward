@@ -176,8 +176,10 @@ export async function repoExistsOr503(
  * call is an Error, not a Response, so on its own it escapes the action as the
  * generic "unexpected error" crash — the same failure mode the loaders already
  * degrade. Turn it into a route error the boundary can explain: a 422 is the
- * one the user fixes themselves (a repo of that name already exists), a 401
- * re-auths, and every other failure is the transient-outage refresh.
+ * one the user fixes themselves (a repo of that name already exists), a 404 is
+ * a template the token can't reach (a private template hides as "not found",
+ * so onboarding stalls for everyone outside its org), a 401 re-auths, and every
+ * other failure is the transient-outage refresh.
  */
 export async function createDataRepoOr503(
   token: string,
@@ -197,6 +199,17 @@ export async function createDataRepoOr503(
         throw data(
           `GitHub already has a repository named ${owner}/${name}, so it can't create a fresh one from the template. Delete or rename it on GitHub and try again — or, if you're signed in as the wrong account, sign out and back in as the owner.`,
           { status: 422 },
+        )
+      }
+      // 404 on /generate is a misconfiguration, not a hiccup: the template repo
+      // is missing, or — the usual case — private and invisible to this token
+      // (GitHub hides private repos as "not found"). Retrying never fixes it,
+      // so say what's wrong instead of the transient "try again" below, which
+      // would trap every out-of-org user in a loop that can't succeed.
+      if (error.status === 404) {
+        throw data(
+          `The data-repo template (${templateRepo}) can't be reached, so no repo could be created from it. It's either missing or private — a private template is invisible to accounts outside its organization. Make the template repository public, or grant your account access, then try again.`,
+          { status: 404 },
         )
       }
       // Everything else (rate limit, 5xx, network blip) is the transient class:
