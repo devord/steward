@@ -138,7 +138,7 @@ export const en = {
 
   "templates.title": "Templates",
   "templates.subtitle":
-    "What the routine picker offers — templates/routines/ in {repo}, plus the built-ins.",
+    "What the routine picker offers — {dir} in {repo}, plus the built-ins.",
   "templates.colTemplate": "Template",
   "templates.colDescription": "Description",
   "templates.colSource": "Source",
