@@ -235,10 +235,12 @@ export function AddRoutineDialog({
   const [templateId, setTemplateId] = useState<string | null>(null)
   const [name, setName] = useState("")
   const [nameEdited, setNameEdited] = useState(false)
+  // The slug is derived (see `derivedSlug`), not stored — `slugOverride` holds
+  // the value only once the user takes it over (Customize) or in edit mode.
   const [slugEdited, setSlugEdited] = useState(false)
-  const [slug, setSlug] = useState("")
-  // A subject template shows its derived slug as a read-only chip; this
-  // reveals the editable field for the rare deliberate override (ADR-0040).
+  const [slugOverride, setSlugOverride] = useState("")
+  // The derived slug shows as a read-only caption; this reveals the editable
+  // field for the rare deliberate override (ADR-0040).
   const [customizingSlug, setCustomizingSlug] = useState(false)
   const [schedule, setSchedule] = useState<string>(DEFAULT_SCHEDULE)
   const [scheduleEdited, setScheduleEdited] = useState(false)
@@ -265,22 +267,36 @@ export function AddRoutineDialog({
     () => subjectToken(template, params),
     [template, params],
   )
-  // True while the wizard owns the slug from the subject: a picked subject
-  // template, in add mode, that the user hasn't chosen to hand-edit.
-  const derivesSlug = !isEdit && template?.widget.subjectParam != null
-
-  // Re-derive slug and name from the subject as it changes, until the user
-  // takes over either field. This is what makes two routines from one
-  // template distinct by default (corza-pulse, acme-pulse) rather than
-  // counter-suffixed (ADR-0040). Guarded off in edit mode (slug is fixed).
-  useEffect(() => {
-    if (!derivesSlug || subject.length === 0 || template == null) return
-    if (!nameEdited) setName(titleCase(subject))
-    if (!slugEdited) {
-      const base = `${kebab(subject)}-${templateKind(template)}`
-      setSlug(uniqueSlug(base, existingSlugsRef.current))
+  // The wizard derives the slug, it never solicits it (ADR-0040): a subject
+  // template slugs <subject>-<kind> (corza-pulse, acme-pulse — distinct by
+  // construction, not counter-suffixed); every other template kebab-cases the
+  // name, itself seeded from the template. Computed, not stored, so it's always
+  // current with the name/subject and never a stale-or-empty field.
+  const derivedSlug = useMemo(() => {
+    if (template?.widget.subjectParam != null) {
+      // Subject template: pending (blank) until the subject is answered.
+      if (subject.length === 0) return ""
+      return uniqueSlug(
+        `${kebab(subject)}-${templateKind(template)}`,
+        existingSlugs,
+      )
     }
-  }, [derivesSlug, subject, template, nameEdited, slugEdited])
+    const source = name.trim()
+    return source ? uniqueSlug(kebab(source), existingSlugs) : ""
+  }, [template, subject, name, existingSlugs])
+  // The effective slug: the user's own once taken over (Customize / edit mode),
+  // otherwise the live derivation.
+  const slug = isEdit || slugEdited ? slugOverride : derivedSlug
+
+  // A subject template also names its instance after the subject (Corza),
+  // title-cased and still user-overridable — a display concern, unlike the slug
+  // which is permanent, so it stays a real (settable) field.
+  useEffect(() => {
+    if (isEdit || nameEdited) return
+    if (template?.widget.subjectParam != null && subject.length > 0) {
+      setName(titleCase(subject))
+    }
+  }, [isEdit, nameEdited, template, subject])
 
   // Typeahead pool for repo pickers: the viewer's own repos via /repos.
   // Failures resolve to [] — the pickers accept typed owner/repo anyway.
@@ -301,8 +317,6 @@ export function AddRoutineDialog({
   // re-run the prefill over in-progress edits.
   const templatesRef = useRef(templates)
   templatesRef.current = templates
-  const existingSlugsRef = useRef(existingSlugs)
-  existingSlugsRef.current = existingSlugs
 
   // Opening in add mode from a "new routine from template" entry point seeds
   // the picker exactly as a click on its card would (name, slug, suggested
@@ -318,12 +332,10 @@ export function AddRoutineDialog({
     if (suggested.length > 0) {
       setConnectors((current) => [...new Set([...current, ...suggested])])
     }
-    // A subject template fills name/slug from the entered subject (the
-    // derivation effect); seed from the template name only otherwise (ADR-0040).
-    if (entry.widget.subjectParam == null) {
-      setName(entry.name)
-      setSlug(uniqueSlug(kebab(entry.name), existingSlugsRef.current))
-    }
+    // A subject template names its instance after the entered subject; seed
+    // the name from the template only otherwise. The slug follows the name via
+    // the derivation effect (ADR-0040).
+    if (entry.widget.subjectParam == null) setName(entry.name)
   }, [open, editRoutine, initialTemplate])
 
   // Opening in edit mode seeds the fields from the routine and jumps to the
@@ -338,7 +350,7 @@ export function AddRoutineDialog({
     setInstructions(editRoutine.instructions ?? "")
     setTemplateId(editRoutine.template ?? null)
     setName(editRoutine.name)
-    setSlug(editRoutine.slug)
+    setSlugOverride(editRoutine.slug)
     setSlugEdited(true)
     const cron = editRoutine.schedule
     if (cron == null) setSchedule(MANUAL)
@@ -377,7 +389,7 @@ export function AddRoutineDialog({
     setName("")
     setNameEdited(false)
     setSlugEdited(false)
-    setSlug("")
+    setSlugOverride("")
     setSchedule(DEFAULT_SCHEDULE)
     setScheduleEdited(false)
     setCustomCron("")
@@ -393,13 +405,11 @@ export function AddRoutineDialog({
   function pickTemplate(next: DiscoveredTemplate) {
     // The picker is an accelerator, not a gate — a second click deselects
     // back to a prompt-only routine, keeping whatever the user typed but
-    // dropping any name/slug this template auto-filled.
+    // dropping any name this template auto-filled (the slug follows via the
+    // derivation effect).
     if (next.id === templateId) {
       setTemplateId(null)
-      if (!nameEdited) {
-        setName("")
-        if (!slugEdited) setSlug("")
-      }
+      if (!nameEdited) setName("")
       return
     }
     setTemplateId(next.id)
@@ -414,19 +424,13 @@ export function AddRoutineDialog({
     if (suggested.length > 0) {
       setConnectors((current) => [...new Set([...current, ...suggested])])
     }
-    // Re-fill from the newly picked template unless the user typed their own
-    // name — otherwise switching templates leaves the first template's name/slug.
-    // A subject template names its instance after the subject the user is
-    // about to enter (the derivation effect), not the template — so clear the
-    // seed and let that effect fill it (ADR-0040).
+    // Re-seed the name from the newly picked template unless the user typed
+    // their own — otherwise switching templates strands the first template's
+    // name. A subject template names its instance after the subject the user
+    // is about to enter (the derivation effect), not the template, so clear it
+    // there. The slug follows the name/subject via that effect (ADR-0040).
     if (!nameEdited) {
-      if (next.widget.subjectParam != null) {
-        setName("")
-        if (!slugEdited) setSlug("")
-      } else {
-        setName(next.name)
-        if (!slugEdited) setSlug(uniqueSlug(kebab(next.name), existingSlugs))
-      }
+      setName(next.widget.subjectParam != null ? "" : next.name)
     }
   }
 
@@ -720,71 +724,34 @@ export function AddRoutineDialog({
                   </fieldset>
                 )}
 
-                <div className="grid gap-3 sm:grid-cols-2 sm:items-start">
-                  <div className="grid gap-2">
-                    <Label htmlFor="routine-name">{t("dialog.name")}</Label>
-                    <Input
-                      id="routine-name"
-                      value={name}
-                      onChange={(event) => {
-                        setNameEdited(true)
-                        setName(event.target.value)
-                        // For subject templates the slug tracks the subject,
-                        // not the name (ADR-0040) — leave it be.
-                        if (!slugEdited && !derivesSlug)
-                          setSlug(
-                            uniqueSlug(
-                              kebab(event.target.value),
-                              existingSlugs,
-                            ),
-                          )
-                      }}
-                      placeholder={t("dialog.namePlaceholder")}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="routine-slug">{t("dialog.slug")}</Label>
-                    {derivesSlug && !customizingSlug ? (
-                      // A subject template auto-slugs <subject>-<kind>
-                      // (ADR-0040); show the result, don't solicit it. The
-                      // slug is fixed once created, so a text field here just
-                      // invites a permanent typo.
-                      <>
-                        <div className="flex min-h-9 items-center justify-between gap-2 rounded-md border border-input bg-muted/40 px-3">
-                          <code
-                            id="routine-slug-display"
-                            // Truncate a real (possibly long) slug; let the
-                            // pending placeholder read in full — it's the more
-                            // common state before the subject is answered.
-                            className={`font-mono text-sm text-muted-foreground ${slug ? "truncate" : ""}`}
-                          >
-                            {slug || t("dialog.slugPending")}
-                          </code>
-                          {slug.length > 0 && (
-                            // Nothing to override until a slug is derived.
-                            <button
-                              type="button"
-                              className="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                              onClick={() => {
-                                setCustomizingSlug(true)
-                                setSlugEdited(true)
-                              }}
-                            >
-                              {t("dialog.customize")}
-                            </button>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {t("dialog.slugDerivedHint")}
-                        </p>
-                      </>
-                    ) : (
+                <div className="grid gap-2">
+                  <Label htmlFor="routine-name">{t("dialog.name")}</Label>
+                  <Input
+                    id="routine-name"
+                    value={name}
+                    onChange={(event) => {
+                      setNameEdited(true)
+                      setName(event.target.value)
+                    }}
+                    placeholder={t("dialog.namePlaceholder")}
+                  />
+                  {isEdit || customizingSlug ? (
+                    // Edit mode: the slug is fixed (delete + re-add to rename).
+                    // Customize: the rare deliberate override of the derived
+                    // slug (ADR-0040). Either way it's a labelled field.
+                    <div className="grid gap-1 pt-1">
+                      <Label
+                        htmlFor="routine-slug"
+                        className="font-normal text-muted-foreground"
+                      >
+                        {t("dialog.slug")}
+                      </Label>
                       <Input
                         id="routine-slug"
                         value={slug}
                         onChange={(event) => {
                           setSlugEdited(true)
-                          setSlug(event.target.value)
+                          setSlugOverride(event.target.value)
                         }}
                         // The slug keys widgets and the artifact path — fixed
                         // once the routine exists (delete + re-add to rename).
@@ -794,13 +761,43 @@ export function AddRoutineDialog({
                         }
                         className="font-mono disabled:opacity-70"
                       />
-                    )}
-                    {slugTaken && (
-                      <p className="text-xs text-destructive">
-                        {t("dialog.slugTaken")}
-                      </p>
-                    )}
-                  </div>
+                      {slugTaken && (
+                        <p className="text-xs text-destructive">
+                          {t("dialog.slugTaken")}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    // The slug is derived, not solicited (ADR-0040): a caption
+                    // under the name, overridable via Customize — never an
+                    // empty required field.
+                    <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                      <span>{t("dialog.slug")}</span>
+                      <code
+                        id="routine-slug-display"
+                        className="font-mono text-foreground"
+                      >
+                        {slug || t("dialog.slugPending")}
+                      </code>
+                      {slug.length > 0 && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <button
+                            type="button"
+                            className="underline underline-offset-2 hover:text-foreground"
+                            onClick={() => {
+                              // Carry the derived slug into the field to tweak.
+                              setSlugOverride(slug)
+                              setCustomizingSlug(true)
+                              setSlugEdited(true)
+                            }}
+                          >
+                            {t("dialog.customize")}
+                          </button>
+                        </>
+                      )}
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2 sm:items-start">

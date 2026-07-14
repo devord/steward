@@ -407,7 +407,6 @@ export const ptBR: Messages = {
   "dialog.slug": "Slug",
   "dialog.slugTaken": "Já usado por outra rotina",
   "dialog.slugPending": "Definido pelo assunto acima",
-  "dialog.slugDerivedHint": "Gerado do assunto; fixo após criar",
   "dialog.customize": "Personalizar",
   "dialog.schedule": "Agendamento",
   "dialog.suggested": "Sugerido — {cron}",

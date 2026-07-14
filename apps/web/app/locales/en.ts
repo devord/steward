@@ -409,7 +409,6 @@ export const en = {
   "dialog.slug": "Slug",
   "dialog.slugTaken": "Already used by another routine",
   "dialog.slugPending": "Set from the subject above",
-  "dialog.slugDerivedHint": "Auto-set from the subject; fixed once created",
   "dialog.customize": "Customize",
   "dialog.schedule": "Schedule",
   "dialog.suggested": "Suggested — {cron}",
