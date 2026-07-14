@@ -24,8 +24,7 @@ export const ptBR: Messages = {
     "O Claude Code executa a rotina: segue seu template ou instruções e escreve um único arquivo HTML autocontido.",
   "landing.loop.push":
     "Publicar é um git push. Sem upload, sem CDN, e histórico de versões de graça.",
-  "landing.loop.widget":
-    "O painel renderiza o arquivo em um frame isolado.",
+  "landing.loop.widget": "O painel renderiza o arquivo em um frame isolado.",
   "landing.loop.prereqs":
     "Só é preciso uma conta no GitHub e o Claude Code — rotinas rodam na nuvem ou na sua máquina.",
 
@@ -46,7 +45,7 @@ export const ptBR: Messages = {
     "Rode na nuvem da Anthropic com o laptop fechado, ou na sua máquina junto dos dados locais.",
   "landing.features.fresh.title": "Frescor confiável",
   "landing.features.fresh.body":
-    'Todo widget mostra quando rodou pela última vez, direto do histórico de commits — e um atrasado avisa.',
+    "Todo widget mostra quando rodou pela última vez, direto do histórico de commits — e um atrasado avisa.",
 
   "landing.cta": "Bata o olho em vez de cavar.",
 

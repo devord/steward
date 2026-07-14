@@ -25,8 +25,7 @@ export const en = {
     "Claude Code executes the routine: it follows your template or instructions and writes one self-contained HTML file.",
   "landing.loop.push":
     "Publishing is a git push. No upload, no CDN, and version history for free.",
-  "landing.loop.widget":
-    "The dashboard renders the file in a sandboxed frame.",
+  "landing.loop.widget": "The dashboard renders the file in a sandboxed frame.",
   "landing.loop.prereqs":
     "All it takes: a GitHub account and Claude Code — routines run in the cloud or on your machine.",
 
@@ -47,7 +46,7 @@ export const en = {
     "Run in Anthropic's cloud with the laptop closed, or on your machine next to local data.",
   "landing.features.fresh.title": "Freshness you can trust",
   "landing.features.fresh.body":
-    'Every widget shows when it last ran, straight from commit history — and a stale one says so.',
+    "Every widget shows when it last ran, straight from commit history — and a stale one says so.",
 
   "landing.cta": "Glance instead of digging.",
 
