@@ -50,6 +50,19 @@
       [hidden] {
         display: none !important;
       }
+      /* This artifact shows no visible page title — it leans on the chrome
+         title bar. The visually-hidden <h1> still roots the section <h2>s so
+         the iframe document's outline isn't a run of orphaned headings. */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
       html,
       body {
         height: 100%;
@@ -433,6 +446,7 @@
   </head>
   <body>
     <main>
+      <h1 class="sr-only">Repo Pulse</h1>
       <section class="stat">
         <div class="num">17</div>
         <div class="label">open PRs</div>

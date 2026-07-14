@@ -295,10 +295,17 @@
       }
       /* Page heading — the artifact's title line, matching the app's own
          page headings (font-mono, 18px, medium): the date this plan is for
-         (distinct from the chrome's "ran Xm ago"). Hidden at the glance
-         tiers; shown from the wide grid up (below). */
+         (distinct from the chrome's "ran Xm ago"). Visually hidden at the
+         glance tiers — never display:none, so the <h1> stays in the a11y tree
+         and keeps rooting the section <h2>s where the visible title is
+         omitted. The visible title returns from the wide grid up (below). */
       .date {
-        display: none;
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
         font-family: var(--font-mono);
         font-size: 18px;
         font-weight: 500;
@@ -408,9 +415,15 @@
         }
         /* Shown on every wide surface — the wide tile as well as the raw
            page and full view — so the reserved "date" grid row carries the
-           heading instead of sitting empty (which read as dead top margin). */
+           heading instead of sitting empty (which read as dead top margin).
+           Undo the glance-tier visually-hidden state to a visible title. */
         .date {
-          display: block;
+          position: static;
+          width: auto;
+          height: auto;
+          overflow: visible;
+          clip: auto;
+          white-space: normal;
         }
       }
       /* The time grid (any wide surface tall enough to hold the day: the
@@ -561,7 +574,7 @@
   </head>
   <body>
     <main>
-      <p class="date"><b>Daniel</b> · Monday, July 13</p>
+      <h1 class="date"><b>Daniel</b> · Monday, July 13</h1>
       <section class="stat">
         <div class="num">3</div>
         <div class="label">priorities today</div>

@@ -103,13 +103,23 @@ wide grid up instead).
 
 ### Heading
 
-The artifact's own page title, matching the app's page headings so a wide
-tile, raw page, or full view reads like the rest of the product: mono, 18px,
-medium weight, full ink — with an optional ink-dim subtitle (14px sans) for a
-caption. The glance tiers lean on the chrome's title bar (name + freshness)
-and skip it; show it from the wide grid up (≥900px) and on the raw/full page,
+The artifact's own page title — the document's `<h1>`, matching the app's
+page headings so a wide tile, raw page, or full view reads like the rest of
+the product: mono, 18px, medium weight, full ink — with an optional ink-dim
+subtitle (14px sans) for a caption. The iframe is its own outline, so this
+`<h1>` roots the section `<h2>`s below (never a `<p>` sitting above orphaned
+headings). The glance tiers lean on the chrome's title bar (name +
+freshness) and drop the _visible_ title — but hide it visually (the
+`.sr-only` pattern below), never `display: none`, so the `<h1>` stays in the
+a11y tree and keeps rooting the section `<h2>`s at every iframe size; restore
+the visible title from the wide grid up (≥900px) and on the raw/full page,
 where there's room. Distinct from the chrome's freshness — carry the content
 the title bar can't: for daily-plan the day the plan is _for_, not when it ran.
+
+An artifact that shows no visible title (glance-only, leaning entirely on the
+chrome bar — e.g. repo-pulse) still roots its sections with a visually-hidden
+`<h1>` (the widget's name), so the document outline is never a run of `<h2>`s
+with no parent.
 
 ```css
 .heading {
@@ -124,14 +134,26 @@ the title bar can't: for daily-plan the day the plan is _for_, not when it ran.
   font-size: 14px;
   color: var(--color-ink-dim);
 }
+/* Visually hide the title (glance tiers, or an always-hidden glance-only
+   root) without dropping the <h1> from the a11y tree. Reverse each property
+   at the wide grid up to reveal the visible title. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
 ```
 
 ```html
-<p class="heading">Monday, July 13</p>
+<h1 class="heading">Monday, July 13</h1>
 ```
 
 (The daily-plan sample names this element `.date` — the class is the
-artifact's to pick; the treatment is the shared one above.)
+artifact's to pick; the treatment is the shared one above. The shell's `*`
+reset zeroes the browser's default `<h1>` margin, so no reset is needed.)
 
 ### Section
 
