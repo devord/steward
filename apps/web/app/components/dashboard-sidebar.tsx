@@ -2,7 +2,6 @@ import { useState } from "react"
 
 import {
   FolderGit2,
-  LayoutGrid,
   ListTodo,
   MoreHorizontal,
   Pencil,
@@ -40,20 +39,20 @@ import { useT } from "../lib/i18n.tsx"
  * It carries no surface, width, or positioning of its own — the host owns the
  * border, background, collapse, and resize — so the two placements can't drift.
  *
- * The rail reads as three tiers on one glyph column (ADR-0023/0034): a repo
- * heading rooted by its own glyph (repo-group-header.tsx), the boards it heads
- * each carrying a grid glyph, and — set off by voice — its section sub-labels,
- * which own the column by leaving it blank. The bright heading plus that column
- * (tight rows within a group, air between groups) read the boards as the repo's
- * children; no drawn rail is needed.
+ * The rail reads as three tiers (ADR-0023/0034): a repo heading anchored by its
+ * own glyph (repo-group-header.tsx) and set in the board type size, its boards
+ * threaded below on a hairline spine, and — one step deeper — the boards of any
+ * named section, under a quiet sub-label. The heading leads by weight, glyph,
+ * and full ink; the boards are quiet mono until active. Indent plus the spine
+ * read them as the repo's children.
  *
  * Board switching lives in this always-visible list: every board is one click,
  * the active one reads from across the room, and "new dashboard" is a peer of
  * the boards it joins. Each group leads with its dashboards — the group IS its
- * boards — and the repo's routine pool (ADR-0025) closes the group as the last
- * node on the glyph column: unmistakably inside the repo, but in a different
- * voice (a ledger glyph + sans label vs the boards' grid glyph + mono names),
- * so it never poses as one of the boards.
+ * boards — and the repo's routine pool (ADR-0025) closes the group as the
+ * spine's terminal node: unmistakably inside the repo, but in a different voice
+ * (a ledger glyph + sans label vs the boards' rest-quiet dots + mono names), so
+ * it never poses as one of the boards.
  *
  * A repo group with no boards keeps a create-first row in place of the board
  * list — deleting the last board must not make the repo disappear from the app.
@@ -149,10 +148,11 @@ export function DashboardSidebar({
                   {/* Boards partition into their repo's sections (ADR-0034):
                       ungrouped lead unlabeled, then labeled sections in the
                       repo's authored order. A repo with no sections yields one
-                      label-less section — the flat list, unchanged. Rendered
-                      as a flat child sequence (not nested wrappers) so the
-                      glyph column's one geometry and the parent's row gap both
-                      hold; section labels are just quieter rows in that flow. */}
+                      label-less section — the flat list. Rendered as a flat
+                      child sequence (not nested wrappers) so the spine's one
+                      geometry and the parent's row gap both hold; a section is a
+                      quiet label followed by boards indented one step under it,
+                      the extra indent (not a wrapper) carrying the nesting. */}
                   {groupBoards(group.dashboards, group.groups).flatMap(
                     (section, sectionIndex) => [
                       section.label != null && (
@@ -177,6 +177,10 @@ export function DashboardSidebar({
                             to={boardHref(group.repo, board.slug, homeRepo)}
                             label={board.name ?? board.slug}
                             active={active}
+                            // A board inside a named section sits one indent
+                            // deeper than an ungrouped one, nested under its
+                            // label (ADR-0034).
+                            indented={section.label != null}
                             draft={drafts.has(
                               boardDraftKey(group.repo, board.slug),
                             )}
@@ -204,8 +208,8 @@ export function DashboardSidebar({
                   {group.dashboards.length === 0 && (
                     // The group's only child while the repo has no boards: the
                     // next action, sitting where the first board will. The plus
-                    // takes the marker-column slot a board's grid glyph uses, so
-                    // it reads as "a board goes here".
+                    // takes the marker-column slot a board's dot uses, so it
+                    // reads as "a board goes here".
                     <RailAction
                       icon={Plus}
                       label={t("switcher.newHere")}
@@ -335,7 +339,7 @@ function RailSkeleton() {
 
 /**
  * A create verb rendered on the board list's own grid: the icon sits centered
- * on the marker column (where a board's grid glyph sits), the label on the
+ * on the marker column (where a board's dot sits), the label on the
  * board-name column. Sharing that geometry is what keeps "new dashboard" and
  * the empty-group create-first row reading as peers of the boards they make,
  * not buttons floating on a different margin.
@@ -368,16 +372,15 @@ function RailAction({
 
 /**
  * A dashboard section's sub-heading (ADR-0034) — one tier below the repo
- * heading, set off from it by color, glyph, and voice: the repo heading is
- * full-ink and carries its own glyph on the marker column, while this rests at
- * 13px `ink-dim` (navigational text the user reads to steer — it must clear AA
- * at this size, so not the ≥3:1 `ink-faint` metadata role) and owns the marker
- * column by leaving it blank — the one tier with no glyph, between the repo's
- * glyph above and the boards' glyphs below. A generous gap opens above each
- * section (tight within a section, air between them) except the first, which
- * tucks straight under the repo heading. The label is the viewer's own words
- * (a display label, ADR-0026), so it's sans and verbatim — truncated, never
- * wrapped, to keep the rail one row per line.
+ * heading, set off by size, weight, and indent: the repo heading is 15px
+ * full-ink with its own glyph, while this is 13px `ink-dim` medium (navigational
+ * text the user reads to steer — it must clear AA at this size, so not the
+ * ≥3:1 `ink-faint` metadata role), a quiet sub-label sitting at the board-name
+ * column with its own boards indented one step under it. A generous gap opens
+ * above each section (tight within a section, air between them) except the
+ * first, which tucks straight under the repo heading. The label is the viewer's
+ * own words (a display label, ADR-0026), so it's sans and verbatim — truncated,
+ * never wrapped, to keep the rail one row per line.
  */
 function SectionLabel({
   children,
@@ -392,7 +395,7 @@ function SectionLabel({
     <div
       data-testid="rail-section"
       className={cn(
-        "truncate pr-2.5 pl-6 text-xs text-ink-dim",
+        "truncate pr-2.5 pl-6 text-xs font-medium text-ink-dim",
         !first && "mt-3",
       )}
     >
@@ -402,17 +405,17 @@ function SectionLabel({
 }
 
 /**
- * A repo heading over its board list. Grouping is carried by the glyph column,
- * not a drawn rail: the heading's own glyph (repo-group-header.tsx) tops the
- * column, each board hangs a glyph on the marker column below it ({@link
- * NavItem}), and the routine pool closes it ({@link PoolNavItem}) — one node
- * per row, tight within the group (gap-0.5) and set off from the next group by
- * the parent's `space-y-4`. That column plus the bright heading read the boards
- * as the repo's children without a spine (the earlier hairline ran along the
- * marker column and had to stop short of the pool glyph to spare its
- * transparent strokes; the glyph column now does the threading, so the line is
- * gone and the chrome recedes). The active board and the pool light their glyph
- * to accent under a tinted row — the loud and the terminal nodes of the column.
+ * A repo heading over its board list, the boards threaded on a single hairline
+ * spine — a tree indent guide (1px, neutral), not a side-stripe. The spine
+ * descends from under the repo heading's own glyph (repo-group-header.tsx),
+ * which roots it, and runs the height of the list, so the boards read as the
+ * repo's children rather than rows floating in space. Inactive boards leave the
+ * spine unbroken; the active board is an accent dot sitting on it, "you are
+ * here" (see {@link NavItem}). The routine pool is the spine's terminal node:
+ * the line runs down through the boards and ends at its ledger glyph ({@link
+ * PoolNavItem}), so the group is closed by its fixed view instead of leaving it
+ * adrift below. Boards inside a named section hang one indent deeper, off the
+ * same spine.
  */
 function NavGroup({
   header,
@@ -420,16 +423,25 @@ function NavGroup({
   children,
 }: {
   header: React.ReactNode
-  /** The group's terminal entry — the routine pool link (ADR-0025). A peer
-      view of the boards but a different kind, so it sits last on the glyph
-      column, in its own voice, never as the first "board". */
+  /** The group's terminal entry on the spine — the routine pool link
+      (ADR-0025). A peer view of the boards but a different kind, so it sits
+      last, in its own voice, never as the first "board". */
   foot?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <div>
       {header}
-      <div className="flex flex-col gap-0.5">
+      <div className="relative flex flex-col gap-0.5">
+        {/* bottom-6, not inset-y-1: the spine ends at the top edge of the pool
+            row's ledger glyph (last row 32px tall, 14px glyph on its center),
+            leading into the terminal node instead of striking through the
+            icon's transparent strokes. It starts below the header, descending
+            from the repo glyph that roots it. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-1 bottom-6 left-[13px] w-px bg-border-dim"
+        />
         {children}
         {foot}
       </div>
@@ -439,15 +451,16 @@ function NavGroup({
 
 /**
  * A repo's routine pool link (ADR-0025) — a peer of its boards but a different
- * kind: it lists what runs, not a grid. It closes the group as the glyph
- * column's last node, on the boards' own marker/label columns — a ledger glyph
- * in the marker slot where boards carry their grid glyph, sized to match (14px,
+ * kind: it lists what runs, not a grid. It closes the group as the spine's
+ * terminal node, on the boards' own marker/label columns — a ledger glyph in
+ * the marker slot where boards carry a dot, sized into the marker column (14px,
  * not the 16px that outdented past the group heading and made the row read
- * top-level). What separates it from the boards is kind: the glyph is a ledger
- * where a board's is a grid, and the label is sans where board names are mono,
- * with a hair of extra space setting it off. Active, it lights the same
- * accent-tinted selection as an active board, glyph in accent — the same
- * "you are here" node an active board's lit glyph is.
+ * top-level). What separates it from the boards is kind: the glyph rests visible
+ * where board dots rest invisible (the fixed view is furniture; boards are
+ * content), and the label is sans where board names are mono, with a hair of
+ * extra space setting it off. Active, it lights the same accent-tinted selection
+ * as an active board, glyph in accent — the same "you are here" node an active
+ * board's dot is.
  */
 function PoolNavItem({
   to,
@@ -502,9 +515,9 @@ function PoolNavItem({
  * A rail row's state marker — the routines ledger's StateDot vocabulary
  * (accent = running, yellow = unsynced) shrunk to the rail's whisper: one
  * 6px dot trailing the row's name, exactly the header chip's unsynced dot.
- * It trails the label rather than sitting in the marker column, so it never
- * collides with the board's glyph there and survives every row state (active,
- * hover) without negotiation. Never color alone:
+ * It trails the label rather than riding the spine's marker column, so the
+ * spine keeps its one meaning ("you are here") and the marker survives every row
+ * state (active, hover) without negotiation. Never color alone:
  * the sr-only label names the state for readers, and the two tones also
  * differ in motion (running pulses; honors reduced motion by resting solid).
  */
@@ -533,11 +546,13 @@ function RowStateDot({
 }
 
 /**
- * One board link, indented to hang under its group's guide. The marker column
- * carries a grid glyph — the board's node on the group's glyph column: faint at
- * rest, and when active it lights to accent under a tinted row ("you are here"),
- * the same node-goes-accent the pool row uses one kind down ({@link
- * PoolNavItem}). Active also lifts the name to full ink.
+ * One board link, indented to hang off its group's spine. The leading slot is
+ * pinned to the spine's x so the active accent dot reads as a node on it ("you
+ * are here"); inactive rows leave the spine unbroken, and the dot warms to a
+ * faint fill on hover. Active also fills the dot to accent and lifts the name to
+ * full ink. A board inside a named section (`indented`) hangs one step deeper,
+ * its dot on a second column just right of the spine — the extra indent is what
+ * nests it under its section label (ADR-0034).
  *
  * When `onRename`/`onDelete` are set the row carries a trailing `⋯` menu:
  * board-lifecycle actions live here, beside the board they act on, so any board
@@ -552,6 +567,7 @@ function NavItem({
   to,
   label,
   active,
+  indented,
   draft,
   onRename,
   onDelete,
@@ -560,6 +576,9 @@ function NavItem({
   to: string
   label: string
   active: boolean
+  /** This board sits inside a named section, so it hangs one indent deeper
+      than an ungrouped board — nested under its section label (ADR-0034). */
+  indented?: boolean
   /** This board holds unsynced edits (a localStorage draft, ADR-0003) — it
       carries the header chip's yellow dot, trailing the name
       ({@link RowStateDot}), so unsynced work is visible without switching
@@ -578,18 +597,22 @@ function NavItem({
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "group relative flex min-w-0 flex-1 items-center rounded-md py-1.5 pr-2.5 pl-6 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          "group relative flex min-w-0 flex-1 items-center rounded-md py-1.5 pr-2.5 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          indented ? "pl-10" : "pl-6",
           hasMenu && "pr-8",
           active
             ? "bg-primary/10 font-medium text-foreground"
             : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
         )}
       >
-        <LayoutGrid
+        <span
           aria-hidden
           className={cn(
-            "absolute top-1/2 left-[13px] size-3.5 -translate-x-1/2 -translate-y-1/2 transition-colors",
-            active ? "text-primary" : "text-ink-faint",
+            "absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all",
+            indented ? "left-[29px]" : "left-[13px]",
+            active
+              ? "size-2 bg-primary"
+              : "size-1.5 bg-transparent group-hover:bg-ink-faint",
           )}
         />
         <span className="truncate">{label}</span>
