@@ -78,8 +78,6 @@ Prerequisites: a GitHub account; Claude Code (for routines to run).
 6. Widgets refresh on their own from then on; stale or never-run widgets say
    so on the card.
 
-(Steps 1–6 describe the target UX; see the roadmap for what's live today.)
-
 ## Development
 
 Requires Node ≥ 24 and pnpm 10.
@@ -100,5 +98,5 @@ Workspace layout:
 | `apps/web`        | React Router v8 app (framework mode, SSR, Tailwind 4)                      |
 | `packages/schema` | zod schemas for routines/dashboards/templates — buildless, source-exported |
 | `.claude/skills`  | the contract skills (run-routine, widget-artifact, publish-widget)         |
-| `templates/`      | the data-repo template and the built-in routine templates                 |
+| `templates/`      | the data-repo template and the built-in routine templates                  |
 | `docs/`           | ADRs, widget standard, roadmap                                             |
