@@ -89,28 +89,27 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
       title={group.repo}
     >
       {/* The repo tier's anchor (ADR-0023): a repo glyph on the marker column
-          (left-[13px], the boards' own glyph x) that tops the group's glyph
-          column and gives the top tier a left-edge presence the boards below
-          already had. Rhymes with the foot's "Add data repo" glyph — that makes a
-          new group; this marks each one. ink-dim, a step up from the faint
-          board/pool glyphs, so the parent node reads slightly heavier than its
-          children. */}
+          (left-[13px], the boards' own glyph x) that tops the group's spine and
+          fronts the caption — the "icon · label · count" header idiom. size-3
+          (12px) reads at the 11px caps' optical weight rather than looming over
+          them. Rhymes with the foot's "Add data repo" glyph — that makes a new
+          group; this marks each one. */}
       <FolderGit2
         aria-hidden
         data-testid="repo-glyph"
-        className="absolute top-1/2 left-[13px] size-3.5 -translate-x-1/2 -translate-y-1/2 text-ink-dim"
+        className="absolute top-1/2 left-[13px] size-3 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
       />
-      {/* text-sm + semibold + foreground: the group heading is the rail's
-          primary structure. Sized to the 15px board rows (not under them — a
-          heading smaller than what it heads reads upside-down) and made the
-          clear anchor by weight, glyph, and full ink rather than by size. The
-          trailing visibility glyphs stay faint (metadata, resting quiet). Voice
-          follows the account menu's prose-vs-identifier rule: a display name (or
-          "Personal") is prose — sans — separating the heading tier from the mono
-          board slugs below; only the bare repo-name fallback keeps mono. */}
+      {/* A caption, not a big heading: 11px semibold UPPERCASE, tracked, muted —
+          the terminal section-header idiom (tmux/lazygit, and Flow's overview).
+          Small reads as a deliberate caption *because* it's tracked caps with a
+          glyph and a trailing count, not as a shrunk item; that lets the boards
+          below be the bright, primary tier. ink-dim clears AA at this size (the
+          user reads it to steer). Voice follows the account menu's prose-vs-
+          identifier rule: a display name (or "Personal") is prose — sans — while
+          only the bare repo-name fallback keeps mono. */}
       <span
         className={cn(
-          "truncate text-sm font-semibold text-foreground",
+          "truncate text-[11px] font-semibold tracking-wider text-ink-dim uppercase",
           group.displayName != null || group.isHome ? "font-sans" : "font-mono",
         )}
       >
@@ -147,7 +146,7 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
               // baseline lands at (ascent−descent)/2, and digits have no
               // descender), so flexbox centering leaves the count riding
               // high against the glyph. Nudge it onto the optical center.
-              <span className="translate-y-[0.75px] font-mono text-xs">
+              <span className="translate-y-[0.75px] font-mono text-[11px] tabular-nums">
                 {collaborators.length}
               </span>
             )}
