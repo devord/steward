@@ -13,6 +13,9 @@ coverage
 
 # Personal impeccable skill copy (installed by npx impeccable update)
 .claude/skills/impeccable/
+
+# Transient harness worktree copies of the repo
+.claude/worktrees/
 design-shots/
 .env*
 

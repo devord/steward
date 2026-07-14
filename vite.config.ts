@@ -48,6 +48,8 @@ export default defineConfig({
       "**/.react-router/",
       "**/.vercel/",
       "**/coverage/",
+      // Transient harness worktree copies of the repo — never lint them.
+      "**/.claude/worktrees/",
     ],
     overrides: [
       {
@@ -82,7 +84,12 @@ export default defineConfig({
     endOfLine: "lf",
     // react-router skill docs are vendored from the upstream template;
     // don't reformat them so future re-syncs stay diff-clean.
-    ignorePatterns: ["**/CHANGELOG.md", ".claude/skills/react-router/**"],
+    // Transient harness worktree copies of the repo are excluded wholesale.
+    ignorePatterns: [
+      "**/CHANGELOG.md",
+      ".claude/skills/react-router/**",
+      "**/.claude/worktrees/**",
+    ],
   },
   staged: {
     "*.{js,ts,tsx,json,md,sh}": "vp check --fix",
