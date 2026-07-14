@@ -64,7 +64,7 @@ async function renderBoard(
                 collaborators: null,
                 viewerIsAdmin: true,
                 viewerCanPush: true,
-                dashboards: ["main"],
+                dashboards: [{ slug: "main", name: null }],
               },
               {
                 repo: "acme/steward-team",
@@ -75,7 +75,7 @@ async function renderBoard(
                 collaborators: null,
                 viewerIsAdmin: null,
                 viewerCanPush: null,
-                dashboards: ["team-ops"],
+                dashboards: [{ slug: "team-ops", name: null }],
               },
             ],
             complete: true,
