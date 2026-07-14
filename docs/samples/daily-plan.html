@@ -335,7 +335,9 @@
         footer {
           width: 100%;
           max-width: 920px;
-          margin-inline: auto;
+          /* Left-aligned so the content lines up with the flush section
+             header; the readability cap's slack falls to the right. */
+          margin-inline: 0 auto;
         }
         main {
           grid-template-columns: 0.95fr 1.05fr;

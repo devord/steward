@@ -551,15 +551,32 @@ const LINK_GUARD_SCRIPT =
  *    every row);
  *  - fades the bottom edge out whenever content still overflows, so
  *    truncation reads as "there's more — expand", never an ambiguous
- *    mid-line crop. The fade dissolves into `--color-bg1`, the artifact
- *    page background, and retints with the theme override for free.
+ *    mid-line crop. The fade dissolves into `--color-bg` — the tile's flush
+ *    page surface (see TILE_FLUSH_STYLE) — and retints with the theme
+ *    override for free.
  */
 const TILE_GUARD_STYLE =
   "<style data-steward-tile-guard>" +
   "html,body{overflow:hidden !important}" +
   "#steward-tile-fade{position:fixed;left:0;right:0;bottom:0;height:32px;" +
   "pointer-events:none;opacity:0;transition:opacity .15s;" +
-  "background:linear-gradient(transparent,var(--color-bg1,#282828))}" +
+  "background:linear-gradient(transparent,var(--color-bg,#1d2021))}" +
+  "</style>"
+
+/**
+ * Flush the tile artifact to the board. On the board the chrome renders
+ * widgets as sections, not elevated cards — the WidgetCard border is the only
+ * frame (view mode reveals it on hover; edit mode keeps it lit). Artifacts
+ * author their own page surface as `--color-bg1` (widget-standard, e.g.
+ * `body{background:var(--color-bg1)}`); embedded as a tile we repaint
+ * `html`/`body` to `--color-bg` with `!important` so the widget sits flush
+ * with the page instead of glowing a step above it. The artifact's *inner*
+ * `--color-bg1` panels are untouched, so internal hierarchy is preserved.
+ * Tile-only: the raw page and the full-view lightbox keep the authored bg1.
+ */
+const TILE_FLUSH_STYLE =
+  "<style data-steward-tile-flush>" +
+  "html,body{background:var(--color-bg,#1d2021) !important}" +
   "</style>"
 
 const TILE_GUARD_SCRIPT =
@@ -609,7 +626,9 @@ export function frameArtifactHtml(
     EMBED_FRAME_STYLE +
     LINK_GUARD_SCRIPT +
     fontStyle +
-    (view === "tile" ? TILE_GUARD_STYLE + TILE_GUARD_SCRIPT : "") +
+    (view === "tile"
+      ? TILE_GUARD_STYLE + TILE_GUARD_SCRIPT + TILE_FLUSH_STYLE
+      : "") +
     (artifactThemeStyle(name) ?? "")
   )
 }

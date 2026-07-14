@@ -96,8 +96,9 @@ describe("frameArtifactHtml", () => {
     // The card chrome renders identity + freshness; the artifact's own
     // footer is standalone-only, so the embedded frame suppresses it.
     expect(framed).toContain("footer{display:none !important}")
-    // No override block — the tile guard's var(--color-bg1) fallback is the
-    // only palette reference the default framing carries.
+    // No override block — the tile framing's var(--color-bg) fallbacks (flush
+    // surface + fade) are the only palette references the default framing
+    // carries.
     expect(framed).not.toContain("data-steward-theme")
     // A null override must not stringify into the srcdoc as visible "null".
     expect(framed).not.toContain("null")
