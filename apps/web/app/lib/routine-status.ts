@@ -108,21 +108,27 @@ export function setupCommands(
   trigger: string | null
 } {
   const local = routineHost(routine) === "local"
-  // Runs from the steward checkout (ADR-0014), which has no data/ dir. With
-  // the repo slug known, --repo makes the line copy-pasteable — the script
-  // maintains its own clone under ~/.cache/steward/. Standalone renders
-  // don't know the slug and fall back to a --file placeholder.
+  // The published CLI (ADR-0036) keeps its own clone under ~/.cache/steward/,
+  // so with the repo slug known --repo makes the line copy-pasteable from
+  // anywhere. Standalone renders don't know the slug and fall back to a --file
+  // placeholder.
   const target =
     dataRepo != null
       ? `--repo ${dataRepo}`
       : "--file <path-to-data-repo>/data/routines.yaml"
   return {
     // Manual local routines have nothing to enact — you just run them.
-    enact:
-      local && isManual(routine)
+    // Scheduled-local writes a launchd plist with an absolute --add-dir, so it
+    // needs a stable global install, not an ephemeral npx cache (ADR-0036).
+    // Cloud enact and interactive run work fine under npx.
+    enact: local
+      ? isManual(routine)
         ? null
-        : `pnpm routines:sync --apply ${target}`,
-    runOnce: local ? `pnpm routine ${routine.slug}` : null,
-    trigger: local ? null : `pnpm routine:trigger ${routine.slug} ${target}`,
+        : `steward sync --apply ${target}`
+      : `npx @devord/steward sync --apply ${target}`,
+    runOnce: local ? `npx @devord/steward run ${routine.slug}` : null,
+    trigger: local
+      ? null
+      : `npx @devord/steward trigger ${routine.slug} ${target}`,
   }
 }

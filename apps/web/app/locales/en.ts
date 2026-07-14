@@ -315,7 +315,7 @@ export const en = {
   "widget.updateShort": "Update",
   "widget.updateRequested": "Run requested — refresh in a minute",
   "widget.updateNoTrigger":
-    "No API trigger for this routine — set one up with pnpm routine:trigger {slug}",
+    "No API trigger for this routine — set one up with npx @devord/steward trigger {slug}",
   "widget.updateFailed": "The run request failed — try again",
   "widget.copyCommand": "Copy the terminal command that runs {name}",
   "widget.copied": "Command copied — run it from your Steward checkout",
@@ -398,11 +398,11 @@ export const en = {
   "dialog.hostCloudShort": "Cloud",
   "dialog.hostLocalShort": "Local",
   "dialog.hostLocalHint":
-    "Local routines run from your machine: scheduled ones enact via pnpm routines:sync, manual ones run with pnpm routine <slug>",
+    "Local routines run from your machine: scheduled ones enact via steward sync --apply (needs npm i -g @devord/steward), manual ones run with npx @devord/steward run <slug>",
   "dialog.manualCloudHint":
-    "Manual cloud routines fire from the widget's update button via an API trigger — pnpm routines:sync sets it up",
+    "Manual cloud routines fire from the widget's update button via an API trigger — npx @devord/steward sync sets it up",
   "dialog.runnerHint":
-    "The cloud resource runs on {login}'s Claude account — after committing, run pnpm routines:sync against the team repo",
+    "The cloud resource runs on {login}'s Claude account — after committing, run npx @devord/steward sync against the team repo",
   "dialog.cancel": "Cancel",
   "dialog.add": "Add to draft",
   "dialog.save": "Save changes",

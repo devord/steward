@@ -149,10 +149,10 @@ describe("setupCommands", () => {
   it("cloud routines enact via routines:sync, nothing to run locally", () => {
     expect(setupCommands(routine({ schedule: "0 8 * * *" }))).toEqual({
       enact:
-        "pnpm routines:sync --apply --file <path-to-data-repo>/data/routines.yaml",
+        "npx @devord/steward sync --apply --file <path-to-data-repo>/data/routines.yaml",
       runOnce: null,
       trigger:
-        "pnpm routine:trigger r --file <path-to-data-repo>/data/routines.yaml",
+        "npx @devord/steward trigger r --file <path-to-data-repo>/data/routines.yaml",
     })
   })
 
@@ -163,9 +163,9 @@ describe("setupCommands", () => {
         "alice/steward-data-alice",
       ),
     ).toEqual({
-      enact: "pnpm routines:sync --apply --repo alice/steward-data-alice",
+      enact: "npx @devord/steward sync --apply --repo alice/steward-data-alice",
       runOnce: null,
-      trigger: "pnpm routine:trigger r --repo alice/steward-data-alice",
+      trigger: "npx @devord/steward trigger r --repo alice/steward-data-alice",
     })
   })
 
@@ -174,8 +174,8 @@ describe("setupCommands", () => {
       setupCommands(routine({ host: "local", schedule: "0 8 * * *" })),
     ).toEqual({
       enact:
-        "pnpm routines:sync --apply --file <path-to-data-repo>/data/routines.yaml",
-      runOnce: "pnpm routine r",
+        "steward sync --apply --file <path-to-data-repo>/data/routines.yaml",
+      runOnce: "npx @devord/steward run r",
       trigger: null,
     })
   })
@@ -183,7 +183,7 @@ describe("setupCommands", () => {
   it("local manual routines have nothing to enact — just run them", () => {
     expect(setupCommands(routine({ host: "local" }))).toEqual({
       enact: null,
-      runOnce: "pnpm routine r",
+      runOnce: "npx @devord/steward run r",
       trigger: null,
     })
   })

@@ -311,7 +311,7 @@ export const ptBR: Messages = {
   "widget.updateShort": "Atualizar",
   "widget.updateRequested": "Execução solicitada — atualize em um minuto",
   "widget.updateNoTrigger":
-    "Sem gatilho de API para esta rotina — configure com pnpm routine:trigger {slug}",
+    "Sem gatilho de API para esta rotina — configure com npx @devord/steward trigger {slug}",
   "widget.updateFailed": "A solicitação falhou — tente de novo",
   "widget.copyCommand": "Copiar o comando de terminal que roda {name}",
   "widget.copied": "Comando copiado — rode a partir do seu checkout do Steward",
@@ -397,11 +397,11 @@ export const ptBR: Messages = {
   "dialog.hostCloudShort": "Nuvem",
   "dialog.hostLocalShort": "Local",
   "dialog.hostLocalHint":
-    "Rotinas locais rodam na sua máquina: as agendadas são ativadas via pnpm routines:sync; as manuais rodam com pnpm routine <slug>",
+    "Rotinas locais rodam na sua máquina: as agendadas são ativadas via steward sync --apply (requer npm i -g @devord/steward); as manuais rodam com npx @devord/steward run <slug>",
   "dialog.manualCloudHint":
-    "Rotinas manuais na nuvem disparam pelo botão de atualizar do widget via gatilho de API — pnpm routines:sync configura",
+    "Rotinas manuais na nuvem disparam pelo botão de atualizar do widget via gatilho de API — npx @devord/steward sync configura",
   "dialog.runnerHint":
-    "O recurso na nuvem roda na conta Claude de {login} — depois do commit, rode pnpm routines:sync contra o repo do time",
+    "O recurso na nuvem roda na conta Claude de {login} — depois do commit, rode npx @devord/steward sync contra o repo do time",
   "dialog.cancel": "Cancelar",
   "dialog.add": "Adicionar ao rascunho",
   "dialog.save": "Salvar mudanças",
