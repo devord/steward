@@ -277,11 +277,14 @@ export function RoutineRunsView({
       </header>
 
       <section>
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="font-mono text-base font-medium text-foreground">
-            {t("runs.heading")}
-          </h2>
-          <div className="flex items-baseline gap-4">
+        {/* The count is a descriptor of the section — it rides with the
+            heading; Compare is the section's lone toolbar action, kept apart
+            on the right so an action never reads as bundled with a metric. */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-baseline gap-2.5">
+            <h2 className="font-mono text-base font-medium text-foreground">
+              {t("runs.heading")}
+            </h2>
             {runsData != null && runsData.receipts.length > 0 && (
               <span className="font-mono text-xs text-ink-faint">
                 {runsData.capped
@@ -289,22 +292,22 @@ export function RoutineRunsView({
                   : t("runs.count", { n: runsData.receipts.length })}
               </span>
             )}
-            {canCompare && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5 self-center font-mono text-xs"
-                aria-pressed={compareMode}
-                onClick={() => {
-                  setCompareMode((on) => !on)
-                  setSelected([])
-                }}
-              >
-                <Columns2 aria-hidden className="size-3.5" />
-                {t(compareMode ? "runs.compareCancel" : "runs.compare")}
-              </Button>
-            )}
           </div>
+          {canCompare && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 font-mono text-xs"
+              aria-pressed={compareMode}
+              onClick={() => {
+                setCompareMode((on) => !on)
+                setSelected([])
+              }}
+            >
+              <Columns2 aria-hidden className="size-3.5" />
+              {t(compareMode ? "runs.compareCancel" : "runs.compare")}
+            </Button>
+          )}
         </div>
         <p className="mt-0.5 text-sm text-ink-dim">{t("runs.subtitle")}</p>
         {routineId != null && <ClaudeNote routineId={routineId} />}
