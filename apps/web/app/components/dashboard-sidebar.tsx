@@ -4,6 +4,7 @@ import {
   FolderGit2,
   ListTodo,
   MoreHorizontal,
+  Pencil,
   Plus,
   Trash2,
 } from "lucide-react"
@@ -54,6 +55,7 @@ export function DashboardSidebar({
   login,
   displayName,
   onDeleteBoard,
+  onRenameBoard,
   onNavigate,
 }: {
   /** The active board's repo; "" on chrome pages (settings). */
@@ -71,6 +73,10 @@ export function DashboardSidebar({
       chrome pages (no board actions there); the home default board is never
       offered a menu (it must always exist). */
   onDeleteBoard?: (repo: string, slug: string) => void
+  /** Rename a board's display name — offered on every board, including each
+      repo's default `main` (only delete is withheld there). The current name
+      rides along so the dialog can prefill. Absent on chrome pages. */
+  onRenameBoard?: (repo: string, slug: string, name: string | null) => void
   /** Fired when a board link is followed — lets the mobile drawer close. */
   onNavigate?: () => void
 }) {
@@ -118,20 +124,31 @@ export function DashboardSidebar({
                     />
                   }
                 >
-                  {group.dashboards.map((slug) => {
+                  {group.dashboards.map((board) => {
                     const active =
-                      activeRepo === group.repo && dashboardSlug === slug
-                    // Every repo's `main` is its default board (server-protected in
-                    // all repos) — so no delete menu on any `main`.
+                      activeRepo === group.repo && dashboardSlug === board.slug
+                    // Every repo's `main` is its default board (server-protected
+                    // in all repos) — so no delete on any `main`. Rename is
+                    // harmless (display name only), so every board gets it.
                     return (
                       <NavItem
-                        key={`${group.repo}:${slug}`}
-                        to={boardHref(group.repo, slug, homeRepo)}
-                        label={slug}
+                        key={`${group.repo}:${board.slug}`}
+                        to={boardHref(group.repo, board.slug, homeRepo)}
+                        label={board.name ?? board.slug}
                         active={active}
+                        onRename={
+                          onRenameBoard
+                            ? () =>
+                                onRenameBoard(
+                                  group.repo,
+                                  board.slug,
+                                  board.name,
+                                )
+                            : undefined
+                        }
                         onDelete={
-                          onDeleteBoard && slug !== DEFAULT_DASHBOARD
-                            ? () => onDeleteBoard(group.repo, slug)
+                          onDeleteBoard && board.slug !== DEFAULT_DASHBOARD
+                            ? () => onDeleteBoard(group.repo, board.slug)
                             : undefined
                         }
                         onNavigate={onNavigate}
@@ -217,7 +234,10 @@ export function DashboardSidebar({
             defaultRepo={creating ?? activeRepo ?? homeRepo}
             homeRepo={homeRepo}
             takenSlugs={Object.fromEntries(
-              sidebar.repos.map((repo) => [repo.repo, repo.dashboards]),
+              sidebar.repos.map((repo) => [
+                repo.repo,
+                repo.dashboards.map((board) => board.slug),
+              ]),
             )}
           />
           <AddDataRepoDialog
@@ -387,10 +407,11 @@ function PoolNavItem({
  * ("you are here"); inactive rows leave the rail unbroken. Active also fills and
  * lifts to full ink.
  *
- * When `onDelete` is set (every deletable board — all but the home default)
- * the row carries a trailing `⋯` menu: board-lifecycle actions live here, beside
- * the board they act on, so any board is actionable without switching to it
- * first. The menu rests quiet — a faint glyph, no hover gate — and brightens as
+ * When `onRename`/`onDelete` are set the row carries a trailing `⋯` menu:
+ * board-lifecycle actions live here, beside the board they act on, so any board
+ * is actionable without switching to it first. Rename is offered on every
+ * board; delete is withheld from each repo's default `main`. The menu rests
+ * quiet — a faint glyph, no hover gate — and brightens as
  * the pointer nears (row, then button): present enough to find, dim enough to
  * recede against the board names. The Link is a sibling of the menu button
  * (never its parent) so no interactive control nests inside the anchor.
@@ -399,16 +420,19 @@ function NavItem({
   to,
   label,
   active,
+  onRename,
   onDelete,
   onNavigate,
 }: {
   to: string
   label: string
   active: boolean
+  onRename?: () => void
   onDelete?: () => void
   onNavigate?: () => void
 }) {
   const t = useT()
+  const hasMenu = onRename != null || onDelete != null
   return (
     <div className="group/nav relative flex items-center">
       <Link
@@ -417,7 +441,7 @@ function NavItem({
         aria-current={active ? "page" : undefined}
         className={cn(
           "group relative flex min-w-0 flex-1 items-center rounded-md py-1.5 pr-2.5 pl-6 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-          onDelete && "pr-8",
+          hasMenu && "pr-8",
           active
             ? "bg-primary/10 font-medium text-foreground"
             : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
@@ -434,7 +458,7 @@ function NavItem({
         />
         <span className="truncate">{label}</span>
       </Link>
-      {onDelete && (
+      {hasMenu && (
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -449,10 +473,18 @@ function NavItem({
             <MoreHorizontal />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" sideOffset={4} className="w-48">
-            <DropdownMenuItem variant="destructive" onClick={onDelete}>
-              <Trash2 />
-              {t("board.deleteDashboard")}
-            </DropdownMenuItem>
+            {onRename && (
+              <DropdownMenuItem onClick={onRename}>
+                <Pencil />
+                {t("board.renameDashboard")}
+              </DropdownMenuItem>
+            )}
+            {onDelete && (
+              <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                <Trash2 />
+                {t("board.deleteDashboard")}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

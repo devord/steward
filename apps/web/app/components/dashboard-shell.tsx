@@ -32,6 +32,7 @@ export function DashboardShell({
   onAdd,
   onToggleEdit,
   onDeleteBoard,
+  onRenameBoard,
   children,
 }: {
   dataRepo: string
@@ -49,6 +50,8 @@ export function DashboardShell({
   onToggleEdit: () => void
   /** Delete a board by repo+slug — wired to the rail's per-board menu. */
   onDeleteBoard: (repo: string, slug: string) => void
+  /** Rename a board's display name — same menu; current name for prefill. */
+  onRenameBoard: (repo: string, slug: string, name: string | null) => void
   children: React.ReactNode
 }) {
   const t = useT()
@@ -61,9 +64,11 @@ export function DashboardShell({
         sidebar,
         login,
         displayName,
-        // Board delete lives in the rail's per-board menu, keyed by repo+slug —
-        // the rail draws a menu on every board but the home default.
+        // Board lifecycle lives in the rail's per-board menu, keyed by
+        // repo+slug — rename on every board, delete on all but each repo's
+        // default `main`.
         onDeleteBoard,
+        onRenameBoard,
       }}
       // Canvas cap: `wide` fills a large monitor (still bounded so the board
       // stays composed, not stretched edge-to-edge); `fixed` keeps the

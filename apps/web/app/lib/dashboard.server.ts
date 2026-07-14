@@ -184,6 +184,47 @@ export async function listDashboards(
     .sort()
 }
 
+/**
+ * listDashboards plus each board's display name, for the rail: one extra
+ * ETag-cached read per board, behind the sidebar's SWR window. Every name
+ * read is best-effort — a missing or malformed layout file is just "no
+ * display name" (the row shows its slug), never a failed group.
+ *
+ * Ordered by what the row *shows* (name, slug as fallback) — the rail must
+ * read as sorted, and it displays labels, not slugs. Renaming a board is
+ * therefore also how you re-order it.
+ */
+async function listSidebarBoards(
+  token: string,
+  repo: string,
+): Promise<SidebarBoard[] | null> {
+  const slugs = await listDashboards(token, repo)
+  if (!slugs) return null
+  const boards = await Promise.all(
+    slugs.map(async (slug) => ({
+      slug,
+      name: await getFile(token, repo, dashboardPath(slug), "main")
+        .then((raw) =>
+          raw ? (parseDashboardFile(raw.text).name ?? null) : null,
+        )
+        .catch(() => null),
+    })),
+  )
+  return boards.sort((a, b) =>
+    (a.name ?? a.slug).localeCompare(b.name ?? b.slug, undefined, {
+      sensitivity: "base",
+    }),
+  )
+}
+
+/** One board row in the rail. */
+export interface SidebarBoard {
+  slug: string
+  /** Display name from the layout file (best-effort read). null → unset or
+      unreadable: the row falls back to the slug. */
+  name: string | null
+}
+
 /** One rail group: a data repo and its boards. */
 export interface SidebarRepo {
   /** `owner/name`. */
@@ -206,10 +247,10 @@ export interface SidebarRepo {
   /** Gates the rename affordance — the display name is a commit, so it
       needs push access. null → unknown: affordance withheld. */
   viewerCanPush: boolean | null
-  /** Board slugs. `[]` — the repo is alive with no boards yet (git prunes
-      `data/dashboards/` with the last file): the group stays, carrying its
-      create-first row. */
-  dashboards: string[]
+  /** Boards, slug + display name. `[]` — the repo is alive with no boards yet
+      (git prunes `data/dashboards/` with the last file): the group stays,
+      carrying its create-first row. */
+  dashboards: SidebarBoard[]
 }
 
 export interface SidebarData {
@@ -233,7 +274,7 @@ export async function loadSidebar(
   const repos = await Promise.all(
     listing.repos.map(async (repo) => {
       const [dashboards, collaborators, repoFile] = await Promise.all([
-        listDashboards(token, repo.full).catch(() => null),
+        listSidebarBoards(token, repo.full).catch(() => null),
         // Best-effort by contract (403 for plain readers → null).
         listCollaborators(token, repo.full),
         // Best-effort too: an absent or malformed repo.yaml is just "no

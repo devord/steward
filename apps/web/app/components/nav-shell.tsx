@@ -31,6 +31,9 @@ export interface ShellNav {
       in the rail. Absent on chrome pages (settings); the rail itself withholds
       the menu from the one board that can't be deleted (the home default). */
   onDeleteBoard?: (repo: string, slug: string) => void
+  /** Rename a board's display name — same per-board menu, offered on every
+      board (the current name rides along for the dialog's prefill). */
+  onRenameBoard?: (repo: string, slug: string, name: string | null) => void
 }
 
 /**

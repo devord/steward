@@ -25,7 +25,10 @@ const base = {
         collaborators: null,
         viewerIsAdmin: true,
         viewerCanPush: true,
-        dashboards: ["main", "test"],
+        dashboards: [
+          { slug: "main", name: null },
+          { slug: "test", name: null },
+        ],
       },
       {
         repo: SHARED_REPO,
@@ -39,7 +42,7 @@ const base = {
         ],
         viewerIsAdmin: false,
         viewerCanPush: false,
-        dashboards: ["team-ops"],
+        dashboards: [{ slug: "team-ops", name: null }],
       },
     ],
     complete: true,
@@ -83,17 +86,24 @@ async function renderSidebar(
   over: Partial<Parameters<typeof DashboardSidebar>[0]> = {},
 ) {
   const onDeleteBoard = vi.fn<(repo: string, slug: string) => void>()
+  const onRenameBoard =
+    vi.fn<(repo: string, slug: string, name: string | null) => void>()
   // AccountMenu's sign-out uses useSubmit, which needs a data router.
   const router = createMemoryRouter([
     {
       path: "/",
       element: (
-        <DashboardSidebar {...base} onDeleteBoard={onDeleteBoard} {...over} />
+        <DashboardSidebar
+          {...base}
+          onDeleteBoard={onDeleteBoard}
+          onRenameBoard={onRenameBoard}
+          {...over}
+        />
       ),
     },
   ])
   await render(<RouterProvider router={router} />)
-  return { onDeleteBoard }
+  return { onDeleteBoard, onRenameBoard }
 }
 
 describe("DashboardSidebar per-board menu", () => {
@@ -109,33 +119,38 @@ describe("DashboardSidebar per-board menu", () => {
     expect(menuButton("team-ops")).not.toBeNull()
   })
 
-  it("withholds the menu from every repo's default board, not just home", async () => {
+  it("withholds delete (but not rename) from every repo's default board", async () => {
     // A shared repo's `main` is its owner's default board — deleting it is
-    // cross-user data loss, so no repo's `main` gets a delete menu (matches
-    // the server guard). Give the shared repo a `main` and assert no `main`
-    // row anywhere carries a menu.
+    // cross-user data loss, so no repo's `main` offers Delete (matches the
+    // server guard). Renaming is display-name only, so `main` keeps its menu
+    // with Rename alone.
     await renderSidebar({
       sidebar: {
         repos: [
           base.sidebar.repos[0],
-          { ...base.sidebar.repos[1], dashboards: ["main", "ops"] },
+          {
+            ...base.sidebar.repos[1],
+            dashboards: [
+              { slug: "main", name: null },
+              { slug: "ops", name: null },
+            ],
+          },
         ],
         complete: true,
       },
     })
-    const mainRows = [...document.querySelectorAll("a")].filter(
-      (a) => a.textContent?.trim() === "main",
-    )
-    expect(mainRows.length).toBe(2)
-    for (const row of mainRows) {
-      expect(
-        row.parentElement?.querySelector(
-          'button[aria-label="Dashboard options"]',
-        ),
-      ).toBeNull()
-    }
-    // The shared repo's non-default board still deletes.
-    expect(menuButton("ops")).not.toBeNull()
+    requireMenuButton("main").click()
+    await vi.waitFor(() => expect(menuItem("Rename dashboard")).not.toBeNull())
+    expect(menuItem("Delete dashboard")).toBeNull()
+    // Selecting an item closes the menu — the cleanest dismiss the dropdown
+    // offers in this harness (body clicks don't reach its outside-press layer).
+    requireMenuItem("Rename dashboard").click()
+    await vi.waitFor(() => expect(menuItem("Rename dashboard")).toBeNull())
+
+    // The shared repo's non-default board still offers both.
+    requireMenuButton("ops").click()
+    await vi.waitFor(() => expect(menuItem("Delete dashboard")).not.toBeNull())
+    expect(menuItem("Rename dashboard")).not.toBeNull()
   })
 
   it("deletes the board the menu belongs to, not the active one", async () => {
@@ -150,8 +165,59 @@ describe("DashboardSidebar per-board menu", () => {
     expect(onDeleteBoard).toHaveBeenCalledWith(HOME_REPO, "test")
   })
 
-  it("renders no board menus on chrome pages (no delete handler)", async () => {
-    await renderSidebar({ onDeleteBoard: undefined })
+  it("renames the board the menu belongs to, passing its current name", async () => {
+    const { onRenameBoard } = await renderSidebar({
+      sidebar: {
+        repos: [
+          {
+            ...base.sidebar.repos[0],
+            dashboards: [
+              { slug: "main", name: null },
+              { slug: "test", name: "Test Ops" },
+            ],
+          },
+          base.sidebar.repos[1],
+        ],
+        complete: true,
+      },
+    })
+
+    requireMenuButton("Test Ops").click()
+    await vi.waitFor(() => expect(menuItem("Rename dashboard")).not.toBeNull())
+    requireMenuItem("Rename dashboard").click()
+
+    expect(onRenameBoard).toHaveBeenCalledTimes(1)
+    // The row's own repo+slug+name — the dialog prefill.
+    expect(onRenameBoard).toHaveBeenCalledWith(HOME_REPO, "test", "Test Ops")
+  })
+
+  it("shows the display name when set, the slug otherwise", async () => {
+    await renderSidebar({
+      sidebar: {
+        repos: [
+          {
+            ...base.sidebar.repos[0],
+            dashboards: [
+              { slug: "main", name: null },
+              { slug: "test", name: "Test Ops" },
+            ],
+          },
+          base.sidebar.repos[1],
+        ],
+        complete: true,
+      },
+    })
+    const labels = [...document.querySelectorAll("nav a")].map((a) =>
+      a.textContent?.trim(),
+    )
+    expect(labels).toContain("Test Ops")
+    expect(labels).not.toContain("test")
+    // Unnamed boards keep their slug.
+    expect(labels).toContain("main")
+  })
+
+  it("renders no board menus on chrome pages (no handlers)", async () => {
+    await renderSidebar({ onDeleteBoard: undefined, onRenameBoard: undefined })
     expect(menuButton("test")).toBeNull()
     expect(menuButton("team-ops")).toBeNull()
   })
