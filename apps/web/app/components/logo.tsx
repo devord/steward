@@ -107,24 +107,22 @@ export function Wordmark({
         className,
       )}
     >
-      {/* Optical nudge: items-center centers the mark on the text's line box,
-          but "Steward" has no descenders (only S/t/d rise), so its ink centroid
-          — the word's visual center of mass — sits below that line-box center.
-          Drop the mark ~0.054em to meet it: measured from pixel screenshots of
-          the real Geist Mono render (mark centroid vs word centroid → ~0 at
-          60–120px). Size-independent — the half-leading items-center adds
-          exactly cancels line-height, so this one value holds at every font
-          size (text-sm through the landing's text-5xl). Both crops keep the
-          glyph's center at y=32, so the nudge is shared. */}
+      {/* No optical nudge: items-center already puts the mark's center on the
+          line-box center, which is where "Steward"'s cap-height midpoint and
+          the surrounding chrome (header centerline, sibling icons) sit. An
+          earlier 0.054em drop chased the word's ink-density centroid instead —
+          it skews low because the ink mass is in the x-height band — and left
+          the symmetric tie reading ~1px low in the app header, its bottom edge
+          kissing the baseline (measured from pixel screenshots of the real
+          Geist Mono render). Both crops keep the glyph's center at y=32. */}
       <Logo
         live={live}
         display={display}
-        className={cn(
+        className={
           // Bare glyph: sized so the wings stand roughly cap-height next to
           // the name. Display tile: the old 1.4em block.
-          display ? "size-[1.4em]" : "size-[1.25em]",
-          "translate-y-[0.054em]",
-        )}
+          display ? "size-[1.4em]" : "size-[1.25em]"
+        }
       />
       Steward
     </span>
