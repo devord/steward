@@ -276,7 +276,10 @@ export function DashboardSidebar({
           icon={FolderGit2}
           label={t("switcher.addRepo")}
           onClick={() => setAddingRepo(true)}
-          className="pl-7"
+          // py-1.5 (over RailAction's tighter py-1 default): the foot is its own
+          // tier, and this row matches the account row's height (py-1.5) so the
+          // two foot controls read as one block, not the compact board list.
+          className="pl-7 py-1.5"
         />
         <AccountMenu
           login={login}
@@ -370,7 +373,7 @@ function RailAction({
       type="button"
       onClick={onClick}
       className={cn(
-        "relative flex w-full cursor-pointer items-center rounded-md py-1.5 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
+        "relative flex w-full cursor-pointer items-center rounded-md py-1 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
         className,
       )}
     >
@@ -449,14 +452,14 @@ function NavGroup({
     <div>
       {header}
       <div className="relative flex flex-col gap-0.5">
-        {/* bottom-6, not inset-y-1: the spine ends at the top edge of the pool
-            row's ledger glyph (last row 32px tall, 14px glyph on its center),
-            leading into the terminal node instead of striking through the
-            icon's transparent strokes. It starts below the header, descending
-            from the repo glyph that roots it. */}
+        {/* bottom-[21px], not inset-y-1: the spine ends at the top edge of the
+            pool row's ledger glyph (last row ~29px tall, 12px glyph on its
+            center), leading into the terminal node instead of striking through
+            the icon's transparent strokes. It starts below the header,
+            descending from the repo glyph that roots it. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute top-1 bottom-6 left-[13px] w-px bg-border-dim"
+          className="pointer-events-none absolute top-1 bottom-[21px] left-[13px] w-px bg-border-dim"
         />
         {children}
         {foot}
@@ -469,14 +472,16 @@ function NavGroup({
  * A repo's routine pool link (ADR-0025) — a peer of its boards but a different
  * kind: it lists what runs, not a grid. It closes the group as the spine's
  * terminal node, on the boards' own marker/label columns — a ledger glyph in
- * the marker slot where boards carry a dot, sized into the marker column (14px,
- * not the 16px that outdented past the group heading and made the row read
- * top-level). What separates it from the boards is kind: the glyph rests visible
- * where board dots rest invisible (the fixed view is furniture; boards are
- * content), and the label is sans where board names are mono, with a hair of
- * extra space setting it off. Active, it lights the same accent-tinted selection
- * as an active board, glyph in accent — the same "you are here" node an active
- * board's dot is.
+ * the marker slot where boards carry a dot, sized to echo the repo glyph that
+ * roots the spine (12px, size-3, the same as repo-group-header.tsx). That echo
+ * is deliberate: the group is bracketed by two glyphs of one weight — a folder
+ * opens it (the repo), a ledger closes it (the routines) — so the glyph reads as
+ * a system, not an exception looming over the boards' quiet dots. What separates
+ * it from the boards is kind: the glyph rests visible where board dots rest
+ * invisible (the fixed view is furniture; boards are content), and the label is
+ * sans where board names are mono, with a hair of extra space setting it off.
+ * Active, it lights the same accent-tinted selection as an active board, glyph
+ * in accent — the same "you are here" node an active board's dot is.
  */
 function PoolNavItem({
   to,
@@ -501,7 +506,7 @@ function PoolNavItem({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative mt-1 flex items-center rounded-md py-1.5 pr-2.5 pl-6 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        "relative mt-0.5 flex items-center rounded-md py-1 pr-2.5 pl-6 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
         active
           ? "bg-primary/10 font-medium text-foreground"
           : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
@@ -510,7 +515,7 @@ function PoolNavItem({
       <ListTodo
         aria-hidden
         className={cn(
-          "absolute top-1/2 left-[13px] size-3.5 -translate-x-1/2 -translate-y-1/2 transition-colors",
+          "absolute top-1/2 left-[13px] size-3 -translate-x-1/2 -translate-y-1/2 transition-colors",
           active ? "text-primary" : "text-ink-faint",
         )}
       />
@@ -635,7 +640,7 @@ function NavItem({
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "group relative flex min-w-0 flex-1 items-center rounded-md py-1.5 pr-2.5 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          "group relative flex min-w-0 flex-1 items-center rounded-md py-1 pr-2.5 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
           indented ? "pl-10" : "pl-6",
           hasMenu && "pr-8",
           // Boards are the bright, primary tier under the muted captions (the
