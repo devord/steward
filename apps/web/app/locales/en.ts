@@ -407,8 +407,10 @@ export const en = {
     "Local routines run from your machine: scheduled ones enact via steward sync --apply (needs npm i -g @devord/steward), manual ones run with npx @devord/steward run <slug>",
   "dialog.manualCloudHint":
     "Manual cloud routines fire from the widget's update button via an API trigger — npx @devord/steward sync sets it up",
+  "dialog.accountHint":
+    "Owning Claude account: {account} — a cloud routine belongs to one account; re-sync from a different one to reassign it",
   "dialog.runnerHint":
-    "The cloud resource runs on {login}'s Claude account — after committing, run npx @devord/steward sync against the team repo",
+    "After committing, run npx @devord/steward sync against the team repo — whoever runs it enacts the cloud resource under their Claude account",
   "dialog.cancel": "Cancel",
   "dialog.add": "Add to draft",
   "dialog.save": "Save changes",

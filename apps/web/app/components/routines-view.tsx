@@ -372,6 +372,11 @@ export function RoutinesView({
         editRoutine={editingRoutine}
         onEdit={editRoutine}
         runner={repo.isShared ? login : undefined}
+        account={
+          editingRoutine
+            ? (resolvedArtifacts?.[editingRoutine.slug]?.claudeAccount ?? null)
+            : null
+        }
       />
 
       {draft != null && (

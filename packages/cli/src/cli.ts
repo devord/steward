@@ -7,7 +7,7 @@
  * Subcommands mirror the in-repo dev scripts one-to-one:
  *   steward sync    [--apply] [--repo <owner/repo>] [--file <path>]
  *   steward run     <slug> [--dry] [--repo <owner/repo>]
- *   steward trigger <slug> [--repo <owner/repo>] [--file <path>]
+ *   steward trigger <slug> [--repo <owner/repo>] [--file <path>] [--account [<email>]]
  */
 import { main as run } from "./routine.ts"
 import { main as sync } from "./routines-sync.ts"
@@ -19,7 +19,8 @@ function usage(): void {
       "Commands:\n" +
       "  sync    [--apply] [--repo <owner/repo>] [--file <path>]  reconcile cloud + launchd\n" +
       "  run     <slug> [--dry] [--repo <owner/repo>]             run a routine interactively\n" +
-      "  trigger <slug> [--repo <owner/repo>] [--file <path>]     set up a routine's API trigger\n\n" +
+      "  trigger <slug> [--repo <owner/repo>] [--file <path>]     set up a routine's API trigger\n" +
+      "          [--account [<email>]]                            stamp its owning Claude account (ADR-0029)\n\n" +
       "--repo uses a managed clone under ~/.cache/steward; --file targets a\n" +
       "checkout you manage; neither runs from the current data-repo checkout.",
   )
