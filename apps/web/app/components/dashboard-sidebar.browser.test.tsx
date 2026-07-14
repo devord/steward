@@ -602,6 +602,26 @@ describe("DashboardSidebar repo groups", () => {
     expect(value?.textContent ?? "").toContain(SHARED_REPO)
   })
 
+  it("hangs the foot's actions on the boards' marker column", async () => {
+    // The rail has one glyph spine: every marker — repo headers, board rows,
+    // "New dashboard" — centers on the boards' `left-[13px]` column. The foot
+    // must join it, so "Add data repo" and the account avatar sit on the same
+    // line as the glyphs above them, not outdented in their own gutter.
+    await renderSidebar()
+    const centerX = (el: Element | null | undefined) => {
+      if (!el) throw new Error("missing an element to measure")
+      const r = el.getBoundingClientRect()
+      return r.left + r.width / 2
+    }
+    const spine = centerX(document.querySelector('[data-testid="repo-glyph"]'))
+    const addRepo = [...document.querySelectorAll("button")]
+      .find((b) => b.textContent?.trim() === "Add data repo")
+      ?.querySelector("svg")
+    const avatar = document.querySelector('[data-slot="avatar"]')
+    expect(centerX(addRepo)).toBeCloseTo(spine, 0)
+    expect(centerX(avatar)).toBeCloseTo(spine, 0)
+  })
+
   it("keeps the foot's box stable while the account menu is open", async () => {
     // The account menu is modal, so Base UI parks hidden focus-guard spans
     // beside the trigger while it's open. The foot must lay out with flex

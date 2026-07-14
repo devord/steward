@@ -267,19 +267,17 @@ export function DashboardSidebar({
           sibling margins would count them and grow the foot 2px; gap ignores
           out-of-flow children, so the foot holds still. */}
       <div className="flex shrink-0 flex-col gap-0.5 border-t border-border-dim p-2">
-        <button
-          type="button"
+        {/* Foot tier: markers stay on the boards' `left-[13px]` spine, but the
+            label column steps out one notch (pl-7 vs the nav's pl-6) so the
+            account avatar — a 20px disc, wider than the 14px glyphs — clears its
+            name instead of crowding it. Both foot rows share that column, so
+            they align with each other; the glyphs still hang on the spine. */}
+        <RailAction
+          icon={FolderGit2}
+          label={t("switcher.addRepo")}
           onClick={() => setAddingRepo(true)}
-          className="flex w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          <span
-            aria-hidden
-            className="flex size-6 shrink-0 items-center justify-center"
-          >
-            <FolderGit2 className="size-4 text-ink-faint" />
-          </span>
-          {t("switcher.addRepo")}
-        </button>
+          className="pl-7"
+        />
         <AccountMenu
           login={login}
           displayName={displayName}
@@ -359,16 +357,22 @@ function RailAction({
   icon: Icon,
   label,
   onClick,
+  className,
 }: {
   icon: typeof Plus
   label: string
   onClick: () => void
+  /** Extra classes (e.g. a wider `pl-*` for the foot tier), merged last. */
+  className?: string
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="relative flex w-full cursor-pointer items-center rounded-md py-1.5 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+      className={cn(
+        "relative flex w-full cursor-pointer items-center rounded-md py-1.5 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
+        className,
+      )}
     >
       {/* 14px like the pool glyph — every marker-column icon shares one size,
           so nothing outdents past the group headings. */}
