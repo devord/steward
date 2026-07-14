@@ -113,12 +113,24 @@ export function AccountMenu({
       <DropdownMenuTrigger
         aria-label={t("account.menu")}
         className={cn(
-          "flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-sm text-ink-dim outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-sidebar-accent aria-expanded:text-foreground",
-          block && "w-full",
+          "flex cursor-pointer items-center rounded-md text-sm text-ink-dim outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-sidebar-accent aria-expanded:text-foreground",
+          // Block fills the rail foot and hangs the avatar on the marker spine
+          // (the boards' `left-[13px]` glyph column) so it lines up with every
+          // rail glyph above it. pl-7 (the foot tier's wider label column, one
+          // notch past the nav's pl-6): the 20px avatar is wider than the 14px
+          // glyphs, so the name needs the extra step to clear it. The compact
+          // pill packs tight for the top bar.
+          block ? "relative w-full py-1.5 pr-2.5 pl-7" : "gap-2 px-1.5 py-1",
           className,
         )}
       >
-        <Avatar size="sm">
+        <Avatar
+          size={block ? "xs" : "sm"}
+          className={cn(
+            block &&
+              "absolute top-1/2 left-[13px] -translate-x-1/2 -translate-y-1/2",
+          )}
+        >
           <AvatarImage src={avatarSrc} alt="" />
           <AvatarFallback className="text-[0.625rem] font-medium">
             {initials}
