@@ -314,6 +314,48 @@ soft and font-dependent, never sharp.
 (That path set is lucide `redo-2` — the daily-plan sample's carried-over
 key.)
 
+### Avatar
+
+A person as a ledger key: an 18px round image inlined as a data URI
+(fetched at generation time, ≤48px source — widget-standard rule 1
+forbids images by URL). `alt` and `title` both carry the person's
+name/login, so hover answers _who_; identity never rides on the picture
+alone. When no image could be inlined, fall back to the initial form —
+same footprint, one mono capital. Avatars are the one raster exception
+in an otherwise vector language: earn them (a row genuinely about a
+person), never decorate with them.
+
+```css
+.avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  align-self: center;
+  border: 1px solid var(--color-border);
+}
+span.avatar {
+  /* fallback: the initial */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+  color: var(--color-ink-dim);
+  background: var(--color-bg3);
+}
+```
+
+```html
+<img
+  class="avatar"
+  src="data:image/png;base64,…"
+  alt="octocat"
+  title="octocat"
+/>
+<span class="avatar" title="hubot">H</span>
+```
+
 ### Meter
 
 Progress as a segmented bar (done/total), 4px tall. Use for genuinely
