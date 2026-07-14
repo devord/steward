@@ -161,6 +161,24 @@ export const en = {
     "GitHub unreachable — run history couldn't load. It retries on refresh.",
   "runs.loading": "Loading run history…",
 
+  // Version browsing + compare (ADR-0038): a run's row opens the artifact as
+  // it published, and two rows compare side by side. The raw text diff stays
+  // on GitHub, where git already renders it.
+  "runs.viewArtifact": "View this run's artifact",
+  "runs.compare": "Compare",
+  "runs.compareCancel": "Cancel",
+  "runs.compareHint": "Pick two runs to compare.",
+  "runs.compareSelected": "{n}/2 selected",
+  "runs.compareOpen": "Compare runs",
+  "runs.selectForCompare": "Select this run to compare",
+  "runs.compareOlder": "older",
+  "runs.compareNewer": "newer",
+  "runs.textDiff": "Text diff on GitHub",
+  "runs.versionLoading": "Loading this run's artifact…",
+  "runs.versionError":
+    "GitHub unreachable — this run's artifact couldn't load.",
+  "runs.versionGone": "No artifact was published at this run.",
+
   "templates.title": "Templates",
   "templates.subtitle":
     "What the routine picker offers — {dir} in {repo}, plus the built-ins.",

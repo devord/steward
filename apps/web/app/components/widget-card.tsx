@@ -26,8 +26,8 @@ import {
   type WidgetStatus,
   widgetStatus,
 } from "../lib/routine-status.ts"
-import { frameArtifactHtml } from "../lib/theme.ts"
 import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
+import { frameArtifactHtml } from "../lib/theme.ts"
 import { agoParts } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
 import type { DragKind, GridDrag } from "../lib/use-grid-drag.ts"

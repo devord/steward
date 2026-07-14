@@ -727,6 +727,39 @@ export async function loadRoutineRuns(
   }
 }
 
+export interface ArtifactVersion {
+  /** The artifact's HTML as published at that commit, unframed — the client
+      theme-injects it exactly as the board does. null → the file didn't exist
+      at that commit (a receipt from before the path, or a deleted widget). */
+  html: string | null
+  /** GitHub couldn't serve that blob right now (5xx) — the dialog shows a
+      retry line, never an error page (the same per-cell degrade the board and
+      run history use). */
+  unreachable?: boolean
+}
+
+/**
+ * One run's published artifact — `w/<slug>/index.html` read at a specific
+ * commit `sha` (ADR-0002). The run history (loadRoutineRuns) lists the
+ * receipts; this fetches the render behind one of them, so a run can be
+ * browsed or two runs compared side by side without leaving the app. On
+ * demand only: the detail route streams the receipts, then a resource route
+ * pulls each version's body when the viewer opens it.
+ */
+export async function loadArtifactVersion(
+  token: string,
+  repo: string,
+  slug: string,
+  sha: string,
+): Promise<ArtifactVersion> {
+  try {
+    const file = await getFile(token, repo, `w/${slug}/index.html`, sha)
+    return { html: file?.text ?? null }
+  } catch {
+    return { html: null, unreachable: true }
+  }
+}
+
 /** loadRoutinesPool for route loaders: same degrade contract as the board
     loaders — a dead token becomes the 401 re-auth page, any other transient
     GitHub failure the 503 refresh page. */

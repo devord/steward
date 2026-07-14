@@ -54,12 +54,15 @@ footer); drag-and-drop layout; multi-repo/org support via team dashboards
 (ADR-0010: org team data repo, `data/dashboards/<slug>.yaml` layouts,
 `/team/<slug>` routes, `runner:`-scoped `routines:sync`); template preview
 in the add-routine picker (ADR-0037: built-ins reuse their `docs/samples/`
-archetype, repo templates a `templates/routines/<id>.sample.html` sibling). Open backlog:
-external/PIN-gated artifact sharing (second publish target), artifact
-version browsing (free from git history), `instructionsFile:` for
-long-form routine guidance, dashboard rename (today: delete + recreate),
-dashboard display names in the switcher (today: slugs). "Run now" and the
-`steward apply` CLI graduated into M6 (ADR-0016/0017).
+archetype, repo templates a `templates/routines/<id>.sample.html` sibling);
+artifact version browsing + compare on the routine detail view (ADR-0038) —
+each run's receipt reopens its render, two compare side by side, text diff
+stays on GitHub. Open backlog:
+external/PIN-gated artifact sharing (second publish target),
+`instructionsFile:` for long-form routine guidance, dashboard rename
+(today: delete + recreate), dashboard display names in the switcher
+(today: slugs). "Run now" and the `steward apply` CLI graduated into M6
+(ADR-0016/0017).
 
 ## M6 — Hosts, manual runs, prompt-first ✅ (code)
 

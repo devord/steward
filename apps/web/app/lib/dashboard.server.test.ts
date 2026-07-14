@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { failPath, seedRepo } from "../mocks/github.ts"
 import {
+  loadArtifactVersion,
   loadDashboard,
   loadDashboardStructureOr503,
   repoExistsOr503,
@@ -368,5 +369,52 @@ describe("loadDashboardStructureOr503", () => {
     ).catch((e) => e)) as { init?: ResponseInit }
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(401)
+  })
+})
+
+describe("loadArtifactVersion", () => {
+  const SLUG = "daily-plan"
+  const PATH = "w/daily-plan/index.html"
+
+  it("reads a run's artifact body at its receipt commit", async () => {
+    seedRepo(DATA_REPO, { [PATH]: "<p>v1</p>" }, "c0ffee1")
+
+    const version = await loadArtifactVersion(
+      "token",
+      DATA_REPO,
+      SLUG,
+      "c0ffee1",
+    )
+
+    expect(version).toEqual({ html: "<p>v1</p>" })
+  })
+
+  it("returns null html when the widget didn't exist at that commit", async () => {
+    // The path exists on another ref, but not at the requested commit — a
+    // receipt from before the widget, or after a deletion.
+    seedRepo(DATA_REPO, { [PATH]: "<p>v1</p>" }, "artifacts")
+
+    const version = await loadArtifactVersion(
+      "token",
+      DATA_REPO,
+      SLUG,
+      "deadbee",
+    )
+
+    expect(version).toEqual({ html: null })
+  })
+
+  it("degrades a 5xx to unreachable rather than throwing", async () => {
+    seedRepo(DATA_REPO, { [PATH]: "<p>v1</p>" }, "c0ffee1")
+    failPath(DATA_REPO, PATH, { status: 502, endpoint: "contents" })
+
+    const version = await loadArtifactVersion(
+      "token",
+      DATA_REPO,
+      SLUG,
+      "c0ffee1",
+    )
+
+    expect(version).toEqual({ html: null, unreachable: true })
   })
 })

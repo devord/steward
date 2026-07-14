@@ -1,12 +1,17 @@
-import type { ReactNode } from "react"
+import { type ReactNode, useCallback, useMemo, useState } from "react"
 
-import { ArrowLeft, ExternalLink } from "lucide-react"
+import { ArrowLeft, Columns2, ExternalLink, Maximize2 } from "lucide-react"
 
 import { isManual, routineHost, type Routine } from "@steward/schema"
 
+import {
+  ArtifactVersionDialog,
+  type VersionPane,
+} from "./artifact-version-dialog.tsx"
 import { NavShell } from "./nav-shell.tsx"
 import { rowLinkCls, StateDot, StateLabel } from "./routines-view.tsx"
 import { Button } from "~/components/ui/button"
+import { Checkbox } from "~/components/ui/checkbox"
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
 import type {
@@ -15,10 +20,11 @@ import type {
   SidebarData,
 } from "../lib/dashboard.server.ts"
 import { useT, type Translate } from "../lib/i18n.tsx"
-import { boardHref, routinesHref } from "../lib/repos.ts"
+import { boardHref, routineHref, routinesHref } from "../lib/repos.ts"
 import { claudeRoutineUrl, widgetStatus } from "../lib/routine-status.ts"
 import { deriveRuns, type RunView } from "../lib/runs.ts"
 import { agoParts, durationParts } from "../lib/time.ts"
+import { useArtifactVersions } from "../lib/use-artifact-versions.ts"
 import { useStreamed } from "../lib/use-streamed.ts"
 
 interface RepoInfo {
@@ -93,6 +99,70 @@ export function RoutineRunsView({
   // The routine's runner, or the repo owner for home pools — the same rule
   // the pool table applies (ADR-0025).
   const owner = routine.runner ?? repo.full.split("/")[0]
+
+  // Version browsing + compare (ADR-0038): each run's render is fetched on
+  // demand from the artifacts branch at its receipt's commit, so a run can be
+  // opened whole or two runs held side by side without leaving the app.
+  const versionUrl = useCallback(
+    (sha: string) => `${routineHref(repo.full, routine.slug)}/at/${sha}`,
+    [repo.full, routine.slug],
+  )
+  const { load, stateFor } = useArtifactVersions(versionUrl)
+  const [compareMode, setCompareMode] = useState(false)
+  const [selected, setSelected] = useState<string[]>([])
+  // The SHAs currently in the dialog: one to browse, or [older, newer].
+  const [preview, setPreview] = useState<string[] | null>(null)
+
+  // sha → ISO date and newest-first index, for the dialog's timestamps and to
+  // order a compare pair older→newer regardless of the click order.
+  const bySha = useMemo(() => {
+    const at: Record<string, string> = {}
+    const order: Record<string, number> = {}
+    ;(runViews ?? []).forEach((run, i) => {
+      at[run.sha] = run.at
+      order[run.sha] = i
+    })
+    return { at, order }
+  }, [runViews])
+
+  const openSingle = useCallback(
+    (sha: string) => {
+      load(sha)
+      setPreview([sha])
+    },
+    [load],
+  )
+  const toggleSelect = useCallback((sha: string) => {
+    setSelected((prev) =>
+      prev.includes(sha)
+        ? prev.filter((s) => s !== sha)
+        : prev.length < 2
+          ? [...prev, sha]
+          : prev,
+    )
+  }, [])
+  const openCompare = useCallback(() => {
+    if (selected.length !== 2) return
+    // Higher newest-first index = older run → the left pane.
+    const [older, newer] = [...selected].sort(
+      (a, b) => bySha.order[b] - bySha.order[a],
+    )
+    load(older)
+    load(newer)
+    setPreview([older, newer])
+  }, [selected, bySha.order, load])
+
+  const panes: VersionPane[] | null =
+    preview?.map((sha) => ({
+      sha,
+      at: bySha.at[sha] ?? new Date(now).toISOString(),
+      state: stateFor(sha),
+    })) ?? null
+  const diffHref =
+    preview?.length === 2
+      ? `https://github.com/${repo.full}/compare/${preview[0]}...${preview[1]}`
+      : undefined
+  const canCompare = runViews != null && runViews.length >= 2
 
   return (
     <NavShell
@@ -211,21 +281,81 @@ export function RoutineRunsView({
           <h2 className="font-mono text-base font-medium text-foreground">
             {t("runs.heading")}
           </h2>
-          {runsData != null && runsData.receipts.length > 0 && (
-            <span className="font-mono text-xs text-ink-faint">
-              {runsData.capped
-                ? t("runs.capped", { n: runsData.receipts.length })
-                : t("runs.count", { n: runsData.receipts.length })}
-            </span>
-          )}
+          <div className="flex items-baseline gap-4">
+            {runsData != null && runsData.receipts.length > 0 && (
+              <span className="font-mono text-xs text-ink-faint">
+                {runsData.capped
+                  ? t("runs.capped", { n: runsData.receipts.length })
+                  : t("runs.count", { n: runsData.receipts.length })}
+              </span>
+            )}
+            {canCompare && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 self-center font-mono text-xs"
+                aria-pressed={compareMode}
+                onClick={() => {
+                  setCompareMode((on) => !on)
+                  setSelected([])
+                }}
+              >
+                <Columns2 aria-hidden className="size-3.5" />
+                {t(compareMode ? "runs.compareCancel" : "runs.compare")}
+              </Button>
+            )}
+          </div>
         </div>
         <p className="mt-0.5 text-sm text-ink-dim">{t("runs.subtitle")}</p>
         {routineId != null && <ClaudeNote routineId={routineId} />}
 
+        {/* The compare tray: live only in compare mode, it names the goal
+            (pick two) and, once two are held, opens the side-by-side. */}
+        {compareMode && (
+          <div className="mt-3 flex items-center gap-3 rounded-lg border border-border-dim bg-bg1 px-3 py-2">
+            <span className="font-mono text-xs text-ink-dim">
+              {selected.length === 0
+                ? t("runs.compareHint")
+                : t("runs.compareSelected", { n: selected.length })}
+            </span>
+            <Button
+              size="sm"
+              className="ml-auto"
+              disabled={selected.length !== 2}
+              onClick={openCompare}
+            >
+              {t("runs.compareOpen")}
+            </Button>
+          </div>
+        )}
+
         <div className="mt-3">
-          <RunsBody runViews={runViews} runsData={runsData} now={now} t={t} />
+          <RunsBody
+            runViews={runViews}
+            runsData={runsData}
+            now={now}
+            t={t}
+            compareMode={compareMode}
+            selected={selected}
+            onView={openSingle}
+            onToggleSelect={toggleSelect}
+          />
         </div>
       </section>
+
+      {panes != null && (
+        <ArtifactVersionDialog
+          open
+          onOpenChange={(next) => {
+            if (!next) setPreview(null)
+          }}
+          name={routine.name}
+          slug={routine.slug}
+          panes={panes}
+          now={now}
+          diffHref={diffHref}
+        />
+      )}
     </NavShell>
   )
 }
@@ -266,11 +396,19 @@ function RunsBody({
   runsData,
   now,
   t,
+  compareMode,
+  selected,
+  onView,
+  onToggleSelect,
 }: {
   runViews: RunView[] | null
   runsData: RoutineRuns | null
   now: number
   t: Translate
+  compareMode: boolean
+  selected: string[]
+  onView: (sha: string) => void
+  onToggleSelect: (sha: string) => void
 }) {
   if (runViews == null || runsData == null) {
     return (
@@ -299,7 +437,15 @@ function RunsBody({
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-left align-bottom font-mono text-xs text-ink-faint">
-            <th scope="col" className="px-3 py-1.5 font-normal">
+            {compareMode && (
+              <th scope="col" className="w-8 px-3 py-1.5 font-normal">
+                <span className="sr-only">{t("runs.compare")}</span>
+              </th>
+            )}
+            <th
+              scope="col"
+              className={cn("py-1.5 font-normal", !compareMode && "px-3")}
+            >
               {t("runs.colRan")}
             </th>
             <th scope="col" className="py-1.5 pr-3 font-normal">
@@ -318,7 +464,19 @@ function RunsBody({
         </thead>
         <tbody>
           {runViews.map((run) => (
-            <RunRow key={run.sha} run={run} now={now} t={t} />
+            <RunRow
+              key={run.sha}
+              run={run}
+              now={now}
+              t={t}
+              compareMode={compareMode}
+              checked={selected.includes(run.sha)}
+              selectDisabled={
+                selected.length >= 2 && !selected.includes(run.sha)
+              }
+              onView={onView}
+              onToggleSelect={onToggleSelect}
+            />
           ))}
         </tbody>
       </table>
@@ -326,18 +484,65 @@ function RunsBody({
   )
 }
 
-function RunRow({ run, now, t }: { run: RunView; now: number; t: Translate }) {
+function RunRow({
+  run,
+  now,
+  t,
+  compareMode,
+  checked,
+  selectDisabled,
+  onView,
+  onToggleSelect,
+}: {
+  run: RunView
+  now: number
+  t: Translate
+  compareMode: boolean
+  checked: boolean
+  selectDisabled: boolean
+  onView: (sha: string) => void
+  onToggleSelect: (sha: string) => void
+}) {
   const ago = agoParts(run.at, now)
+  const agoLabel =
+    ago.unit === "now" ? t("time.now") : t(`time.${ago.unit}`, { n: ago.n })
   return (
-    <tr className="border-b border-border-dim last:border-0 hover:bg-bg1/60">
+    <tr className="group border-b border-border-dim last:border-0 hover:bg-bg1/60">
+      {/* Compare selection — a run joins the side-by-side; two at a time, the
+          rest disabled once the pair is held. */}
+      {compareMode && (
+        <td className="px-3 py-2 align-top">
+          <Checkbox
+            checked={checked}
+            disabled={selectDisabled}
+            onCheckedChange={() => onToggleSelect(run.sha)}
+            aria-label={t("runs.selectForCompare")}
+          />
+        </td>
+      )}
+
       {/* When it ran — relative for the glance, the full timestamp a hover
-          away (native title, the chrome's tooltip idiom). */}
-      <td className="px-3 py-2 align-top font-mono text-xs text-ink">
-        <time dateTime={run.at} title={run.at}>
-          {ago.unit === "now"
-            ? t("time.now")
-            : t(`time.${ago.unit}`, { n: ago.n })}
-        </time>
+          away. The cell is also the door to that run's render: click it to
+          open the artifact as it published (ADR-0038). */}
+      <td
+        className={cn(
+          "py-2 align-top font-mono text-xs",
+          !compareMode && "px-3",
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => onView(run.sha)}
+          title={run.at}
+          className="inline-flex items-center gap-1.5 text-ink outline-none hover:text-foreground focus-visible:text-foreground"
+        >
+          <time dateTime={run.at}>{agoLabel}</time>
+          <Maximize2
+            aria-hidden
+            className="size-3 text-ink-faint opacity-0 transition-opacity group-hover:opacity-100"
+          />
+          <span className="sr-only">{t("runs.viewArtifact")}</span>
+        </button>
       </td>
 
       {/* The gap to the previous run — the cadence signal freshness alone

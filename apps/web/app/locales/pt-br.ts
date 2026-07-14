@@ -156,6 +156,24 @@ export const ptBR: Messages = {
     "GitHub inacessível — o histórico de execuções não carregou. Tenta de novo ao atualizar.",
   "runs.loading": "Carregando histórico de execuções…",
 
+  // Navegação de versões + comparação (ADR-0038): a linha de uma execução
+  // abre o artifact como foi publicado, e duas linhas comparam lado a lado. O
+  // diff de texto puro fica no GitHub, onde o git já o renderiza.
+  "runs.viewArtifact": "Ver o artifact desta execução",
+  "runs.compare": "Comparar",
+  "runs.compareCancel": "Cancelar",
+  "runs.compareHint": "Escolha duas execuções para comparar.",
+  "runs.compareSelected": "{n}/2 selecionadas",
+  "runs.compareOpen": "Comparar execuções",
+  "runs.selectForCompare": "Selecionar esta execução para comparar",
+  "runs.compareOlder": "mais antiga",
+  "runs.compareNewer": "mais recente",
+  "runs.textDiff": "Diff de texto no GitHub",
+  "runs.versionLoading": "Carregando o artifact desta execução…",
+  "runs.versionError":
+    "GitHub inacessível — o artifact desta execução não carregou.",
+  "runs.versionGone": "Nenhum artifact foi publicado nesta execução.",
+
   "templates.title": "Templates",
   "templates.subtitle":
     "O que o seletor de rotinas oferece — {dir} em {repo}, mais os nativos.",

@@ -11,6 +11,12 @@ export default [
     "r/:owner/:repo/routines/:slug",
     "routes/r.$owner.$repo.routines.$slug.tsx",
   ),
+  // One run's published artifact, fetched on demand for version browsing +
+  // compare (ADR-0038): the body of `w/:slug/index.html` at a given commit.
+  route(
+    "r/:owner/:repo/routines/:slug/at/:sha",
+    "routes/r.$owner.$repo.routines.$slug.at.$sha.ts",
+  ),
   route("r/:owner/:repo/:dashboard", "routes/r.$owner.$repo.$dashboard.tsx"),
   // Legacy URL shapes, pre-ADR-0023 — permanent redirects to the canonical
   // `/r/:owner/:repo/:dashboard` space.
