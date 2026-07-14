@@ -231,6 +231,15 @@ export const en = {
   "newDash.exists": "That dashboard already exists in the repo",
 
   "board.deleteDashboard": "Delete dashboard",
+  "board.renameDashboard": "Rename dashboard",
+  "board.renameTitle": "Rename dashboard",
+  "board.renameBody":
+    "Shown in the sidebar. The slug ({slug}) and its URL don't change. Leave empty to fall back to the slug.",
+  "board.renameLabel": "Display name",
+  "board.renameConfirm": "Save",
+  "board.renaming": "Saving…",
+  "board.renameConflict":
+    "The dashboard changed in the repo just now — close and retry",
   "board.menu": "Dashboard options",
   "board.deleteTitle": "Delete this dashboard?",
   "board.deleteBody":

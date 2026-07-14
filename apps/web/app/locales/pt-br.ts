@@ -230,6 +230,15 @@ export const ptBR: Messages = {
   "newDash.exists": "Esse painel já existe no repo",
 
   "board.deleteDashboard": "Excluir painel",
+  "board.renameDashboard": "Renomear painel",
+  "board.renameTitle": "Renomear painel",
+  "board.renameBody":
+    "Aparece na barra lateral. O slug ({slug}) e sua URL não mudam. Deixe vazio para voltar ao slug.",
+  "board.renameLabel": "Nome de exibição",
+  "board.renameConfirm": "Salvar",
+  "board.renaming": "Salvando…",
+  "board.renameConflict":
+    "O painel mudou no repo agora mesmo — feche e tente de novo",
   "board.menu": "Opções do painel",
   "board.deleteTitle": "Excluir este painel?",
   "board.deleteBody":

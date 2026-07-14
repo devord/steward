@@ -18,6 +18,8 @@ import { SyncPanel } from "./sync-panel.tsx"
 import { WidgetCard } from "./widget-card.tsx"
 import { WidgetSkeleton } from "./widget-skeleton.tsx"
 import { Button } from "~/components/ui/button"
+import { Input } from "~/components/ui/input"
+import { Label } from "~/components/ui/label"
 import {
   Dialog,
   DialogContent,
@@ -117,6 +119,13 @@ export function DashboardBoard({
   const [deleteTarget, setDeleteTarget] = useState<{
     repo: string
     slug: string
+  } | null>(null)
+  // The board the rail's menu is renaming — the current display name rides
+  // along so the dialog prefills; null closes it.
+  const [renameTarget, setRenameTarget] = useState<{
+    repo: string
+    slug: string
+    name: string | null
   } | null>(null)
   const [deletingRoutine, setDeletingRoutine] = useState<string | null>(null)
 
@@ -483,6 +492,9 @@ export function DashboardBoard({
         onAdd={() => setAdding(true)}
         onToggleEdit={() => setEditing((value) => !value)}
         onDeleteBoard={(repo, slug) => setDeleteTarget({ repo, slug })}
+        onRenameBoard={(repo, slug, name) =>
+          setRenameTarget({ repo, slug, name })
+        }
       >
         {editing && (
           <GridSettings
@@ -660,6 +672,16 @@ export function DashboardBoard({
         onClose={() => setDeletingRoutine(null)}
         onConfirm={deleteRoutine}
       />
+      <RenameDashboardDialog
+        target={renameTarget}
+        onClose={() => setRenameTarget(null)}
+        onRenamed={() => {
+          setRenameTarget(null)
+          // The loader revalidation refreshes the rail (its SWR entry was
+          // dropped server-side) and the board's own dashboardName.
+          void revalidator.revalidate()
+        }}
+      />
       <DeleteDashboardDialog
         target={deleteTarget}
         activeView={view}
@@ -684,6 +706,103 @@ export function DashboardBoard({
 interface DeleteResult {
   ok: boolean
   error?: string
+}
+
+/**
+ * Rename a board's display name — any board the rail offers. The slug (the
+ * layout file's name and the URL) is immutable; this edits only the `name`
+ * field, committed directly like the rest of the board lifecycle (ADR-0010).
+ * An empty name clears the field, falling the row back to its slug. The
+ * fetcher is keyed by target so a prior rename's success can't auto-close the
+ * next board's dialog.
+ */
+function RenameDashboardDialog({
+  target,
+  onClose,
+  onRenamed,
+}: {
+  target: { repo: string; slug: string; name: string | null } | null
+  onClose: () => void
+  onRenamed: () => void
+}) {
+  const t = useT()
+  const fetcher = useFetcher<DeleteResult>({
+    key: target ? `board-rename:${target.repo}:${target.slug}` : "board-rename",
+  })
+  const busy = fetcher.state !== "idle"
+  const [name, setName] = useState("")
+
+  // Prefill from the row's current name each time a new target is set —
+  // keyed on the target's identity so a re-render's fresh object can't
+  // clobber what the user is typing (adjust-state-during-render pattern).
+  const targetKey = target ? `${target.repo}:${target.slug}` : null
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null)
+  if (target && targetKey !== prefilledFor) {
+    setPrefilledFor(targetKey)
+    setName(target.name ?? "")
+  }
+  // Closing disarms, so reopening the same board prefills afresh instead of
+  // resurrecting an abandoned edit.
+  if (!target && prefilledFor !== null) setPrefilledFor(null)
+
+  const renamed = fetcher.data?.ok === true
+  useEffect(() => {
+    if (renamed) onRenamed()
+  }, [renamed, onRenamed])
+
+  function submit() {
+    if (!target || busy) return
+    void fetcher.submit(
+      JSON.stringify({
+        intent: "rename",
+        repo: target.repo,
+        slug: target.slug,
+        name: name.trim(),
+      }),
+      { method: "post", action: "/dashboards", encType: "application/json" },
+    )
+  }
+
+  return (
+    <Dialog open={target != null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("board.renameTitle")}</DialogTitle>
+          <DialogDescription>
+            {t("board.renameBody", { slug: target?.slug ?? "" })}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2">
+          <Label htmlFor="board-rename-name">{t("board.renameLabel")}</Label>
+          <Input
+            id="board-rename-name"
+            autoFocus
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={target?.slug ?? ""}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") submit()
+            }}
+          />
+        </div>
+        {fetcher.data?.ok === false && (
+          <p className="text-xs text-destructive">
+            {fetcher.data.error === "conflict"
+              ? t("board.renameConflict")
+              : t("error.generic")}
+          </p>
+        )}
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            {t("dialog.cancel")}
+          </Button>
+          <Button disabled={busy} onClick={submit}>
+            {busy ? t("board.renaming") : t("board.renameConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 /**

@@ -1,6 +1,7 @@
 import {
   dashboardFileSchema,
   dashboardPath,
+  parseDashboardFile,
   serializeDashboardFile,
   slugSchema,
 } from "@steward/schema"
@@ -30,6 +31,14 @@ const payloadSchema = z.discriminatedUnion("intent", [
     repo: z.string(),
     slug: slugSchema,
     name: z.string().min(1).optional(),
+  }),
+  z.object({
+    intent: z.literal("rename"),
+    repo: z.string(),
+    slug: slugSchema,
+    /** New display name. Empty (after trim) clears it — the UI falls back to
+        the slug. The slug itself is immutable: it's the filename and the URL. */
+    name: z.string().max(120),
   }),
   z.object({
     intent: z.literal("delete"),
@@ -94,6 +103,45 @@ export async function action({ request }: { request: Request }) {
     }
     // The rail lists boards from the SWR cache (ADR-0030) — drop it so the
     // new board shows on the very next load.
+    invalidateSidebarCache(auth.token)
+    return { ok: true as const, slug: payload.slug }
+  }
+
+  if (payload.intent === "rename") {
+    // Rename touches only the display name — a direct commit like the rest of
+    // the lifecycle (ADR-0010). Any open draft on this board sees the base
+    // move and resolves through the sync conflict path (ADR-0003).
+    const current = await getFile(auth.token, repo, path, "main")
+    if (!current) {
+      return data({ ok: false as const, error: "missing" }, { status: 404 })
+    }
+    const { name: _replaced, ...file } = parseDashboardFile(current.text)
+    const name = payload.name.trim()
+    const next = serializeDashboardFile(name ? { ...file, name } : file)
+    try {
+      await putFile(auth.token, repo, path, {
+        content: next,
+        message: `config: rename dashboard ${payload.slug} via steward`,
+        branch: "main",
+        sha: current.sha,
+      })
+    } catch (error) {
+      // Stale sha — the file moved between the read and the PUT: a conflict,
+      // not a 500, mirroring delete below.
+      if (
+        error instanceof GitHubError &&
+        (error.status === 409 || error.status === 422)
+      ) {
+        return data({ ok: false as const, error: "conflict" }, { status: 409 })
+      }
+      // Read-only collaborator on a shared repo: a clean "denied".
+      if (error instanceof GitHubError && error.status === 403) {
+        return data({ ok: false as const, error: "denied" }, { status: 403 })
+      }
+      throw error
+    }
+    // The rail shows display names — drop its cache so the new name shows on
+    // the very next load.
     invalidateSidebarCache(auth.token)
     return { ok: true as const, slug: payload.slug }
   }
