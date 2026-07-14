@@ -26,20 +26,13 @@ import {
   type WidgetStatus,
   widgetStatus,
 } from "../lib/routine-status.ts"
-import { artifactFontStyle, frameArtifactHtml } from "../lib/theme.ts"
+import { frameArtifactHtml } from "../lib/theme.ts"
+import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
 import { agoParts } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
 import type { DragKind, GridDrag } from "../lib/use-grid-drag.ts"
 import type { RunResult } from "../routes/run.ts"
 import { WidgetLightbox } from "./widget-lightbox.tsx"
-
-// The chrome mono, inlined for the sandboxed iframes (ADR-0031): the frame
-// has an opaque origin, so a URL-based @font-face would be blocked as a
-// cross-origin fetch — the data URI ships the face with the document. Latin
-// subset only (~30 kB base64, in-memory per frame, never published).
-import geistMonoWoff2 from "@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2?inline"
-
-const ARTIFACT_FONT_STYLE = artifactFontStyle(geistMonoWoff2)
 
 export interface WidgetCardProps {
   widget: Widget

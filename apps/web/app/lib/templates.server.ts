@@ -14,6 +14,11 @@ import { swr, tokenKey } from "./swr.server.ts"
 /** `templates/routines/<id>.md` — the one placement rule (ADR-0021). */
 const TEMPLATE_MD = /^templates\/routines\/([a-z0-9-]+)\.md$/
 
+/** A template's picker preview render, beside its markdown (ADR-0037) — a
+    repo template's optional sibling; the built-ins keep theirs as the
+    `docs/samples/<id>.html` archetypes globbed below. */
+const TEMPLATE_SAMPLE = /^templates\/routines\/([a-z0-9-]+)\.sample\.html$/
+
 // Built-in templates, inlined at build time from this repo's
 // templates/routines/ — no API call, no env var, no access check, and the
 // picker's built-ins always match the deployed app version.
@@ -23,12 +28,33 @@ const builtinFiles = import.meta.glob("../../../../templates/routines/*.md", {
   eager: true,
 })
 
+// The built-ins' picker previews: their canonical design archetypes in
+// docs/samples/ double as the sample renders (ADR-0037), keyed to the
+// template by basename and inlined the same way — one file, one source of
+// truth, no separate copy to drift.
+const builtinSampleFiles = import.meta.glob("../../../../docs/samples/*.html", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+})
+
+const builtinSamples = new Map<string, string>(
+  Object.entries(builtinSampleFiles).flatMap(([path, text]) => {
+    const id = /([a-z0-9-]+)\.html$/.exec(path)?.[1]
+    return id && typeof text === "string" ? [[id, text]] : []
+  }),
+)
+
 const builtins: DiscoveredTemplate[] = Object.entries(builtinFiles).flatMap(
   ([path, text]) => {
     const id = /([a-z0-9-]+)\.md$/.exec(path)?.[1]
     const template =
       id && typeof text === "string" ? parseRoutineTemplate(id, text) : null
-    return template ? [{ ...template, source: "builtin" as const }] : []
+    if (!template) return []
+    const sample = builtinSamples.get(template.id)
+    return [
+      { ...template, source: "builtin" as const, ...(sample && { sample }) },
+    ]
   },
 )
 
@@ -38,6 +64,14 @@ async function discoverFrom(
 ): Promise<DiscoveredTemplate[]> {
   const paths = await listTreePaths(token, repo)
   if (!paths) return []
+  // Sample siblings are read from the same tree listing, so a template with
+  // no preview costs no extra fetch — only those that ship one are read.
+  const samplePaths = new Map<string, string>(
+    paths.flatMap((path) => {
+      const id = TEMPLATE_SAMPLE.exec(path)?.[1]
+      return id ? [[id, path]] : []
+    }),
+  )
   const candidates = paths.flatMap((path) => {
     const id = TEMPLATE_MD.exec(path)?.[1]
     return id ? [{ id, path }] : []
@@ -51,7 +85,20 @@ async function discoverFrom(
         const file = await getFile(token, repo, path)
         if (!file) return null
         const template = parseRoutineTemplate(id, file.text)
-        return template ? { ...template, source: "repo" as const } : null
+        if (!template) return null
+        // The preview is best-effort decoration: a failed or missing sample
+        // read leaves the card previewless, never drops the template.
+        const samplePath = samplePaths.get(id)
+        const sample = samplePath
+          ? await getFile(token, repo, samplePath)
+              .then((f) => f?.text)
+              .catch(() => undefined)
+          : undefined
+        return {
+          ...template,
+          source: "repo" as const,
+          ...(sample && { sample }),
+        }
       } catch {
         return null
       }

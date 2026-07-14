@@ -358,6 +358,8 @@ export const en = {
   "dialog.customCard": "Describe it yourself — your description is the brief",
   "dialog.sourceRepo": "This repo",
   "dialog.sourceBuiltin": "Built-in",
+  "dialog.samplePreview": "Sample render — your routine's data will differ",
+  "dialog.samplePreviewTitle": "{name} sample render",
   "dialog.name": "Name",
   "dialog.namePlaceholder": "Daily Plan",
   "dialog.slug": "Slug",
