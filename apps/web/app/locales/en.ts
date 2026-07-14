@@ -20,7 +20,7 @@ export const en = {
 
   "landing.loop.title": "How a widget stays fresh",
   "landing.loop.cron":
-    "A schedule fires, and the routine runs.",
+    "A schedule fires, and the routine runs in the cloud or on your machine.",
   "landing.loop.skill":
     "Claude Code executes the routine: it follows your template or instructions and writes one self-contained HTML file.",
   "landing.loop.push":

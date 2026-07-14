@@ -19,7 +19,7 @@ export const ptBR: Messages = {
 
   "landing.loop.title": "Como um widget se mantém fresco",
   "landing.loop.cron":
-    "Um agendamento dispara e a rotina roda.",
+    "Um agendamento dispara e a rotina roda na nuvem ou na sua máquina.",
   "landing.loop.skill":
     "O Claude Code executa a rotina: segue seu template ou instruções e escreve um único arquivo HTML autocontido.",
   "landing.loop.push":
