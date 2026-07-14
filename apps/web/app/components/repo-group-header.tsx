@@ -3,7 +3,13 @@ import { useFetcher } from "react-router"
 
 import { REPO_NAME_MAX } from "@steward/schema"
 
-import { ExternalLink, Globe, Lock, MoreHorizontal } from "lucide-react"
+import {
+  ExternalLink,
+  FolderGit2,
+  Globe,
+  Lock,
+  MoreHorizontal,
+} from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
 import { Button } from "~/components/ui/button"
@@ -48,8 +54,8 @@ const MAX_LISTED = 12
  * readers get a 403) drop the count and the popover's list, unknown
  * visibility drops the glyph and the visibility line. With nothing to
  * disclose at all (no status, no `⋯`), the row gives way to the bare
- * hover-revealed GitHub link — the home group usually reads as the plain
- * heading it always was.
+ * hover-revealed GitHub link — the home group then reads as just its leading
+ * glyph and name, the trailing side bare.
  */
 export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
   const t = useT()
@@ -75,20 +81,37 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
       // glyph, not the box edge, is what must align). On coarse pointers
       // both buttons take the icon-xs size-8 floor, so the 2px compensation
       // inverts: pr-1 matches the rows' right-1 exactly.
-      className="group/repo mb-1 flex h-5 items-center gap-1.5 pr-1.5 pl-2.5 pointer-coarse:pr-1"
+      // pl-6 (not pl-2.5): the name now clears a leading identity glyph pinned
+      // to the marker column, so the heading joins the group's glyph column
+      // (repo → boards → pool) and roots it — the name aligns with the board
+      // names it heads, one tier up by weight and voice, not by outdent.
+      className="group/repo relative mb-1 flex h-5 items-center gap-1.5 pr-1.5 pl-6 pointer-coarse:pr-1"
       title={group.repo}
     >
-      {/* ink-dim, not ink-faint: with N repos the group heading is the rail's
-          primary structure, not metadata — it must scan, while the 13px size
-          keeps it subordinate to the 15px board rows. The trailing visibility
-          glyphs stay faint (they are metadata, resting quiet). Voice follows
+      {/* The repo tier's anchor (ADR-0023): a repo glyph on the marker column
+          (left-[13px], the boards' own glyph x) that tops the group's glyph
+          column and gives the top tier a left-edge presence the boards below
+          already had. Rhymes with the foot's "Add data repo" glyph — that makes a
+          new group; this marks each one. ink-dim, a step up from the faint
+          board/pool glyphs, so the parent node reads slightly heavier than its
+          children. */}
+      <FolderGit2
+        aria-hidden
+        data-testid="repo-glyph"
+        className="absolute top-1/2 left-[13px] size-3.5 -translate-x-1/2 -translate-y-1/2 text-ink-dim"
+      />
+      {/* foreground, not ink-dim: with N repos the group heading is the rail's
+          primary structure, and at ink-dim it sat at the same brightness as the
+          inactive boards and the section labels — three tiers at one value, the
+          blur this pass fixes. Lifting it to full ink makes it the clear anchor
+          (the 15px mono boards still hold weight by size). The trailing
+          visibility glyphs stay faint (metadata, resting quiet). Voice follows
           the account menu's prose-vs-identifier rule: a display name (or
-          "Personal") is prose — sans — which is also what finally separates
-          the heading tier from the mono board slugs two pixels below it; only
-          the bare repo-name fallback is an identifier and keeps mono. */}
+          "Personal") is prose — sans — separating the heading tier from the
+          mono board slugs below; only the bare repo-name fallback keeps mono. */}
       <span
         className={cn(
-          "truncate text-xs font-medium text-ink-dim",
+          "truncate text-xs font-medium text-foreground",
           group.displayName != null || group.isHome ? "font-sans" : "font-mono",
         )}
       >
