@@ -753,20 +753,26 @@ export function AddRoutineDialog({
                         <div className="flex min-h-9 items-center justify-between gap-2 rounded-md border border-input bg-muted/40 px-3">
                           <code
                             id="routine-slug-display"
-                            className="truncate font-mono text-sm text-muted-foreground"
+                            // Truncate a real (possibly long) slug; let the
+                            // pending placeholder read in full — it's the more
+                            // common state before the subject is answered.
+                            className={`font-mono text-sm text-muted-foreground ${slug ? "truncate" : ""}`}
                           >
                             {slug || t("dialog.slugPending")}
                           </code>
-                          <button
-                            type="button"
-                            className="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                            onClick={() => {
-                              setCustomizingSlug(true)
-                              setSlugEdited(true)
-                            }}
-                          >
-                            {t("dialog.customize")}
-                          </button>
+                          {slug.length > 0 && (
+                            // Nothing to override until a slug is derived.
+                            <button
+                              type="button"
+                              className="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                              onClick={() => {
+                                setCustomizingSlug(true)
+                                setSlugEdited(true)
+                              }}
+                            >
+                              {t("dialog.customize")}
+                            </button>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {t("dialog.slugDerivedHint")}
