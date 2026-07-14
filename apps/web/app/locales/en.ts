@@ -82,6 +82,8 @@ export const en = {
   "nav.routines": "Routines",
   "nav.unsynced": "Unsynced changes",
   "nav.runInFlight": "Run in flight",
+  "nav.stale": "Stale",
+  "nav.fresh": "Up to date",
   "account.menu": "Account",
   "account.githubAccount": "GitHub account",
 
@@ -328,6 +330,10 @@ export const en = {
   "time.minutes": "{n}m ago",
   "time.hours": "{n}h ago",
   "time.days": "{n}d ago",
+  "time.nowShort": "now",
+  "time.minutesShort": "{n}m",
+  "time.hoursShort": "{n}h",
+  "time.daysShort": "{n}d",
 
   // Bare durations (a run's gap to the previous one) — same vocabulary as
   // time.* without the "ago"; "now" is the under-a-minute case.

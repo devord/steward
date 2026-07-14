@@ -81,6 +81,8 @@ export const ptBR: Messages = {
   "nav.routines": "Rotinas",
   "nav.unsynced": "Mudanças não sincronizadas",
   "nav.runInFlight": "Execução em andamento",
+  "nav.stale": "Desatualizado",
+  "nav.fresh": "Em dia",
   "account.menu": "Conta",
   "account.githubAccount": "Conta do GitHub",
 
@@ -327,6 +329,10 @@ export const ptBR: Messages = {
   "time.minutes": "há {n}m",
   "time.hours": "há {n}h",
   "time.days": "há {n}d",
+  "time.nowShort": "agora",
+  "time.minutesShort": "{n}m",
+  "time.hoursShort": "{n}h",
+  "time.daysShort": "{n}d",
 
   "duration.now": "<1m",
   "duration.minutes": "{n}m",

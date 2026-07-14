@@ -1,5 +1,6 @@
 import {
   type DashboardFile,
+  type Routine,
   type RoutinesFile,
   dashboardFileSchema,
   dashboardPath,
@@ -22,12 +23,14 @@ import {
   getFile,
   getLastCommitDate,
   GitHubError,
+  listArtifactPublishDates,
   listCollaborators,
   listDirectory,
   listPathCommits,
   repoExists,
 } from "./github.server.ts"
 import { listDataRepos } from "./repos.server.ts"
+import { isStale } from "./routine-status.ts"
 import { invalidateSwr, swr, tokenKey } from "./swr.server.ts"
 import { discoverTemplates } from "./templates.server.ts"
 
@@ -199,13 +202,14 @@ export async function listDashboards(
 async function listSidebarBoards(
   token: string,
   repo: string,
-): Promise<SidebarBoard[] | null> {
+): Promise<RawSidebarBoard[] | null> {
   const slugs = await listDashboards(token, repo)
   if (!slugs) return null
   const boards = await Promise.all(
     slugs.map(async (slug) => {
-      // One read yields both the row's name and its section — a malformed or
-      // missing file degrades both to null (row shows its slug, ungrouped).
+      // One read yields the row's name, its section, and (kept for freshness,
+      // ADR-0035) the routine slugs its widgets render — a malformed or missing
+      // file degrades all three (row shows its slug, ungrouped, no freshness).
       const meta = await getFile(token, repo, dashboardPath(slug), "main")
         .then((raw) => (raw ? parseDashboardFile(raw.text) : null))
         .catch(() => null)
@@ -213,6 +217,7 @@ async function listSidebarBoards(
         slug,
         name: meta?.name ?? null,
         group: meta?.group ?? null,
+        routineSlugs: meta?.widgets.map((widget) => widget.routine) ?? [],
       }
     }),
   )
@@ -221,6 +226,40 @@ async function listSidebarBoards(
       sensitivity: "base",
     }),
   )
+}
+
+/** How many artifacts-branch commits the rail scans for freshness — one page
+    (ADR-0035). A slug not published within this window reads "unknown". */
+const FRESHNESS_COMMITS = 100
+
+/**
+ * Roll a board's widgets up into its rail freshness (ADR-0035): the age is its
+ * *stalest* widget's last publish (the most-behind content), and `stale` is
+ * true if *any* widget is overdue against its own routine's schedule
+ * (`isStale`). Widgets with no known publish date (never run, or beyond the
+ * scanned window) contribute no age and, lacking a `lastRunAt`, are never
+ * "stale" on their own (ADR-0016) — the board reads unknown, never wrong.
+ */
+function rollUpFreshness(
+  routineSlugs: string[],
+  publishDates: Map<string, string> | null,
+  routinesBySlug: Map<string, Routine>,
+  now: number,
+): { lastRunAt: string | null; stale: boolean } {
+  let oldest: string | null = null
+  let stale = false
+  for (const slug of routineSlugs) {
+    const date = publishDates?.get(slug) ?? null
+    if (
+      date != null &&
+      (oldest == null || Date.parse(date) < Date.parse(oldest))
+    ) {
+      oldest = date
+    }
+    const routine = routinesBySlug.get(slug)
+    if (routine && isStale(routine, date, now)) stale = true
+  }
+  return { lastRunAt: oldest, stale }
 }
 
 /** One board row in the rail. */
@@ -232,6 +271,26 @@ export interface SidebarBoard {
   /** Section this board sits in (the layout file's `group`). null → ungrouped:
       the board leads its repo group in the unlabeled section. */
   group: string | null
+  /** Freshness age: the board's *stalest* widget's last publish, ISO
+      (ADR-0035) — a board is only as fresh as its most-behind content. null →
+      unknown (no widget, none run, or beyond the read window): the row shows
+      a faint dot and no age. */
+  lastRunAt: string | null
+  /** Any widget overdue against its routine's cron schedule (`isStale`,
+      ADR-0016/0035). Reddens the board's freshness dot; false for fresh,
+      manual, and never-run boards. */
+  stale: boolean
+}
+
+/** listSidebarBoards' internal row: the layout facts plus the routine slugs its
+    widgets render, kept from the same read so loadSidebar can roll up freshness
+    (ADR-0035) without a second parse. loadSidebar turns it into a
+    {@link SidebarBoard}, adding `lastRunAt`/`stale`. */
+interface RawSidebarBoard {
+  slug: string
+  name: string | null
+  group: string | null
+  routineSlugs: string[]
 }
 
 /** One rail group: a data repo and its boards. */
@@ -289,6 +348,7 @@ export async function loadSidebar(
   login: string,
   override?: string,
 ): Promise<SidebarData> {
+  const now = Date.now()
   const listing = await listDataRepos(token, login, override)
   // A failed board listing (rate limit, 5xx, network) stays isolated to its
   // own repo group per ADR-0023, but it marks the whole load degraded so the
@@ -298,19 +358,42 @@ export async function loadSidebar(
   let degraded = false
   const repos = await Promise.all(
     listing.repos.map(async (repo) => {
-      const [dashboards, collaborators, repoFile] = await Promise.all([
-        listSidebarBoards(token, repo.full).catch(() => {
-          degraded = true
-          return null
+      const [boards, collaborators, repoFile, publishDates, routines] =
+        await Promise.all([
+          // A failed board listing marks the whole load degraded (never cached),
+          // so its empty group isn't mistaken for a repo with no boards.
+          listSidebarBoards(token, repo.full).catch(() => {
+            degraded = true
+            return null
+          }),
+          // Best-effort by contract (403 for plain readers → null).
+          listCollaborators(token, repo.full),
+          // Best-effort too: an absent or malformed repo.yaml is just "no
+          // display name", never a failed rail.
+          getFile(token, repo.full, REPO_FILE_PATH, "main")
+            .then((raw) => (raw ? parseRepoFile(raw.text) : null))
+            .catch(() => null),
+          // Freshness inputs (ADR-0035), both best-effort — a flaky read just
+          // degrades every board's dot to "unknown", never a failed rail (so,
+          // unlike the board listing, these don't mark the load degraded):
+          // one artifacts-branch page dates each widget's last publish,
+          listArtifactPublishDates(token, repo.full, FRESHNESS_COMMITS).catch(
+            () => null,
+          ),
+          // and routines.yaml carries the schedules `isStale` judges against.
+          getFile(token, repo.full, "data/routines.yaml", "main")
+            .then((raw) => (raw ? parseRoutinesFile(raw.text) : null))
+            .catch(() => null),
+        ])
+      const routinesBySlug = new Map(
+        (routines?.routines ?? []).map((routine) => [routine.slug, routine]),
+      )
+      const dashboards: SidebarBoard[] = (boards ?? []).map(
+        ({ routineSlugs, ...board }) => ({
+          ...board,
+          ...rollUpFreshness(routineSlugs, publishDates, routinesBySlug, now),
         }),
-        // Best-effort by contract (403 for plain readers → null).
-        listCollaborators(token, repo.full),
-        // Best-effort too: an absent or malformed repo.yaml is just "no
-        // display name", never a failed rail.
-        getFile(token, repo.full, REPO_FILE_PATH, "main")
-          .then((raw) => (raw ? parseRepoFile(raw.text) : null))
-          .catch(() => null),
-      ])
+      )
       return {
         repo: repo.full,
         name: repo.name,
@@ -320,7 +403,7 @@ export async function loadSidebar(
         collaborators,
         viewerIsAdmin: repo.viewerIsAdmin,
         viewerCanPush: repo.viewerCanPush,
-        dashboards: dashboards ?? [],
+        dashboards,
         groups: repoFile?.groups ?? [],
       }
     }),

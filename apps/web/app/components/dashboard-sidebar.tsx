@@ -29,6 +29,8 @@ import { boardDraftKey, poolDraftKey } from "../lib/draft.ts"
 import { useRailStatus } from "../lib/rail-status.ts"
 import { boardHref, DEFAULT_DASHBOARD, routinesHref } from "../lib/repos.ts"
 import { groupBoards } from "../lib/sidebar-sections.ts"
+import { agoParts } from "../lib/time.ts"
+import { useNow } from "../lib/use-now.ts"
 import { useT } from "../lib/i18n.tsx"
 
 /**
@@ -98,6 +100,9 @@ export function DashboardSidebar({
   onNavigate?: () => void
 }) {
   const t = useT()
+  // One ticking clock for the whole rail's freshness ages (ADR-0035), so the
+  // "2h" labels stay current between navigations without each row polling.
+  const now = useNow()
   // The repo the new-dashboard dialog opens on, or null while closed — an
   // empty group's create-first row opens it pre-targeted at that repo.
   const [creating, setCreating] = useState<string | null>(null)
@@ -182,6 +187,11 @@ export function DashboardSidebar({
                             // deeper than an ungrouped one, nested under its
                             // label (ADR-0034).
                             indented={section.label != null}
+                            // Freshness (ADR-0035): the leading dot's colour and
+                            // the trailing age.
+                            lastRunAt={board.lastRunAt}
+                            stale={board.stale}
+                            now={now}
                             draft={drafts.has(
                               boardDraftKey(group.repo, board.slug),
                             )}
@@ -549,13 +559,16 @@ function RowStateDot({
 
 /**
  * One board link, indented to hang off its group's spine. Boards carry full ink
- * at rest — the bright, primary tier under the muted captions. The leading slot
- * is pinned to the spine's x so the active accent dot reads as a node on it ("you
- * are here"); inactive rows leave the spine unbroken, and the dot warms to a
- * faint fill on hover. Active fills the dot to accent, adds weight, and lays the
- * selection tint under the row. A board inside a named section (`indented`) hangs
- * one step deeper, its dot on a second column just right of the spine — the extra
- * indent is what nests it under its section label (ADR-0034).
+ * at rest — the bright, primary tier under the muted captions. The leading slot,
+ * pinned to the spine's x, is the board's **freshness dot** (ADR-0035), always
+ * on: red when a widget is overdue, a quiet green when up to date, faint when
+ * unknown. The active board overrides it to the accent — "you are here" outranks
+ * freshness on the row you're already on — and reads as a node on the spine,
+ * under the selection tint and heavier ink. To its right, a compact age
+ * ("2h") reports when the board's stalest widget last ran. A board inside a
+ * named section (`indented`) hangs one step deeper, its dot on a second column
+ * just right of the spine — the extra indent nests it under its section label
+ * (ADR-0034).
  *
  * When `onRename`/`onDelete` are set the row carries a trailing `⋯` menu:
  * board-lifecycle actions live here, beside the board they act on, so any board
@@ -571,6 +584,9 @@ function NavItem({
   label,
   active,
   indented,
+  lastRunAt,
+  stale,
+  now,
   draft,
   onRename,
   onDelete,
@@ -582,6 +598,14 @@ function NavItem({
   /** This board sits inside a named section, so it hangs one indent deeper
       than an ungrouped board — nested under its section label (ADR-0034). */
   indented?: boolean
+  /** The board's stalest widget's last publish, ISO — the age readout and,
+      with `stale`, the dot colour (ADR-0035). null → unknown (faint dot, no
+      age). */
+  lastRunAt?: string | null
+  /** A widget is overdue against its schedule (ADR-0035) — reddens the dot. */
+  stale?: boolean
+  /** The rail's shared clock ({@link useNow}) the age is measured against. */
+  now: number
   /** This board holds unsynced edits (a localStorage draft, ADR-0003) — it
       carries the header chip's yellow dot, trailing the name
       ({@link RowStateDot}), so unsynced work is visible without switching
@@ -593,6 +617,13 @@ function NavItem({
 }) {
   const t = useT()
   const hasMenu = onRename != null || onDelete != null
+  const ago = lastRunAt != null ? agoParts(lastRunAt, now) : null
+  const age =
+    ago == null
+      ? null
+      : ago.unit === "now"
+        ? t("time.nowShort")
+        : t(`time.${ago.unit}Short`, { n: ago.n })
   return (
     <div className="group/nav relative flex items-center">
       <Link
@@ -611,20 +642,57 @@ function NavItem({
             : "text-ink hover:bg-sidebar-accent/60",
         )}
       >
+        {/* Freshness dot (ADR-0035): active outranks freshness (accent); else
+            red = overdue, green = up to date, faint = unknown (never run or
+            beyond the scanned window). Never colour alone — the sr-only state
+            below names it, and the age reads plainly beside the row. */}
         <span
           aria-hidden
+          data-testid="freshness-dot"
+          data-freshness={
+            active
+              ? "active"
+              : stale
+                ? "stale"
+                : lastRunAt != null
+                  ? "fresh"
+                  : "unknown"
+          }
           className={cn(
             "absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all",
             indented ? "left-[29px]" : "left-[13px]",
             active
               ? "size-2 bg-primary"
-              : "size-1.5 bg-transparent group-hover:bg-ink-faint",
+              : stale
+                ? "size-1.5 bg-red"
+                : lastRunAt != null
+                  ? "size-1.5 bg-green"
+                  : "size-1.5 bg-ink-faint/40 group-hover:bg-ink-faint",
           )}
         />
-        <span className="truncate">{label}</span>
-        {draft && (
-          <span className="ml-2 flex shrink-0 items-center">
-            <RowStateDot tone="draft" label={t("nav.unsynced")} />
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {(stale || lastRunAt != null) && (
+          <span className="sr-only">
+            {`, ${stale ? t("nav.stale") : t("nav.fresh")}`}
+            {ago != null &&
+              `, ${
+                ago.unit === "now"
+                  ? t("time.now")
+                  : t(`time.${ago.unit}`, { n: ago.n })
+              }`}
+          </span>
+        )}
+        {(age != null || draft) && (
+          <span className="ml-2 flex shrink-0 items-center gap-2">
+            {age != null && (
+              <span
+                aria-hidden
+                className="font-mono text-[11px] text-ink-faint tabular-nums"
+              >
+                {age}
+              </span>
+            )}
+            {draft && <RowStateDot tone="draft" label={t("nav.unsynced")} />}
           </span>
         )}
       </Link>
