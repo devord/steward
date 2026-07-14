@@ -28,6 +28,7 @@ import type { SidebarData } from "../lib/dashboard.server.ts"
 import { boardDraftKey, poolDraftKey } from "../lib/draft.ts"
 import { useRailStatus } from "../lib/rail-status.ts"
 import { boardHref, DEFAULT_DASHBOARD, routinesHref } from "../lib/repos.ts"
+import { groupBoards } from "../lib/sidebar-sections.ts"
 import { useT } from "../lib/i18n.tsx"
 
 /**
@@ -137,40 +138,61 @@ export function DashboardSidebar({
                     />
                   }
                 >
-                  {group.dashboards.map((board) => {
-                    const active =
-                      activeRepo === group.repo && dashboardSlug === board.slug
-                    // Every repo's `main` is its default board (server-protected
-                    // in all repos) — so no delete on any `main`. Rename is
-                    // harmless (display name only), so every board gets it.
-                    return (
-                      <NavItem
-                        key={`${group.repo}:${board.slug}`}
-                        to={boardHref(group.repo, board.slug, homeRepo)}
-                        label={board.name ?? board.slug}
-                        active={active}
-                        draft={drafts.has(
-                          boardDraftKey(group.repo, board.slug),
-                        )}
-                        onRename={
-                          onRenameBoard
-                            ? () =>
-                                onRenameBoard(
-                                  group.repo,
-                                  board.slug,
-                                  board.name,
-                                )
-                            : undefined
-                        }
-                        onDelete={
-                          onDeleteBoard && board.slug !== DEFAULT_DASHBOARD
-                            ? () => onDeleteBoard(group.repo, board.slug)
-                            : undefined
-                        }
-                        onNavigate={onNavigate}
-                      />
-                    )
-                  })}
+                  {/* Boards partition into their repo's sections (ADR-0034):
+                      ungrouped lead unlabeled, then labeled sections in the
+                      repo's authored order. A repo with no sections yields one
+                      label-less section — the flat list, unchanged. Rendered
+                      as a flat child sequence (not nested wrappers) so the
+                      spine's one geometry and the parent's row gap both hold;
+                      section labels are just quieter rows in that flow. */}
+                  {groupBoards(group.dashboards, group.groups).flatMap(
+                    (section, sectionIndex) => [
+                      section.label != null && (
+                        <SectionLabel
+                          key={`section:${section.label}`}
+                          first={sectionIndex === 0}
+                        >
+                          {section.label}
+                        </SectionLabel>
+                      ),
+                      ...section.boards.map((board) => {
+                        const active =
+                          activeRepo === group.repo &&
+                          dashboardSlug === board.slug
+                        // Every repo's `main` is its default board (server-
+                        // protected in all repos) — so no delete on any `main`.
+                        // Rename is harmless (display name only), so every
+                        // board gets it.
+                        return (
+                          <NavItem
+                            key={`${group.repo}:${board.slug}`}
+                            to={boardHref(group.repo, board.slug, homeRepo)}
+                            label={board.name ?? board.slug}
+                            active={active}
+                            draft={drafts.has(
+                              boardDraftKey(group.repo, board.slug),
+                            )}
+                            onRename={
+                              onRenameBoard
+                                ? () =>
+                                    onRenameBoard(
+                                      group.repo,
+                                      board.slug,
+                                      board.name,
+                                    )
+                                : undefined
+                            }
+                            onDelete={
+                              onDeleteBoard && board.slug !== DEFAULT_DASHBOARD
+                                ? () => onDeleteBoard(group.repo, board.slug)
+                                : undefined
+                            }
+                            onNavigate={onNavigate}
+                          />
+                        )
+                      }),
+                    ],
+                  )}
                   {group.dashboards.length === 0 && (
                     // The group's only child while the repo has no boards: the
                     // next action, sitting where the first board will. The plus
@@ -333,6 +355,40 @@ function RailAction({
       />
       {label}
     </button>
+  )
+}
+
+/**
+ * A dashboard section's sub-heading (ADR-0034) — one tier below the repo
+ * heading and set off from it by weight, not color: both are 13px `ink-dim`
+ * (navigational text the user reads to steer — it must clear AA at this size,
+ * so not the ≥3:1 `ink-faint` metadata role), but the repo heading is medium
+ * and this is regular, and this sits indented on the board-name column (inside
+ * the repo, right of the spine) where the heading sits at the group margin.
+ * A generous gap opens above each section (tight within a section, air between
+ * them) except the first, which tucks straight under the repo heading. The
+ * label is the viewer's own words (a display label, ADR-0026), so it's sans and
+ * verbatim — truncated, never wrapped, to keep the rail one row per line.
+ */
+function SectionLabel({
+  children,
+  first,
+}: {
+  children: React.ReactNode
+  /** The section leads the group (no ungrouped boards above it): drop the top
+      gap so it sits directly under the repo heading. */
+  first?: boolean
+}) {
+  return (
+    <div
+      data-testid="rail-section"
+      className={cn(
+        "truncate pr-2.5 pl-6 text-xs text-ink-dim",
+        !first && "mt-3",
+      )}
+    >
+      {children}
+    </div>
   )
 }
 
@@ -559,7 +615,7 @@ function NavItem({
             {onRename && (
               <DropdownMenuItem onClick={onRename}>
                 <Pencil />
-                {t("board.renameDashboard")}
+                {t("board.editDashboard")}
               </DropdownMenuItem>
             )}
             {onDelete && (

@@ -30,9 +30,10 @@ const base = {
         collaborators: null,
         viewerIsAdmin: true,
         viewerCanPush: true,
+        groups: [],
         dashboards: [
-          { slug: "main", name: null },
-          { slug: "test", name: null },
+          { slug: "main", name: null, group: null },
+          { slug: "test", name: null, group: null },
         ],
       },
       {
@@ -47,7 +48,8 @@ const base = {
         ],
         viewerIsAdmin: false,
         viewerCanPush: false,
-        dashboards: [{ slug: "team-ops", name: null }],
+        groups: [],
+        dashboards: [{ slug: "team-ops", name: null, group: null }],
       },
     ],
     complete: true,
@@ -136,8 +138,8 @@ describe("DashboardSidebar per-board menu", () => {
           {
             ...base.sidebar.repos[1],
             dashboards: [
-              { slug: "main", name: null },
-              { slug: "ops", name: null },
+              { slug: "main", name: null, group: null },
+              { slug: "ops", name: null, group: null },
             ],
           },
         ],
@@ -145,17 +147,17 @@ describe("DashboardSidebar per-board menu", () => {
       },
     })
     requireMenuButton("main").click()
-    await vi.waitFor(() => expect(menuItem("Rename dashboard")).not.toBeNull())
+    await vi.waitFor(() => expect(menuItem("Edit dashboard")).not.toBeNull())
     expect(menuItem("Delete dashboard")).toBeNull()
     // Selecting an item closes the menu — the cleanest dismiss the dropdown
     // offers in this harness (body clicks don't reach its outside-press layer).
-    requireMenuItem("Rename dashboard").click()
-    await vi.waitFor(() => expect(menuItem("Rename dashboard")).toBeNull())
+    requireMenuItem("Edit dashboard").click()
+    await vi.waitFor(() => expect(menuItem("Edit dashboard")).toBeNull())
 
     // The shared repo's non-default board still offers both.
     requireMenuButton("ops").click()
     await vi.waitFor(() => expect(menuItem("Delete dashboard")).not.toBeNull())
-    expect(menuItem("Rename dashboard")).not.toBeNull()
+    expect(menuItem("Edit dashboard")).not.toBeNull()
   })
 
   it("deletes the board the menu belongs to, not the active one", async () => {
@@ -177,8 +179,8 @@ describe("DashboardSidebar per-board menu", () => {
           {
             ...base.sidebar.repos[0],
             dashboards: [
-              { slug: "main", name: null },
-              { slug: "test", name: "Test Ops" },
+              { slug: "main", name: null, group: null },
+              { slug: "test", name: "Test Ops", group: null },
             ],
           },
           base.sidebar.repos[1],
@@ -188,8 +190,8 @@ describe("DashboardSidebar per-board menu", () => {
     })
 
     requireMenuButton("Test Ops").click()
-    await vi.waitFor(() => expect(menuItem("Rename dashboard")).not.toBeNull())
-    requireMenuItem("Rename dashboard").click()
+    await vi.waitFor(() => expect(menuItem("Edit dashboard")).not.toBeNull())
+    requireMenuItem("Edit dashboard").click()
 
     expect(onRenameBoard).toHaveBeenCalledTimes(1)
     // The row's own repo+slug+name — the dialog prefill.
@@ -203,8 +205,8 @@ describe("DashboardSidebar per-board menu", () => {
           {
             ...base.sidebar.repos[0],
             dashboards: [
-              { slug: "main", name: null },
-              { slug: "test", name: "Test Ops" },
+              { slug: "main", name: null, group: null },
+              { slug: "test", name: "Test Ops", group: null },
             ],
           },
           base.sidebar.repos[1],
@@ -225,6 +227,46 @@ describe("DashboardSidebar per-board menu", () => {
     await renderSidebar({ onDeleteBoard: undefined, onRenameBoard: undefined })
     expect(menuButton("test")).toBeNull()
     expect(menuButton("team-ops")).toBeNull()
+  })
+})
+
+const sectionLabels = (): string[] =>
+  [...document.querySelectorAll('[data-testid="rail-section"]')].map(
+    (el) => el.textContent?.trim() ?? "",
+  )
+
+describe("DashboardSidebar sections", () => {
+  it("renders no section labels when no board is grouped", async () => {
+    await renderSidebar()
+    expect(sectionLabels()).toEqual([])
+  })
+
+  it("groups boards under section labels in the repo's authored order", async () => {
+    await renderSidebar({
+      sidebar: {
+        repos: [
+          {
+            ...base.sidebar.repos[0],
+            // Authored order is Projects-before-Clients — not alphabetical,
+            // and not the order the boards are listed in.
+            groups: ["Projects", "Clients"],
+            dashboards: [
+              { slug: "main", name: null, group: null },
+              { slug: "corza", name: "Corza", group: "Clients" },
+              { slug: "steward", name: "Steward", group: "Projects" },
+            ],
+          },
+          base.sidebar.repos[1],
+        ],
+        complete: true,
+      },
+    })
+    expect(sectionLabels()).toEqual(["Projects", "Clients"])
+    // The ungrouped board still renders (leads, unlabeled).
+    const labels = [...document.querySelectorAll("nav a")].map((a) =>
+      a.textContent?.trim(),
+    )
+    expect(labels).toEqual(expect.arrayContaining(["main", "Corza", "Steward"]))
   })
 })
 

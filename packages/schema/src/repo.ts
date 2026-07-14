@@ -21,6 +21,14 @@ export const repoFileSchema = z.object({
     .max(REPO_NAME_MAX)
     .refine((text) => text.trim().length > 0, "must not be blank")
     .optional(),
+  /**
+   * Order of the rail's dashboard sections (ADR-0034). Membership rides on
+   * each board's own `group` field; this list carries only the sequence.
+   * Listed sections render in this order; a section a board names but this
+   * list omits sorts after, alphabetically. Names not matching any board's
+   * `group` are ignored — a harmless leftover, never an error.
+   */
+  groups: z.array(z.string().min(1)).optional(),
 })
 
 export type RepoFile = z.infer<typeof repoFileSchema>

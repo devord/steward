@@ -47,6 +47,10 @@ export const widgetSchema = z.object({
 /** Directory holding one layout file per dashboard in a data repo. */
 export const DASHBOARDS_DIR = "data/dashboards"
 
+/** Ceiling for a dashboard's section name — a rail sub-heading, not a
+    paragraph. Matches the board display-name feel; keeps the rail label short. */
+export const GROUP_NAME_MAX = 40
+
 /** Repo path of a dashboard's layout file; the slug is the filename. */
 export function dashboardPath(slug: string): string {
   return `${DASHBOARDS_DIR}/${slugSchema.parse(slug)}.yaml`
@@ -57,6 +61,12 @@ export const dashboardFileSchema = z
   .object({
     /** Display title; UI falls back to the slug when absent. */
     name: z.string().min(1).optional(),
+    /** Section this board belongs to in the rail — a free-text label the
+        viewer authors (e.g. "Clients", "Projects"). Boards sharing a value
+        cluster under one sub-heading inside their repo group; absent → the
+        board leads the group's unlabeled section. Order across sections is
+        set by the repo's `groups` list (data/repo.yaml), not here. */
+    group: z.string().min(1).max(GROUP_NAME_MAX).optional(),
     grid: z.object({
       columns: z.number().int().min(1).max(GRID_MAX_COLS).default(4),
       rowHeight: z.number().int().positive().default(150),

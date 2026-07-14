@@ -1,5 +1,12 @@
 import type { ReactNode } from "react"
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+} from "react"
 import {
   Await,
   useFetcher,
@@ -9,7 +16,7 @@ import {
 } from "react-router"
 
 import type { DashboardFile, Routine, WidgetSize } from "@steward/schema"
-import { dashboardPath, GRID_MAX_COLS } from "@steward/schema"
+import { dashboardPath, GRID_MAX_COLS, GROUP_NAME_MAX } from "@steward/schema"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
@@ -125,12 +132,15 @@ export function DashboardBoard({
     repo: string
     slug: string
   } | null>(null)
-  // The board the rail's menu is renaming — the current display name rides
-  // along so the dialog prefills; null closes it.
+  // The board the rail's menu is editing — its current name and section ride
+  // along so the dialog prefills, plus the repo's existing section names to
+  // suggest; null closes it.
   const [renameTarget, setRenameTarget] = useState<{
     repo: string
     slug: string
     name: string | null
+    group: string | null
+    sections: string[]
   } | null>(null)
   const [deletingRoutine, setDeletingRoutine] = useState<string | null>(null)
 
@@ -497,9 +507,28 @@ export function DashboardBoard({
         onAdd={() => setAdding(true)}
         onToggleEdit={() => setEditing((value) => !value)}
         onDeleteBoard={(repo, slug) => setDeleteTarget({ repo, slug })}
-        onRenameBoard={(repo, slug, name) =>
-          setRenameTarget({ repo, slug, name })
-        }
+        onRenameBoard={(repo, slug, name) => {
+          // Pull the board's current section and the repo's known sections
+          // (its authored order first, then any a board names off-list) so the
+          // dialog can prefill and offer them as suggestions.
+          const group = sidebarData?.repos.find((r) => r.repo === repo)
+          const known = group
+            ? [
+                ...group.groups,
+                ...group.dashboards
+                  .map((b) => b.group)
+                  .filter((g): g is string => g != null),
+              ]
+            : []
+          setRenameTarget({
+            repo,
+            slug,
+            name,
+            group:
+              group?.dashboards.find((b) => b.slug === slug)?.group ?? null,
+            sections: [...new Set(known)],
+          })
+        }}
       >
         {editing && (
           <GridSettings
@@ -714,37 +743,49 @@ interface DeleteResult {
 }
 
 /**
- * Rename a board's display name — any board the rail offers. The slug (the
- * layout file's name and the URL) is immutable; this edits only the `name`
- * field, committed directly like the rest of the board lifecycle (ADR-0010).
- * An empty name clears the field, falling the row back to its slug. The
- * fetcher is keyed by target so a prior rename's success can't auto-close the
- * next board's dialog.
+ * Edit a board's display name and section — any board the rail offers. The
+ * slug (the layout file's name and the URL) is immutable; this edits only the
+ * `name` and `group` fields, committed directly like the rest of the board
+ * lifecycle (ADR-0010). An empty name falls the row back to its slug; an empty
+ * section returns it to the repo's unlabeled lead section. The section input is
+ * free text with the repo's existing sections offered as suggestions (a native
+ * datalist — pick one to file the board there, or type a new name to start a
+ * section). The fetcher is keyed by target so a prior edit's success can't
+ * auto-close the next board's dialog.
  */
 function RenameDashboardDialog({
   target,
   onClose,
   onRenamed,
 }: {
-  target: { repo: string; slug: string; name: string | null } | null
+  target: {
+    repo: string
+    slug: string
+    name: string | null
+    group: string | null
+    sections: string[]
+  } | null
   onClose: () => void
   onRenamed: () => void
 }) {
   const t = useT()
+  const listId = useId()
   const fetcher = useFetcher<DeleteResult>({
     key: target ? `board-rename:${target.repo}:${target.slug}` : "board-rename",
   })
   const busy = fetcher.state !== "idle"
   const [name, setName] = useState("")
+  const [group, setGroup] = useState("")
 
-  // Prefill from the row's current name each time a new target is set —
-  // keyed on the target's identity so a re-render's fresh object can't
+  // Prefill from the row's current name and section each time a new target is
+  // set — keyed on the target's identity so a re-render's fresh object can't
   // clobber what the user is typing (adjust-state-during-render pattern).
   const targetKey = target ? `${target.repo}:${target.slug}` : null
   const [prefilledFor, setPrefilledFor] = useState<string | null>(null)
   if (target && targetKey !== prefilledFor) {
     setPrefilledFor(targetKey)
     setName(target.name ?? "")
+    setGroup(target.group ?? "")
   }
   // Closing disarms, so reopening the same board prefills afresh instead of
   // resurrecting an abandoned edit.
@@ -763,6 +804,7 @@ function RenameDashboardDialog({
         repo: target.repo,
         slug: target.slug,
         name: name.trim(),
+        group: group.trim(),
       }),
       { method: "post", action: "/dashboards", encType: "application/json" },
     )
@@ -772,23 +814,48 @@ function RenameDashboardDialog({
     <Dialog open={target != null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t("board.renameTitle")}</DialogTitle>
+          <DialogTitle>{t("board.editTitle")}</DialogTitle>
           <DialogDescription>
-            {t("board.renameBody", { slug: target?.slug ?? "" })}
+            {t("board.editBody", { slug: target?.slug ?? "" })}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-2">
-          <Label htmlFor="board-rename-name">{t("board.renameLabel")}</Label>
-          <Input
-            id="board-rename-name"
-            autoFocus
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder={target?.slug ?? ""}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") submit()
-            }}
-          />
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="board-rename-name">{t("board.renameLabel")}</Label>
+            <Input
+              id="board-rename-name"
+              autoFocus
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={target?.slug ?? ""}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") submit()
+              }}
+            />
+            <p className="text-xs text-ink-dim">{t("board.renameHint")}</p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="board-edit-group">{t("board.sectionLabel")}</Label>
+            <Input
+              id="board-edit-group"
+              value={group}
+              list={target && target.sections.length > 0 ? listId : undefined}
+              maxLength={GROUP_NAME_MAX}
+              onChange={(event) => setGroup(event.target.value)}
+              placeholder={t("board.sectionPlaceholder")}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") submit()
+              }}
+            />
+            {target && target.sections.length > 0 && (
+              <datalist id={listId}>
+                {target.sections.map((section) => (
+                  <option key={section} value={section} />
+                ))}
+              </datalist>
+            )}
+            <p className="text-xs text-ink-dim">{t("board.sectionHint")}</p>
+          </div>
         </div>
         {fetcher.data?.ok === false && (
           <p className="text-xs text-destructive">
