@@ -1,0 +1,39 @@
+name: Changeset
+
+# Non-blocking reminder: a PR that changes the CLI but carries no changeset will
+# be silently skipped by the release pipeline (Changesets only versions recorded
+# intents). This surfaces a warning annotation so it's a conscious choice — it
+# never fails, so infra/docs-only PRs (and web-app-only PRs) can ignore it.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  changeset:
+    name: Changeset reminder
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need the PR base commit for the diff
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Warn if no changeset
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # `changeset status` exits non-zero when a versionable package changed
+          # since BASE_SHA but no changeset was added. Swallow it into a warning
+          # so the check stays green either way.
+          if pnpm exec changeset status --since="$BASE_SHA" >/dev/null 2>&1; then
+            echo "Changeset present, or no versionable package changes."
+          else
+            echo "::warning title=No changeset::This PR changes package source but has no changeset. If it should ship in a release, run 'pnpm changeset', pick a bump level, and commit the generated file. Infra-, docs-, or web-only PRs can ignore this."
+          fi

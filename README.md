@@ -47,7 +47,7 @@ The loop:
    template, name it, pick a size, a schedule (or manual), and a host.
    **Sync** commits it to your data repo.
 2. **A run fires** — a cloud schedule, local launchd, an update-button
-   click, or `pnpm routine <slug>` in a terminal. Every path is one stable
+   click, or `steward run <slug>` in a terminal. Every path is one stable
    line: _"Run the steward routine `<slug>` — follow the `run-routine`
    skill."_
 3. **The routine publishes** — it writes a self-contained, responsive HTML
@@ -68,13 +68,13 @@ Prerequisites: a GitHub account; Claude Code (for routines to run).
 2. First run: accept the wizard that creates your private
    `steward-data-<you>` repo from the template.
 3. **Add a routine** (prompt → name → size → schedule/host) and **Sync**.
-4. **Enact it** from your steward checkout — each widget card prints the
-   exact line:
-   `pnpm routines:sync --apply --repo <owner>/steward-data-<owner>`. It
+4. **Enact it** — each widget card prints the exact line:
+   `npx @devord/steward sync --apply --repo <owner>/steward-data-<owner>`. It
    creates the cloud routine or launchd agent and reconciles drift on every
-   later run.
+   later run. Scheduled-local (launchd) routines want a stable install —
+   `npm i -g @devord/steward`.
 5. Missed a trigger? Mint one with
-   `pnpm routine:trigger <slug> --repo <owner>/steward-data-<owner>`.
+   `npx @devord/steward trigger <slug> --repo <owner>/steward-data-<owner>`.
 6. Widgets refresh on their own from then on; stale or never-run widgets say
    so on the card.
 
@@ -97,6 +97,7 @@ Workspace layout:
 | ----------------- | -------------------------------------------------------------------------- |
 | `apps/web`        | React Router v8 app (framework mode, SSR, Tailwind 4)                      |
 | `packages/schema` | zod schemas for routines/dashboards/templates — buildless, source-exported |
+| `packages/cli`    | the `@devord/steward` routines CLI — bundled + published to npm            |
 | `.claude/skills`  | the contract skills (run-routine, widget-artifact, publish-widget)         |
 | `templates/`      | the data-repo template and the built-in routine templates                  |
 | `docs/`           | ADRs, widget standard, roadmap                                             |

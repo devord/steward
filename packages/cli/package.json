@@ -1,0 +1,29 @@
+{
+  "name": "@devord/steward",
+  "version": "0.0.0",
+  "description": "Keep your Steward dashboard's routines in sync — cloud routines and local launchd agents from one routines.yaml.",
+  "license": "MIT",
+  "bin": {
+    "steward": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skills"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc"
+  },
+  "devDependencies": {
+    "@steward/schema": "workspace:*",
+    "@types/node": "catalog:",
+    "esbuild": "^0.25.0"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}

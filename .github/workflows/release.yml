@@ -1,0 +1,54 @@
+name: Release
+
+# The release spine for the published CLI (`@devord/steward`, ADR-0036),
+# driven by pushes to `main`:
+#
+#   1. While unreleased changesets sit on main, changesets/action keeps a
+#      "Version Packages" PR open that runs `pnpm run version` (apply the
+#      bumps, regenerate CHANGELOG.md). Merging that PR is the release trigger.
+#   2. When a push to main carries versions with no changeset left to apply,
+#      the action runs `pnpm run release` — builds the bundle and
+#      `changeset publish`es to npm.
+#
+# The private web app is never published; only `@devord/steward` has a public
+# access + version, so publish touches nothing else. No npm provenance: it
+# requires a public source repo, and this monorepo stays private (ADR-0036).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false # never interrupt a publish mid-flight
+
+permissions:
+  contents: write # open/update the Version PR, commit version bumps
+  pull-requests: write # open/update the Version PR
+
+jobs:
+  release:
+    name: Version PR & publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org" # writes the auth .npmrc
+      - run: pnpm install --frozen-lockfile
+      - name: Create Version PR or publish
+        uses: changesets/action@v1
+        with:
+          version: pnpm run version
+          publish: pnpm run release
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
