@@ -64,6 +64,47 @@ describe("swr", () => {
     await expect(swr("k", TTL, load)).rejects.toThrow("down")
   })
 
+  it("serves an uncacheable value on a miss but does not store it", async () => {
+    const load = vi.fn().mockResolvedValue({ degraded: true })
+    const cacheable = (v: { degraded: boolean }) => !v.degraded
+
+    // Served, but nothing is cached...
+    expect(await swr("k", TTL, load, TTL * 10, cacheable)).toEqual({
+      degraded: true,
+    })
+    // ...so the next read within the TTL still loads live (self-heals).
+    expect(await swr("k", TTL, load, TTL * 10, cacheable)).toEqual({
+      degraded: true,
+    })
+    expect(load).toHaveBeenCalledTimes(2)
+  })
+
+  it("keeps the good stale value when a background refresh is uncacheable", async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce({ degraded: false, n: 1 })
+      .mockResolvedValueOnce({ degraded: true, n: 0 }) // transient degrade
+      .mockResolvedValueOnce({ degraded: false, n: 2 })
+    const cacheable = (v: { degraded: boolean }) => !v.degraded
+
+    await swr("k", TTL, load, TTL * 10, cacheable)
+    vi.advanceTimersByTime(TTL + 1)
+
+    // Stale read fires the degraded refresh — which must not overwrite v1.
+    expect(await swr("k", TTL, load, TTL * 10, cacheable)).toMatchObject({
+      n: 1,
+    })
+    await vi.runAllTimersAsync()
+    expect(await swr("k", TTL, load, TTL * 10, cacheable)).toMatchObject({
+      n: 1,
+    })
+    // A later read retries and, once good again, caches the fresh value.
+    await vi.runAllTimersAsync()
+    expect(await swr("k", TTL, load, TTL * 10, cacheable)).toMatchObject({
+      n: 2,
+    })
+  })
+
   it("invalidates by prefix, leaving other tokens' entries", async () => {
     await swr("sidebar:a:x", TTL, () => Promise.resolve("a"))
     await swr("sidebar:b:x", TTL, () => Promise.resolve("b"))
