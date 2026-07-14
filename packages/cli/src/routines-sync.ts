@@ -517,10 +517,10 @@ export function main(argv: string[]): void {
         "\nAPI triggers are research preview: create the trigger and mint its" +
           "\ntoken in the Claude web UI (shown once), then paste both here —" +
           "\nthey are committed to the data repo, where repo read access is" +
-          "\nexactly the entitlement to fire (ADR-0016). Manual routines can't" +
-          "\nrun without one; scheduled routines need one only for the app's" +
-          "\nUpdate button. Leave empty to skip (mint later with" +
-          "\n`steward trigger <slug>`).\n",
+          "\nexactly the entitlement to fire (ADR-0016). A trigger only gates" +
+          "\nfiring the cloud routine — from the API or the app's Update button;" +
+          "\n`steward run <slug>` always runs it locally without one. Leave empty" +
+          "\nto skip (mint later with `steward trigger <slug>`).\n",
       )
       for (const routine of missingTriggers) {
         promptTriggerToken(routine.slug, dataRepoDir)
