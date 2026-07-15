@@ -35,13 +35,15 @@ drag/resize engine, driven as a **controlled component**.
   render (memoised on a value signature so a background poll can't hand it a
   fresh object mid-drag). `onDragStop`/`onResizeStop` fold the settled layout
   back into the draft, guarded against a no-op so a click never forks a draft.
-- **Free-form placement with push**, not vertical compaction:
-  `getCompactor(null, false, false)` (`allowOverlap: false`,
-  `preventCollision: false`). Dropping onto/between widgets slides the
-  neighbours aside — the behaviour the old model refused — while **not**
-  reflowing a board on load. Vertical compaction was rejected precisely because
-  it would yank every widget upward the first time an existing board opened,
-  disrupting layouts authored with intentional gaps.
+- **Vertical compaction** (`verticalCompactor`, RGL's default). Dropping onto or
+  between widgets slides the neighbours aside — the behaviour the old model
+  refused — and a displaced widget floats back up once the space frees. An
+  earlier attempt used no compaction (`getCompactor(null, false, false)`) to
+  avoid reflowing a board on load, but that pushed a displaced widget down and
+  never recovered it: each drag shoved it further and it stayed stranded, which
+  read as a bug. Vertical compaction is the standard dashboard behaviour and the
+  right trade — a board may compact upward on first render, but the commit only
+  writes on drag/resize, so nothing is persisted just by viewing.
 - **The YAML schema is unchanged.** `data/dashboards/<slug>.yaml` stays
   1-indexed `position`/`size`; a boundary adapter (`rgl-layout.ts`) is the only
   place the stored coordinates meet RGL's flat 0-indexed `{i,x,y,w,h}`, and it

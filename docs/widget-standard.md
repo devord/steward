@@ -10,7 +10,7 @@ relies on it when rendering. Grid bounds are encoded in
 - A react-grid-layout grid (ADR-0041): the board's own **`grid.columns`** on
   desktop (default **4**, up to **6**), 2 on tablet, 1 on phone. In edit mode,
   dragging a widget onto or between others slides the neighbours aside
-  (free-form placement with push — a board never reflows on load).
+  (vertical compaction — a displaced widget floats back up once the space frees).
 - Row unit **≈ 150 px** by default (`grid.rowHeight`, adjustable as board
   density), **12 px** gap. Canvas width is `grid.width` — `fixed` (centered)
   or `wide` (fills a large monitor).
