@@ -14,6 +14,16 @@ slugs, repo names, ages), sans for human titles. Hierarchy comes from
 weight, color, and alignment — never from shrinking type below the floors
 (14px body, 12px labels/meta).
 
+Stretch the tiers so each artifact has **one datum that is clearly the most
+important pixel** — the heading where there is one, the stat number at 1×1,
+otherwise the datum that answers the glance. The three type tiers (heading →
+section label → body) must read as three, not one narrow band: the heading is
+the heaviest and darkest (18px semibold, full ink); the section label is the
+_quiet_ organizer (12px, ink-dim, uppercase, tracked — small and dim, never a
+second heading); body is the content between them. Cards carry no border by
+design, so this hierarchy plus the whitespace rhythm between blocks _is_ the
+separation. Never let a section label out-weigh the heading it sits under.
+
 ## The shell
 
 Copy this skeleton on top of the token snippet (SKILL.md). It gives every
@@ -105,7 +115,7 @@ wide grid up instead).
 
 The artifact's own page title — the document's `<h1>`, matching the app's
 page headings so a wide tile, raw page, or full view reads like the rest of
-the product: mono, 18px, medium weight, full ink — with an optional ink-dim
+the product: mono, 18px, semibold, full ink — with an optional ink-dim
 subtitle (14px sans) for a caption. The iframe is its own outline, so this
 `<h1>` roots the section `<h2>`s below (never a `<p>` sitting above orphaned
 headings). The glance tiers lean on the chrome's title bar (name +
@@ -121,11 +131,18 @@ chrome bar — e.g. repo-pulse) still roots its sections with a visually-hidden
 `<h1>` (the widget's name), so the document outline is never a run of `<h2>`s
 with no parent.
 
+The heading is the artifact's anchor — the most important pixel on any tier
+that shows it. It carries a full **semibold** and full ink so it commands the
+top of the section a clear step above the 12px section labels below it (which
+stay ink-dim and quiet); a hair of negative tracking keeps the mono from
+reading as a data string.
+
 ```css
 .heading {
   font-family: var(--font-mono);
   font-size: 18px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--color-ink);
 }
 .heading .sub {
