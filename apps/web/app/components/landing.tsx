@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react"
-import { Blocks, Check, ChevronsDown, Lock, RefreshCw } from "lucide-react"
+import {
+  Blocks,
+  Check,
+  ChevronsDown,
+  LayoutGrid,
+  Lock,
+  RefreshCw,
+} from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 import { handleRadioKeydown } from "./appearance-settings.tsx"
@@ -63,8 +70,14 @@ export function Landing() {
           <ScrollCue />
         </div>
 
-        {/* Below the fold: the argument, for readers arriving cold. */}
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-20 pb-24">
+        {/* The proof, at full width: one dense board, the way the product
+            actually looks in use — claim first (the hero), evidence next. */}
+        <ShowcaseSection />
+
+        {/* Below the fold: the argument, for readers arriving cold. Left-
+            anchored to the hero and showcase edge so the wordmark, headline,
+            and every section heading share one left rail. */}
+        <div className="flex w-full max-w-3xl flex-col gap-20 pb-24">
           <LoopSection />
           <DataSection />
           <FeaturesSection />
@@ -388,21 +401,55 @@ function GithubMark({ className }: { className?: string }) {
   )
 }
 
-/* --- Landing demo board ----------------------------------------------------
-   A faux dashboard rendered in the real widget chrome (card + title bar), so
-   the landing shows the product instead of describing it. Content is
-   illustrative; colors are tokens only. Widget artifacts here are plain
-   markup, not iframes — this never touches a real routine. */
+/* --- The showcase --------------------------------------------------------- */
 
+/**
+ * The proof fold: one dense board at the scale a team actually runs, so the
+ * claim in the hero ("reports that update themselves") lands as something you
+ * can see rather than take on faith — evidence right under the assertion. Set
+ * at full width, its own reveal, and captioned honestly (the content is
+ * illustrative). The board itself is decorative markup, so it's aria-hidden;
+ * the heading and caption carry the meaning.
+ */
+function ShowcaseSection() {
+  const t = useT()
+  const reveal = useReveal()
+  return (
+    <section ref={reveal} className="pb-24">
+      <div className="landing-reveal-item">
+        <SectionTitle icon={LayoutGrid}>
+          {t("landing.showcase.title")}
+        </SectionTitle>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-dim">
+          {t("landing.showcase.body")}
+        </p>
+      </div>
+      <div className="landing-reveal-item mt-8" style={cssVars({ "--i": 1 })}>
+        <ShowcaseBoard />
+      </div>
+    </section>
+  )
+}
+
+/* --- Living-board vignettes -------------------------------------------------
+   Faux dashboards rendered in the real widget chrome (card + freshness title
+   bar), so the landing shows the product instead of describing it. Two scales:
+   a compact board beside the pitch, and the full board in the showcase, at the
+   density a real team runs. Content is illustrative; colors are tokens only,
+   and these are plain markup — never a real routine or iframe. */
+
+/** The compact board beside the hero pitch — a first glance at a live board,
+    with one routine mid-run so the page reads as something still being
+    written, not a screenshot. */
 function DemoBoard() {
   const t = useT()
   return (
     <div
       aria-hidden
-      className="flex w-full max-w-md flex-col items-stretch gap-3 max-lg:mx-auto sm:flex-row"
+      className="flex w-full max-w-lg flex-col items-stretch gap-3 max-lg:mx-auto sm:flex-row"
     >
       {/* Left column: one tall widget, stretched to match the right stack. */}
-      <DemoWidget name="Daily plan" ago="Ran 2h ago" className="flex-1">
+      <Widget name="Daily plan" ago="Ran 2h ago" className="flex-1">
         <p className="mb-3 flex items-center justify-between font-mono text-xs text-ink-dim">
           Today
           <span className="text-ink-faint">Jul 09</span>
@@ -415,57 +462,172 @@ function DemoBoard() {
           <Task>Merge appearance branch</Task>
           <Task>Reply to design thread</Task>
         </ul>
-        <div className="mt-auto flex items-center gap-2 pt-4 font-mono text-xs text-ink-dim">
-          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg3">
-            <span
-              className="block h-full rounded-full bg-green"
-              style={{ width: "33%" }}
-            />
-          </span>
-          2/6
-        </div>
-      </DemoWidget>
+        <ProgressBar
+          value={33}
+          label="2/6"
+          tone="green"
+          className="mt-auto pt-4"
+        />
+      </Widget>
 
       {/* Right column: two stacked widgets, ~matching the tall one. */}
       <div className="flex flex-1 flex-col gap-3">
-        <DemoWidget name="Repo pulse" ago="Ran 14m ago">
+        <Widget name="Repo pulse" ago="Ran 14m ago">
           <p className="mb-2.5 font-mono text-xs text-ink-dim">Open PRs</p>
           <div className="space-y-2">
-            <PulseRow label="steward" fill="68%" n={4} />
-            <PulseRow label="chat" fill="40%" n={2} />
-            <PulseRow label="kb" fill="18%" n={1} />
+            <MeterRow label="steward" fill="68%" n={4} />
+            <MeterRow label="chat" fill="40%" n={2} />
+            <MeterRow label="kb" fill="18%" n={1} />
           </div>
-        </DemoWidget>
+        </Widget>
 
-        <DemoWidget
-          name="Changelog"
-          ago="Ran 4d ago"
-          stale
-          staleLabel={t("widget.stale")}
+        <Widget
+          name="Morning briefing"
+          running
+          runningLabel={t("widget.running")}
         >
-          <p className="mb-2.5 font-mono text-xs text-ink-dim">This week</p>
+          <p className="mb-2.5 font-mono text-xs text-ink-dim">Writing…</p>
           <div className="space-y-2">
             <SkeletonLine w="w-full" />
             <SkeletonLine w="w-4/5" />
-            <SkeletonLine w="w-11/12" />
-            <SkeletonLine w="w-2/3" />
+            <SkeletonLine w="w-11/12" shimmer />
           </div>
-        </DemoWidget>
+        </Widget>
       </div>
     </div>
   )
 }
 
-function DemoWidget({
+/** The full board — four dense widgets in the real chrome, the density a
+    working dashboard carries. Two columns on desktop, stacking below. */
+function ShowcaseBoard() {
+  const t = useT()
+  return (
+    <div aria-hidden className="grid gap-3 sm:grid-cols-2">
+      <Widget name="Progress report" ago="Ran 2h ago">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-sm text-foreground">
+            Closing on <span className="font-medium">Design system</span>
+          </p>
+          <span className="font-mono text-lg font-medium text-primary">
+            62%
+          </span>
+        </div>
+        <ProgressBar value={62} tone="primary" className="mt-2.5" />
+        <p className="mt-2 font-mono text-xs text-ink-faint">
+          9 landed · 3 in review
+        </p>
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-xs">
+          <Phase done>Discovery</Phase>
+          <Phase active>Build</Phase>
+          <Phase>Polish</Phase>
+          <Phase>Launch</Phase>
+        </div>
+        <div className="mt-4 space-y-2.5">
+          <MeterRow label="Components" fill="74%" suffix="74%" />
+          <MeterRow label="Tokens" fill="90%" suffix="90%" />
+        </div>
+      </Widget>
+
+      <Widget name="Needs your review" ago="Ran 12m ago">
+        <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2.5 font-mono text-xs">
+          <PrRow
+            title="wire toast to the router"
+            pr="#212"
+            size="+142 −8"
+            state="you"
+          />
+          <PrRow
+            title="debounce the search box"
+            pr="#208"
+            size="+64 −12"
+            state="ok"
+          />
+          <PrRow
+            title="fix z-index on the popover"
+            pr="#205"
+            size="+9 −3"
+            state="you"
+          />
+          <PrRow
+            title="add pt-BR locale keys"
+            pr="#201"
+            size="+318 −40"
+            state="draft"
+          />
+          <PrRow
+            title="cache the repo tree read"
+            pr="#198"
+            size="+55 −7"
+            state="ok"
+          />
+        </div>
+      </Widget>
+
+      <Widget name="Repo stats" ago="Ran 7h ago">
+        <p className="mb-3 font-mono text-xs text-ink-dim">
+          Commits · 12 weeks
+        </p>
+        <BarChart />
+        <div className="mt-3 flex items-center gap-4 font-mono text-xs text-ink-faint">
+          <Legend tone="green">merged</Legend>
+          <Legend tone="primary">open</Legend>
+        </div>
+      </Widget>
+
+      <Widget
+        name="Ticket gaps"
+        ago="Ran 6h ago"
+        stale
+        staleLabel={t("widget.stale")}
+      >
+        <p className="mb-3 font-mono text-xs text-ink-dim">Recommended 14</p>
+        <div className="space-y-2.5">
+          <GapRow
+            kind="gap"
+            title="Build the export-to-CSV flow"
+            ticket="ATL-84"
+          />
+          <GapRow
+            kind="drift"
+            title="Wire the empty-state illustration"
+            ticket="ATL-77"
+          />
+          <GapRow
+            kind="gap"
+            title="Add keyboard nav to the grid"
+            ticket="ATL-69"
+          />
+          <GapRow
+            kind="gap"
+            title="Rate-limit the webhook intake"
+            ticket="ATL-61"
+          />
+        </div>
+      </Widget>
+    </div>
+  )
+}
+
+/* --- Widget primitives ---------------------------------------------------- */
+
+/** The widget card: the real freshness title bar (name + run state) over a
+    body. State reads as the app's own pills — a pulsing accent dot for a run
+    in flight, a yellow badge for stale — never prose. */
+function Widget({
   name,
   ago,
+  running = false,
+  runningLabel,
   stale = false,
   staleLabel,
   className,
   children,
 }: {
   name: string
-  ago: string
+  ago?: string
+  running?: boolean
+  runningLabel?: string
   stale?: boolean
   staleLabel?: string
   className?: string
@@ -478,18 +640,61 @@ function DemoWidget({
         className,
       )}
     >
-      <div className="flex items-center gap-2 border-b border-border-dim px-2.5 py-1.5 text-xs">
-        <span className="truncate font-medium text-foreground">{name}</span>
-        <span className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-ink-dim">
-          {stale && (
-            <span className="rounded border border-yellow/45 bg-yellow/10 px-1.5 text-xs text-ink">
-              {staleLabel}
-            </span>
+      <div className="flex items-center gap-2 border-b border-border-dim px-2.5 py-1.5 text-sm">
+        <span className="truncate font-mono font-medium text-foreground">
+          {name}
+        </span>
+        <span className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-xs text-ink-dim">
+          {running ? (
+            <>
+              <span className="run-pulse size-1.5 rounded-full bg-primary" />
+              {runningLabel}
+            </>
+          ) : (
+            <>
+              {stale && (
+                <span className="rounded border border-yellow/45 bg-yellow/10 px-1.5 text-xs text-ink">
+                  {staleLabel}
+                </span>
+              )}
+              {ago}
+            </>
           )}
-          {ago}
         </span>
       </div>
       <div className="flex min-h-0 flex-1 flex-col p-3">{children}</div>
+    </div>
+  )
+}
+
+function ProgressBar({
+  value,
+  label,
+  tone = "primary",
+  className,
+}: {
+  value: number
+  label?: string
+  tone?: "primary" | "green"
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 font-mono text-xs text-ink-dim",
+        className,
+      )}
+    >
+      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg3">
+        <span
+          className={cn(
+            "block h-full rounded-full",
+            tone === "green" ? "bg-green" : "bg-primary",
+          )}
+          style={{ width: `${value}%` }}
+        />
+      </span>
+      {label && <span className="shrink-0">{label}</span>}
     </div>
   )
 }
@@ -515,29 +720,206 @@ function Task({
   )
 }
 
-function PulseRow({
+/** A labelled meter: name, fill bar, and a right-aligned figure (a count or a
+    percentage). */
+function MeterRow({
   label,
   fill,
   n,
+  suffix,
 }: {
   label: string
   fill: string
-  n: number
+  n?: number
+  suffix?: string
 }) {
   return (
     <div className="flex items-center gap-2 font-mono text-xs">
-      <span className="w-16 shrink-0 truncate text-ink-dim">{label}</span>
+      <span className="w-20 shrink-0 truncate text-ink-dim">{label}</span>
       <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg3">
         <span
           className="block h-full rounded-full bg-aqua"
           style={{ width: fill }}
         />
       </span>
-      <span className="w-3 shrink-0 text-right text-ink-faint">{n}</span>
+      <span className="w-8 shrink-0 text-right text-ink-faint">
+        {suffix ?? n}
+      </span>
     </div>
   )
 }
 
-function SkeletonLine({ w }: { w: string }) {
-  return <span className={cn("block h-2 rounded-full bg-bg3", w)} />
+/** A milestone phase chip: a leading dot (done/active/pending) and its name. */
+function Phase({
+  done = false,
+  active = false,
+  children,
+}: {
+  done?: boolean
+  active?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        className={cn(
+          "size-1.5 rounded-full",
+          done && "bg-green",
+          active && "run-pulse bg-primary",
+          !done && !active && "bg-bg3",
+        )}
+      />
+      <span
+        className={cn(
+          active ? "text-foreground" : done ? "text-ink-dim" : "text-ink-faint",
+        )}
+      >
+        {children}
+      </span>
+    </span>
+  )
+}
+
+/** One row of a PR-review list: title, size diff, and a state pill. */
+function PrRow({
+  pr,
+  title,
+  size,
+  state,
+}: {
+  pr: string
+  title: string
+  size: string
+  state: "you" | "ok" | "draft"
+}) {
+  const pill =
+    state === "you"
+      ? { text: "needs you", cls: "border-primary/40 bg-primary/10 text-ink" }
+      : state === "ok"
+        ? { text: "approved", cls: "border-green/40 bg-green/10 text-ink" }
+        : { text: "draft", cls: "border-border bg-bg3 text-ink-dim" }
+  return (
+    <>
+      <span className="flex min-w-0 items-baseline gap-2">
+        <span className="shrink-0 text-ink-faint">{pr}</span>
+        <span className="truncate text-ink-dim">{title}</span>
+      </span>
+      <span className="shrink-0 text-right text-ink-faint">
+        <span className="text-green">{size.split(" ")[0]}</span>{" "}
+        <span className="text-red">{size.split(" ")[1]}</span>
+      </span>
+      <span
+        className={cn(
+          "shrink-0 justify-self-end rounded border px-1.5 text-xs",
+          pill.cls,
+        )}
+      >
+        {pill.text}
+      </span>
+    </>
+  )
+}
+
+/** A gap/drift finding: a typed badge, the recommendation, and its ticket. */
+function GapRow({
+  kind,
+  title,
+  ticket,
+}: {
+  kind: "gap" | "drift"
+  title: string
+  ticket: string
+}) {
+  return (
+    <div className="flex items-center gap-2.5 font-mono text-xs">
+      <span
+        className={cn(
+          "w-11 shrink-0 rounded border px-1 text-center text-xs",
+          kind === "gap"
+            ? "border-primary/40 bg-primary/10 text-ink"
+            : "border-yellow/45 bg-yellow/10 text-ink",
+        )}
+      >
+        {kind}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-ink-dim">{title}</span>
+      <span className="shrink-0 text-ink-faint">{ticket}</span>
+    </div>
+  )
+}
+
+/** A small bar chart — merged commits with an open-PR cap — the kind of glance
+    stat a repo widget carries. Heights are illustrative. */
+function BarChart() {
+  const bars = [
+    { h: 34, open: 0 },
+    { h: 52, open: 8 },
+    { h: 46, open: 0 },
+    { h: 70, open: 14 },
+    { h: 61, open: 0 },
+    { h: 88, open: 10 },
+    { h: 74, open: 0 },
+    { h: 96, open: 18 },
+    { h: 58, open: 6 },
+    { h: 80, open: 0 },
+    { h: 44, open: 9 },
+    { h: 67, open: 12 },
+  ]
+  return (
+    <div className="flex h-20 items-end gap-1.5">
+      {bars.map((bar, i) => (
+        <span
+          key={i}
+          className="flex flex-1 flex-col justify-end overflow-hidden rounded-sm bg-bg3"
+          style={{ height: `${bar.h}%` }}
+        >
+          {bar.open > 0 && (
+            <span
+              className="block w-full bg-primary"
+              style={{ height: `${bar.open}%` }}
+            />
+          )}
+          <span className="block w-full flex-1 bg-green" />
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function Legend({
+  tone,
+  children,
+}: {
+  tone: "green" | "primary"
+  children: React.ReactNode
+}) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        className={cn(
+          "size-2 rounded-sm",
+          tone === "green" ? "bg-green" : "bg-primary",
+        )}
+      />
+      {children}
+    </span>
+  )
+}
+
+function SkeletonLine({
+  w,
+  shimmer = false,
+}: {
+  w: string
+  shimmer?: boolean
+}) {
+  return (
+    <span
+      className={cn(
+        "block h-2 rounded-full bg-bg3",
+        w,
+        shimmer && "landing-shimmer",
+      )}
+    />
+  )
 }
