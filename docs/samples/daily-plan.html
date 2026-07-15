@@ -174,6 +174,27 @@
         color: var(--color-ink-faint);
         white-space: nowrap;
       }
+      /* Dot-leader (design.md · Ledger rows): the block body ends in a quiet
+         dotted rule that runs to its duration, so the time and the length
+         read as one row instead of a label on the left and a value adrift on
+         the right. Pure CSS — the body flexes and its ::after grows to fill
+         the column; single-line block labels give the dots a clean start.
+         Suppressed in the time grid, where each block is a drawn box that
+         already caps the measure. */
+      .blocks .body {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+      }
+      .blocks .body::after {
+        content: "";
+        flex: 1;
+        align-self: baseline;
+        height: 0.5em;
+        min-width: 16px;
+        border-bottom: 1px dotted var(--color-border-dim);
+      }
       /* Block notes (the "what done looks like" elaboration) are a page
          luxury — hidden on tiles, shown inside the time grid. */
       .note {
@@ -503,10 +524,14 @@
           grid-column: 1;
         }
         .blocks .day .body {
+          display: block;
           min-width: 0;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+        }
+        .blocks .day .body::after {
+          content: none;
         }
         .blocks .day .note {
           display: block;

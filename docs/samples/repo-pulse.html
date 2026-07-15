@@ -396,8 +396,19 @@
       }
 
       /* ≥700px (3-col tiles and up): reveal ticket + size, name the
-         columns. The row's state/age shift to columns 5/6. */
+         columns. The row's state/age shift to columns 5/6. Cap the table's
+         measure and left-align it (design.md · Ledger rows / the shell): an
+         uncapped table lets the title's 1fr swallow the width and flings
+         ticket/size/state/age to the far frame edge — a wide tile or the
+         full view then reads as a title on the left and a cluster of values
+         a whole saccade away on the right. Capped, the value cluster sits a
+         short reach from the title; the slack falls off to the right. */
       @media (min-width: 700px) {
+        main,
+        footer {
+          max-width: 52rem;
+          margin-inline: 0 auto;
+        }
         main {
           grid-template-columns:
             max-content minmax(0, 1fr)
@@ -418,15 +429,20 @@
         }
       }
 
-      /* Wide/full (~900px+): a page table — roomier rows, hairlines, titles
-         wrap. The artifact fills the full width it's given (the board sizes
-         the widget); no content cap, so the columns breathe edge to edge.
-         Page chrome (outer padding) keys on the un-stamped raw page, not
-         width, so a 4-col board tile stays compact. */
+      /* Wide/full (~900px+): a page table — roomier rows, hairlines (which
+         also guide the eye horizontally across the row), titles wrap. The
+         measure cap set at ≥700 carries through; page chrome (outer padding)
+         still keys on the un-stamped raw page, not width, so a 4-col board
+         tile stays compact. Sections breathe more than rows (design.md ·
+         Rhythm): the 14px row-gap holds inside a group, +12px opens between
+         groups. */
       @media (min-width: 900px) {
         main,
         footer {
           width: 100%;
+        }
+        .rows + .rows {
+          margin-top: 12px;
         }
         li {
           padding-block: 7px;
