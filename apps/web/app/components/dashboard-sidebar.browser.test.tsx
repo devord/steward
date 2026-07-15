@@ -9,6 +9,7 @@ import { DRAFT_EVENT, DRAFT_KEY_PREFIX } from "../lib/draft.ts"
 import {
   PENDING_RUN_EVENT,
   PENDING_RUN_KEY_PREFIX,
+  PENDING_TIMEOUT_MS,
 } from "../lib/pending-runs.ts"
 
 const HOME_REPO = "alice/steward-data"
@@ -825,7 +826,13 @@ describe("DashboardSidebar state markers", () => {
   it("ignores a run mark that has already timed out", async () => {
     localStorage.setItem(
       `${PENDING_RUN_KEY_PREFIX}${HOME_REPO}:repo-pulse`,
-      JSON.stringify({ firedAt: Date.now() - 11 * 60_000, sha: null }),
+      JSON.stringify({
+        // Older than the pending-run window, so the hydration scan drops it.
+        // Derived from the constant so a window change can't silently strand
+        // this test at a stale threshold.
+        firedAt: Date.now() - PENDING_TIMEOUT_MS - 60_000,
+        sha: null,
+      }),
     )
     await renderSidebar()
     // Give the hydration scan a tick, then assert nothing lit up.
