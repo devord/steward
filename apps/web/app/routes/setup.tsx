@@ -1,7 +1,8 @@
-import { Form, redirect, useNavigation } from "react-router"
+import { Form, redirect, useNavigation, useRouteError } from "react-router"
 
 import type { Route } from "./+types/setup"
 import { AccountBar } from "../components/account-bar.tsx"
+import { describeSetupError, ErrorScreen } from "../components/error-screen.tsx"
 import { Button } from "~/components/ui/button"
 import {
   createDataRepoOr503,
@@ -61,6 +62,19 @@ export async function action({ request }: Route.ActionArgs) {
   invalidateRepoCache(auth.token)
   invalidateSidebarCache(auth.token)
   return redirect("/")
+}
+
+/**
+ * Setup's own error screen. The root boundary flattens every 404 to "the page
+ * could not be found," which buries the one 404 that matters here: an
+ * unreachable data-repo template (createDataRepoOr503), whose thrown body names
+ * the misconfiguration and how to fix it. A genuine no-match never reaches this
+ * route boundary, so surfacing the thrown message is always right.
+ */
+export function ErrorBoundary() {
+  const error = useRouteError()
+  const t = useT()
+  return <ErrorScreen {...describeSetupError(error, t)} />
 }
 
 /**
