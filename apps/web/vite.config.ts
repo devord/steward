@@ -4,6 +4,11 @@ import { playwright } from "@vitest/browser-playwright"
 import { defineConfig } from "vitest/config"
 
 export default defineConfig({
+  // react-grid-layout's react-draggable reads `process.env.DRAGGABLE_DEBUG`
+  // at drag start; the client bundle has no `process`, so without this the
+  // first drag throws "process is not defined". Replace the read with a
+  // literal so it compiles away (in the app build and both test projects).
+  define: { "process.env.DRAGGABLE_DEBUG": "false" },
   // The React Router framework plugin expects its react-refresh preamble
   // and full app context; under vitest (unit and browser projects alike)
   // plain Vite's esbuild JSX transform is all the tests need.

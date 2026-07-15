@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { useFetcher } from "react-router"
 
-import type { Routine, Widget, WidgetSize } from "@steward/schema"
-import { GRID_MAX_COLS, GRID_MAX_ROWS, routineHost } from "@steward/schema"
+import type { Routine, Widget } from "@steward/schema"
+import { routineHost } from "@steward/schema"
 import {
   Check,
   Copy,
@@ -25,7 +25,6 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog"
 import { cn } from "~/lib/utils"
-import { cssVars } from "../lib/css.ts"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
 import {
@@ -38,7 +37,6 @@ import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
 import { frameArtifactHtml } from "../lib/theme.ts"
 import { agoParts } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
-import type { DragKind, GridDrag } from "../lib/use-grid-drag.ts"
 import type { RunResult } from "../routes/run.ts"
 import { WidgetLightbox } from "./widget-lightbox.tsx"
 
@@ -47,9 +45,6 @@ export interface WidgetCardProps {
   routine: Routine
   artifact: ArtifactInfo | undefined
   now: number
-  /** The board's column count — bounds keyboard resize (defaults to the
-      grid ceiling for standalone renders like tests). */
-  columns?: number
   /** Which data repo this card's board lives in — enables the Update action
       (ADR-0016). Standalone renders (tests) omit it and get no Update
       control. */
@@ -71,7 +66,9 @@ export interface WidgetCardProps {
   /** Open the Sync panel — powers the draft tile's "Sync to commit" button,
       the same action as the header's unsynced chip (ADR-0003). */
   onSync?: () => void
-  /** Edit mode: drag to move, corner handle to resize, × to remove. */
+  /** Edit mode: drag the title bar to move (ADR-0041), corner handle to
+      resize, × to remove. The grid (react-grid-layout) owns the drag/resize
+      mechanics; the card only supplies the drag-handle surface and the ×. */
   editing?: boolean
   /** Open the routine editor for this card (edit-mode title bar pencil). */
   onEdit?: () => void
@@ -79,12 +76,6 @@ export interface WidgetCardProps {
       disabled tile's Enable button. A disabled routine never runs (ADR-0016);
       this is the only in-app way back on (or off). */
   onToggleEnabled?: () => void
-  /** This card's active drag, if it is the one being dragged. */
-  drag?: GridDrag | null
-  onDragStart?: (kind: DragKind, event: React.PointerEvent) => void
-  /** Keyboard fallbacks — arrows move, shift+arrows resize, del removes. */
-  onMove?: (dCol: number, dRow: number) => void
-  onResize?: (size: WidgetSize) => void
   onRemove?: () => void
 }
 
@@ -104,7 +95,6 @@ export function WidgetCard({
   routine,
   artifact,
   now,
-  columns = GRID_MAX_COLS,
   dataRepo,
   shared = false,
   login,
@@ -115,16 +105,12 @@ export function WidgetCard({
   editing = false,
   onEdit,
   onToggleEnabled,
-  drag = null,
-  onDragStart,
-  onMove,
-  onResize,
   onRemove,
 }: WidgetCardProps) {
   const t = useT()
   const theme = useResolvedTheme()
   const [expanded, setExpanded] = useState(false)
-  const { position, size } = widget
+  const { size } = widget
   // The signed-in viewer resolves person-relative content at render time
   // (ADR-0039): repo-pulse's "needs your review" / "yours" enhance against
   // this login instead of the routine runner's. Absent on standalone renders
@@ -177,56 +163,17 @@ export function WidgetCard({
       : t("widget.ran", { ago: t(`time.${ago.unit}`, { n: ago.n }) })
     : t("widget.never")
 
-  const resizing = drag?.kind === "resize"
-  // While resizing, the title-bar readout tracks the snap target live.
-  const shownSize = resizing ? drag.candidate : size
-
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.target !== event.currentTarget) return
-    const step = (dCol: number, dRow: number) => {
-      if (event.shiftKey) {
-        onResize?.({
-          cols: Math.min(columns, Math.max(1, size.cols + dCol)),
-          rows: Math.min(GRID_MAX_ROWS, Math.max(1, size.rows + dRow)),
-        })
-      } else {
-        onMove?.(dCol, dRow)
-      }
-    }
-    switch (event.key) {
-      case "ArrowLeft":
-        step(-1, 0)
-        break
-      case "ArrowRight":
-        step(1, 0)
-        break
-      case "ArrowUp":
-        step(0, -1)
-        break
-      case "ArrowDown":
-        step(0, 1)
-        break
-      case "Delete":
-      case "Backspace":
-        onRemove?.()
-        break
-      default:
-        return
-    }
-    event.preventDefault()
-  }
-
   return (
     <>
       <article
         className={cn(
           // `isolate` keeps the card's internal z-layering (edit-mode header
-          // z-20, drag surface z-10, resize handle z-30) inside its own
-          // stacking context. Without it the article isn't a stacking context
-          // in the static edit state, so the header's z-20 leaks to the root
-          // and — tying the app header's own z-20 but later in the DOM — paints
-          // over the sticky page header when a tall card scrolls up under it.
-          "widget-cell group relative isolate flex flex-col overflow-hidden rounded-lg border",
+          // z-20, resize handle z-30) inside its own stacking context. Without
+          // it the article isn't a stacking context in the static edit state,
+          // so the header's z-20 leaks to the root and — tying the app header's
+          // own z-20 but later in the DOM — paints over the sticky page header
+          // when a tall card scrolls up under it.
+          "group relative isolate flex size-full flex-col overflow-hidden rounded-lg border",
           // The widget reads as a section of the page, not an elevated card:
           // the artifact is repainted flush to the board (TILE_FLUSH_STYLE) and
           // the title/freshness float frameless over it (see the view header),
@@ -240,41 +187,17 @@ export function WidgetCard({
           // *descendants* — an element is never its own descendant, so it would
           // never fire on the article that carries the class).
           editing
-            ? "border-border focus-visible:outline-2 focus-visible:-outline-offset-1"
+            ? "border-border"
             : "border-transparent transition-colors hover:border-border focus-within:border-border",
-          drag && "shadow-xl shadow-black/50",
         )}
-        tabIndex={editing ? 0 : undefined}
-        aria-label={
-          editing
-            ? `${routine.name} — arrow keys move, shift+arrows resize, delete removes`
-            : undefined
-        }
-        onKeyDown={editing ? handleKeyDown : undefined}
-        style={{
-          ...cssVars({
-            "--col": position.col,
-            "--row": position.row,
-            "--cols": size.cols,
-            "--cols-md": Math.min(size.cols, 2),
-            "--rows": size.rows,
-          }),
-          ...(drag?.kind === "move" && {
-            transform: `translate(${drag.dx}px, ${drag.dy}px)`,
-            zIndex: 20,
-          }),
-          ...(resizing &&
-            drag.sizePx && {
-              ...(drag.sizePx.width != null && { width: drag.sizePx.width }),
-              height: drag.sizePx.height,
-              zIndex: 20,
-            }),
-        }}
       >
         {editing ? (
-          /* Edit-mode title bar: remove, identity, and the live size readout.
-             Controls live in the bar, never floating over the artifact. */
-          <header className="relative z-20 flex items-center gap-1.5 border-b bg-bg2 py-1 pr-2.5 pl-1 text-xs">
+          /* Edit-mode title bar: doubles as react-grid-layout's drag handle
+             (`.widget-drag-handle`, ADR-0041) — grab it to move the card. Its
+             buttons are excluded from the drag via the grid's `cancel`
+             selector. Controls live in the bar, never floating over the
+             artifact; resize is RGL's own corner grip. */
+          <header className="widget-drag-handle relative z-20 flex items-center gap-1.5 border-b bg-bg2 py-1 pr-2.5 pl-1 text-xs">
             <Button
               variant="ghost"
               size="icon-xs"
@@ -329,18 +252,11 @@ export function WidgetCard({
             )}
             <span
               className={cn(
-                "shrink-0 pr-1 font-mono tabular-nums",
+                "shrink-0 pr-1 font-mono tabular-nums text-ink-dim",
                 onEdit || onToggleEnabled ? "" : "ml-auto",
-                // Red while an invalid drop is pending — on the narrow grids
-                // this readout is the only collision signal (no ghost cell).
-                resizing
-                  ? drag.valid
-                    ? "text-primary"
-                    : "text-destructive"
-                  : "text-ink-dim",
               )}
             >
-              {shownSize.cols}×{shownSize.rows}
+              {size.cols}×{size.rows}
             </span>
           </header>
         ) : (
@@ -478,46 +394,6 @@ export function WidgetCard({
             onSync={onSync}
             onEnable={onToggleEnabled}
           />
-        )}
-        {editing && (
-          <>
-            {/* Drag surface: covers the artifact (iframes swallow pointer
-              events) but sits under the title bar and resize handle. Remove
-              lives in the bar so no control ever floats over the
-              artifact — content stays clean while dragging. Move only exists
-              on the full ≥1100px grid, so below it the surface keeps
-              touch-action free — a finger on the card must still pan the
-              page in edit mode. */}
-            <div
-              aria-hidden
-              className={cn(
-                "absolute inset-0 z-10 min-[1100px]:touch-none",
-                drag?.kind === "move"
-                  ? "min-[1100px]:cursor-grabbing"
-                  : "min-[1100px]:cursor-grab",
-              )}
-              onPointerDown={(event) => onDragStart?.("move", event)}
-            />
-            {/* Corner resize handle — hidden mid-move so the lifted card is
-              just artifact + footer. The pointer target is a padded hitbox
-              around the small L-shaped visual so a finger can grab it. */}
-            {drag?.kind !== "move" && (
-              <div
-                aria-hidden
-                className="group/resize absolute right-0 bottom-0 z-30 flex cursor-nwse-resize touch-none items-end justify-end p-[3px] pointer-coarse:pt-7 pointer-coarse:pl-7"
-                onPointerDown={(event) => onDragStart?.("resize", event)}
-              >
-                <div
-                  className={cn(
-                    "size-3.5 rounded-br-[5px] border-r-2 border-b-2",
-                    resizing
-                      ? "border-primary"
-                      : "border-ink-dim group-hover/resize:border-primary",
-                  )}
-                />
-              </div>
-            )}
-          </>
         )}
       </article>
       {fullHtml && (

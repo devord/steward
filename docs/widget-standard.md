@@ -7,13 +7,16 @@ relies on it when rendering. Grid bounds are encoded in
 
 ## The grid (dashboard side)
 
-- CSS grid: the board's own **`grid.columns`** on desktop (default **4**,
-  up to **6**), 2 on tablet, 1 on phone.
+- A react-grid-layout grid (ADR-0041): the board's own **`grid.columns`** on
+  desktop (default **4**, up to **6**), 2 on tablet, 1 on phone. In edit mode,
+  dragging a widget onto or between others slides the neighbours aside
+  (free-form placement with push — a board never reflows on load).
 - Row unit **≈ 150 px** by default (`grid.rowHeight`, adjustable as board
   density), **12 px** gap. Canvas width is `grid.width` — `fixed` (centered)
   or `wide` (fills a large monitor).
 - A widget declares `size: { cols: 1..columns, rows: 1..6 }` and a
-  `position: { col, row }` in `data/dashboards/<slug>.yaml`.
+  `position: { col, row }` in `data/dashboards/<slug>.yaml` (1-indexed; the
+  board maps it to the grid engine's own 0-indexed layout).
 - The widget body is an iframe:
   `<iframe srcdoc={artifactHtml} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox">`
   — scripts allowed, links open real new tabs (ADR-0028), **no**

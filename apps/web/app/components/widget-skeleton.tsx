@@ -1,33 +1,25 @@
 import type { Widget } from "@steward/schema"
 
 import { Skeleton } from "~/components/ui/skeleton"
-import { cssVars } from "../lib/css.ts"
 
 /**
  * A widget cell while its artifact streams in from GitHub (ADR-0002). The
- * board structure loads first, so this sits in the widget's real grid slot at
- * its real size — the silhouette is already correct; only the body is
- * pending. Mirrors WidgetCard's view-mode frame (frameless section header over
- * a flush, page-colored body, transparent border) so the swap to the loaded
- * card neither shifts the layout nor flashes a card outline that then
- * dissolves.
+ * board structure loads first, so this fills its react-grid-layout cell (which
+ * is already at the widget's real size) — the silhouette is correct; only the
+ * body is pending. Mirrors WidgetCard's view-mode frame (frameless section
+ * header over a flush, page-colored body, transparent border) so the swap to
+ * the loaded card neither shifts the layout nor flashes a card outline that
+ * then dissolves.
  */
 export function WidgetSkeleton({ widget }: { widget: Widget }) {
-  const { position, size } = widget
+  const { size } = widget
   // A couple more body lines on taller cells so big widgets don't read empty.
   const lines = size.rows > 1 ? 5 : 3
 
   return (
     <div
       aria-hidden
-      className="widget-cell flex flex-col overflow-hidden rounded-lg border border-transparent"
-      style={cssVars({
-        "--col": position.col,
-        "--row": position.row,
-        "--cols": size.cols,
-        "--cols-md": Math.min(size.cols, 2),
-        "--rows": size.rows,
-      })}
+      className="flex size-full flex-col overflow-hidden rounded-lg border border-transparent"
     >
       <div className="flex min-h-8 items-center justify-between gap-2 px-2.5 py-1.5">
         <Skeleton className="h-2.5 w-24" />
