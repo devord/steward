@@ -15,7 +15,7 @@ import type { ArtifactInfo } from "./dashboard.server.ts"
  * spinning "Running" long after its artifact had already updated. We record
  * the SHA on file at fire time and clear once the loaded SHA differs from it.
  */
-export const PENDING_TIMEOUT_MS = 10 * 60_000
+export const PENDING_TIMEOUT_MS = 30 * 60_000
 
 /** localStorage key prefix for in-flight run marks — the rail scans it
     (rail-status.ts) to mark repos with a run in flight. */

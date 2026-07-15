@@ -62,7 +62,7 @@ describe("pendingToClear", () => {
   })
 
   it("clears a run that has waited past the timeout with no new artifact", () => {
-    const fired = run(NOW - 11 * 60_000, "sha-old") // > 10min
+    const fired = run(NOW - 31 * 60_000, "sha-old") // > 30min
     expect(
       pendingToClear({ a: fired }, { a: artifact("sha-old") }, NOW),
     ).toEqual(["a"])
