@@ -437,10 +437,11 @@ span.avatar {
 </a>
 ```
 
-### Meter
+### Meter (and the one-progress rule)
 
-Progress as a segmented bar (done/total), 4px tall. Use for genuinely
-bounded progress only.
+Progress as a segmented bar (done/total), 4px tall — one shape plus its
+exact value, the way the sparkline pairs a line with its endpoint label.
+Use for genuinely bounded progress only.
 
 ```css
 .meter {
@@ -456,6 +457,65 @@ bounded progress only.
 .meter span.on {
   background: var(--color-orange);
 }
+```
+
+**One progress representation per widget.** Progress is a single
+question — _how far along?_ — so it gets a single answer. A bar, a percent
+ring, and a numbered stepper stacked together are the same number drawn
+three times: the eye has to reconcile three things that must always agree,
+and none of them carries what the others left out. Pick the _one_ encoding
+that fits the glance, then demote the rest:
+
+- **Meter** when the whole is small and countable and the _shape_ of
+  done-against-todo means something.
+- **A single mono caption** (`8/13`, or `62%` — never both) when only the
+  magnitude matters and there's no room for a bar. It rides in the section
+  count (`h2 .count`) or beside the bar as 12px mono ink-dim, and it _is_
+  the meter's text label either way — the bar never stands on color and
+  length alone (a screen reader needs the number, so `role="img"` +
+  `aria-label` carries it). One shape and one number are still one
+  representation, the way the stat is a num plus its label; two textual
+  encodings of the same total (a percent _and_ a fraction) are not.
+- **The ledger's own order** when "progress" really means _which items are
+  done_ — the list already shows that, and a bar on top of it is the
+  redundant copy. Let done rows recede (ink-faint) and the live ones sit
+  full ink.
+
+The structures a progress widget reaches for all collapse into that one:
+
+- A **second or third bar/ring/stepper** of the same total → delete.
+- A **legend** decoding the colors → delete; one encoding with semantic
+  tone needs no key, and any state word rides on its own row (the
+  status-dot rule), never in a separate map.
+- A **stepper** of numbered circles → the meter's segments already _are_
+  the steps. Keep numbered steps only when they're named stages the reader
+  acts on, and then they're ledger rows (rank in the mono key), not a
+  second bar above the first.
+- **Sub-rows** splitting each item into parts → progressive disclosure:
+  hidden on tiles, shown on the raw/full page
+  (`:root:not([data-steward-tile])`). If the per-item breakdown _is_ the
+  widget's one representation — each row carrying its own meter — then the
+  board-level total is what demotes: it drops to a mono count in the
+  section label, not a second aggregate bar.
+
+Same discipline as the day strip (Time blocks): one underlying quantity,
+one rendering per tier — never three at once on the same surface. The
+collapse:
+
+```html
+<!-- ✗ one 8-of-13 quantity drawn six ways: a ring AND a bar AND a
+     stepper, a percent AND a fraction, a legend, plus per-item sub-rows -->
+
+<!-- ✓ one shape, one number; the ledger carries which items -->
+<h2>Migration <span class="count">8/13</span></h2>
+<div class="meter" role="img" aria-label="8 of 13 widgets migrated">
+  <span class="on"></span><span class="on"></span><span></span
+  ><!-- … -->
+</div>
+<ul>
+  <li class="done"><span class="key">daily-plan</span><span>migrated</span></li>
+  <li><span class="key">ticket-gaps</span><span>pending</span></li>
+</ul>
 ```
 
 ### Sparkline
@@ -625,5 +685,7 @@ Design each tier deliberately — a tier is a viewport, not a crop:
 Bans, on top of the board's own: no invented colors or fonts; no boxes
 inside the tile (the card is the box — sections separate with rules and
 space, never nested cards); no side-stripe accents; no more than one
-accent-colored element per tile tier; body text never below 14px, nothing
-below 12px.
+accent-colored element per tile tier; no more than one progress
+representation per widget (a bar, a percent, and a stepper are the same
+number three times — see Meter); body text never below 14px, nothing below
+12px.
