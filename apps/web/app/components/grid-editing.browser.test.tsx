@@ -2,10 +2,10 @@ import { useCallback, useState } from "react"
 
 import type { Routine, Widget } from "@steward/schema"
 import {
-  getCompactor,
   type LayoutItem,
   ResponsiveGridLayout,
   useContainerWidth,
+  verticalCompactor,
 } from "react-grid-layout"
 import "react-grid-layout/css/styles.css"
 import { describe, expect, it } from "vitest"
@@ -17,9 +17,9 @@ import { layoutItemToRect, widgetsToLayout } from "../lib/rgl-layout.ts"
 import { WidgetCard } from "./widget-card.tsx"
 
 // The board's grid wired exactly as dashboard-board.tsx does it (ADR-0041):
-// react-grid-layout with a free-form push compactor, controlled by a widgets
-// array the commit path folds RGL's settled layout back into.
-const FREEFORM = getCompactor(null, false, false)
+// react-grid-layout with vertical compaction, controlled by a widgets array
+// the commit path folds RGL's settled layout back into.
+const COMPACTOR = verticalCompactor
 
 function GridHarness({
   initial,
@@ -73,7 +73,7 @@ function GridHarness({
             rowHeight={150}
             margin={[12, 12]}
             containerPadding={[0, 0]}
-            compactor={FREEFORM}
+            compactor={COMPACTOR}
             dragConfig={{
               enabled: gridEditing,
               handle: ".widget-drag-handle",
@@ -211,14 +211,14 @@ describe("grid editing (react-grid-layout, ADR-0041)", () => {
     expect(placementOf("a").cols).toBe(2)
   })
 
-  it("drops onto a neighbor by pushing it aside (free-form + push)", async () => {
+  it("drops onto a neighbor by pushing it aside", async () => {
     await mounted(
       <GridHarness
         initial={[widget("a", 1, 1, 2, 1), widget("b", 3, 1, 2, 1)]}
       />,
       2,
     )
-    // Drag a onto b's cell: the push compactor slides b aside, unlike the old
+    // Drag a onto b's cell: vertical compaction slides b aside, unlike the old
     // model where dropping onto an occupied cell was rejected and a snapped
     // home. Both stay placed, and they don't overlap.
     await userEvent.dragAndDrop(handle("a"), handle("b"))
@@ -231,6 +231,35 @@ describe("grid editing (react-grid-layout, ADR-0041)", () => {
       a.row < b.row + b.rows &&
       b.row < a.row + a.rows
     expect(overlap).toBe(false)
+  })
+
+  it("a widget pushed down by a drag floats back up when the space frees", async () => {
+    // Regression (the reported bug): with no compaction, dragging x up onto y
+    // shoved y down and it never recovered — each drag pushed it further. With
+    // vertical compaction, y is displaced, then returns to the top once x moves
+    // back down. Two stacked widgets: y on top (row 1), x below (row 2).
+    await mounted(
+      <GridHarness
+        initial={[widget("top", 1, 1, 2, 1), widget("bot", 1, 2, 2, 1)]}
+      />,
+      2,
+    )
+    expect(placementOf("top").row).toBe(1)
+
+    // Drag bot up into the top row → top is displaced downward. (Fixed grid
+    // coordinates, since the target widget shifts mid-drag.)
+    await userEvent.dragAndDrop(handle("bot"), grid(), {
+      targetPosition: { x: 100, y: 20 },
+    })
+    await expect.poll(() => placementOf("bot").row).toBe(1)
+    expect(placementOf("top").row).toBeGreaterThan(1)
+
+    // Drag bot back down → top floats back to the top (never stays stranded).
+    await userEvent.dragAndDrop(handle("bot"), grid(), {
+      targetPosition: { x: 100, y: 340 },
+    })
+    await expect.poll(() => placementOf("top").row).toBe(1)
+    expect(placementOf("bot").row).toBeGreaterThan(1)
   })
 
   it("collapses to one full-width column on a phone-width viewport", async () => {

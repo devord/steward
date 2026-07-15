@@ -43,10 +43,10 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import {
-  getCompactor,
   type LayoutItem,
   ResponsiveGridLayout,
   useContainerWidth,
+  verticalCompactor,
 } from "react-grid-layout"
 import "react-grid-layout/css/styles.css"
 
@@ -71,12 +71,14 @@ import { layoutItemToRect, widgetsToLayout } from "../lib/rgl-layout.ts"
 import { usePollRevalidate } from "../lib/use-poll-revalidate.ts"
 
 /**
- * Free-form placement with push (ADR-0041): no post-drag compaction (widgets
- * stay where they are dropped, gaps and all — a board never reflows on load),
- * `allowOverlap: false` + `preventCollision: false` so dropping onto or
- * between others slides the neighbors aside instead of blocking.
+ * Vertical compaction (ADR-0041): dropping a widget onto or between others
+ * slides the neighbors aside AND lets a displaced widget float back up once the
+ * space frees — the reflow you expect from a dashboard grid. The no-compaction
+ * alternative pushed neighbors down and never recovered them (each drag shoved
+ * them further), so it read as a bug; vertical compaction is the library's
+ * default for exactly this reason.
  */
-const FREEFORM_COMPACTOR = getCompactor(null, false, false)
+const COMPACTOR = verticalCompactor
 
 /** Grid breakpoints, keyed to viewport width to match the widget-standard's
     cell sizes (desktop → the board's own columns; tablet → 2; phone → 1).
@@ -452,8 +454,11 @@ export function DashboardBoard({
   // already reflects the fixed/wide canvas cap the shell applies); the
   // viewport-keyed breakpoint picks the column count and gates editing to the
   // desktop grid — drag/resize stayed desktop-only across ADR-0041.
+  // `measureBeforeMount` holds the first paint until the real width is known,
+  // so the grid never renders at a guessed width and then snaps to the measured
+  // one — that snap read as a flicker on every mount/board-switch.
   const { width, containerRef, mounted } = useContainerWidth({
-    initialWidth: 1280,
+    measureBeforeMount: true,
   })
   const breakpoint = useViewportBreakpoint()
   const gridEditing = editing && breakpoint === "lg"
@@ -577,7 +582,7 @@ export function DashboardBoard({
                   rowHeight={dashboard.grid.rowHeight}
                   margin={GRID_MARGIN}
                   containerPadding={[0, 0]}
-                  compactor={FREEFORM_COMPACTOR}
+                  compactor={COMPACTOR}
                   dragConfig={{
                     enabled: gridEditing,
                     handle: ".widget-drag-handle",
