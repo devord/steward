@@ -42,8 +42,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select"
+import {
+  getCompactor,
+  type LayoutItem,
+  ResponsiveGridLayout,
+  useContainerWidth,
+} from "react-grid-layout"
+import "react-grid-layout/css/styles.css"
+
 import { cn } from "~/lib/utils"
-import { cssVars } from "../lib/css.ts"
 import type {
   ArtifactInfo,
   DashboardBase,
@@ -59,9 +66,23 @@ import { useT } from "../lib/i18n.tsx"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
 import { useStreamed } from "../lib/use-streamed.ts"
 import { usePendingRuns } from "../lib/pending-runs.ts"
-import { collides, findFreeSlot, type Rect } from "../lib/placement.ts"
-import { useGridDrag } from "../lib/use-grid-drag.ts"
+import { findFreeSlot, type Rect } from "../lib/placement.ts"
+import { layoutItemToRect, widgetsToLayout } from "../lib/rgl-layout.ts"
 import { usePollRevalidate } from "../lib/use-poll-revalidate.ts"
+
+/**
+ * Free-form placement with push (ADR-0041): no post-drag compaction (widgets
+ * stay where they are dropped, gaps and all — a board never reflows on load),
+ * `allowOverlap: false` + `preventCollision: false` so dropping onto or
+ * between others slides the neighbors aside instead of blocking.
+ */
+const FREEFORM_COMPACTOR = getCompactor(null, false, false)
+
+/** Grid breakpoints, keyed to viewport width to match the widget-standard's
+    cell sizes (desktop → the board's own columns; tablet → 2; phone → 1).
+    Editing (drag/resize) is desktop-only, as it was before ADR-0041. */
+const RGL_BREAKPOINTS = { lg: 1100, md: 700, sm: 0 } as const
+const GRID_MARGIN: readonly [number, number] = [12, 12]
 
 /**
  * One board — in any discovered data repo (ADR-0023) — extracted from the
@@ -167,17 +188,29 @@ export function DashboardBoard({
   const [resolved, setResolved] = useState<Record<string, ArtifactInfo> | null>(
     null,
   )
+  // First-load stream death (server abort at streamTimeout, dropped
+  // connection): flip every cell to its honest "unreachable" state instead of
+  // hanging on skeletons. Reset per fresh promise; a poll failure after data
+  // already resolved keeps the last good render (see gridData below).
+  const [streamFailed, setStreamFailed] = useState(false)
   useEffect(() => {
     let alive = true
+    setStreamFailed(false)
     artifacts.then(
       (a) => {
-        if (alive) setResolved(a)
+        if (alive) {
+          setResolved(a)
+          setStreamFailed(false)
+        }
       },
       // A rejected stream (the server aborts promises still pending at
       // streamTimeout) keeps the last resolved artifacts on screen; the next
-      // poll retries with a fresh promise. Without this handler a slow
-      // GitHub moment during a background poll crashed the whole board.
-      () => {},
+      // poll retries with a fresh promise. On first load (nothing resolved
+      // yet) streamFailed flips the cells to unreachable. Without this handler
+      // the rejection crashed the whole board.
+      () => {
+        if (alive) setStreamFailed(true)
+      },
     )
     return () => {
       alive = false
@@ -220,6 +253,35 @@ export function DashboardBoard({
   const orderedWidgets = [...dashboard.widgets].sort(
     (a, b) =>
       a.position.row - b.position.row || a.position.col - b.position.col,
+  )
+  // Only widgets whose routine still exists become grid cells; the RGL layout
+  // and the rendered children must be the same set, keyed by slug. Each cell
+  // carries its routine so the render never re-looks-it-up (and never asserts
+  // non-null).
+  const placedCells = orderedWidgets.flatMap((widget) => {
+    const routine = routinesBySlug.get(widget.routine)
+    return routine ? [{ widget, routine }] : []
+  })
+  // The `lg` layout, memoized on a value signature (not the array identity,
+  // which is fresh every render) so a background poll's re-render can't hand
+  // RGL a new `layouts` object mid-drag and snap the lifted card. Narrow
+  // breakpoints are derived by RGL from this one and never persisted (ADR-0041).
+  const layoutSignature = placedCells
+    .map(
+      ({ widget: w }) =>
+        `${w.routine}:${w.position.col},${w.position.row},${w.size.cols},${w.size.rows}`,
+    )
+    .join("|")
+  const layouts = useMemo(
+    () => ({
+      lg: widgetsToLayout(
+        placedCells.map((c) => c.widget),
+        columns,
+      ),
+    }),
+    // placedCells is rebuilt each render; layoutSignature captures its value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [layoutSignature, columns],
   )
 
   const addRoutine = useCallback(
@@ -294,59 +356,41 @@ export function DashboardBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placeParam])
 
-  const moveWidget = useCallback(
-    (slug: string, dCol: number, dRow: number) => {
-      update((current) => {
-        const widget = current.dashboard.widgets.find((w) => w.routine === slug)
-        if (!widget) return current
-        const col = Math.min(
-          Math.max(1, widget.position.col + dCol),
-          current.dashboard.grid.columns - widget.size.cols + 1,
+  // RGL hands back the whole layout once a drag or resize settles; fold each
+  // item back into the draft as 1-indexed position/size. Guarded so a settle
+  // that changed nothing (a click, or a drag that snapped home) never forks a
+  // draft — `update` always writes to localStorage, so the no-op check lives
+  // here, as it did for the old drop-unchanged path.
+  const commitLayout = useCallback(
+    (layout: readonly LayoutItem[]) => {
+      const rects = new Map<string, Rect>()
+      let changed = false
+      for (const item of layout) {
+        const widget = dashboard.widgets.find((w) => w.routine === item.i)
+        if (!widget) continue
+        const rect = layoutItemToRect(item, columns)
+        rects.set(item.i, rect)
+        if (
+          widget.position.col !== rect.col ||
+          widget.position.row !== rect.row ||
+          widget.size.cols !== rect.cols ||
+          widget.size.rows !== rect.rows
         )
-        const row = Math.max(1, widget.position.row + dRow)
-        const candidate = { col, row, ...widget.size }
-        // Moving onto another widget is a no-op — predictable beats clever.
-        if (!collides(current.dashboard.widgets, candidate, slug)) {
-          widget.position = { col, row }
-        }
-        return current
-      })
-    },
-    [update],
-  )
-
-  const placeWidget = useCallback(
-    (slug: string, rect: Rect) => {
+          changed = true
+      }
+      if (!changed) return
       update((current) => {
-        const widget = current.dashboard.widgets.find((w) => w.routine === slug)
-        if (widget) {
-          widget.position = { col: rect.col, row: rect.row }
-          widget.size = { cols: rect.cols, rows: rect.rows }
+        for (const widget of current.dashboard.widgets) {
+          const rect = rects.get(widget.routine)
+          if (rect) {
+            widget.position = { col: rect.col, row: rect.row }
+            widget.size = { cols: rect.cols, rows: rect.rows }
+          }
         }
         return current
       })
     },
-    [update],
-  )
-
-  const resizeWidget = useCallback(
-    (slug: string, size: WidgetSize) => {
-      update((current) => {
-        const widget = current.dashboard.widgets.find((w) => w.routine === slug)
-        if (!widget) return current
-        const col = Math.min(
-          widget.position.col,
-          current.dashboard.grid.columns - size.cols + 1,
-        )
-        const candidate = { col, row: widget.position.row, ...size }
-        if (!collides(current.dashboard.widgets, candidate, slug)) {
-          widget.size = size
-          widget.position = { ...widget.position, col }
-        }
-        return current
-      })
-    },
-    [update],
+    [update, dashboard.widgets, columns],
   )
 
   const removeWidget = useCallback(
@@ -404,17 +448,15 @@ export function DashboardBoard({
     1,
   )
 
-  const { drag, gridRef, startDrag, cancel } = useGridDrag({
-    widgets: dashboard.widgets,
-    columns,
-    rowHeight: dashboard.grid.rowHeight,
-    onCommit: placeWidget,
+  // Container width drives RGL's pixel geometry (via a ResizeObserver, so it
+  // already reflects the fixed/wide canvas cap the shell applies); the
+  // viewport-keyed breakpoint picks the column count and gates editing to the
+  // desktop grid — drag/resize stayed desktop-only across ADR-0041.
+  const { width, containerRef, mounted } = useContainerWidth({
+    initialWidth: 1280,
   })
-
-  // Leaving edit mode mid-drag must not leave a floating card behind.
-  useEffect(() => {
-    if (!editing) cancel()
-  }, [editing, cancel])
+  const breakpoint = useViewportBreakpoint()
+  const gridEditing = editing && breakpoint === "lg"
 
   // "Keep my version": adopt the base the loader currently sees (so the next
   // commit force-overwrites it, never a silent one) and revalidate to refresh
@@ -442,63 +484,9 @@ export function DashboardBoard({
     ? draft.routines.routines.filter((r) => !committedSlugs.has(r.slug))
     : []
 
-  const renderCards = (data: Record<string, ArtifactInfo>) => (
-    <>
-      {orderedWidgets.flatMap((widget) => {
-        const routine = routinesBySlug.get(widget.routine)
-        if (!routine) return []
-        return [
-          <WidgetCard
-            key={widget.routine}
-            widget={widget}
-            routine={routine}
-            artifact={data[widget.routine]}
-            now={now}
-            columns={columns}
-            shared={view.isShared}
-            dataRepo={view.dataRepo}
-            login={login}
-            committed={committedSlugs.has(widget.routine)}
-            pendingFiredAt={pending[widget.routine]?.firedAt ?? null}
-            onFired={() =>
-              markFired(widget.routine, data[widget.routine]?.sha ?? null)
-            }
-            onSync={() => setSyncing(true)}
-            editing={editing}
-            onEdit={() => setEditingRoutine(routine)}
-            onToggleEnabled={() =>
-              updateRoutine({ ...routine, enabled: !routine.enabled })
-            }
-            drag={drag?.slug === widget.routine ? drag : null}
-            onDragStart={(kind, event) =>
-              startDrag(widget.routine, kind, event)
-            }
-            onMove={(dCol, dRow) => moveWidget(widget.routine, dCol, dRow)}
-            onResize={(size) => resizeWidget(widget.routine, size)}
-            onRemove={() => removeWidget(widget.routine)}
-          />,
-        ]
-      })}
-      {drag && (
-        /* Snap-target ghost. Full-grid only: its explicit gridColumn/gridRow
-           mean nothing on the narrow auto-flow grids, where a resize
-           previews on the card itself instead. */
-        <div
-          aria-hidden
-          className={cn(
-            "pointer-events-none z-10 hidden rounded-lg border border-dashed min-[1100px]:block",
-            drag.valid
-              ? "border-primary bg-primary/5"
-              : "border-red/70 bg-red/10",
-          )}
-          style={{
-            gridColumn: `${drag.candidate.col} / span ${drag.candidate.cols}`,
-            gridRow: `${drag.candidate.row} / span ${drag.candidate.rows}`,
-          }}
-        />
-      )}
-    </>
-  )
+  // The artifact map to render: last-resolved wins; a first-load stream death
+  // shows every cell unreachable; still-pending is null → skeleton bodies.
+  const gridData = resolved ?? (streamFailed ? allUnreachable : null)
 
   return (
     <>
@@ -572,43 +560,74 @@ export function DashboardBoard({
                 </Await>
               </Suspense>
             </p>
-            <main
-              ref={gridRef}
-              className="dash-grid"
-              style={cssVars({
-                "--grid-cols": columns,
-                "--row-h": `${dashboard.grid.rowHeight}px`,
-              })}
-            >
-              {/* First load streams: the frame is placed and each cell holds its
-              slot with a skeleton until the artifacts resolve. Once resolved,
-              render from state so a poll's revalidation swaps bodies in place
-              rather than re-suspending back to skeletons. */}
-              {resolved === null ? (
-                <Suspense
-                  fallback={orderedWidgets.flatMap((widget) =>
-                    routinesBySlug.has(widget.routine)
-                      ? [
-                          <WidgetSkeleton
-                            key={widget.routine}
-                            widget={widget}
-                          />,
-                        ]
-                      : [],
-                  )}
+            <main ref={containerRef}>
+              {/* One grid instance for the board's life: RGL positions each
+                cell by transform, and the body swaps skeleton → card in place
+                as the artifact stream resolves (a poll's revalidation never
+                re-suspends the whole grid). Rendered only once the container
+                is measured so the first paint lands at the right width. */}
+              {mounted && (
+                <ResponsiveGridLayout
+                  className={cn("dash-grid", gridEditing && "is-editing")}
+                  width={width}
+                  breakpoint={breakpoint}
+                  breakpoints={RGL_BREAKPOINTS}
+                  cols={{ lg: columns, md: 2, sm: 1 }}
+                  layouts={layouts}
+                  rowHeight={dashboard.grid.rowHeight}
+                  margin={GRID_MARGIN}
+                  containerPadding={[0, 0]}
+                  compactor={FREEFORM_COMPACTOR}
+                  dragConfig={{
+                    enabled: gridEditing,
+                    handle: ".widget-drag-handle",
+                    cancel: "button, a, [data-no-drag]",
+                    threshold: 4,
+                  }}
+                  resizeConfig={{ enabled: gridEditing, handles: ["se"] }}
+                  onDragStop={(layout) => commitLayout(layout)}
+                  onResizeStop={(layout) => commitLayout(layout)}
                 >
-                  <Await
-                    resolve={artifacts}
-                    // A dead stream on first load degrades to unreachable
-                    // cells (never the root error page); the poll's next
-                    // revalidation hands this branch a fresh promise.
-                    errorElement={renderCards(allUnreachable)}
-                  >
-                    {(awaited) => renderCards(awaited)}
-                  </Await>
-                </Suspense>
-              ) : (
-                renderCards(resolved)
+                  {placedCells.map(({ widget, routine }) => {
+                    return (
+                      <div key={widget.routine} className="widget-cell">
+                        {gridData ? (
+                          <WidgetCard
+                            widget={widget}
+                            routine={routine}
+                            artifact={gridData[widget.routine]}
+                            now={now}
+                            shared={view.isShared}
+                            dataRepo={view.dataRepo}
+                            login={login}
+                            committed={committedSlugs.has(widget.routine)}
+                            pendingFiredAt={
+                              pending[widget.routine]?.firedAt ?? null
+                            }
+                            onFired={() =>
+                              markFired(
+                                widget.routine,
+                                gridData[widget.routine]?.sha ?? null,
+                              )
+                            }
+                            onSync={() => setSyncing(true)}
+                            editing={editing}
+                            onEdit={() => setEditingRoutine(routine)}
+                            onToggleEnabled={() =>
+                              updateRoutine({
+                                ...routine,
+                                enabled: !routine.enabled,
+                              })
+                            }
+                            onRemove={() => removeWidget(widget.routine)}
+                          />
+                        ) : (
+                          <WidgetSkeleton widget={widget} />
+                        )}
+                      </div>
+                    )
+                  })}
+                </ResponsiveGridLayout>
               )}
             </main>
           </>
@@ -770,6 +789,30 @@ export function DashboardBoard({
       />
     </>
   )
+}
+
+/**
+ * The grid's active breakpoint, keyed to viewport width (not container width)
+ * so the column count and the desktop-only editing gate match the
+ * widget-standard's cell breakpoints exactly, the way the old CSS `@media`
+ * rules did. Defaults to `lg` for the server/first paint (the board is
+ * desktop-primary) and settles on mount.
+ */
+function useViewportBreakpoint(): "lg" | "md" | "sm" {
+  const [bp, setBp] = useState<"lg" | "md" | "sm">("lg")
+  useEffect(() => {
+    const lg = window.matchMedia("(min-width: 1100px)")
+    const md = window.matchMedia("(min-width: 700px)")
+    const compute = () => setBp(lg.matches ? "lg" : md.matches ? "md" : "sm")
+    compute()
+    lg.addEventListener("change", compute)
+    md.addEventListener("change", compute)
+    return () => {
+      lg.removeEventListener("change", compute)
+      md.removeEventListener("change", compute)
+    }
+  }, [])
+  return bp
 }
 
 interface DeleteResult {
