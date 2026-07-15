@@ -270,11 +270,14 @@ export function WidgetCard({
              stays pinned to the card's edge (symmetric with the title inset)
              and the reserved action width is absorbed by the flex gap — no idle
              dead space, no layout shift on reveal. The name is the board's
-             two-second glance target, so it rides a step above the 12px metadata
-             floor in the mono terminal voice; state reads as pills, not prose
-             (ADR-0009). */
+             two-second glance target and each widget is a section of the page,
+             so it sits at the section-heading tier (16px mono semibold) and
+             owns the top of the cell — a full step above the 13px freshness
+             beside it, which stays quiet in ink-dim. Whitespace and that
+             weight/size jump are the block's separation; there is no divider.
+             State reads as pills, not prose (ADR-0009). */
           <header className="flex min-h-8 items-center gap-2 py-1.5 pr-2.5 pl-2.5">
-            <span className="min-w-0 truncate font-mono text-sm font-medium text-foreground">
+            <span className="min-w-0 truncate font-mono text-base font-semibold text-foreground">
               {routine.name}
             </span>
             <div className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-xs text-ink-dim">

@@ -89,12 +89,17 @@ tokens only; a literal hex breaks every non-default theme.
   Section headings 16–18px (`text-base`/`text-lg`). No display sizes in
   chrome. Nav and other primary controls take body size, never the metadata
   floor.
-- Widget title exception: the `widget-card` tile name is **mono, `text-sm`
-  (15px) medium** — a deliberate break from sans-for-names. The name is the
-  board's two-second glance target, so it carries the terminal voice and sits
-  a step above the 13px metadata beside it. State reads as pills in that same mono
-  voice (`running`/`stale`/`manual`), never prose; a fresh tile carries no
-  pill (semantic color only when it means something).
+- Widget title exception: the `widget-card` tile name is **mono, `text-base`
+  (16px) semibold** — a deliberate break from sans-for-names. Each widget is a
+  section of the page, so its name reads as a section heading that owns the top
+  of the cell, not a faint label: it takes the 16px heading tier and a full
+  semibold, a clear step in size, weight, and color (full `foreground`) above
+  the 13px `ink-dim` freshness beside it, which stays quiet. With no card
+  border by design, that heading plus the whitespace rhythm _is_ the block's
+  separation. The lightbox header carries the same name in the same mono
+  heading voice. State reads as pills in that same mono voice
+  (`running`/`stale`/`manual`), never prose; a fresh tile carries no pill
+  (semantic color only when it means something).
 - Artifacts set their own type, one register bolder than chrome since they
   are the content that glows: body/data ≥14px, section labels ≥12px, nothing
   below 12px (the contract lives in `docs/widget-standard.md` §6 and the

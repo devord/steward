@@ -294,7 +294,7 @@
         color: var(--color-ink-faint);
       }
       /* Page heading — the artifact's title line, matching the app's own
-         page headings (font-mono, 18px, medium): the date this plan is for
+         page headings (font-mono, 18px, semibold): the date this plan is for
          (distinct from the chrome's "ran Xm ago"). Visually hidden at the
          glance tiers — never display:none, so the <h1> stays in the a11y tree
          and keeps rooting the section <h2>s where the visible title is
@@ -308,7 +308,8 @@
         white-space: nowrap;
         font-family: var(--font-mono);
         font-size: 18px;
-        font-weight: 500;
+        font-weight: 600;
+        letter-spacing: -0.01em;
         color: var(--color-ink);
       }
       /* Progressive disclosure per grid size (widget standard §2):

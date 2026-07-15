@@ -66,7 +66,7 @@ export function WidgetLightbox({
           )}
         >
           <header className="flex shrink-0 items-center gap-2 border-b border-border-dim bg-bg2 py-1.5 pr-1.5 pl-3 text-xs">
-            <DialogPrimitive.Title className="truncate text-sm text-foreground">
+            <DialogPrimitive.Title className="truncate font-mono text-base font-semibold text-foreground">
               {name}
             </DialogPrimitive.Title>
             <span
