@@ -286,7 +286,15 @@
       @media (min-width: 900px) {
         main,
         footer {
+          /* Cap the measure and left-align (design.md · Ledger rows): the
+             row body is a wrapping title+evidence, so a leader doesn't fit —
+             but an uncapped 1fr body still flings the trailing confidence /
+             ticket / Copy cluster to the far frame edge on a wide tile or the
+             full view. Capped, the cluster stays a short reach from the row;
+             the slack falls to the right. */
           width: 100%;
+          max-width: 46rem;
+          margin-inline: 0 auto;
         }
         /* Restore the visible page heading from the wide grid up (design.md
            · Heading) — wide tiles and the full/raw page have room for it. */

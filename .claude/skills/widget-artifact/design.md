@@ -87,12 +87,15 @@ media block:
 @media (min-width: 900px) {
   main,
   footer {
-    /* Fill the frame — the artifact takes the full width it's given, and
-       the board sizes the widget. No content-width cap: a ledger/table
-       artifact wants its columns to breathe edge to edge. If a widget is
-       long-form prose, cap the measure on the text block itself (~72ch),
-       never on the whole artifact. */
+    /* Fill the frame the board gives you — but up to a cap, never the raw
+       1400px. An uncapped ledger flings its trailing values to the far edge
+       (see Ledger rows · cap the measure); a prose widget runs past a
+       readable line. So cap the measure and left-align, letting the slack
+       fall to the right: ~56rem for a trailing-value ledger, wider for a
+       genuine multi-column table, ~72ch for long-form prose. */
     width: 100%;
+    max-width: 56rem;
+    margin-inline: 0 auto;
   }
   :root:not([data-steward-tile]) body {
     padding: 40px 32px;
@@ -207,6 +210,16 @@ h2::after {
 <h2>Top priorities <span class="count">3</span></h2>
 ```
 
+**Rhythm — sections breathe more than rows.** The space _between_ sections
+must clearly beat the space _between rows_ inside one, or the artifact reads
+as a single undifferentiated list instead of a page with parts. Keep rows
+tight (4–6px) and separate sections generously, and grow the separation with
+the surface: `main`'s inter-section gap runs ~12px on a tile and opens to
+~24–32px on the page, so the "sections of a page" read strengthens exactly
+where there's room for it. When the whole artifact is one shared subgrid (so
+`row-gap` would space rows and sections alike), add the separation as
+`margin-top` on each section after the first, never as a bigger `row-gap`.
+
 ### Ledger rows
 
 The workhorse. One grid per list, rows as subgrid items, so key columns
@@ -259,6 +272,127 @@ li + li {
   border-top: 1px solid var(--color-border-dim);
 }
 ```
+
+**Never let the value drift to the far edge.** A trailing value pinned to
+the frame's right while its label sits at the left forces an eye-trek
+across dead space, and the wider the surface the worse it reads. The `1fr`
+body column is the culprit: it swallows every pixel of slack and flings the
+value off to the right. Two tools close the gap — a ledger with a trailing
+value uses both.
+
+**Cap the measure.** A trailing-value ledger is _not_ a thing that wants to
+breathe edge to edge; cap it (`max-inline-size` around `56rem`,
+left-aligned, slack falling to the right — the daily-plan page idiom) so the
+value never sits more than a saccade from its label. Only a genuinely wide
+multi-column table earns more width, and it still caps — filling the frame
+means "up to the cap", never the raw 1400px. This refines the shell's
+fill-the-frame note.
+
+**Dot-leaders.** For a single-line row with one trailing value, end the body
+in a quiet dotted rule that runs to the value — the eye rides the dots, a
+ledger's oldest idiom. The body becomes a baseline flex row: the words, then
+a `.lead` that grows to fill the column up to the value. Leaders are for
+single-line rows only; where bodies wrap (the page tier of a prose-ish
+ledger), drop the leader and lean on the measure cap and the row hairlines.
+
+```css
+.body {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.body > span:first-child {
+  /* the words — clamp to one line so the leader has a clean start */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lead {
+  flex: 1;
+  align-self: baseline;
+  height: 0.5em;
+  min-width: 16px;
+  border-bottom: 1px dotted var(--color-border-dim);
+}
+```
+
+```html
+<li>
+  <time class="key">14:00</time>
+  <span class="body"
+    ><span>Deep — render path</span><span class="lead" aria-hidden="true"></span
+  ></span>
+  <span class="dur">1h30</span>
+</li>
+```
+
+#### Magnitude bar (the drift-list archetype)
+
+When the trailing value is a **count meant to be compared across rows** — N
+drifts per Figma file, N failing checks per repo, N open per label — a bare
+number flung right reads one row at a time: the eye has to fetch each figure
+and hold it to rank them. Render the count as an inline bar whose **length**
+encodes it against the section's max, the figure kept at the bar's end. Now
+the rows sort themselves by length at a glance and the exact number is still
+there to read. Bars share one origin and one scale — the section sets
+`--max`, each row sets `--n` — so lengths compare honestly. It's a bar, not
+a meter: no track behind it, because a count of drifts has no denominator to
+fill.
+
+```css
+ul.mag {
+  grid-template-columns: max-content 1fr minmax(120px, 180px);
+}
+.mag-cell {
+  display: grid;
+  grid-template-columns: 1fr max-content;
+  align-items: center;
+  gap: 8px;
+}
+.mag-cell .track {
+  position: relative;
+  height: 6px;
+}
+.mag-cell .track > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(clamp(0, var(--n) / var(--max), 1) * 100%);
+  min-width: 2px;
+  border-radius: 3px;
+  background: var(--color-orange);
+}
+.mag-cell .n {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-ink-dim);
+  text-align: right;
+}
+```
+
+```html
+<ul class="mag" style="--max: 12">
+  <li style="--n: 12">
+    <a class="key" href="…" target="_blank" rel="noopener">Checkout</a>
+    <span class="mag-cell"
+      ><span class="track"><i></i></span><span class="n">12</span></span
+    >
+  </li>
+  <li style="--n: 3">
+    <a class="key" href="…" target="_blank" rel="noopener">Settings</a>
+    <span class="mag-cell"
+      ><span class="track"><i></i></span><span class="n">3</span></span
+    >
+  </li>
+</ul>
+```
+
+Colour the bar only when the count carries state — for a drift list orange
+is right, since drifts want attention; an inert magnitude stays a quiet
+neutral (`var(--color-ink-faint)`). The one-accent-per-tier rule still
+holds — on a drift list the bars _are_ that accent, so nothing else on the
+tile competes.
 
 ### Link
 
