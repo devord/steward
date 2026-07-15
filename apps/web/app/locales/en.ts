@@ -18,6 +18,10 @@ export const en = {
   "landing.more": "more",
   "landing.moreLabel": "Scroll to how it works",
 
+  "landing.showcase.title": "This is what you glance at",
+  "landing.showcase.body":
+    "One board, laid out however you like — a milestone report, the PRs waiting on you, repo activity, the gaps worth picking up. Each widget is its own routine, each regenerated on its own schedule, each stamped with when it last ran.",
+
   "landing.loop.title": "How a widget stays fresh",
   "landing.loop.cron":
     "A schedule fires, and the routine runs in the cloud or on your machine.",

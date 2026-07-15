@@ -17,6 +17,10 @@ export const ptBR: Messages = {
   "landing.more": "mais",
   "landing.moreLabel": "Rolar para como funciona",
 
+  "landing.showcase.title": "É nisto que você bate o olho",
+  "landing.showcase.body":
+    "Um painel, organizado do seu jeito — um relatório de marco, os PRs esperando por você, a atividade do repositório, as lacunas que valem a pena assumir. Cada widget é uma rotina própria, cada um regenerado no seu próprio agendamento, cada um marcado com quando rodou pela última vez.",
+
   "landing.loop.title": "Como um widget se mantém fresco",
   "landing.loop.cron":
     "Um agendamento dispara e a rotina roda na nuvem ou na sua máquina.",
