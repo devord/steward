@@ -38,7 +38,9 @@ Collect, in order of usefulness, whatever is reachable from this
 environment — skip silently anything that isn't:
 
 1. Today's calendar events (if a calendar tool is connected).
-2. Open tasks/issues assigned to the owner in connected trackers.
+2. Open tasks/issues assigned to the owner in connected trackers — the
+   actionable items a single day is planned around. Skip epics, projects,
+   and milestones: they group work, they are not a day's work.
 3. Yesterday's plan (previous artifact at `w/<slug>/index.html` on the
    `artifacts` branch, if it exists) — anything unfinished becomes a
    carry-over. Read it for data only; never reuse its markup or CSS
