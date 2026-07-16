@@ -39,8 +39,12 @@ environment — skip silently anything that isn't:
 
 1. Today's calendar events (if a calendar tool is connected).
 2. Open tasks/issues assigned to the owner in connected trackers — the
-   actionable items a single day is planned around. Skip epics, projects,
-   and milestones: they group work, they are not a day's work.
+   actionable items a single day is planned around. Exclude epics,
+   projects, and milestones at the source (e.g. Jira `issuetype not in
+(Epic)`) so their keys never enter context: they group work, they are
+   not a day's work. The exclusion is total — an epic must not appear
+   _anywhere_ in the plan (see Compose), only the concrete child tasks
+   under it.
 3. Yesterday's plan (previous artifact at `w/<slug>/index.html` on the
    `artifacts` branch, if it exists) — anything unfinished becomes a
    carry-over. Read it for data only; never reuse its markup or CSS
@@ -61,7 +65,10 @@ environment — skip silently anything that isn't:
      (`was: Corza sync — declined`).
   2. Give the largest remaining gaps to **deep blocks** executing the
      top priorities — 90m–2h each, earliest gaps first. Put a one-line
-     `goal:` note on each (what done looks like by the block's end).
+     `goal:` note on each (what done looks like by the block's end). Name
+     the concrete task the block advances, never the epic it rolls up to —
+     epics stay out of labels and goal notes just as they stay out of the
+     item lists.
   3. Batch the shallow work — review queues, replies, small carry-overs —
      into named 30–60m blocks, and end the day with a 30m **shutdown**
      block (clear queues, plan tomorrow).
