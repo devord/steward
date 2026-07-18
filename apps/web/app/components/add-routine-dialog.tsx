@@ -658,7 +658,10 @@ export function AddRoutineDialog({
                         }
                         placeholder={t("dialog.promptPlaceholder")}
                         rows={3}
-                        className="field-sizing-content min-h-[4.5rem] w-full resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                        // text-base below md, like the input/textarea
+                        // primitives: iOS Safari auto-zooms any focused field
+                        // under 16px, and the zoom wrecks the dialog.
+                        className="field-sizing-content min-h-[4.5rem] w-full resize-none bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
                       />
                     )}
                   </TemplateCard>

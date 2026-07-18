@@ -304,6 +304,8 @@ export function RoutinesView({
           displayName,
         }}
         cap="max-w-7xl"
+        // The pool view's identity in the header, mirroring the board slug.
+        context="routines"
         actions={
           <>
             {draft != null && (
@@ -312,7 +314,7 @@ export function RoutinesView({
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-2 border-yellow/45 bg-yellow/10 font-mono text-xs text-ink hover:bg-yellow/15 dark:hover:bg-yellow/15 max-sm:aspect-square max-sm:px-0"
+                className="gap-2 border-yellow/45 bg-yellow/10 font-mono text-xs text-ink hover:bg-yellow/15 dark:hover:bg-yellow/15 max-sm:relative max-sm:min-h-9 max-sm:min-w-9 max-sm:px-0 max-sm:after:absolute max-sm:after:-inset-1"
                 onClick={() => setSyncing(true)}
               >
                 <span aria-hidden className="size-1.5 rounded-full bg-yellow" />
@@ -320,10 +322,13 @@ export function RoutinesView({
               </Button>
             )}
             {/* The create verb takes the solid accent, as its empty-state twin
-                below already does — the toolbar's one accent moment. */}
+                below already does — the toolbar's one accent moment. Below
+                `sm` the label collapses, so the accent survives as glyph ink
+                on a ghost square, never a lone solid block (dashboard-shell's
+                ToolbarAction sets the same floors and phone treatment). */}
             <Button
               size="sm"
-              className="gap-2 max-sm:aspect-square max-sm:px-0"
+              className="gap-2 max-sm:relative max-sm:min-h-9 max-sm:min-w-9 max-sm:bg-transparent max-sm:px-0 max-sm:text-primary max-sm:after:absolute max-sm:after:-inset-1 max-sm:hover:bg-primary/10 max-sm:hover:text-primary dark:max-sm:hover:bg-primary/10"
               onClick={() => setAdding(true)}
             >
               <CalendarPlus />

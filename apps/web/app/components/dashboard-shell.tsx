@@ -84,6 +84,10 @@ export function DashboardShell({
       // stays composed, not stretched edge-to-edge); `fixed` keeps the
       // comfortable centered reading width.
       cap={wide ? "max-w-[1800px]" : "max-w-7xl"}
+      // Header wayfinding where the rail is hidden — the slug, not the display
+      // name: the header pairs it with the wordmark as an identifier, the same
+      // honest machine string the URL carries.
+      context={dashboardSlug}
       actions={
         <>
           {hasDraft && (
@@ -102,8 +106,12 @@ export function DashboardShell({
           )}
           {/* The toolbar's one accent moment: the create verb takes the solid
               primary (as its empty-state twin already does); everything else
-              here rests in ink. */}
+              here rests in ink. Below `sm` the label collapses away and a
+              solid square would out-shout the whole header (the loudest
+              element in the chrome for a rare action), so the accent survives
+              as glyph ink on a ghost square instead of a fill. */}
           <ToolbarAction
+            className="max-sm:bg-transparent max-sm:text-primary max-sm:hover:bg-primary/10 max-sm:hover:text-primary dark:max-sm:hover:bg-primary/10"
             label={t("header.addRoutine")}
             icon={<CalendarPlus />}
             onClick={onAdd}
@@ -136,7 +144,11 @@ export function DashboardShell({
 /**
  * A toolbar button that collapses to its icon on phones: the label goes
  * sr-only and the button squares off, so the action row holds one line on a
- * 360px viewport. The label stays the accessible name.
+ * 360px viewport. The label stays the accessible name. Icon-only squares cap
+ * the *visible* box at 36px — a 44px box in the 48px header reads as a
+ * full-height slab the moment a state wash fills it (edit-active) — and the
+ * `after` inset extends the touch target to 44px invisibly, the widget bar's
+ * ⋯-trigger pattern.
  */
 function ToolbarAction({
   icon,
@@ -150,7 +162,10 @@ function ToolbarAction({
   return (
     <Button
       size="sm"
-      className={cn("max-sm:aspect-square max-sm:px-0", className)}
+      className={cn(
+        "max-sm:relative max-sm:min-h-9 max-sm:min-w-9 max-sm:px-0 max-sm:after:absolute max-sm:after:-inset-1",
+        className,
+      )}
       {...props}
     >
       {icon}

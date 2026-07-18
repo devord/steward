@@ -1388,7 +1388,11 @@ function GridSettings({
   const densityKnown = DENSITY_PRESETS.some((d) => d.value === grid.rowHeight)
 
   return (
-    <div className="-mt-2 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs text-ink-dim">
+    // Hidden below lg with the drag/resize gate (gridEditing): these knobs
+    // tune the desktop grid, and on a 1-col phone stack they read as
+    // controls for a layout that isn't on screen. Edit mode below lg is
+    // content ops — remove, enable, edit — via the tile bars.
+    <div className="-mt-2 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs text-ink-dim max-lg:hidden">
       <GridKnob
         label={t("grid.columnsLabel")}
         value={String(grid.columns)}

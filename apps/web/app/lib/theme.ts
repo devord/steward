@@ -585,9 +585,17 @@ const TILE_GUARD_SCRIPT =
   "function init(){" +
   'var f=document.createElement("div");f.id="steward-tile-fade";' +
   "document.body.appendChild(f);" +
+  // The card veils the iframe until the artifact has *content*, not merely a
+  // parsed document — an artifact that builds its DOM after load would
+  // otherwise unveil as a flush-bg void. The sandbox has an opaque origin, so
+  // this posts (targetOrigin "*", payload carries nothing sensitive) once the
+  // body has real height; widget-card matches on e.source.
+  "var posted=false;" +
+  "var ready=function(){if(!posted&&document.body.scrollHeight>24){posted=true;" +
+  'try{parent.postMessage({type:"steward:tile-painted"},"*")}catch(e){}}};' +
   // Overflow must be read off <body>: html/body pin overflow:hidden, so the
   // clipped region belongs to body and never surfaces on documentElement.
-  "var check=function(){f.style.opacity=" +
+  "var check=function(){ready();f.style.opacity=" +
   'Math.max(d.scrollHeight,document.body.scrollHeight)>d.clientHeight+1?"1":"0"};' +
   "new ResizeObserver(check).observe(document.body);" +
   'addEventListener("resize",check);check()}' +

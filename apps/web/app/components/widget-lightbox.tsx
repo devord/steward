@@ -91,7 +91,9 @@ export function WidgetLightbox({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    className="text-ink-dim hover:text-foreground"
+                    // The one exit from a full-screen surface: full 44px on
+                    // coarse pointers, not the icon-sm 36px floor.
+                    className="text-ink-dim hover:text-foreground pointer-coarse:size-11"
                     aria-label={t("widget.collapse")}
                   />
                 }

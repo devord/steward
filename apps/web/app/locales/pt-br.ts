@@ -375,6 +375,8 @@ export const ptBR: Messages = {
   "widget.expand": "Expandir {name} em tela cheia",
   "widget.expandShort": "Expandir",
   "widget.collapse": "Fechar",
+  "widget.menuLabel": "Ações de {name}",
+  "widget.editShort": "Editar rotina",
 
   "time.now": "agora mesmo",
   "time.minutes": "há {n}m",

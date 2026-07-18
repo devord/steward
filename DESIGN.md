@@ -212,13 +212,28 @@ appears.)
   reads like the full board.
 - Chrome density: quiet but legible — comfortable spacing and readable
   type, never cramped; the header is one slim row (`app-header` shell,
-  shared by every route); panels use `gap-4`.
+  shared by every route); panels use `gap-4`. The `NavShell` toolbar is
+  `h-11` on desktop (the rail brand row's box — unbroken hairline) and
+  relaxes to `h-12` below `lg`, where the wordmark steps up to `text-base`
+  (the brand must not read smaller than the 16px widget titles) and a
+  `· <slug>` mono wayfinding label joins it — the rail isn't there to
+  answer "where am I".
 - Page gutters: `px-4 sm:px-6` on every route container; `body` carries
   safe-area insets (`viewport-fit=cover`).
 - Touch: the vendored button/select primitives carry `pointer-coarse:`
   size floors (roughly one Tailwind step up), so coarse pointers get
-  usable targets while fine pointers keep the compact density. Header
-  actions collapse to icons below `sm` (label goes `sr-only`).
+  usable targets while fine pointers keep the compact density. Primary
+  chrome meets the 44px platform floor, but only invisible boxes may
+  _grow_ to it (the ghost drawer trigger, `pointer-coarse:size-11`);
+  anything that can show a fill — a state wash, a chip — caps its
+  visible box at 36px and extends the hit area with an `after` inset
+  (the header action squares, the widget bar's ⋯ trigger): a 44px wash
+  inside the 48px header reads as a full-height slab. Header actions
+  collapse to icons below `sm` (label goes `sr-only`), and an icon-only
+  create verb goes ghost with the accent on the glyph — a lone solid
+  square out-shouts a slim header. The widget bar's hover-revealed
+  actions collapse into one ⋯ menu on coarse pointers so the title
+  keeps its bar.
 - Dialogs: never override the base `max-w-*` (it is the phone edge
   margin) — widen with `sm:max-w-*`; tall content gets
   `max-h-[85svh]` + a scrollable middle.
