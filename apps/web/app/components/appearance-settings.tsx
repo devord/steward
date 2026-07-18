@@ -243,9 +243,9 @@ export function AppearanceSettings() {
             )
           })}
         </div>
-        <p className="font-mono text-xs text-ink-dim">
-          {t(MODE_HINT[prefs.mode])}
-        </p>
+        {/* Hints are prose, so sans — mono stays on labels and state (the
+            per-string rule in DESIGN.md, not per slot). */}
+        <p className="text-xs text-ink-dim">{t(MODE_HINT[prefs.mode])}</p>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -276,9 +276,7 @@ export function AppearanceSettings() {
             />
           ))}
         </div>
-        <p className="font-mono text-xs text-ink-dim">
-          {t("settings.themeHint")}
-        </p>
+        <p className="text-xs text-ink-dim">{t("settings.themeHint")}</p>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -350,9 +348,7 @@ export function AppearanceSettings() {
               })}
             </div>
             {shownMode && editSlot !== shownMode && (
-              <p className="font-mono text-xs text-ink-dim">
-                {t("settings.notApplied")}
-              </p>
+              <p className="text-xs text-ink-dim">{t("settings.notApplied")}</p>
             )}
             <div
               role="radiogroup"

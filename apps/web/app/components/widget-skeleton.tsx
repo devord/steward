@@ -1,6 +1,7 @@
 import type { Widget } from "@steward/schema"
 
 import { Skeleton } from "~/components/ui/skeleton"
+import { cn } from "~/lib/utils"
 
 /**
  * A widget cell while its artifact streams in from GitHub (ADR-0002). The
@@ -12,10 +13,6 @@ import { Skeleton } from "~/components/ui/skeleton"
  * then dissolves.
  */
 export function WidgetSkeleton({ widget }: { widget: Widget }) {
-  const { size } = widget
-  // A couple more body lines on taller cells so big widgets don't read empty.
-  const lines = size.rows > 1 ? 5 : 3
-
   return (
     <div
       aria-hidden
@@ -25,13 +22,36 @@ export function WidgetSkeleton({ widget }: { widget: Widget }) {
         <Skeleton className="h-2.5 w-24" />
         <Skeleton className="h-2.5 w-12" />
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">
-        <Skeleton className="h-2.5 w-1/3" />
-        <div className="mt-0.5 flex flex-col gap-2">
-          {Array.from({ length: lines }, (_, i) => (
-            <Skeleton key={i} className={LINE_WIDTHS[i % LINE_WIDTHS.length]} />
-          ))}
-        </div>
+      <WidgetSkeletonBody rows={widget.size.rows} />
+    </div>
+  )
+}
+
+/**
+ * The pending-body lines alone — WidgetCard reuses them as the veil over a
+ * mounted iframe until its document paints, so "artifact on the way" looks
+ * the same whether the bytes or the paint are what's pending.
+ */
+export function WidgetSkeletonBody({
+  rows,
+  className,
+}: {
+  rows: number
+  className?: string
+}) {
+  // A couple more body lines on taller cells so big widgets don't read empty.
+  const lines = rows > 1 ? 5 : 3
+
+  return (
+    <div
+      aria-hidden
+      className={cn("flex min-h-0 flex-1 flex-col gap-2.5 p-3", className)}
+    >
+      <Skeleton className="h-2.5 w-1/3" />
+      <div className="mt-0.5 flex flex-col gap-2">
+        {Array.from({ length: lines }, (_, i) => (
+          <Skeleton key={i} className={LINE_WIDTHS[i % LINE_WIDTHS.length]} />
+        ))}
       </div>
     </div>
   )

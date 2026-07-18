@@ -14,6 +14,13 @@ slugs, repo names, ages), sans for human titles. Hierarchy comes from
 weight, color, and alignment — never from shrinking type below the floors
 (14px body, 12px labels/meta).
 
+**No motion.** An artifact is glanced at, not watched: it must look settled
+the moment it paints. Never animate chart geometry or values on load — bars
+growing, numbers counting up, labels traveling read as flicker in a tile and
+overlap mid-transition. If something genuinely must move (it almost never
+does), keep it ≤200ms ease-out and gate it behind
+`@media (prefers-reduced-motion: no-preference)`.
+
 Stretch the tiers so each artifact has **one datum that is clearly the most
 important pixel** — the heading where there is one, the stat number at 1×1,
 otherwise the datum that answers the glance. The three type tiers (heading →

@@ -298,6 +298,25 @@ describe("WidgetCard empty states", () => {
     await expect.poll(() => toggled).toBe(true)
   })
 
+  it("paints the artifact eagerly, veiled by skeleton lines until load", async () => {
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine()}
+        artifact={artifact({ html: "<h1>live</h1>" })}
+        now={Date.now()}
+      />,
+    )
+    const iframe = document.querySelector("iframe")
+    expect(iframe).not.toBeNull()
+    // Never lazy: Chromium defers an in-viewport lazy srcdoc iframe until a
+    // scroll, so the board's drive-by glance saw titled, empty tiles.
+    expect(iframe?.getAttribute("loading")).toBeNull()
+    // The veil lifts (and the skeleton unmounts) once the document paints.
+    await expect.poll(() => iframe?.classList.contains("opacity-0")).toBe(false)
+    expect(document.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(0)
+  })
+
   it("opens the routine editor from the view-mode title bar", async () => {
     let edited = false
     await renderCard(

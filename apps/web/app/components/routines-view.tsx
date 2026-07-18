@@ -26,6 +26,7 @@ import {
 } from "@steward/schema"
 
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
+import { KeymapSheet } from "./keymap-sheet.tsx"
 import { NavShell } from "./nav-shell.tsx"
 import { SyncPanel } from "./sync-panel.tsx"
 import { RunLocallyDialog } from "./widget-card.tsx"
@@ -59,7 +60,10 @@ import {
 } from "../lib/draft.ts"
 import { useT, type Translate } from "../lib/i18n.tsx"
 import { usePendingRuns, type PendingRun } from "../lib/pending-runs.ts"
+import { useKeymap } from "../lib/keymap.ts"
 import { boardHref, routineHref } from "../lib/repos.ts"
+import { schedulePhraseKey } from "../lib/schedules.ts"
+import { sectionBoards } from "../lib/sidebar-sections.ts"
 import { usePollRevalidate } from "../lib/use-poll-revalidate.ts"
 import {
   claudeRoutineUrl,
@@ -152,6 +156,7 @@ export function RoutinesView({
 
   const [syncing, setSyncing] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [keymapOpen, setKeymapOpen] = useState(false)
   // Set by the templates ledger's "new routine from template" — opens the
   // add dialog with that template pre-picked (still fully editable).
   const [addingTemplate, setAddingTemplate] = useState<string | null>(null)
@@ -168,6 +173,31 @@ export function RoutinesView({
   // While a run is in flight, poll so the published artifact lands the badge
   // back on "Ran just now" without a manual reload (matches the board).
   usePollRevalidate({ fast: anyPending })
+
+  // The same single-key layer the board carries, minus the board-only verbs
+  // (`e`, `r`): 1–9 still switch boards in rail order, so the pool is one
+  // keystroke from any board it feeds.
+  const boardTargets = useMemo(() => {
+    if (sidebarData == null) return []
+    return sidebarData.repos.flatMap((repoGroup) =>
+      sectionBoards(repoGroup.dashboards, repoGroup.sections).flatMap(
+        (section) =>
+          section.boards.map((board) =>
+            boardHref(repoGroup.repo, board.slug, homeRepo),
+          ),
+      ),
+    )
+  }, [sidebarData, homeRepo])
+  useKeymap({
+    ...Object.fromEntries(
+      boardTargets
+        .slice(0, 9)
+        .map((href, i) => [String(i + 1), () => void navigate(href)]),
+    ),
+    a: () => setAdding(true),
+    s: draft != null ? () => setSyncing(true) : undefined,
+    "?": () => setKeymapOpen(true),
+  })
 
   // Artifacts stream in after the table paints (ADR-0002): resolve once into
   // state so the state column fills in place, keeping row menus mounted (no
@@ -306,7 +336,9 @@ export function RoutinesView({
           <h1 className="font-mono text-lg font-medium text-foreground">
             {t("routines.title")}
           </h1>
-          <p className="mt-0.5 text-sm text-ink-dim">
+          {/* Prose keeps a readable measure — on a wide canvas an uncapped
+              subtitle ran ~149 characters per line. */}
+          <p className="mt-0.5 max-w-prose text-sm text-ink-dim">
             {subtitleBefore}
             <a
               href={`https://github.com/${repo.full}`}
@@ -416,6 +448,8 @@ export function RoutinesView({
         onClose={() => setDeletingSlug(null)}
         onConfirm={deleteRoutine}
       />
+
+      <KeymapSheet open={keymapOpen} onOpenChange={setKeymapOpen} />
     </>
   )
 }
@@ -563,6 +597,24 @@ const rowActionCls =
 export const rowLinkCls =
   "font-mono text-xs text-ink-dim underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
 
+/**
+ * A schedule, spoken before spelled: a preset cron reads as its picker phrase
+ * ("Every 4 hours" — prose, so sans), the raw expression riding as the native
+ * title tooltip (the slug idiom) plus an sr-only echo. An off-preset cron has
+ * no phrase to wear and stays verbatim mono — the honest machine string.
+ */
+export function ScheduleText({ schedule }: { schedule: string }) {
+  const t = useT()
+  const key = schedulePhraseKey(schedule)
+  if (key == null) return <>{schedule}</>
+  return (
+    <span className="font-sans" title={schedule}>
+      {t(key)}
+      <span className="sr-only"> — {schedule}</span>
+    </span>
+  )
+}
+
 function RoutineRow({
   routine,
   status,
@@ -659,9 +711,9 @@ function RoutineRow({
       <td className="hidden py-2 pr-3 align-top font-mono text-xs text-ink-dim md:table-cell">
         {isManual(routine) ? (
           <span className="text-ink-faint">{t("routines.manualDash")}</span>
-        ) : (
-          routine.schedule
-        )}
+        ) : routine.schedule != null ? (
+          <ScheduleText schedule={routine.schedule} />
+        ) : null}
       </td>
 
       <td className="hidden py-2 pr-3 align-top font-mono text-xs text-ink-dim md:table-cell">
@@ -669,22 +721,20 @@ function RoutineRow({
       </td>
 
       <td className="hidden py-2 pr-3 align-top md:table-cell">
+        {/* The owning Claude account (ADR-0029) rides the login as the native
+            title tooltip plus an sr-only echo — the slug idiom. An email is
+            rarely the scan target and it's the ledger's only PII, so the cell
+            stays one line; the routine detail view spells it out in full. */}
         <a
           href={`https://github.com/${owner}`}
           target="_blank"
           rel="noreferrer"
           className={rowLinkCls}
+          title={account ?? undefined}
         >
           {owner}
+          {account != null && <span className="sr-only"> — {account}</span>}
         </a>
-        {/* The owning Claude account beneath the login — same two-line idiom
-            as name/slug. Absent (local, no trigger, pre-ADR-0029 trigger) the
-            cell stays a bare login rather than showing a placeholder. */}
-        {account != null && (
-          <div className="truncate font-mono text-xs text-ink-faint">
-            {account}
-          </div>
-        )}
       </td>
 
       <td className="hidden py-2 pr-3 align-top sm:table-cell">
@@ -908,7 +958,7 @@ export function TemplatesSection({
           to the repo root, matching the pool subtitle above. Split from the
           translated template so the links survive every locale's word
           order. HEAD lets GitHub resolve the default branch. */}
-      <p className="mt-0.5 mb-3 text-sm text-ink-dim">
+      <p className="mt-0.5 mb-3 max-w-prose text-sm text-ink-dim">
         {t("templates.subtitle")
           .split(/(\{dir\}|\{repo\})/)
           .map((part, i) =>
@@ -1078,7 +1128,9 @@ function TemplateRow({
       </td>
 
       <td className="hidden py-2 pr-3 align-top font-mono text-xs text-ink-dim md:table-cell">
-        {template.widget.schedule ?? (
+        {template.widget.schedule != null ? (
+          <ScheduleText schedule={template.widget.schedule} />
+        ) : (
           <span aria-hidden className="text-ink-faint">
             —
           </span>

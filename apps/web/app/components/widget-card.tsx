@@ -39,6 +39,7 @@ import { agoParts } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
 import type { RunResult } from "../routes/run.ts"
 import { WidgetLightbox } from "./widget-lightbox.tsx"
+import { WidgetSkeletonBody } from "./widget-skeleton.tsx"
 
 export interface WidgetCardProps {
   widget: Widget
@@ -110,6 +111,7 @@ export function WidgetCard({
   const t = useT()
   const theme = useResolvedTheme()
   const [expanded, setExpanded] = useState(false)
+  const [painted, setPainted] = useState(false)
   const { size } = widget
   // The signed-in viewer resolves person-relative content at render time
   // (ADR-0039): repo-pulse's "needs your review" / "yours" enhance against
@@ -378,13 +380,27 @@ export function WidgetCard({
           </header>
         )}
         {html ? (
-          <iframe
-            srcDoc={html}
-            sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-            title={routine.name}
-            loading="lazy"
-            className="min-h-0 w-full flex-1 border-0"
-          />
+          /* Eager srcdoc, veiled until first paint. Never `loading="lazy"`
+             here: Chromium defers a lazy srcdoc iframe even in-viewport, so
+             tiles sat blank until a scroll nudged them. Even eager, the
+             document takes a beat to parse — the skeleton body holds the cell
+             so a titled void never renders. `painted` latches on first load;
+             theme swaps reload the doc in place without re-veiling. */
+          <div className="relative min-h-0 w-full flex-1">
+            <iframe
+              srcDoc={html}
+              sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+              title={routine.name}
+              onLoad={() => setPainted(true)}
+              className={cn("size-full border-0", !painted && "opacity-0")}
+            />
+            {!painted && (
+              <WidgetSkeletonBody
+                rows={size.rows}
+                className="absolute inset-0"
+              />
+            )}
+          </div>
         ) : (
           <WidgetEmptyState
             status={status}

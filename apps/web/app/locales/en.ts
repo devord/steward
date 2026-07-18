@@ -520,9 +520,27 @@ export const en = {
   "settings.saved":
     "Appearance is saved on this device; language travels as a cookie",
 
+  "keymap.title": "Keyboard shortcuts",
+  "keymap.boards": "Boards, in rail order",
+  "keymap.edit": "Edit layout",
+  "keymap.add": "Add routine",
+  "keymap.sync": "Sync draft",
+  "keymap.routines": "Routines",
+  "keymap.escEdit": "Leave edit mode",
+  "keymap.sheet": "This sheet",
+  "keymap.settingsHintBefore": "Single-key shortcuts — turn off in ",
+  "keymap.settingsHintLink": "Settings",
+  "keymap.settingsHintAfter": ".",
+  "settings.keyboard": "Keyboard",
+  "settings.shortcuts": "Single-key shortcuts",
+  "settings.shortcutsOn": "On",
+  "settings.shortcutsOff": "Off",
+  "settings.shortcutsHint":
+    "1–9 switch boards, ? shows the map — keys never fire while typing",
+
   "error.title": "Error",
   "error.notFound": "The requested page could not be found.",
-  "error.generic": "An unexpected error occurred.",
+  "error.generic": "The request failed — try again.",
 } as const
 
 export type MessageKey = keyof typeof en

@@ -516,7 +516,25 @@ export const ptBR: Messages = {
   "settings.saved":
     "Aparência fica salva neste dispositivo; idioma viaja como cookie",
 
+  "keymap.title": "Atalhos de teclado",
+  "keymap.boards": "Painéis, na ordem da barra lateral",
+  "keymap.edit": "Editar layout",
+  "keymap.add": "Adicionar rotina",
+  "keymap.sync": "Sincronizar rascunho",
+  "keymap.routines": "Rotinas",
+  "keymap.escEdit": "Sair do modo de edição",
+  "keymap.sheet": "Esta lista",
+  "keymap.settingsHintBefore": "Atalhos de uma tecla — desative em ",
+  "keymap.settingsHintLink": "Ajustes",
+  "keymap.settingsHintAfter": ".",
+  "settings.keyboard": "Teclado",
+  "settings.shortcuts": "Atalhos de uma tecla",
+  "settings.shortcutsOn": "Ligados",
+  "settings.shortcutsOff": "Desligados",
+  "settings.shortcutsHint":
+    "1–9 trocam de painel, ? mostra o mapa — teclas nunca disparam enquanto você digita",
+
   "error.title": "Erro",
   "error.notFound": "A página pedida não foi encontrada.",
-  "error.generic": "Ocorreu um erro inesperado.",
+  "error.generic": "A solicitação falhou — tente de novo.",
 }

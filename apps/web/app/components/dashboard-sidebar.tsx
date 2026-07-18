@@ -743,7 +743,9 @@ function NavItem({
         {/* Freshness dot (ADR-0035): active outranks freshness (accent); else
             red = overdue, green = up to date, faint = unknown (never run or
             beyond the scanned window). Never colour alone — the sr-only state
-            below names it, and the age reads plainly beside the row. */}
+            below names it for readers, and overdue differs in FORM for sighted
+            colorblind viewers: a hollow ring against every other state's solid
+            fill (red vs green alone is the classic deuteranopia confusable). */}
         <span
           aria-hidden
           data-testid="freshness-dot"
@@ -764,7 +766,7 @@ function NavItem({
             active
               ? "bg-primary"
               : stale
-                ? "bg-red"
+                ? "border-[1.5px] border-red"
                 : lastRunAt != null
                   ? "bg-green"
                   : "bg-ink-faint/40 group-hover:bg-ink-faint",
@@ -787,7 +789,7 @@ function NavItem({
             {age != null && (
               <span
                 aria-hidden
-                className="font-mono text-[11px] text-ink-faint tabular-nums"
+                className="font-mono text-xs text-ink-faint tabular-nums"
               >
                 {age}
               </span>

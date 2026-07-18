@@ -45,16 +45,9 @@ import type { DiscoveredTemplate } from "../lib/templates.ts"
 import { frameArtifactHtml } from "../lib/theme.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
 import type { RepoSearchResult } from "../routes/repos.ts"
+import { SCHEDULE_PRESETS } from "../lib/schedules.ts"
 import { TokenCombobox } from "./token-combobox.tsx"
 import { CopyableCommand } from "./widget-card.tsx"
-
-const SCHEDULE_PRESETS = [
-  { value: "0 * * * *", label: "dialog.presetHourly" },
-  { value: "0 */4 * * *", label: "dialog.presetEvery4h" },
-  { value: "0 8 * * *", label: "dialog.presetDaily8" },
-  { value: "0 9 * * 1-5", label: "dialog.presetWeekdays9" },
-  { value: "0 9 * * 1", label: "dialog.presetWeeklyMon9" },
-] as const
 
 /** Wizard defaults when the template declares no hint (ADR-0013/0022). */
 const DEFAULT_SCHEDULE = "0 8 * * *"
@@ -1142,11 +1135,12 @@ function TemplatePreview({ html, name }: { html: string; name: string }) {
   return (
     <figure className="grid gap-1.5">
       <div className="overflow-hidden rounded-md border border-border-dim">
+        {/* Never `loading="lazy"` on a srcdoc iframe: Chromium defers it even
+            in-viewport, leaving the preview blank until a scroll. */}
         <iframe
           srcDoc={framed}
           sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
           title={t("dialog.samplePreviewTitle", { name })}
-          loading="lazy"
           className="h-44 w-full border-0"
         />
       </div>
