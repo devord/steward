@@ -1,0 +1,73 @@
+---
+title: What is Steward
+description: Reports that update themselves — a dashboard of living widgets, each regenerated on schedule by a Claude Code routine and published to a GitHub repo you own.
+---
+
+Every developer keeps a handful of reports that only stay current while
+someone refreshes them by hand: the daily plan, the review queue, the status
+update, the changelog. They rot the moment the author gets busy — and a
+stale report is worse than none.
+
+Steward hands the chore to **routines**. Each widget on a Steward dashboard
+is a small, self-contained HTML file — an **artifact** — that a scheduled
+Claude Code routine regenerates and publishes. You describe what a widget
+should show; the routine keeps it true.
+
+import {
+  GitCommitVertical,
+  LayoutDashboard,
+  ListPlus,
+  Play,
+} from "lucide-react"
+
+## The loop
+
+<Flow>
+  <FlowStep label="Add a routine" icon={<ListPlus />}>
+    Describe the widget or start from a template, pick a size and a
+    schedule (or leave it manual). **Sync** commits it to your data repo's
+    `routines.yaml`.
+  </FlowStep>
+  <FlowStep label="A run fires" icon={<Play />}>
+    A cloud schedule, a local launchd agent, the Update button, or
+    `steward run <slug>` in a terminal — every path executes the same
+    one-line prompt: _"Run the steward routine `<slug>` in `<owner/repo>` —
+    follow the `run-routine` skill."_
+  </FlowStep>
+  <FlowStep label="The routine publishes" icon={<GitCommitVertical />} accent>
+    It authors a self-contained, responsive HTML artifact and pushes it to
+    `w/<slug>/index.html` on your repo's `artifacts` branch. Publishing
+    _is_ the git push; there is no upload and no CDN.
+  </FlowStep>
+  <FlowStep label="The dashboard renders" icon={<LayoutDashboard />} last>
+    The app fetches your artifacts with your own GitHub token and shows
+    each in a sandboxed iframe. The last commit touching the file becomes
+    its "ran 2h ago" freshness readout.
+  </FlowStep>
+  <FlowLoop>
+    The schedule fires again — the report stays current with no one
+    touching it.
+  </FlowLoop>
+</Flow>
+
+## Your data is yours
+
+There is no database and no artifact host. Everything Steward knows —
+routine definitions, dashboard layouts, published widgets — lives in
+GitHub repos **you** own, private by default. The app is a stateless
+renderer working with your token: privacy is GitHub's repo boundary, not
+app logic. Share a dashboard by granting read access to its repo; leave by
+deleting the repo.
+
+## Where to go next
+
+- **[Quickstart](/docs/getting-started/quickstart)** — sign in, get a data
+  repo, and put your first living widget on the board.
+- **[Core concepts](/docs/getting-started/concepts)** — the vocabulary:
+  routines, artifacts, data repos, templates, hosts.
+- **[Guides](/docs/guides/data-repos)** — working with data repos,
+  authoring routines and templates, scheduling, dashboards.
+- **[Reference](/docs/reference/cli)** — the `@devord/steward` CLI, the
+  YAML schemas, the widget standard.
+- **[Architecture](/docs/architecture)** — how the whole thing works with
+  nothing but GitHub and Claude Code.

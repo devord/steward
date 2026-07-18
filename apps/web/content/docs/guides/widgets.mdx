@@ -1,0 +1,137 @@
+---
+title: Widget artifacts
+description: Authoring the self-contained HTML file a widget renders — responsiveness by media query, the design language, person-relative content, and how the board frames it.
+---
+
+An artifact is one HTML file that must serve every size it's shown at: the
+1×1 glance tile, a wide strip, a tall feed, and the full-screen view — with
+nothing but its own inline CSS and the width and height it's given. This
+page is the authoring guide; the normative contract is the
+[widget standard](/docs/reference/widget-standard).
+
+## One file, no network
+
+The artifact renders inside a sandboxed iframe with **no network**: no
+CDNs, no web fonts, no `fetch`, no images by URL. Anything external simply
+breaks. Inline everything. This is what makes an artifact durable — it
+renders identically today and in the version browser a month from now.
+
+## Size is a media query
+
+Because the iframe _is_ the widget body, plain `@media` queries respond to
+the widget's size — no postMessage, no resize observer:
+
+| Query               | Tier                                             |
+| ------------------- | ------------------------------------------------ |
+| `max-width: 340px`  | 1 column — the glance tile: one KPI, centered    |
+| `max-width: 700px`  | 2 columns — the summary: KPI row, terse ledger   |
+| wider               | 3+ columns — columns of detail, not longer lines |
+| `max-height: 160px` | 1 row — single-line ledgers, no sections         |
+| `min-width: 900px`  | the full view — reads like a page, top-anchored  |
+
+Design each tier; never let a tier be a cropped version of the next one
+up. A 1×1 shows the essence (the number that matters); larger sizes add
+detail progressively — KPI row, then line items, then the sparkline.
+
+## Tiles never scroll
+
+The board pins `overflow: hidden` inside tile iframes and stamps
+`data-steward-tile` on the artifact's root. Content must **fit the height
+at every tier**: a list that doesn't fit degrades to fewer items plus a
+visible `+N more` line. If content overflows anyway, the frame fades the
+bottom edge out — visibly truncated, never ambiguously cropped. Gate any
+fit-to-height measurement on `html[data-steward-tile]` so the raw page and
+the full view keep every row; the full view is where `+N more` actually
+lives.
+
+## Theme tokens, injected
+
+Artifacts are authored in the canonical gruvbox-dark palette as CSS custom
+properties (`--color-*`), with `color-scheme: dark`. Never hard-code a hex
+and always paint via the tokens: when a viewer picks another theme, the
+dashboard injects an override of those same custom properties into the
+iframe at render time — hard-coded colors won't retheme. The same
+injection carries the brand mono: lead `--font-mono` with
+`"Geist Mono Variable"`, load nothing yourself, and the raw page falls
+back to the system mono.
+
+## The design language
+
+Artifacts compose from a shared component set rather than inventing
+per-routine visuals, so a board of widgets from different routines reads
+as one product. The `widget-artifact` skill carries the full `design.md`;
+the vocabulary:
+
+- **Shell** — flex-column body; tiles top-align content (only the one-row
+  glance tier centers); footer pinned; page generosity gated on
+  `:root:not([data-steward-tile])`.
+- **Ledger rows** — aligned key columns, hanging indents, optional
+  trailing values. The workhorse for lists.
+- **The stat** — the 1×1 tier's single KPI.
+- **Pills, dots, meters, sparklines** — state and trend, mirroring the
+  chrome's own vocabulary.
+- **Designed empty states** — missing data is part of the artifact, not an
+  error.
+
+Type floors: body and data at **14px**, section labels at **12px**,
+nothing smaller. Earn hierarchy with weight and color, not by shrinking.
+
+**No motion.** An artifact is glanced at, not watched: it must look
+settled the moment it paints. Never animate chart geometry or values on
+load — bars growing, numbers counting up read as flicker in a tile. If
+something genuinely must move (it almost never does), keep it ≤ 200ms and
+respect `prefers-reduced-motion`.
+
+## Links go out, in new tabs
+
+Anything the artifact names that lives elsewhere — a PR, an issue, an
+event — is an anchor to it. Every link carries
+`target="_blank" rel="noopener"`: in-frame navigation is sandbox-blocked,
+so a bare href goes nowhere on the raw page (on the board, the frame
+retargets forgotten anchors as a backstop). The tile is triage; the source
+system is the follow-through.
+
+## Person-relative content
+
+An artifact is authored once and rendered for whoever can see the board,
+so "you" is a render-time fact — never the routine runner. Two shapes:
+
+- **Person-owned** (a daily plan): name the owner in the third person —
+  "Daniel's Daily Plan" — resolved at build time. A stranger must read
+  _whose_ it is, never a false "your".
+- **Shared with per-viewer facets** (a PR queue): publish viewer-neutral —
+  group by an objective axis, stamp rows with raw relationship data
+  (`data-author`, requested reviewers), no precomputed "mine". On the
+  board the frame injects `window.__STEWARD_VIEWER__ = { login }`; read it
+  in a `DOMContentLoaded` handler, wrapped in `try`/`catch`, and re-group
+  into "Needs your review" / "Yours" only when the viewer actually
+  participates. Any failure leaves the neutral render — the honest floor.
+
+This is the one sanctioned use of JavaScript for _content_ (fit
+measurement being the other JS use); the file stays self-contained — the
+viewer is injected, not fetched.
+
+## The receipt doctrine
+
+Every run ends in publish, even for routines whose real output is action
+(PRs opened, issues filed). For those, the artifact is the **receipt**:
+what was done, what changed, what needs you — each item linking out. When
+a run truly has nothing to say, an honest "Nothing to report — checked
+&lt;when&gt;" is still freshness signal. Author receipts around deltas,
+never a bare "ran OK".
+
+## Freshness metadata
+
+Carry the generation time twice: a
+`<meta name="widget-generated-at" content="<ISO-8601>">` tag, and a
+visible compact timestamp in a `<footer>`. The footer is standalone
+chrome — the board hides it (the widget card's title bar already shows
+name and freshness) and shows it on the raw page.
+
+## Testing an artifact
+
+Dry-run the routine — `steward run <slug> --dry` from your data repo
+checkout — and the artifact opens in your browser from a local file:
+resize the window across the breakpoints to walk the tiers. Nothing is
+pushed. The board's exact framing (sandbox, theme injection, tile stamp)
+can only be seen by a real publish.

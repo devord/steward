@@ -1,0 +1,117 @@
+---
+title: Hosts & scheduling
+description: Where runs execute — cloud routines vs local launchd agents, cron schedules, manual runs and API triggers, dry runs, and staleness.
+---
+
+Every run, on every host, fires the same one-line pointer prompt:
+
+> Run the steward routine `<slug>` in `<owner/repo>` — follow the
+> `run-routine` skill.
+
+Hosts are therefore interchangeable plumbing: what differs is where the
+prompt executes and what that environment can reach.
+
+## The host × schedule matrix
+
+|                             | `schedule:` set                     | manual-only (no `schedule:`)           |
+| --------------------------- | ----------------------------------- | -------------------------------------- |
+| **`host: cloud`** (default) | cloud routine with a cron trigger   | cloud routine with an API trigger only |
+| **`host: local`**           | launchd agent, headless `claude -p` | nothing to enact — interactive CLI run |
+
+## Cloud
+
+A cloud routine runs on the **runner's** claude.ai account: the laptop can
+be off, the account's MCP connectors are available, and runs bill to the
+subscription (and count against its daily caps). Two fields shape what a
+cloud run can reach:
+
+- **`repos:`** — a cloud session reaches _only_ the repos attached as its
+  sources; it cannot lazily clone anything else. `sync` always attaches
+  the Steward repo (the dispatcher and built-in templates) and the data
+  repo, then unions in the routine's declared extras. If a template
+  watches repos, they must be listed — the wizard mirrors `repos`-type
+  params in automatically.
+- **`connectors:`** — an explicit allowlist by connector name. Absent
+  means **none**: a headless run never inherits your whole connector set.
+  Least privilege is the default; a routine that grows a new external
+  dependency must declare it.
+
+## Local
+
+`host: local` is the only host that can read local data — files on your
+machine, your `gh` auth, your local MCP servers. With a `schedule:`,
+`sync --apply` writes a
+[launchd](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)
+agent (`~/Library/LaunchAgents/org.devord.steward.<slug>.plist`) that fires
+the pointer prompt via headless `claude -p`.
+
+launchd was chosen over cron deliberately: it **coalesces missed schedules
+on wake**. A laptop asleep at 7am runs the 7am routine when the lid opens
+— the right semantic for "keep the widget fresh". Two practical notes:
+
+- Scheduled-local agents persist an absolute path to the CLI's bundled
+  skills — the one case where `npx` won't do. Install globally
+  (`npm i -g @devord/steward`) so the path survives its cache being
+  garbage-collected.
+- Local schedules exist **per machine**. A routine synced on one laptop
+  doesn't run from another.
+
+Headless hosts can't ask questions, so an interactive template (one that
+interviews you before authoring) is necessarily `host: local` with no
+schedule — manual-only.
+
+## Schedules
+
+`schedule:` is a 5-field cron expression, evaluated by the host's trigger
+(cloud cron or launchd calendar). Absent means manual-only: no cadence, no
+staleness badge — the footer reads "updated 3d ago · manual" instead.
+
+## Manual runs and the API trigger
+
+Every cloud routine can carry an **API trigger** — for manual routines
+it's the only way to run; for scheduled ones it powers the app's Update
+button between crons. The per-routine bearer token is **trigger-only
+scoped**: it can't read anything, so a leak's blast radius is quota burn.
+That's why it lives in the data repo itself (`data/triggers/<slug>.json`):
+everyone who can read the repo is exactly the set entitled to trigger.
+
+When you click **Update**, the server reads that token from the repo with
+_your_ GitHub token — GitHub proves the entitlement — then fires the
+trigger, noting "requested by &lt;login&gt;". The run executes as the
+runner, with the runner's connectors.
+
+Minting is the one manual step: the trigger API is a research preview, and
+tokens are shown once in the claude.ai web UI. `sync --apply` prompts for
+missing tokens and commits them; `steward trigger <slug>` mints or repairs
+one later, and `--account` stamps which Claude account owns the routine
+(useful when a runner has more than one).
+
+For local routines the Update button degrades honestly: it copies the
+interactive one-liner instead of firing anything.
+
+## Dry runs
+
+Testing a template or routine edit must not require pushing anything —
+least of all a test artifact onto the live widget. From your data repo
+checkout:
+
+```bash
+steward run <slug> --dry
+```
+
+Exactly two things change, and the template never knows:
+
+- **In**: config and templates resolve from your **local working tree,
+  dirty state included**. What you're editing is what runs.
+- **Out**: the artifact is written to a local file and opened in your
+  browser. Nothing is committed or pushed.
+
+## Staleness
+
+Freshness derives from the publish receipt — the last commit touching the
+artifact — judged against the routine's own schedule, not a flat age: a
+daily widget two hours old is fresh; a five-minute widget two hours old is
+stale (the threshold is 2× the cron interval). Missed runs surface as
+staleness on the widget and a red dot on the board's rail row — never as
+silent failure. Manual and never-run routines are never "stale"; there is
+no cadence to be stale against.

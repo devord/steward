@@ -1,0 +1,12 @@
+{
+  "title": "Guides",
+  "defaultOpen": true,
+  "pages": [
+    "data-repos",
+    "routines",
+    "templates",
+    "widgets",
+    "hosts-and-scheduling",
+    "dashboards"
+  ]
+}

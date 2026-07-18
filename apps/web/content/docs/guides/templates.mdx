@@ -1,0 +1,115 @@
+---
+title: Templates
+description: Parameterized routine definitions — built-in, team, and private tiers; authoring in Claude Code; params, subjects, sample previews, and shadowing.
+---
+
+A **routine template** is a parameterized definition of a report: a plain
+markdown file whose frontmatter describes the widget (name, description,
+sizes, params, suggested schedule) and whose body is the authoring
+procedure a run follows. Routines _instantiate_ templates — many routines,
+one template, different subjects.
+
+## Where templates live
+
+A template lives at `templates/routines/<id>.md` in **the narrowest repo
+all its users can read**:
+
+| Tier         | Repo                                                 | Who sees it                     |
+| ------------ | ---------------------------------------------------- | ------------------------------- |
+| **Built-in** | the Steward product repo (shipped in the app bundle) | everyone                        |
+| **Team**     | a shared data repo                                   | everyone who can read that repo |
+| **Private**  | your personal data repo                              | you                             |
+
+The add-routine picker discovers data-repo templates live via the GitHub
+contents API and badges each card with its source. A data-repo template
+**shadows** a same-named built-in — the picker folds the pair into one card
+with the repo's version winning, and the templates ledger tags the
+override so it's never silent.
+
+Built-ins today: **repo-pulse** (open PRs, fresh issues, CI status per
+watched repo), **daily-plan** (a person's day, composed from their
+calendar and queues), and **custom** — the degenerate template whose whole
+procedure is "follow the routine's `instructions`". `custom` deliberately
+ships without a `widget:` block so discovery never lists it; the wizard's
+prompt field is its interface.
+
+## Anatomy
+
+```markdown title="templates/routines/repo-pulse.md"
+---
+name: Repo pulse
+description: The heartbeat of the repositories you watch.
+widget:
+  artifact: "Open PRs awaiting review, new issues, and CI status per repo"
+  sizes:
+    default: { cols: 2, rows: 1 }
+    min: { cols: 1, rows: 1 }
+  schedule: "0 */4 * * *"
+  params:
+    - key: repos
+      label: Repositories to watch
+      type: repos
+      required: true
+  connectors: [GitHub]
+  subjectParam: repos
+---
+
+# Repo pulse
+
+<the authoring procedure: what data to gather, how to compose the
+artifact's tiers, what the empty state says — written for the Claude
+run that follows it>
+```
+
+The frontmatter is the contract with the app (see the
+[full schema](/docs/reference/template-frontmatter)); the body is the
+contract with the run. Two details matter more than they look:
+
+- **`params`** turn "the instructions MUST name the repositories" from a
+  convention into a form field. Required params block the wizard's submit;
+  answers arrive as a structured `params:` map, and `repos`-type answers
+  are unioned into the routine's `repos:` so the cloud run can read what it
+  watches.
+- **`subjectParam`** names the param that carries the routine's _subject_,
+  so instances get self-describing slugs (`corza-pulse`, `acme-pulse`)
+  instead of a counter.
+
+## Authoring happens in Claude Code, not the app
+
+The app's writable surface is exactly two file kinds — `routines.yaml` and
+dashboard layouts — forever. Templates are procedures: code-like artifacts
+that version with judgment, authored where code is authored. The app
+_reads_ templates (the picker, the ledger) and never writes them.
+
+To create one, work in a Claude Code session in your data repo: write
+`templates/routines/<id>.md`, commit, push. It appears in the picker on the
+next load. To promote a grown-up `custom` routine into a template, ask
+Claude to generalize it — extract the params from the prose, carry
+size/schedule/connectors into the `widget:` block, re-point the routine.
+
+## Sample previews
+
+A template may ship a canned render as a sibling file:
+`templates/routines/<id>.sample.html`. The picker shows it framed exactly
+as the board frames a live widget — same sandbox, same theme injection —
+captioned as an example. Built-ins reuse the canonical design-language
+samples for this. Optional: a template without one just shows its
+description.
+
+## The templates ledger
+
+The routines pool page (`/r/<owner>/<repo>/routines`) closes with a
+read-only **templates ledger**: every template visible to that repo, its
+source, its suggested schedule, and — the two signals only a repo-wide
+surface can compute — **used-by** (which routines instantiate it; `unused`
+mirrors the pool's `orphan`) and **overrides built-in** when a repo
+template shadows one. Repo templates link out to their file on GitHub. Its
+one action is _new routine from template_.
+
+## Resolution at run time
+
+Given `template: <id>`, the dispatcher reads `templates/routines/<id>.md`
+from the **data repo first** (private/team), then from the **Steward
+checkout** (built-ins travel with the dispatcher, so they're always
+present). Neither found → the run stops loudly with the bad reference.
+Nothing is ever improvised from a missing template.

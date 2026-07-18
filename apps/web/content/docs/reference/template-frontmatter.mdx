@@ -1,0 +1,87 @@
+---
+title: Template frontmatter
+description: The widget frontmatter block that makes a markdown file a routine template — params, sizes, connectors, subject-derived slugs.
+---
+
+A file at `templates/routines/<id>.md` becomes a routine template when its
+frontmatter carries a valid `widget:` block. Files without one are
+invisible to the picker — deliberately so for the `custom` built-in. The
+file's basename is the template id that `routines.yaml`'s `template:`
+references.
+
+```markdown title="templates/routines/repo-pulse.md"
+---
+name: Repo pulse
+description: The heartbeat of the repositories you watch.
+widget:
+  artifact: "Open PRs awaiting review, new issues, and CI status per repo"
+  sizes:
+    default: { cols: 2, rows: 1 }
+    min: { cols: 1, rows: 1 }
+  schedule: "0 */4 * * *"
+  params:
+    - key: repos
+      label: Repositories to watch
+      type: repos
+      required: true
+      hint: Each repo gets its own pulse block.
+  connectors: [GitHub]
+  subjectParam: repos
+---
+
+<body: the authoring procedure the run follows>
+```
+
+## Top-level fields
+
+| Field         | Type   | Rules                                      |
+| ------------- | ------ | ------------------------------------------ |
+| `name`        | string | Optional; defaults to the template id.     |
+| `description` | string | **Required.** The picker card's one-liner. |
+| `widget`      | block  | Required for discovery — see below.        |
+
+## The `widget:` block
+
+| Field           | Type             | Rules                                                                                                                                                                                  |
+| --------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `artifact`      | string           | **Required.** One line describing what the artifact shows.                                                                                                                             |
+| `sizes.default` | `{ cols, rows }` | Optional. Pre-fills the wizard's size step.                                                                                                                                            |
+| `sizes.min`     | `{ cols, rows }` | Optional. The smallest size the artifact is designed for.                                                                                                                              |
+| `schedule`      | string           | Optional suggested 5-field cron; pre-fills the wizard.                                                                                                                                 |
+| `params`        | list             | Optional. Inputs the wizard collects — see below. Keys must be unique.                                                                                                                 |
+| `connectors`    | list             | Optional connector names the template's cloud runs typically need; picking the template pre-fills the routine's `connectors:` allowlist (which otherwise defaults to none).            |
+| `subjectParam`  | string           | Optional. The param key that carries the routine's _subject_; the wizard slugs instances `<subject>-<kind>` (`corza-pulse`) instead of after the template. Must name a declared param. |
+| `kind`          | slug             | Optional slug stem after the subject. Defaults to the template id's last hyphen segment (`repo-pulse` → `pulse`).                                                                      |
+
+## Param fields
+
+| Field         | Type    | Rules                                                                                                                                                              |
+| ------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `key`         | slug    | **Required.** The key in the routine's `params:` map.                                                                                                              |
+| `label`       | string  | **Required.** Field label, Sentence case.                                                                                                                          |
+| `type`        | enum    | `string` (free text, default), `select` (one of `options`), or `repos` (a list of `owner/repo` references, unioned into the routine's `repos:` at authoring time). |
+| `required`    | boolean | Default `false`. Required params block the wizard's submit while empty.                                                                                            |
+| `placeholder` | string  | Optional.                                                                                                                                                          |
+| `hint`        | string  | Optional one-liner under the field.                                                                                                                                |
+| `options`     | list    | Required when `type: select`; the closed set of values.                                                                                                            |
+
+## Parsing rules
+
+- Discovery reads frontmatter live via the contents API and **silently
+  skips** files with no frontmatter, invalid frontmatter, or an invalid
+  `widget:` block. If your template doesn't appear in the picker, validate
+  its frontmatter first.
+- A UTF-8 BOM and CRLF line endings are tolerated — a Windows-committed
+  template doesn't vanish.
+- A data-repo template **shadows** a same-named built-in; the templates
+  ledger tags the override.
+- Renaming or retyping a param under existing routines is tolerated:
+  unknown keys round-trip untouched, missing answers render empty, and the
+  run degrades only as far as the template body lets it.
+
+## Sample renders
+
+A sibling `templates/routines/<id>.sample.html` is picked up as the
+template's preview in the add-routine picker — real artifact HTML, framed
+like a live widget, captioned as an example. Optional; costs one contents
+fetch only when present.

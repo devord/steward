@@ -1,0 +1,137 @@
+---
+title: How Steward works
+description: Design philosophy and the execution pipeline — GitHub repos as the database, publish by push, a stateless renderer, and one stable prompt.
+---
+
+Steward is a dashboard product built from two off-the-shelf systems —
+GitHub and Claude Code — and almost nothing else. This page explains the
+design principles first, then the pipeline they produce. Individual
+decisions are recorded as ADRs in the (private) repo; pages here cite them
+by number.
+
+## Design philosophy
+
+**GitHub repos are the database.** There is no database, no object store,
+no server-side state beyond an encrypted session cookie. Routine
+definitions, layouts, templates, tokens, and published widgets all live in
+git, split across repos so that _privacy is the repo boundary_: GitHub has
+no per-path read permissions, so anything that must be private gets its
+own repo (ADR-0001). Config is versioned, diffable, and reviewable for
+free.
+
+**The app is a stateless renderer.** Every read and write the app performs
+uses the signed-in user's own token, server-side. The app can't see
+anything the user can't; a forged repo name can never reach data the token
+couldn't already read. Sharing and revocation are GitHub grants, not app
+features (ADR-0023).
+
+**Publish = git push.** An artifact's address is a path convention — data
+repo, `artifacts` branch, `w/<slug>/index.html` — fixed before the first
+run ever happens. Publishing is a commit; rendering is a contents-API
+fetch into a sandboxed iframe. No upload, no CDN, no
+publish-once-to-learn-the-URL chicken-and-egg (ADR-0002).
+
+**The cloud holds pointers, git holds truth.** A cloud routine's prompt is
+one stable line, created once and never edited. Everything that changes —
+what the routine does, its guidance, its params — lives in `routines.yaml`
+and is reconciled outward by `sync`: the YAML is the source of truth, the
+enacted copy is a projection (ADR-0005/0018).
+
+**The artifact is the receipt.** Every run ends in publish, even for
+routines whose real output is action. The publish commit is the run's
+evidence — freshness, staleness, run history, and version browsing all
+derive from that one commit stream, so no parallel logging channel exists
+to keep honest (ADR-0026/0033).
+
+**Files are self-describing; nothing is hand-registered.** Data repos are
+discovered by a GitHub topic search; templates are discovered by their
+`widget:` frontmatter; the dashboard index is a directory listing. Every
+registry Steward ever maintained by hand or build step was eventually
+replaced by reading the files themselves (ADR-0015/0021/0023).
+
+import {
+  AppWindow,
+  FileCode,
+  GitCommitVertical,
+  Play,
+  RefreshCw,
+  Terminal,
+} from "lucide-react"
+
+## The pipeline
+
+<Flow>
+  <FlowPhase label="enact — once per change">
+    <FlowStep label="routines.yaml" icon={<FileCode />}>
+      The pool: each routine's slug, template, schedule, host, params, and
+      cloud grants — the declarative source of truth.
+    </FlowStep>
+    <FlowStep label="steward sync" icon={<RefreshCw />} last>
+      Projects the YAML onto the hosts: cloud routines, launchd agents,
+      API triggers. Reconciles on every apply; orphans are torn down.
+    </FlowStep>
+  </FlowPhase>
+  <FlowPhase label="every run">
+    <FlowStep label="A trigger fires the pointer prompt" icon={<Play />}>
+      _"Run the steward routine `<slug>` in `<owner/repo>` — follow the
+      `run-routine` skill."_ — created once, never edited.
+    </FlowStep>
+    <FlowStep label="run-routine" icon={<Terminal />}>
+      Resolves the repo, the slug, then the template; authors the artifact
+      per the widget standard.
+    </FlowStep>
+    <FlowStep label="publish-widget" icon={<GitCommitVertical />} accent>
+      One commit to `w/<slug>/index.html` on the `artifacts` branch — the
+      publish receipt, and the run's only evidence.
+    </FlowStep>
+    <FlowStep label="The app renders" icon={<AppWindow />} last>
+      Fetches the file with the viewer's token into a sandboxed iframe;
+      the commit date is the freshness readout.
+    </FlowStep>
+  </FlowPhase>
+</Flow>
+
+Three trigger paths, one prompt: a cloud cron, a local launchd calendar, or
+the API trigger (the app's Update button, fired server-side after proving
+the clicker can read the repo). Interactive terminal runs execute the same
+prompt in a live session.
+
+## Rendering and the sandbox
+
+The widget body is
+`<iframe srcdoc={html} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox">`
+— no `allow-same-origin`, no network inside the frame, no in-frame
+navigation. Everything contextual is **injected at render time** rather
+than baked into the file: the active theme's tokens, the brand mono face,
+the viewer identity for person-relative content, a link-retargeting guard.
+Published files stay immutable and viewer-neutral; the frame adapts them
+per render (ADR-0009/0028/0031/0039).
+
+## Auth
+
+GitHub OAuth (scopes `repo`, `read:user`) behind server-side rendering:
+the code→token exchange needs a client secret, so a pure SPA was never an
+option. The token lives in an encrypted httpOnly cookie and never reaches
+the browser; loaders and actions proxy every GitHub call (ADR-0004). A
+device-flow sign-in exists as a second path for preview deploys, which
+can't satisfy the OAuth callback-URL pinning (ADR-0011).
+
+## Performance shape
+
+Only a board's own structure sits on the paint path — two small file reads
+plus the board listing. Everything else streams in after paint: the
+sidebar, template discovery, per-widget artifacts. Discovery data is served
+stale-while-revalidate (60s TTL, invalidated by the user's own mutations),
+and all GitHub reads ride an ETag cache. Config file bodies and blob SHAs
+are never served stale — drafts and conflict checks key off exactly what's
+on `main` right now (ADR-0030).
+
+## Costs, named
+
+The design buys zero infrastructure at known prices: the artifacts branch
+grows ~1 commit per run forever (squash to depth 1 if it ever bites — at
+the cost of version browsing); a rail can lag someone else's out-of-band
+change by up to ~2× the SWR TTL; failed runs leave no receipt, so their
+evidence is a gap, and their logs live on claude.ai, which the app links
+to but cannot read. Each of these is a deliberate trade, made where the
+alternative was a second system to build and keep honest.

@@ -1,0 +1,101 @@
+---
+title: CLI
+description: "@devord/steward — sync, run, and trigger: commands, flags, repo resolution, and what sync actually reconciles."
+---
+
+The routines CLI is the one public package: it enacts your routines onto
+your own Claude account and your machine. Run it with `npx` — it always
+fetches the latest release, so there is nothing to install or keep current:
+
+```bash
+npx @devord/steward <command>
+```
+
+The one exception is scheduled-local routines, whose launchd agents need a
+stable path a garbage-collected `npx` cache can't provide — those want a
+one-time `npm i -g @devord/steward` (see
+[Hosts & scheduling](/docs/guides/hosts-and-scheduling#local)).
+
+The contract skills (`run-routine`, `widget-artifact`, `publish-widget`)
+travel inside the package, so runs resolve them wherever the CLI is
+installed — no Steward checkout required.
+
+## Repo resolution
+
+Every command targets a data repo:
+
+- `--repo <owner/repo>` — uses a CLI-managed clone under
+  `~/.cache/steward/repos/` (kept fresh automatically). This is the
+  copy-pasteable form the app prints.
+- `--file <path/to/routines.yaml>` — targets a checkout you manage.
+- Neither flag runs from the current directory; the exception is
+  `run --dry`, where the current working tree is authoritative by design.
+
+## `steward sync`
+
+```bash
+steward sync [--apply] [--repo <owner/repo>] [--file <path>]
+```
+
+Reconciles `data/routines.yaml` against the enacted state on every host.
+Without `--apply` it prints the reconciliation plan; with it, it converges
+reality to the YAML:
+
+| Routine shape        | Enacted as                                          |
+| -------------------- | --------------------------------------------------- |
+| `cloud` + `schedule` | a scheduled cloud routine on your Claude account    |
+| `cloud` + manual     | a cloud routine with an API trigger only            |
+| `local` + `schedule` | a launchd agent (`org.devord.steward.<slug>.plist`) |
+| `local` + manual     | nothing — run interactively                         |
+
+Per cloud routine, three axes are reconciled on every apply: the trigger
+(cron or API trigger), the **source repos** (the Steward repo + the data
+repo, always, unioned with the routine's `repos:`), and the **connector
+allowlist** (`connectors:`, defaulting to none). Enacted routines whose
+YAML entry is gone are deleted; a disabled entry is torn down too.
+
+Behaviours worth knowing:
+
+- **Shared repos:** only entries whose `runner:` matches the signed-in
+  `gh` login are enacted. Cleanup keys off each cloud resource's repo
+  clause, so one repo's sync can never delete another's schedules.
+- **Trigger tokens:** the trigger API is a research preview — tokens are
+  minted in the claude.ai web UI and shown once. `--apply` prompts for
+  each missing token in one sitting (skippable) and commits it to
+  `data/triggers/<slug>.json`, stamping the owning Claude account.
+- **Idempotent:** run it after every YAML change; it converges and never
+  duplicates.
+
+## `steward run`
+
+```bash
+steward run <slug> [--dry] [--repo <owner/repo>]
+```
+
+Runs one routine in an **interactive** Claude Code session — the only mode
+where a template can ask questions before authoring. Without `--dry` the
+run publishes normally.
+
+`--dry` is the test loop: config and templates resolve from your current
+working tree (dirty state included — run it from your data repo checkout),
+and the artifact is written to a local file and opened in the browser.
+Nothing is pushed; the live widget is untouched.
+
+## `steward trigger`
+
+```bash
+steward trigger <slug> [--repo <owner/repo>] [--file <path>] [--account [<email>]]
+```
+
+Mints or repairs a cloud routine's API trigger outside a full sync: paste
+the token from the claude.ai UI and it's committed to
+`data/triggers/<slug>.json`. `--account` stamps (or, with no email,
+re-stamps from the machine's signed-in account) which Claude account owns
+the routine — the receipt the app's pool view reads. `--account` alone
+never touches the token.
+
+## Requirements
+
+Node ≥ 20.11, `gh` authenticated as the account that owns (or can push to)
+the data repo, and the `claude` CLI signed in as the account that should
+own the cloud routines.

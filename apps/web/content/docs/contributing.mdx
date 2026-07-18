@@ -1,0 +1,82 @@
+---
+title: Contributing
+description: The monorepo, the dev workflow, how decisions are recorded as ADRs, and how the CLI ships.
+---
+
+Steward's source lives in the private `devord/steward` monorepo. This page
+is the orientation for people working _on_ Steward rather than _with_ it.
+
+## Workspace layout
+
+pnpm workspaces + Turborepo:
+
+| Path              | What                                                                                                                             |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`        | the app — React Router v8 (framework mode, SSR), Tailwind 4, shadcn/Base UI chrome; this docs site lives inside it under `/docs` |
+| `packages/schema` | zod schemas for routines, dashboards, templates — buildless, source-exported, bundled into consumers                             |
+| `packages/cli`    | the `@devord/steward` CLI — esbuild-bundled (schema inlined) and published to npm                                                |
+| `.claude/skills`  | the contract skills: `run-routine`, `widget-artifact`, `publish-widget`                                                          |
+| `templates/`      | the data-repo template and the built-in routine templates                                                                        |
+| `docs/`           | ADRs, the widget standard, the roadmap, canonical artifact samples                                                               |
+
+## Dev workflow
+
+Node ≥ 24, pnpm 10:
+
+```bash
+pnpm install
+pnpm exec lefthook install   # once — ignoreScripts blocks auto-setup
+pnpm dev                     # app on http://localhost:5173
+pnpm check                   # oxlint + oxfmt + typecheck in one pass
+pnpm test                    # vitest via turbo (unit + browser projects)
+pnpm build                   # production build
+```
+
+Tooling is Vite+ (`vp`): oxlint and oxfmt instead of eslint/prettier —
+run `pnpm check --fix` rather than hand-formatting. The web app's tests
+run in two vitest projects: `unit` (node, MSW-mocked GitHub) and `browser`
+(real Chromium, for anything that needs real layout).
+
+Deploys go through GitHub Actions, not Vercel's git integration: CI builds
+and uploads a prebuilt deploy — every PR gets a preview URL as a sticky
+comment, pushes to `main` go to production.
+
+## Language discipline
+
+`CONTEXT.md` at the repo root is the domain glossary — routine, run,
+artifact, widget, dashboard, data repo, template, host, runner — with
+explicit _avoid_ lists (a widget is never a "card" or "tile"; a routine is
+never a "job" or "cron"). Use its terms exactly; drift in naming is
+treated as a bug. `DESIGN.md` is the visual law: the theme registry is the
+single source of every hex, and a literal color in chrome code breaks
+every non-default theme.
+
+## Decisions are ADRs
+
+Architecture changes land as a new ADR in `docs/adr/` — never by silently
+editing an old one. Prior ADRs are records, not living docs: they keep
+their original wording, and a superseding decision says what it supersedes
+(see ADR-0023 superseding ADR-0010). These docs pages cite ADRs by number
+so contributors can find the full context and the options that were
+rejected.
+
+## Releases
+
+Changesets governs the one published package, `@devord/steward`. A PR that
+changes CLI source should carry a changeset (`pnpm changeset` — a
+non-blocking CI reminder nags if it's missing); merging to `main` versions
+and publishes via CI. The web app and schema never publish — the CLI build
+inlines the schema, and the contract skills are copied into the package so
+an installed CLI needs no checkout.
+
+## Contract surfaces
+
+Three things are stable API and change only deliberately, with
+migration notes:
+
+- the **pointer prompt** phrasing (frozen into every enacted cloud
+  routine),
+- the **artifact contract** — `w/<slug>/index.html`, the widget standard,
+  and `data-steward-tile`,
+- the **skill names** `run-routine` / `widget-artifact` /
+  `publish-widget`.

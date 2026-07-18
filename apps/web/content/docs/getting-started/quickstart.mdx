@@ -1,0 +1,118 @@
+---
+title: Quickstart
+description: From sign-in to a self-refreshing widget, then on to projects and teams.
+---
+
+## Prerequisites
+
+- A [GitHub](https://github.com) account.
+- [Claude Code](https://claude.com/claude-code) —
+  [routines](https://code.claude.com/docs/en/routines) are Claude Code runs,
+  so the account that _runs_ routines needs it (cloud routines run on
+  your claude.ai account; local ones use the `claude` CLI on your machine).
+- [Node](https://nodejs.org) ≥ 20.11 for the CLI (`npx @devord/steward`).
+- The [GitHub CLI](https://cli.github.com) (`gh`), authenticated — the
+  Steward CLI resolves your login and clones data repos through it.
+
+## Personal setup
+
+### 1. Sign in
+
+Open [steward.devord.com](https://steward.devord.com) and sign in with
+GitHub. The app asks for the `repo` and `read:user` scopes — every read and
+write it performs afterwards uses your own token, server-side.
+
+### 2. Accept the first-run wizard
+
+On first sign-in the wizard creates your **home repo** —
+`steward-data-<your-login>`, private, generated from the
+[data-repo template](https://github.com/devord/steward-data-template). This one repo holds everything: routine definitions and dashboard
+layouts on `main`, published widgets on the orphan `artifacts` branch.
+
+### 3. Add a routine
+
+Click **Add routine** on the board. Describe what the widget should show in
+the prompt field (that's the `custom` template), or pick a template like
+**Repo pulse** and answer its parameters. Choose a size, a schedule (or
+leave it manual), and a host — `cloud` unless the routine needs data that
+only exists on your machine.
+
+Then **Sync**: the app shows the YAML diff and commits it to your data
+repo. Nothing is saved anywhere else — "save" is a commit.
+
+### 4. Enact it
+
+Config describes what should run; **enacting** makes it real on your Claude
+account and your machine. The widget card prints the exact line:
+
+```bash
+npx @devord/steward sync --apply --repo <you>/steward-data-<you>
+```
+
+`sync` reconciles `data/routines.yaml` against reality: it creates cloud
+routines for `host: cloud` entries, writes launchd agents for scheduled
+`host: local` entries, removes orphans, and prompts once for any missing
+API-trigger token (minted in the claude.ai web UI, committed to the repo so
+the app's Update button works). Run it again any time the YAML changes —
+it converges, it never duplicates.
+
+Always run the CLI with `npx` — it fetches the latest release each time,
+so there is nothing to install or keep updated. (The lone exception is
+scheduled-local routines, which need a one-time global install; see
+[Hosts & scheduling](/docs/guides/hosts-and-scheduling#local).)
+
+### 5. Watch it run
+
+From here the widget refreshes on its own. The card footer reads
+"ran 2h ago" from the publish commit; a run overdue against its schedule
+shows a staleness badge; a routine that has never published shows a
+placeholder. To force a run: the **Update** button (cloud), or
+
+```bash
+npx @devord/steward run <slug> --repo <you>/steward-data-<you>
+```
+
+## Setting up a project or team
+
+A project gets its own **data repo** — same shape as a personal one, shared
+by GitHub permissions. Anyone who can read the repo sees its dashboards;
+anyone with push access can edit them.
+
+1. **Create the repo from the template.** In the app, open the repo
+   switcher and choose **Add data repo** (or use GitHub's
+   _generate from template_ on the [data-repo template](https://github.com/devord/steward-data-template)). The app tags it
+   with the `steward-data` topic — that topic is how repos are discovered,
+   so a hand-created repo must carry it too.
+2. **Add routines** on its boards exactly as above. In a shared repo each
+   routine names a `runner:` — the GitHub login whose Claude account owns
+   its cloud schedule and trigger.
+3. **Each runner enacts their own entries:**
+
+   ```bash
+   npx @devord/steward sync --apply --repo <org>/<data-repo>
+   ```
+
+   In a shared repo, `sync` only enacts routines whose `runner:` matches
+   the signed-in `gh` login — collaborators can run the same command
+   without touching each other's schedules.
+
+4. **Run one now** to prove the loop end to end:
+
+   ```bash
+   npx @devord/steward run daily-plan --repo <org>/<data-repo>
+   ```
+
+Sharing is a GitHub grant: give a teammate read access and the repo's
+dashboards appear in their app with no further setup. Revoke access and
+they disappear. There is no other access control to configure —
+[by design](/docs/architecture/security).
+
+## Where things live
+
+| Thing               | Where                                           |
+| ------------------- | ----------------------------------------------- |
+| Routine definitions | `data/routines.yaml` on the data repo's `main`  |
+| Dashboard layouts   | `data/dashboards/<slug>.yaml`                   |
+| Routine templates   | `templates/routines/<id>.md`                    |
+| API-trigger tokens  | `data/triggers/<slug>.json`                     |
+| Published widgets   | `w/<slug>/index.html` on the `artifacts` branch |

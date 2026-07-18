@@ -1,0 +1,74 @@
+---
+title: routines.yaml
+description: The routine pool schema — every field of data/routines.yaml, plus the trigger receipt file, with validation rules and defaults.
+---
+
+`data/routines.yaml` is a data repo's **routine pool** — the declarative
+source of truth every host projects from. The schema lives in
+`@steward/schema` (zod); the app, the CLI, and the dispatcher all parse
+with it.
+
+```yaml title="data/routines.yaml"
+routines:
+  - slug: corza-pulse # required
+    name: Corza # required
+    template: repo-pulse # required
+    schedule: "0 */4 * * *" # optional — absent means manual-only
+    host: cloud # optional — cloud | local, default cloud
+    instructions: >- # optional — standing guidance per run
+      Emphasize review-blocked PRs.
+    params: # optional — answers to template params
+      repos: [Form-Factory/corza]
+    runner: dmoraes # optional — shared repos
+    repos: [Form-Factory/corza] # optional — extra cloud source repos
+    connectors: [GitHub] # optional — cloud MCP allowlist
+    enabled: true # default true
+```
+
+## Fields
+
+| Field          | Type               | Rules                                                                                                                                                                                             |
+| -------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `slug`         | string             | **Required.** Kebab-case (`[a-z0-9]+(-[a-z0-9]+)*`). Doubles as the artifact path `w/<slug>/index.html` — immutable in practice.                                                                  |
+| `name`         | string             | **Required.** Display name.                                                                                                                                                                       |
+| `template`     | string             | **Required.** Template id — `templates/routines/<id>.md`, resolved data repo first, then Steward's built-ins. A routine with no template fails parse; a bad reference hard-fails the run.         |
+| `schedule`     | string             | Optional 5-field cron. Absent → manual-only: no staleness, run via Update button or interactive CLI.                                                                                              |
+| `host`         | `cloud` \| `local` | Optional; unset means `cloud` (left unstamped so serialization doesn't write `host: cloud` onto every entry).                                                                                     |
+| `instructions` | string             | Optional, non-blank when present. Passed to the template on every run; for `custom`, the whole content brief.                                                                                     |
+| `params`       | map                | Optional. Keys → a non-blank string (`string`/`select` params) or a non-empty string list (`repos` params). Untyped here on purpose — the contract that types them is the template's frontmatter. |
+| `runner`       | string             | Optional GitHub login. In a shared repo, `sync` enacts only entries whose runner matches the signed-in user.                                                                                      |
+| `repos`        | list               | Optional `owner/repo` references — _extra_ cloud source repos. The Steward repo and the data repo are always attached first and can't be dropped by a YAML edit. Ignored on local runs.           |
+| `connectors`   | list               | Optional connector names for cloud runs. **Absent or empty means none** — never the account's full set. Ignored on local runs.                                                                    |
+| `enabled`      | boolean            | Default `true`. `false` parks the routine: sync tears its enactments down, the dispatcher declines to run it.                                                                                     |
+
+Validation is strict about blanks: `instructions: ""` (or whitespace), an
+empty `params` value, or an empty `repos` entry all fail parse — absent is
+the honest blank.
+
+## The trigger receipt: `data/triggers/<slug>.json`
+
+A cloud routine's API trigger lives beside the pool as an enactment
+_receipt_ — it exists once the cloud resource does:
+
+```json title="data/triggers/corza-pulse.json"
+{
+  "routine": "rt_0123456789",
+  "token": "…",
+  "account": "daniel@example.com"
+}
+```
+
+| Field     | Meaning                                                                                                                                                                                                                                                                 |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `routine` | Cloud routine id the fire endpoint addresses (also how the app links to the routine's claude.ai page).                                                                                                                                                                  |
+| `token`   | Trigger-only scoped bearer token, minted in the claude.ai web UI. It grants no read access — a leak's blast radius is quota burn on the runner's account — which is why it may live in the repo: everyone who can read the repo is exactly the set entitled to trigger. |
+| `account` | Optional. The Claude account email that owns the routine — stamped by whichever path wrote the file. `runner:` is a GitHub login and can't tell one person's Claude accounts apart; this can.                                                                           |
+
+## Semantics cheat-sheet
+
+- **Effective host**: `host ?? "cloud"`.
+- **Manual**: `schedule == null`.
+- **Cloud sources**: `[stewardRepo, dataRepo, ...routine.repos]`,
+  de-duplicated, base first.
+- **Staleness**: last publish older than 2× the cron interval. Manual and
+  never-run routines are never stale.

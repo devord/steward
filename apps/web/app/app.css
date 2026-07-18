@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Docs chrome (steward.devord.com/docs): fumadocs-ui's styles are all
+   fd-prefixed (classes and --color-fd-* tokens), so they ride the app's
+   one Tailwind pipeline without touching the board chrome. Only the
+   preset ships — the neutral.css color preset it normally pairs with is
+   replaced wholesale by the fd token mapping onto the runtime palette at
+   the end of this file. */
+@import "fumadocs-ui/css/preset.css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 
@@ -385,4 +392,107 @@
   .react-grid-item.react-draggable-dragging .widget-drag-handle {
     cursor: grabbing;
   }
+}
+
+/* Docs theme (steward.devord.com/docs) — the fd color namespace, aliased
+   onto the runtime palette the same way the shadcn semantic layer is
+   above. This is the color preset the docs use instead of fumadocs'
+   neutral.css, and it must sit below the app's `--color-*: initial`
+   wipe, which would otherwise clear these registrations before the fd
+   utilities (compiled from preset.css's @source inline manifests) can
+   resolve. One mapping serves every theme and both modes: the
+   `--palette-*` values themselves flip with `[data-theme]`/`.dark`
+   (ADR-0009). Never introduce a literal color at this layer. */
+@theme {
+  --color-fd-background: var(--palette-bg);
+  --color-fd-foreground: var(--palette-ink);
+  --color-fd-muted: var(--palette-bg2);
+  --color-fd-muted-foreground: var(--palette-ink-dim);
+  --color-fd-popover: var(--palette-bg1);
+  --color-fd-popover-foreground: var(--palette-ink);
+  --color-fd-card: var(--palette-bg1);
+  --color-fd-card-foreground: var(--palette-ink);
+  /* Hairlines: the docs sidebar/toc sit on the flat chrome plane and
+     recede like the app rail. */
+  --color-fd-border: var(--palette-border-dim);
+  --color-fd-primary: var(--palette-accent);
+  /* Button label = the card tone, same AA reasoning as --primary-foreground. */
+  --color-fd-primary-foreground: var(--palette-bg1);
+  --color-fd-secondary: var(--palette-bg3);
+  --color-fd-secondary-foreground: var(--palette-ink);
+  --color-fd-accent: var(--palette-bg3);
+  --color-fd-accent-foreground: var(--palette-ink);
+  --color-fd-ring: var(--palette-accent-deep);
+  /* Same scrim as the app's dialog overlay: bg at 70%, no glass. */
+  --color-fd-overlay: color-mix(in oklab, var(--palette-bg) 70%, transparent);
+  /* Callout + code-diff accents, from the palette's own status colors. */
+  --color-fd-info: var(--palette-blue);
+  --color-fd-warning: var(--palette-yellow);
+  --color-fd-error: var(--palette-red);
+  --color-fd-success: var(--palette-green);
+  --color-fd-idea: var(--palette-accent);
+  --color-fd-diff-remove: color-mix(
+    in oklab,
+    var(--palette-red) 12%,
+    transparent
+  );
+  --color-fd-diff-remove-symbol: var(--palette-red);
+  --color-fd-diff-add: color-mix(
+    in oklab,
+    var(--palette-green) 10%,
+    transparent
+  );
+  --color-fd-diff-add-symbol: var(--palette-green);
+}
+
+/* Terminal manners for the docs chrome (DESIGN.md principle 5: no motion
+   outlives 200ms): fumadocs' stock 250–300ms entrances/exits re-timed to
+   the law. Tokens ≤200ms upstream (popover, accordion, collapsible, nav
+   menu) keep their defaults. */
+@theme {
+  --animate-fd-fade-in: fd-fade-in 200ms ease;
+  --animate-fd-fade-out: fd-fade-out 200ms ease;
+  --animate-fd-dialog-in: fd-dialog-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fd-dialog-out: fd-dialog-out 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fd-enterFromLeft: fd-enterFromLeft 200ms ease;
+  --animate-fd-enterFromRight: fd-enterFromRight 200ms ease;
+  --animate-fd-sidebar-in: fd-sidebar-in 200ms ease;
+  --animate-fd-sidebar-out: fd-sidebar-out 200ms ease;
+  --animate-fd-exitToLeft: fd-exitToLeft 200ms ease;
+  --animate-fd-exitToRight: fd-exitToRight 200ms ease;
+}
+
+/* Docs polish (the /impeccable pass). Scoped to the docs layout id so the
+   board chrome never inherits any of it. */
+/* The docs rail sits on the viewport edge like the app rail — one flat
+   plane — instead of fumadocs' centered layout, whose outer gutters read
+   as a mistake beside the app. The content column keeps its own measure. */
+#nd-docs-layout {
+  --fd-layout-width: 100vw;
+}
+/* Geist Mono's contextual ligatures fuse `--` into a single-advance glyph,
+   so CLI flags read as `sync--apply` at 13px. Machine strings are kept
+   verbatim (DESIGN.md, terminal manners) — no ligatures in docs code. */
+#nd-docs-layout :is(code, kbd, pre) {
+  font-variant-ligatures: none;
+  /* Belt and braces: the fusion is a contextual alternate, which some
+     engines keep enabled independently of the ligature properties. */
+  font-feature-settings: "calt" 0;
+}
+/* Inline code recedes: a faint ink wash instead of the stock filled,
+   bordered chip — the code is the content, the chip was chrome. The mix
+   tracks every palette and both modes because the ink var flips with the
+   theme (ADR-0009). */
+#nd-docs-layout .prose :not(pre) > code {
+  background: color-mix(in oklab, var(--palette-ink) 7%, transparent);
+  border: none;
+  padding: 2px 5px;
+}
+
+/* Interactive controls in the docs chrome take the pointer cursor — the
+   browser (and fumadocs' own buttons) leave <button> on the default arrow. */
+#nd-docs-layout button:not(:disabled),
+#nd-docs-layout [role="button"],
+#nd-docs-layout summary {
+  cursor: pointer;
 }
