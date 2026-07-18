@@ -25,6 +25,7 @@ import { claudeRoutineUrl, widgetStatus } from "../lib/routine-status.ts"
 import { deriveRuns, type RunView } from "../lib/runs.ts"
 import { agoParts, durationParts } from "../lib/time.ts"
 import { useArtifactVersions } from "../lib/use-artifact-versions.ts"
+import { useOptimisticSidebar } from "../lib/optimistic-boards.ts"
 import { useStreamed } from "../lib/use-streamed.ts"
 
 interface RepoInfo {
@@ -70,7 +71,7 @@ export function RoutineRunsView({
   runs: Promise<RoutineRuns>
 }) {
   const t = useT()
-  const sidebarData = useStreamed(sidebar, "sidebar")
+  const sidebarData = useOptimisticSidebar(sidebar)
   const artifactMap = useStreamed(
     artifacts,
     `routine-artifact:${repo.full}/${routine.slug}`,

@@ -18,7 +18,7 @@ import {
 } from "../lib/i18n.tsx"
 import { getLocale, localeCookie } from "../lib/locale.server.ts"
 import { requireAuth } from "../lib/session.server.ts"
-import { useStreamed } from "../lib/use-streamed.ts"
+import { useOptimisticSidebar } from "../lib/optimistic-boards.ts"
 import { buttonVariants } from "~/components/ui/button"
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
@@ -72,7 +72,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Settings({ loaderData }: Route.ComponentProps) {
   const t = useT()
-  const sidebar = useStreamed(loaderData.sidebar, "sidebar")
+  const sidebar = useOptimisticSidebar(loaderData.sidebar)
 
   return (
     <NavShell
