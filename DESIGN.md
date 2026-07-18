@@ -85,10 +85,13 @@ tokens only; a literal hex breaks every non-default theme.
   `app.css` (`--text-sm`/`--text-xs`), one step above Tailwind's defaults:
   **body and interactive labels 15px (`text-sm`)** — nav items, buttons,
   the account name; **secondary labels and metadata 13px (`text-xs`)** — the
-  floor, nothing smaller in chrome, including timestamps and group headings.
-  Section headings 16–18px (`text-base`/`text-lg`). No display sizes in
-  chrome. Nav and other primary controls take body size, never the metadata
-  floor.
+  floor for anything that carries data, including timestamps. One tier sits
+  below it: **tracked UPPERCASE captions at 11px** (the rail's repo and
+  section headers) — navigational landmarks whose legibility comes from
+  tracking, caps, and weight, never data carriers. Nothing else goes under
+  13px. Section headings 16–18px (`text-base`/`text-lg`). No display sizes
+  in chrome. Nav and other primary controls take body size, never the
+  metadata floor.
 - Widget title exception: the `widget-card` tile name is **mono, `text-base`
   (16px) semibold** — a deliberate break from sans-for-names. Each widget is a
   section of the page, so its name reads as a section heading that owns the top
@@ -99,7 +102,10 @@ tokens only; a literal hex breaks every non-default theme.
   separation. The lightbox header carries the same name in the same mono
   heading voice. State reads as pills in that same mono voice
   (`running`/`stale`/`manual`), never prose; a fresh tile carries no pill
-  (semantic color only when it means something).
+  (semantic color only when it means something). In **edit mode** the tile
+  bar deliberately shows the `slug`, not the name: editing is the machine
+  view — the bar is a drag handle over the routines.yaml entry being
+  rearranged — so the identifier git cares about is the honest label there.
 - Artifacts set their own type, one register bolder than chrome since they
   are the content that glows: body/data ≥14px, section labels ≥12px, nothing
   below 12px (the contract lives in `docs/widget-standard.md` §6 and the

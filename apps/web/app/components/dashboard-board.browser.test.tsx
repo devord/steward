@@ -1,5 +1,6 @@
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { describe, expect, it } from "vitest"
+import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 
 import "../app.css"
@@ -99,6 +100,9 @@ async function renderBoard(
         />
       ),
     },
+    // Catch-all so key-layer navigations (1–9 board switch) land somewhere
+    // observable instead of tripping the memory router's error boundary.
+    { path: "*", element: <p>ELSEWHERE</p> },
   ])
   await render(<RouterProvider router={router} />)
 }
@@ -119,6 +123,67 @@ describe("DashboardBoard", () => {
       .toBe(true)
     // The delete confirmation only mounts its content once a board is targeted.
     expect(document.body.textContent).not.toContain("Delete this dashboard?")
+  })
+
+  it("Esc leaves edit mode, matching the app-wide close-this-layer key", async () => {
+    await page.viewport(1280, 900)
+    await renderBoard()
+    await expect.poll(() => document.body.textContent).toContain("Daily")
+
+    await userEvent.click(
+      page.getByRole("button", { name: "Edit", exact: true }),
+    )
+    await expect
+      .poll(() => document.querySelector(".dash-grid.is-editing"))
+      .not.toBeNull()
+
+    await userEvent.keyboard("{Escape}")
+    // Exiting is safe (layout edits commit to the draft on drag stop), so Esc
+    // is exactly the Done button.
+    await expect
+      .poll(() => document.querySelector(".dash-grid.is-editing"))
+      .toBeNull()
+    expect(document.body.textContent).toContain("Edit")
+  })
+
+  it("single-key layer: e toggles edit mode, ? opens the sheet and owns the keys", async () => {
+    await page.viewport(1280, 900)
+    await renderBoard()
+    await expect.poll(() => document.body.textContent).toContain("Daily")
+
+    // e enters edit mode; e again leaves it.
+    await userEvent.keyboard("e")
+    await expect
+      .poll(() => document.querySelector(".dash-grid.is-editing"))
+      .not.toBeNull()
+    await userEvent.keyboard("e")
+    await expect
+      .poll(() => document.querySelector(".dash-grid.is-editing"))
+      .toBeNull()
+
+    // ? opens the keymap sheet — an open layer owns the keyboard, so e is
+    // inert until Esc closes it.
+    await userEvent.keyboard("?")
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("Keyboard shortcuts")
+    await userEvent.keyboard("e")
+    expect(document.querySelector(".dash-grid.is-editing")).toBeNull()
+    await userEvent.keyboard("{Escape}")
+    await expect
+      .poll(() => document.body.textContent)
+      .not.toContain("Keyboard shortcuts")
+  })
+
+  it("single-key layer: number keys switch boards in rail order", async () => {
+    await page.viewport(1280, 900)
+    await renderBoard()
+    await expect.poll(() => document.body.textContent).toContain("Daily")
+
+    // Board 2 in rail order is acme/steward-team `team-ops` — off this
+    // router's home route, so the catch-all proves the navigation happened.
+    await userEvent.keyboard("2")
+    await expect.poll(() => document.body.textContent).toContain("ELSEWHERE")
   })
 
   // Regression: the streamed artifacts promise rejects whenever the server

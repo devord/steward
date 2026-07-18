@@ -21,6 +21,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react"
 
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
 import { DashboardShell } from "./dashboard-shell.tsx"
+import { KeymapSheet } from "./keymap-sheet.tsx"
 import { SyncPanel } from "./sync-panel.tsx"
 import { WidgetCard } from "./widget-card.tsx"
 import { WidgetSkeleton } from "./widget-skeleton.tsx"
@@ -63,6 +64,9 @@ import {
   useDraft,
 } from "../lib/draft.ts"
 import { useT } from "../lib/i18n.tsx"
+import { OPEN_LAYER_SELECTOR, useKeymap } from "../lib/keymap.ts"
+import { boardHref, routinesHref } from "../lib/repos.ts"
+import { sectionBoards } from "../lib/sidebar-sections.ts"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
 import {
   markBoardDeleted,
@@ -151,6 +155,7 @@ export function DashboardBoard({
 
   const [editing, setEditing] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [keymapOpen, setKeymapOpen] = useState(false)
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null)
   const [syncing, setSyncing] = useState(false)
   // The board the rail's per-board menu is deleting — any board, not only the
@@ -467,6 +472,54 @@ export function DashboardBoard({
   const breakpoint = useViewportBreakpoint()
   const gridEditing = editing && breakpoint === "lg"
 
+  // Esc leaves edit mode — the app-wide "close this layer" key (every dialog
+  // honors it; edit mode is the one modal-ish state that didn't). Exiting is
+  // always safe: layout edits land in the draft on drag/resize stop, so Esc is
+  // exactly the Done button. Layers win the key: skip when a dialog, menu, or
+  // select popup is open (it takes the first Esc; the next one reaches us) or
+  // when something already claimed the event.
+  useEffect(() => {
+    if (!editing) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return
+      if (document.querySelector(OPEN_LAYER_SELECTOR)) return
+      setEditing(false)
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [editing])
+
+  // The single-key layer (lazygit manners; guards live in useKeymap). The
+  // 1–9 targets are the boards flattened in exactly the rail's render order
+  // (repos as listed; within each, sectionBoards' partition) — the key
+  // vocabulary and the visible map never disagree. Boards past the ninth
+  // stay pointer-only; the rail remains the full map.
+  const homeRepo =
+    sidebarData?.repos.find((repo) => repo.isHome)?.repo ?? view.dataRepo
+  const boardTargets = useMemo(() => {
+    if (sidebarData == null) return []
+    return sidebarData.repos.flatMap((repoGroup) =>
+      sectionBoards(repoGroup.dashboards, repoGroup.sections).flatMap(
+        (section) =>
+          section.boards.map((board) =>
+            boardHref(repoGroup.repo, board.slug, homeRepo),
+          ),
+      ),
+    )
+  }, [sidebarData, homeRepo])
+  useKeymap({
+    ...Object.fromEntries(
+      boardTargets
+        .slice(0, 9)
+        .map((href, i) => [String(i + 1), () => void navigate(href)]),
+    ),
+    e: () => setEditing((value) => !value),
+    a: () => setAdding(true),
+    s: draft != null ? () => setSyncing(true) : undefined,
+    r: () => void navigate(routinesHref(view.dataRepo)),
+    "?": () => setKeymapOpen(true),
+  })
+
   // "Keep my version": adopt the base the loader currently sees (so the next
   // commit force-overwrites it, never a silent one) and revalidate to refresh
   // the diff against it. The old loop came from the cache-key split serving a
@@ -696,18 +749,24 @@ export function DashboardBoard({
             edit-only. Silent when everything's placed. ink-dim, not
             ink-faint: this is an interactive control, so it carries
             body-text contrast even though it rests quiet. */}
-        {unplaced.length > 0 && !editing && dashboard.widgets.length > 0 && (
-          <p className="mt-6 font-mono text-xs text-ink-dim">
-            <button
-              type="button"
-              className="underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
-              onClick={() => setEditing(true)}
-            >
-              {t("offgrid.viewHint", { n: unplaced.length })}
-            </button>
-          </p>
-        )}
+        {unplaced.length > 0 &&
+          !editing &&
+          dashboard.widgets.length > 0 && (
+            // Prose, so sans (the per-string rule); the whole line is the
+            // affordance — clicking it enters edit mode with the pool open.
+            <p className="mt-6 text-xs text-ink-dim">
+              <button
+                type="button"
+                className="underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
+                onClick={() => setEditing(true)}
+              >
+                {t("offgrid.viewHint", { n: unplaced.length })}
+              </button>
+            </p>
+          )}
       </DashboardShell>
+
+      <KeymapSheet open={keymapOpen} onOpenChange={setKeymapOpen} />
 
       <AddRoutineDialog
         open={adding || editingRoutine != null}

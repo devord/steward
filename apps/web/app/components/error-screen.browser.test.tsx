@@ -69,7 +69,7 @@ describe("setup ErrorBoundary", () => {
     await renderThrowing(new Error("boom"))
 
     await vi.waitFor(() =>
-      expect(hasText("An unexpected error occurred.")).toBe(true),
+      expect(hasText("The request failed — try again.")).toBe(true),
     )
     // A raw Error's message must never leak to the user in this boundary.
     expect(hasText("boom")).toBe(false)

@@ -9,7 +9,12 @@ import {
   type VersionPane,
 } from "./artifact-version-dialog.tsx"
 import { NavShell } from "./nav-shell.tsx"
-import { rowLinkCls, StateDot, StateLabel } from "./routines-view.tsx"
+import {
+  rowLinkCls,
+  ScheduleText,
+  StateDot,
+  StateLabel,
+} from "./routines-view.tsx"
 import { Button } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Link } from "~/components/ui/link"
@@ -233,9 +238,9 @@ export function RoutineRunsView({
           <Fact label={t("routines.colSchedule")}>
             {isManual(routine) ? (
               <span className="text-ink-faint">{t("routines.manualDash")}</span>
-            ) : (
-              routine.schedule
-            )}
+            ) : routine.schedule != null ? (
+              <ScheduleText schedule={routine.schedule} />
+            ) : null}
           </Fact>
           <Fact label={t("routines.colHost")}>
             {routineHost(routine) === "cloud" ? "cloud" : "local"}

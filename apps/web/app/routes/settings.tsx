@@ -16,6 +16,7 @@ import {
   useLocale,
   useT,
 } from "../lib/i18n.tsx"
+import { useKeymapEnabled } from "../lib/keymap.ts"
 import { getLocale, localeCookie } from "../lib/locale.server.ts"
 import { requireAuth } from "../lib/session.server.ts"
 import { useOptimisticSidebar } from "../lib/optimistic-boards.ts"
@@ -114,6 +115,16 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
           <AppearanceSettings />
         </section>
 
+        <section aria-labelledby="settings-keyboard">
+          <h2
+            id="settings-keyboard"
+            className="mb-4 font-mono text-xs text-ink-dim"
+          >
+            {t("settings.keyboard")}
+          </h2>
+          <KeyboardSettings />
+        </section>
+
         <section aria-labelledby="settings-language">
           <h2
             id="settings-language"
@@ -122,12 +133,13 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
             {t("settings.language")}
           </h2>
           <LanguageSettings />
-          <p className="mt-2 font-mono text-xs text-ink-dim">
+          {/* Prose hint → sans; mono is for labels and machine strings. */}
+          <p className="mt-2 text-xs text-ink-dim">
             {t("settings.languageHint")}
           </p>
         </section>
 
-        <p className="border-t border-border-dim pt-3 font-mono text-xs text-ink-dim">
+        <p className="border-t border-border-dim pt-3 text-xs text-ink-dim">
           {t("settings.saved")}
         </p>
       </main>
@@ -140,6 +152,56 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
  * fetcher value renders optimistically so the check moves on click, then
  * the revalidated root loader re-renders the whole app in the new language.
  */
+/**
+ * The single-key layer's off switch (lib/keymap.ts). It exists because it
+ * must (WCAG 2.1.4 — single-character shortcuts need a way off; speech input
+ * fires them by accident), styled as the mode picker's two-option sibling.
+ * A device preference like appearance: localStorage, never the server.
+ */
+function KeyboardSettings() {
+  const t = useT()
+  const [enabled, setEnabled] = useKeymapEnabled()
+  const options = [
+    { value: true, label: t("settings.shortcutsOn") },
+    { value: false, label: t("settings.shortcutsOff") },
+  ]
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm text-ink-dim">{t("settings.shortcuts")}</span>
+      <div
+        role="radiogroup"
+        aria-label={t("settings.shortcuts")}
+        className="inline-grid w-full max-w-xs grid-cols-2 gap-1 rounded-lg border border-border-dim bg-bg1 p-1"
+      >
+        {options.map((option) => {
+          const active = enabled === option.value
+          return (
+            <button
+              key={option.label}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              tabIndex={active ? 0 : -1}
+              onClick={() => setEnabled(option.value)}
+              onKeyDown={handleRadioKeydown}
+              className={cn(
+                "flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 font-mono text-xs transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                active
+                  ? "bg-secondary text-foreground"
+                  : "text-ink-dim hover:text-foreground",
+              )}
+            >
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+      <p className="text-xs text-ink-dim">{t("settings.shortcutsHint")}</p>
+    </div>
+  )
+}
+
 function LanguageSettings() {
   const locale = useLocale()
   const fetcher = useFetcher()

@@ -158,6 +158,32 @@ describe("RoutinesTable", () => {
     expect(document.body.textContent).toContain("orphan")
   })
 
+  it("speaks a preset schedule as its picker phrase, cron in the tooltip", async () => {
+    // A preset cron reads as the phrase the picker offered ("Hourly"), with
+    // the raw expression as the native title + sr-only echo; an off-preset
+    // cron has no phrase and stays verbatim.
+    await renderTable({
+      routines: [
+        routine({
+          slug: "hourly",
+          name: "Hourly pulse",
+          schedule: "0 * * * *",
+        }),
+        changelog, // 0 9 * * * — not a preset
+      ],
+    })
+    const hourlyRow = [...document.querySelectorAll("tr")].find((tr) =>
+      tr.textContent?.includes("Hourly pulse"),
+    )
+    expect(hourlyRow?.textContent).toContain("Hourly")
+    const phrase = hourlyRow?.querySelector('[title="0 * * * *"]')
+    expect(phrase).not.toBeNull()
+    const changelogRow = [...document.querySelectorAll("tr")].find((tr) =>
+      tr.textContent?.includes("Changelog"),
+    )
+    expect(changelogRow?.textContent).toContain("0 9 * * *")
+  })
+
   it("shows the owning Claude account when the trigger carries one (ADR-0029)", async () => {
     await renderTable()
     // daily-plan's trigger names its account; changelog's predates the field.
