@@ -68,6 +68,7 @@ import {
 } from "../lib/routine-status.ts"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
 import { agoParts } from "../lib/time.ts"
+import { useOptimisticSidebar } from "../lib/optimistic-boards.ts"
 import { useStreamed } from "../lib/use-streamed.ts"
 import type { RunResult } from "../routes/run.ts"
 
@@ -130,7 +131,7 @@ export function RoutinesView({
   // Chrome data resolves out of band, holding the last value across
   // revalidations (fresh promises every time) so the rail and picker never
   // flash back to loading.
-  const sidebarData = useStreamed(sidebar, "sidebar")
+  const sidebarData = useOptimisticSidebar(sidebar)
   const templatesData = useStreamed(templates, `templates:${repo.full}`)
 
   // A repo-scoped draft key — `__routines__` can't collide with a board slug

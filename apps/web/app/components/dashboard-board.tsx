@@ -64,6 +64,10 @@ import {
 } from "../lib/draft.ts"
 import { useT } from "../lib/i18n.tsx"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
+import {
+  markBoardDeleted,
+  useOptimisticSidebar,
+} from "../lib/optimistic-boards.ts"
 import { useStreamed } from "../lib/use-streamed.ts"
 import { usePendingRuns } from "../lib/pending-runs.ts"
 import { findFreeSlot, type Rect } from "../lib/placement.ts"
@@ -119,7 +123,7 @@ export function DashboardBoard({
   // Chrome data resolves out of band, holding the last value across board
   // switches and poll revalidations (fresh promises every time) so the rail
   // and picker never flash back to loading.
-  const sidebarData = useStreamed(sidebar, "sidebar")
+  const sidebarData = useOptimisticSidebar(sidebar)
   const templatesData = useStreamed(templates, `templates:${view.dataRepo}`)
   const revalidator = useRevalidator()
   const navigate = useNavigate()
@@ -762,6 +766,10 @@ export function DashboardBoard({
         activeView={view}
         onClose={() => setDeleteTarget(null)}
         onDeleted={(deletedActive) => {
+          // Hide it from the rail now: the revalidation below can still read
+          // the pre-delete listing back from GitHub (see optimistic-boards).
+          if (deleteTarget)
+            markBoardDeleted(deleteTarget.repo, deleteTarget.slug)
           setDeleteTarget(null)
           // Deleting the board you're on has nowhere to stay — leave for
           // home. Deleting any other board keeps you put; a revalidate
