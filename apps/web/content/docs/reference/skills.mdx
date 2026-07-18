@@ -1,0 +1,73 @@
+---
+title: Contract skills
+description: run-routine, widget-artifact, and publish-widget — the three skills that define the execution contract, and the pointer prompt that invokes them.
+---
+
+Three skills define Steward's execution contract. They live in the Steward
+repo, version atomically with the app and the widget standard, and travel
+bundled inside the CLI package — they are the platform, and deliberately
+the _only_ skills the platform ships. Content lives in
+[templates](/docs/guides/templates), not skills.
+
+## The pointer prompt
+
+Every run — scheduled, manual, or dry — enters through one stable line:
+
+> Run the steward routine `<slug>` in `<owner/repo>` — follow the
+> `run-routine` skill.
+
+A dry run starts with "Dry-run" instead of "Run". The prompt is created
+once per routine and never edited; everything that can change lives in the
+data repo's YAML. This is what makes hosts interchangeable and keeps
+routine edits versioned instead of buried in cloud state.
+
+## `run-routine` — the dispatcher
+
+The single entry point. In order:
+
+1. **Locate the data repo** — the prompt's `in <owner/repo>` clause names
+   it; the skill uses the cwd if it matches, a sibling checkout, or clones
+   it. Unreachable → stop and report (a 404 on a private repo usually
+   means a missing access grant, and the skill says so). On a dry run the
+   cwd is authoritative, dirty state included — no network.
+2. **Resolve the routine** in `data/routines.yaml`. Unknown slug → stop
+   and list the available slugs; `enabled: false` → stop quietly.
+3. **Resolve the template** — `templates/routines/<id>.md`, data repo
+   first, then the Steward checkout's built-ins. Missing → hard-fail
+   loudly, never improvise. Then follow the template body with the
+   routine's `instructions` (standing guidance) and `params` (structured
+   answers — params win over prose when they disagree).
+4. **Author and publish** — the artifact must follow `widget-artifact`,
+   authored fresh from the current design language on every run (a
+   previous artifact is a data source, never an authoring base), then
+   published via `publish-widget`.
+5. **Report** — one short summary: routine, template, data gathered,
+   publish commit SHA (or the local file path on a dry run).
+
+## `widget-artifact` — the authoring contract
+
+Enforces the [widget standard](/docs/reference/widget-standard) at
+authoring time. It carries the canonical theme-token snippet, the design
+language (`design.md` — the component set and per-tier playbook), the
+fit-to-height and viewer-enhancement reference snippets, and points at the
+canonical samples. Routine templates say _what_ to report;
+`widget-artifact` dictates the file.
+
+## `publish-widget` — the last step
+
+Commits the artifact to `w/<slug>/index.html` on the data repo's orphan
+`artifacts` branch and pushes — one commit per publish, touching only that
+path, message `publish: <slug>`. Publishing is a git push: no upload, no
+CDN. Concurrent publishes race only on the push itself; the skill rebases
+and re-pushes. On a dry run it writes a local file and opens it in the
+browser instead — nothing is committed.
+
+## Resolution across hosts
+
+The skills resolve wherever the run happens, by construction:
+
+| Host                            | How the skills are present                                |
+| ------------------------------- | --------------------------------------------------------- |
+| Cloud                           | the Steward repo is always attached as a source by `sync` |
+| Scheduled local (launchd)       | the agent passes `--add-dir` to the CLI's bundled copy    |
+| Interactive CLI (`steward run`) | same bundled copy                                         |

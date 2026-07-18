@@ -6,6 +6,8 @@ build
 packages/cli/skills/
 .turbo
 .react-router
+# fumadocs-mdx build output (generated from apps/web/content/docs)
+.source
 .vercel
 coverage
 .env

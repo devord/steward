@@ -1,0 +1,130 @@
+---
+title: Core concepts
+description: The Steward vocabulary — routine, run, artifact, widget, dashboard, data repo, template, host, runner — and how the pieces relate.
+---
+
+Steward's model is small: **dashboards** of **widgets**, each rendering an
+**artifact** that a scheduled **routine** regenerates. Everything below is
+one of those four things, or the machinery that keeps them honest.
+
+## Routine
+
+A unit of work: _"produce this widget's artifact from this template, on
+this schedule or on demand."_ Defined declaratively in a data repo's
+`data/routines.yaml` — slug, name, template, plus optional instructions,
+params, schedule, host, runner. Executed by Claude Code on its host, always
+via the same stable one-line pointer prompt. A routine without a
+`schedule:` is **manual** — updated via the Update button or an interactive
+CLI run.
+
+## Run
+
+One execution of a routine on its host — a schedule fires, the app fires
+the API trigger, or a terminal session runs the pointer prompt. Every run
+ends by publishing, so its evidence is its **publish receipt**: the one
+commit touching `w/<slug>/index.html` on the artifacts branch. Run history
+_is_ that commit history; a run that fails before publishing leaves no
+receipt, and surfaces as a late gap or a staleness badge instead.
+
+## Artifact
+
+The single self-contained, responsive HTML file a routine publishes — the
+thing a widget renders. Addressed by convention, never by URL: the data
+repo's `artifacts` branch, path `w/<slug>/index.html`. It must follow the
+[widget standard](/docs/reference/widget-standard): no external requests,
+shared theme tokens, media-query responsive from a 1×1 glance tile to a
+full page.
+
+## Widget
+
+A cell on a dashboard grid: a routine reference plus a position and a size
+in grid units (`cols` × `rows`), declared in that dashboard's layout file.
+The widget's body is a sandboxed iframe rendering the routine's artifact.
+Any dashboard may arrange any routine from its repo's pool.
+
+## Dashboard
+
+A named grid of widgets — one layout file per dashboard at
+`data/dashboards/<slug>.yaml`. The directory listing is the index; the slug
+is the label. The home repo's `main` board is what `/` renders; every other
+board lives at `/r/<owner>/<repo>/<slug>`.
+
+## Data repo
+
+A repo holding one routine pool, its dashboards, and its templates. `main`
+holds config; the orphan `artifacts` branch holds published widgets. A user
+can have any number. Discovery is a GitHub **topic**: every repo tagged
+`steward-data` that your token can read appears in the app — so granting
+read access _is_ sharing, and revoking it is unsharing.
+
+Two special cases of the same shape:
+
+- **Home repo** — `steward-data-<login>`, one private repo per user,
+  resolved by naming convention and created by the first-run wizard
+  from the [data-repo template](https://github.com/devord/steward-data-template). It
+  anchors `/` and the top of the rail.
+- **Shared repo** — any data repo that isn't your home repo: an org's, or
+  another user's shared with you. Whoever can read it sees all of it.
+
+## Template
+
+A parameterized routine definition: a markdown file at
+`templates/routines/<id>.md` whose frontmatter (`name`, `description`, a
+`widget:` block) describes the widget and whose body is the authoring
+procedure the dispatcher follows. Templates live in the narrowest repo all
+their users can read — **built-in** (shipped with Steward), or in a shared
+or personal **data repo**. Every routine names one; freeform routines name
+the `custom` built-in, whose whole brief is the routine's `instructions`.
+
+## Param
+
+An input a template declares in its `widget:` frontmatter (`key`, `label`,
+`type: string | select | repos`, `required`) that the add-routine wizard
+renders as a form field. Answers live on the routine as a structured
+`params:` map the dispatcher passes to the template alongside
+`instructions`. `repos`-type answers are also unioned into the routine's
+`repos:` so a cloud run can read what the template watches.
+
+## Host
+
+Where a routine's runs execute — `host: cloud | local`, default `cloud`.
+
+|           | `schedule:` set             | manual-only                        |
+| --------- | --------------------------- | ---------------------------------- |
+| **cloud** | cloud routine, cron trigger | cloud routine, API trigger only    |
+| **local** | launchd agent, headless     | nothing to enact — interactive CLI |
+
+Cloud runs happen on the runner's claude.ai account (connectors,
+subscription billing, laptop can be off). Local is the only host that can
+read local data; it inherits the machine's `gh` auth and MCP servers.
+
+## Runner
+
+The GitHub login whose Claude account owns a routine's cloud resource — its
+schedule and its API trigger. Meaningful in shared repos: each
+collaborator's `sync` enacts only their own entries. Home pools leave it
+unset (the owner is the runner).
+
+## Dispatcher
+
+The `run-routine` skill — the single entry point every run goes through:
+resolve the slug in `data/routines.yaml`, execute that routine's template
+with its `instructions` and `params`, enforce the widget standard, publish.
+It exists so the cloud routine's prompt can stay one stable line forever
+while everything that actually changes lives in versioned YAML.
+
+## Draft and sync
+
+The app never writes your repo directly while you edit. Changes accumulate
+as a **draft** in localStorage (keyed by repo and board, carrying the base
+blob SHAs they were made against); the **Sync** panel turns a draft into a
+direct commit or a PR. A moved base SHA means someone else committed first
+— the app re-applies your draft on the fresh base instead of overwriting.
+
+## Dry run
+
+A test run: same pointer prompt with a dry clause. Config and templates
+resolve from your local working tree — dirty state included — and the
+artifact is written to a local file and opened in the browser. Nothing is
+pushed; the live widget is untouched. See
+[hosts & scheduling](/docs/guides/hosts-and-scheduling#dry-runs).

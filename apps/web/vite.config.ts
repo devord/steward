@@ -1,6 +1,7 @@
 import { reactRouter } from "@react-router/dev/vite"
 import tailwindcss from "@tailwindcss/vite"
 import { playwright } from "@vitest/browser-playwright"
+import mdx from "fumadocs-mdx/vite"
 import { defineConfig } from "vitest/config"
 
 export default defineConfig({
@@ -12,7 +13,7 @@ export default defineConfig({
   // The React Router framework plugin expects its react-refresh preamble
   // and full app context; under vitest (unit and browser projects alike)
   // plain Vite's esbuild JSX transform is all the tests need.
-  plugins: [tailwindcss(), !process.env.VITEST && reactRouter()],
+  plugins: [mdx(), tailwindcss(), !process.env.VITEST && reactRouter()],
   resolve: {
     tsconfigPaths: true,
   },

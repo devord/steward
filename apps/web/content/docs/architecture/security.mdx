@@ -1,0 +1,94 @@
+---
+title: Security & privacy model
+description: What protects your data — repo boundaries, token handling, the artifact sandbox, trigger-token scoping, and what each party can see.
+---
+
+Steward's security model is deliberately small: it delegates almost every
+decision to GitHub, and the few credentials it does handle are scoped so a
+leak is an annoyance, not a breach.
+
+## Privacy is the repo boundary
+
+All user data lives in data repos, private by default. GitHub has no
+per-path read permissions — anyone with read access to a repo sees every
+file on every branch — so Steward never pretends otherwise: the repo is
+the unit of privacy, sharing, and revocation. Routine definitions and
+layouts are treated as private too, since they leak what you track.
+
+Granting a collaborator read access shares _everything_ in that repo —
+that's user-controlled sharing, not a leak. Different repos can belong to
+entirely different circles of people.
+
+## The app holds nothing
+
+The app is a stateless renderer:
+
+- **Session** — an encrypted httpOnly cookie holding the GitHub access
+  token. No session store, no user table.
+- **Token stays server-side** — GitHub API calls happen in loaders and
+  actions; the token never reaches the browser.
+- **Scopes** — `repo` (read/write on your data repos) and `read:user`.
+- **Server-derived trust** — any client-supplied repo name passes one
+  gate: discovered (topic-tagged and readable by your token) or verifiably
+  so — otherwise 404, indistinguishable from absent. Past the gate,
+  everything still runs on your token, so a forged name can never reach
+  data you couldn't already read.
+
+## The artifact sandbox
+
+Artifacts are model-generated HTML rendered from a repo others may push
+to, so the board treats them as untrusted:
+
+```html
+sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+```
+
+- **No `allow-same-origin`** — the frame has an opaque origin: no cookies,
+  no storage, no reach into the app.
+- **No network** — the sandbox blocks fetches and subresources; the
+  contract requires artifacts to be self-contained anyway.
+- **No in-frame navigation** — links must open new tabs
+  (`rel="noopener"`, so the opened page gets no handle back); the board
+  never navigates away from itself.
+- **Injection over persistence** — theme, font, and viewer identity are
+  injected per render. The injected viewer is a bare
+  `{ login, name? }` — never a token.
+
+## Trigger tokens: scoped to uselessness
+
+The one credential stored in a repo is the per-routine API-trigger token,
+and it's stored there _because_ of its scope: it is _trigger-only_ — it
+cannot read anything. Its blast radius is quota burn on the runner's
+account. Everyone who can read the repo is exactly the set entitled to
+trigger the routine, so the repo is the correct ACL — and the Update
+button proves entitlement by reading the token with the clicker's own
+GitHub token before firing server-side.
+
+## Cloud runs: least privilege by default
+
+A cloud run reaches only the repos explicitly attached as its sources, and
+gets **zero** MCP connectors unless the routine's `connectors:` allowlist
+names them. A run silently losing a connector it relied on shows up loudly
+(an empty artifact, a staleness badge); the reverse — a headless run
+inheriting a whole account's connectors — never happens by accident.
+
+## What each party can see
+
+| Party                | Can see                                                                  |
+| -------------------- | ------------------------------------------------------------------------ |
+| You                  | every repo your token reads — home, shared, org                          |
+| A repo collaborator  | everything in that repo: config, templates, artifacts, trigger tokens    |
+| The app (server)     | whatever the signed-in user's token reads, for the duration of a request |
+| An artifact (iframe) | its own file, the injected theme/font/viewer — nothing else; no network  |
+| The cloud routine    | its attached source repos and allowlisted connectors, as the runner      |
+
+## Residual risks, named honestly
+
+- The OAuth `repo` scope is broader than Steward's need — it covers all
+  repos the user can access, not just data repos. A fine-grained GitHub
+  App would scope tighter; it's a known future refinement.
+- Anyone with push access to a data repo can alter artifacts on the
+  `artifacts` branch — script execution stays confined to the sandbox
+  above, but content can lie. Push access is the trust decision.
+- Trigger-token quota burn by a malicious collaborator is accepted: the
+  set of people who can fire is the set you invited.

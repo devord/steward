@@ -2,6 +2,15 @@ import { type RouteConfig, index, route } from "@react-router/dev/routes"
 
 export default [
   index("routes/home.tsx"),
+  // Developer docs (Fumadocs): one splat route renders every page under
+  // /docs from the content/docs MDX collection; the search route serves
+  // its built-in Orama index at the client's default endpoint.
+  route("docs/*", "routes/docs.tsx"),
+  route("api/search", "routes/docs-search.ts"),
+  // Agent surfaces (llmstxt.org): the docs index and full text as plain
+  // markdown; per-page `.md` variants are served by docs.tsx's middleware.
+  route("llms.txt", "routes/llms-txt.ts"),
+  route("llms-full.txt", "routes/llms-full-txt.ts"),
   // Static `routines` is ranked ahead of the `:dashboard` slug below, so the
   // pool view (ADR-0025) reserves that one segment per repo.
   route("r/:owner/:repo/routines", "routes/r.$owner.$repo.routines.tsx"),

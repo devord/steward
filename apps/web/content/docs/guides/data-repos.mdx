@@ -1,0 +1,117 @@
+---
+title: Data repos
+description: The repo that holds everything Steward knows — layout, discovery by topic, sharing by GitHub permission, display names, and the artifacts branch.
+---
+
+Steward stores nothing itself. Every routine definition, dashboard layout,
+template, and published widget lives in a **data repo** you own. The app is
+a renderer over that repo, using your GitHub token.
+
+## Layout
+
+```txt title="the data repo, both branches"
+<data repo>
+├── main
+│   ├── data/
+│   │   ├── routines.yaml            # the routine pool — what runs, and when
+│   │   ├── dashboards/<slug>.yaml   # one grid layout per board
+│   │   ├── repo.yaml                # optional: display name, section order
+│   │   └── triggers/<slug>.json     # API-trigger token per manual cloud routine
+│   └── templates/
+│       └── routines/<id>.md         # this repo's routine templates (+ optional
+│                                    #   <id>.sample.html picker previews)
+└── artifacts (orphan branch)
+    └── w/<slug>/index.html          # one published widget per routine
+```
+
+Two branches, two jobs. `main` is configuration — human-edited, drafted and
+diffed in the app, reviewable like any code. `artifacts` is machine
+output — one commit per routine run, touching only that routine's file.
+Because the branch is an orphan, generated commits never pollute `main`'s
+history, never trigger CI, and bypass any branch protection on `main`.
+
+## Discovery: the `steward-data` topic
+
+The app doesn't keep a registry of repos. Every data repo carries the
+GitHub topic **`steward-data`**, and the app's repo list is a topic search
+run with _your_ token — the results are exactly the tagged repos you can
+read, plus your home repo (resolved by name, so it appears even before the
+search index catches up).
+
+Consequences worth knowing:
+
+- Repos generated from the [data-repo template](https://github.com/devord/steward-data-template) do **not** inherit its topics. The app's
+  create paths tag the new repo explicitly; if you create one by hand, add
+  the topic yourself.
+- "Registering" an existing repo is just adding the tag (push access
+  required). Dropping the tag removes the repo from the app without
+  touching its data.
+- A repo shared with you appears with **no app-side action at all** — the
+  next topic search finds it.
+
+## Home repo vs shared repos
+
+Your **home repo** is `steward-data-<login>` — one private repo, created by
+the first-run wizard, anchoring `/` and the top of the rail. Every other
+data repo is a **shared repo**: an org's, a project's, another person's.
+Same format, same features; the differences are social:
+
+- In a shared repo each routine names a `runner:` — the login whose Claude
+  account owns its cloud schedule. `steward sync` there enacts only entries
+  whose runner matches the signed-in user.
+- Concurrent editors are arbitrated by the sync conflict check: a draft
+  carries the blob SHAs it was loaded against, and a moved base means
+  re-apply, never silent overwrite.
+
+## Sharing is a GitHub grant
+
+There is no sharing UI to manage, deliberately. Whoever can read the repo
+sees all its routines, layouts, and artifacts; whoever can push can edit
+config and publish. The rail shows each repo's visibility, a collaborator
+avatar stack when GitHub will list one, and a link out to the repo's access
+settings — indicators and a link, because GitHub remains the one place
+sharing is managed.
+
+Note that GitHub has no per-path read permissions: anyone with read access
+sees every file on every branch. Routine definitions and layouts are
+private too (they leak what you track) — that's why the boundary is the
+repo, not a folder.
+
+## Display names and sections
+
+Repo slugs make noisy labels, so a data repo may carry a display name in
+`data/repo.yaml`:
+
+```yaml
+name: Form Factory
+sections: [Team, Clients, Projects]
+```
+
+- `name` relabels the rail group only. Identifiers — URLs, prompts, action
+  payloads — never use it. The `owner/repo` slug stays one hover away.
+- `sections` orders the rail's board sections; membership lives on each
+  board's own `section:` field. See
+  [Dashboards](/docs/guides/dashboards#sections).
+
+Both fields are optional; a malformed file degrades to defaults, never a
+broken rail. Editing the name in the app is a commit, like every other
+config change.
+
+## The artifacts branch
+
+Each routine publishes to `w/<slug>/index.html` — a fixed address known
+before the first run, so nothing needs to learn a URL after publishing.
+Isolation is by path: concurrent publishes from different routines can only
+race on the push itself (the publisher rebases and re-pushes), never on
+content.
+
+History grows by roughly one commit per run, and that history is a feature:
+it _is_ the [run record](/docs/guides/routines#run-history), and the app
+can re-render any past version of a widget from it. If size ever becomes a
+problem, squashing the branch to depth 1 is the escape hatch — at the cost
+of version browsing.
+
+## Leaving
+
+Delete the repo. That's the whole exit: no account data to purge, no export
+to request. Untag it instead if you only want it out of the app.

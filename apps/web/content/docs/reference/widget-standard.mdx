@@ -1,0 +1,107 @@
+---
+title: Widget standard
+description: The normative contract between the dashboard and the artifacts routines publish — the grid, the eight artifact rules, person-relative content, addressing and freshness.
+---
+
+This is the contract between the dashboard grid and the artifacts routines
+publish. The `widget-artifact` skill enforces it when authoring; the
+dashboard relies on it when rendering. The
+[authoring guide](/docs/guides/widgets) covers the _how_; this page is the
+_what_.
+
+## The grid (dashboard side)
+
+- The board renders its own `grid.columns` on desktop (default 4, up to
+  6), 2 on tablet, 1 on phone. Row unit ≈ 150 px (`grid.rowHeight`),
+  12 px gap.
+- The widget body is an iframe:
+  `<iframe srcdoc={artifactHtml} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox">`
+  — scripts allowed, links open real new tabs, **no** `allow-same-origin`,
+  no in-frame navigation, and no network inside the sandbox.
+- **Tiles never scroll.** The frame pins `overflow: hidden` in tile
+  iframes and stamps `data-steward-tile` on the artifact's root element.
+  If content overflows anyway, the frame fades the bottom edge out —
+  visible truncation, never an ambiguous mid-line crop. The full view
+  scrolls freely.
+- At render time the frame **injects** — never persisting anything into
+  the published file: the active theme's token overrides, the Geist Mono
+  face (as a data URI), the footer-hide style, a link-retargeting guard,
+  and `window.__STEWARD_VIEWER__` where a viewer is in scope.
+
+## The artifact (inside the iframe)
+
+An artifact MUST:
+
+1. **Be one self-contained HTML file.** No external requests of any kind —
+   no CDNs, no web fonts, no `fetch`, no images by URL. The sandbox blocks
+   the network; anything external simply breaks.
+2. **Respond to the standard breakpoints**, aligned with grid cell sizes —
+   width ≤ 340 px (1 col) / ≤ 700 px (2 col) / wider; height ≤ 160 px
+   (1 row) / taller; and the **full view** at ≥ ~900 px, which must read
+   like a page. Fit the height at every tier: content that doesn't fit
+   degrades to fewer items plus a visible `+N more` line — silent cropping
+   is a contract violation. Gate fit-to-height measurement on
+   `html[data-steward-tile]`. Fill the full width given; cap only
+   long-form prose (~72ch), on the text block itself.
+3. **Use the shared theme tokens** — the gruvbox-dark-hard palette as
+   `--color-*` custom properties with `color-scheme: dark`. Paint via
+   `var(--color-*)` only: the dashboard re-themes by overriding those
+   names inside the iframe; hard-coded hexes won't retheme.
+4. **Carry its generation time** —
+   `<meta name="widget-generated-at" content="<ISO-8601>">` plus a visible
+   compact timestamp in a `<footer>`. The footer is standalone chrome; the
+   board hides it (the card's title bar already shows name and freshness).
+5. **Degrade gracefully** when data is missing — an empty state is part of
+   the artifact, not an error.
+6. **Type at a readable floor** — body/data 14 px, section labels 12 px,
+   nothing smaller. Hierarchy by weight and color, not size. `--font-mono`
+   leads with `"Geist Mono Variable"` (the injected face; the raw page
+   falls back to system mono — the artifact itself still loads nothing).
+7. **Link out, in a new tab.** Every `<a href>` carries
+   `target="_blank" rel="noopener"` — in-frame navigation is
+   sandbox-blocked, so a bare href goes nowhere on the raw page. The
+   board's frame retargets forgotten anchors as a backstop only.
+8. **Compose from the shared design language** — the `widget-artifact`
+   skill's component set (shell, section rules, ledger rows, the stat
+   tier, pills, dots, meters, sparklines, empty states) and its per-tier
+   playbook, rather than per-routine visuals.
+
+## Person-relative content
+
+"You" belongs to whoever is looking, and the file is published once for
+every viewer:
+
+- **Person-owned artifacts** (one subject, known at build time) name the
+  owner in the third person — "Daniel's Daily Plan" — and never say
+  "your".
+- **Shared artifacts with per-viewer facets** publish **viewer-neutral**
+  (objective grouping, raw relationship data on rows, no precomputed
+  "mine") and enhance at render time: read
+  `window.__STEWARD_VIEWER__` in a `DOMContentLoaded` handler, treat it as
+  possibly `undefined`, wrap in `try`/`catch`, and re-group into the
+  second person only for a viewer who participates. Neutral is the honest
+  floor.
+
+This is the one sanctioned use of JS for content; the viewer is injected,
+not fetched, so rule 1 holds.
+
+## Addressing & freshness
+
+- **Address:** data repo, `artifacts` branch, `w/<slug>/index.html` —
+  fixed the moment the routine is configured.
+- **Freshness:** the last commit touching that path is the widget's
+  "ran Xh ago" readout. Overdue relative to the routine's schedule (2× the
+  cron interval) shows a staleness badge; never published shows a
+  placeholder card. Publish commits follow the message convention
+  `publish: <slug>` — one slug per commit — which board-level freshness
+  rollups parse.
+
+## Contract stability notes
+
+- `data-steward-tile` is contract surface: artifacts may key CSS or JS on
+  it; renaming it is a breaking change to the standard.
+- Contract changes reach published artifacts **as routines rerun** — a
+  published file is immutable, so type floors, shell rules, and similar
+  authoring changes are eventually consistent by design. Frame-side
+  injections (theme, font, link guard) reach already-published artifacts
+  immediately.
