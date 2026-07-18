@@ -410,7 +410,9 @@ function RailAction({
       type="button"
       onClick={onClick}
       className={cn(
-        "relative flex w-full cursor-pointer items-center rounded-md py-1 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
+        // 44px rows on coarse pointers — the drawer is primary navigation on
+        // phones, and 29px rows under a thumb are misses.
+        "relative flex w-full cursor-pointer items-center rounded-md py-1 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:min-h-11",
         className,
       )}
     >
@@ -602,7 +604,7 @@ function PoolNavItem({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative mt-0.5 flex items-center rounded-md py-1 pr-2.5 pl-6 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        "relative mt-0.5 flex items-center rounded-md py-1 pr-2.5 pl-6 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:min-h-11",
         active
           ? "bg-primary/10 font-medium text-foreground"
           : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
@@ -729,7 +731,7 @@ function NavItem({
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "group relative flex min-w-0 flex-1 items-center rounded-md py-1 pr-2.5 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          "group relative flex min-w-0 flex-1 items-center rounded-md py-1 pr-2.5 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:min-h-11",
           indented ? "pl-10" : "pl-6",
           hasMenu && "pr-8",
           // Boards are the bright, primary tier under the muted captions (the

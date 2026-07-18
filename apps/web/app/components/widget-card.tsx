@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useFetcher } from "react-router"
 
 import type { Routine, Widget } from "@steward/schema"
@@ -7,6 +7,7 @@ import {
   Check,
   Copy,
   Maximize2,
+  MoreHorizontal,
   Pencil,
   Power,
   PowerOff,
@@ -24,6 +25,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
 import { cn } from "~/lib/utils"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
 import { useT } from "../lib/i18n.tsx"
@@ -112,7 +119,31 @@ export function WidgetCard({
   const theme = useResolvedTheme()
   const [expanded, setExpanded] = useState(false)
   const [painted, setPainted] = useState(false)
+  const frameRef = useRef<HTMLIFrameElement>(null)
   const { size } = widget
+  // The veil lifts when the artifact reports real content (the tile guard's
+  // "steward:tile-painted" message, matched by source — an opaque-origin
+  // sandbox has no origin to check). `onLoad` alone lied: big or script-built
+  // artifacts finish loading long before they have anything to show, and the
+  // unveiled flush-bg document reads as a void.
+  useEffect(() => {
+    if (painted) return
+    const onMessage = (e: MessageEvent<unknown>) => {
+      const data = e.data
+      if (
+        e.source != null &&
+        e.source === frameRef.current?.contentWindow &&
+        typeof data === "object" &&
+        data !== null &&
+        "type" in data &&
+        data.type === "steward:tile-painted"
+      ) {
+        setPainted(true)
+      }
+    }
+    window.addEventListener("message", onMessage)
+    return () => window.removeEventListener("message", onMessage)
+  }, [painted])
   // The signed-in viewer resolves person-relative content at render time
   // (ADR-0039): repo-pulse's "needs your review" / "yours" enhance against
   // this login instead of the routine runner's. Absent on standalone renders
@@ -164,6 +195,16 @@ export function WidgetCard({
       ? t("widget.ran", { ago: t("time.now") })
       : t("widget.ran", { ago: t(`time.${ago.unit}`, { n: ago.n }) })
     : t("widget.never")
+
+  // One eligibility check shared by the fine-pointer UpdateAction and the
+  // touch menu's Update item — see the UpdateAction comment for the "one run
+  // affordance per card" rule it encodes.
+  const updateEligible =
+    dataRepo != null &&
+    routine.enabled &&
+    !running &&
+    status.kind !== "ready-manual" &&
+    status.kind !== "ready-scheduled"
 
   return (
     <>
@@ -289,18 +330,14 @@ export function WidgetCard({
                   a disabled refresh arrow beside the running one. Same rule
                   when the empty state shows the run-now button (ready-*):
                   one affordance per action. */}
-              {dataRepo != null &&
-                routine.enabled &&
-                !running &&
-                status.kind !== "ready-manual" &&
-                status.kind !== "ready-scheduled" && (
-                  <UpdateAction
-                    routine={routine}
-                    dataRepo={dataRepo}
-                    onFired={onFired}
-                    forceVisible={status.kind !== "live"}
-                  />
-                )}
+              {updateEligible && dataRepo != null && (
+                <UpdateAction
+                  routine={routine}
+                  dataRepo={dataRepo}
+                  onFired={onFired}
+                  forceVisible={status.kind !== "live"}
+                />
+              )}
               {/* Open the routine editor. Config (name, schedule, params) is
                   a routines.yaml draft, not a layout edit, so it lives here in
                   view mode — edit mode stays purely layout. Also kept in the
@@ -318,8 +355,8 @@ export function WidgetCard({
                 </Button>
               )}
               {/* Peek at full size. Recedes until the card is hovered/focused
-                (fine pointers), always shown on touch where there is no hover;
-                the reserved slot means no layout shift on reveal. */}
+                (fine pointers); on touch it lives in the ⋯ menu below. The
+                reserved slot means no layout shift on reveal. */}
               {html && (
                 <Button
                   variant="ghost"
@@ -332,6 +369,16 @@ export function WidgetCard({
                   <Maximize2 />
                 </Button>
               )}
+              {/* Touch: the three hover-revealed icons above collapse into
+                  one ⋯ menu so the title keeps its bar (BAR_ACTION hides
+                  them on coarse pointers, this trigger only shows there). */}
+              <WidgetTouchMenu
+                routine={routine}
+                dataRepo={updateEligible ? dataRepo : undefined}
+                onEdit={onEdit}
+                onExpand={html ? () => setExpanded(true) : undefined}
+                onFired={onFired}
+              />
               <span className="flex items-center gap-1.5">
                 {running ? (
                   /* When the trigger file gave us the cloud routine's id, the
@@ -388,10 +435,17 @@ export function WidgetCard({
              theme swaps reload the doc in place without re-veiling. */
           <div className="relative min-h-0 w-full flex-1">
             <iframe
+              ref={frameRef}
               srcDoc={html}
               sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
               title={routine.name}
-              onLoad={() => setPainted(true)}
+              // Fallback latch only: the real unveil is the tile guard's
+              // painted message above. The delay covers a guard that never
+              // runs (a pathological artifact) without defeating the veil for
+              // ones that render just after load.
+              onLoad={() => {
+                window.setTimeout(() => setPainted(true), 2500)
+              }}
               className={cn("size-full border-0", !painted && "opacity-0")}
             />
             {!painted && (
@@ -472,9 +526,14 @@ function StatusPill({
   )
 }
 
-/** The reveal-on-hover title-bar action style the expand + update buttons share. */
+/**
+ * The reveal-on-hover title-bar action style the expand + update buttons
+ * share. Coarse pointers never see these: three always-visible icons crowded
+ * the title out of its own bar on phones, so touch gets the single ⋯ menu
+ * (WidgetTouchMenu) instead.
+ */
 const BAR_ACTION =
-  "size-5 shrink-0 text-ink-dim transition-opacity hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:size-7 pointer-coarse:opacity-100"
+  "size-5 shrink-0 text-ink-dim transition-opacity hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:hidden"
 
 /** Shared fire plumbing for the run controls (ADR-0016): submit to /run and
     tell the board when a fire lands so it can start the running state. */
@@ -590,6 +649,143 @@ function UpdateAction({
         {status ?? ""}
       </span>
     </Button>
+  )
+}
+
+/**
+ * The touch counterpart of the bar's hover-revealed actions: coarse pointers
+ * get one ⋯ menu (Update / Edit / Expand) instead of three 20px icons
+ * crowding the title out of its own bar — BAR_ACTION hides the individual
+ * icons on coarse, this trigger renders only there. The trigger stays a
+ * 32px square so the bar keeps its height; the `after` inset extends the
+ * touch target past 44px without inflating the visual.
+ */
+function WidgetTouchMenu({
+  routine,
+  dataRepo,
+  onEdit,
+  onExpand,
+  onFired,
+}: {
+  routine: Routine
+  /** Present only when the Update action is eligible — mirrors UpdateAction's
+      "one run affordance per card" gate in WidgetCard. */
+  dataRepo?: string
+  onEdit?: () => void
+  onExpand?: () => void
+  onFired?: () => void
+}) {
+  if (dataRepo == null && onEdit == null && onExpand == null) return null
+  // The fetcher-bearing variant mounts only with a repo to fire against —
+  // standalone renders (tests, previews) have no data router, and useFetcher
+  // throws outside one. The split keeps the hook unconditional per component.
+  return dataRepo != null ? (
+    <TouchMenuWithUpdate
+      routine={routine}
+      dataRepo={dataRepo}
+      onEdit={onEdit}
+      onExpand={onExpand}
+      onFired={onFired}
+    />
+  ) : (
+    <TouchMenuFrame routine={routine} onEdit={onEdit} onExpand={onExpand} />
+  )
+}
+
+/**
+ * The menu plus its Update item. The fire plumbing lives here — a card-lifetime
+ * component — not inside the menu popup, which unmounts on close: a run fired
+ * from a closing menu must keep its fetcher alive to flip the tile to Running.
+ */
+function TouchMenuWithUpdate({
+  routine,
+  dataRepo,
+  onEdit,
+  onExpand,
+  onFired,
+}: {
+  routine: Routine
+  dataRepo: string
+  onEdit?: () => void
+  onExpand?: () => void
+  onFired?: () => void
+}) {
+  const t = useT()
+  const local = routineHost(routine) === "local"
+  const { fire, busy } = useFireRoutine(routine, dataRepo, onFired)
+  const [runLocalOpen, setRunLocalOpen] = useState(false)
+  return (
+    <>
+      <TouchMenuFrame
+        routine={routine}
+        onEdit={onEdit}
+        onExpand={onExpand}
+        updateItem={
+          <DropdownMenuItem
+            disabled={busy}
+            className="min-h-11"
+            onClick={() => (local ? setRunLocalOpen(true) : fire())}
+          >
+            <RefreshCw className={cn(busy && "animate-spin")} />
+            {t("widget.updateShort")}
+          </DropdownMenuItem>
+        }
+      />
+      {local && (
+        <RunLocallyDialog
+          routine={routine}
+          dataRepo={dataRepo}
+          open={runLocalOpen}
+          onOpenChange={setRunLocalOpen}
+        />
+      )}
+    </>
+  )
+}
+
+/** The ⋯ trigger and popup shared by both variants — no router hooks here. */
+function TouchMenuFrame({
+  routine,
+  onEdit,
+  onExpand,
+  updateItem,
+}: {
+  routine: Routine
+  onEdit?: () => void
+  onExpand?: () => void
+  updateItem?: React.ReactNode
+}) {
+  const t = useT()
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("widget.menuLabel", { name: routine.name })}
+            className="relative hidden size-8 shrink-0 text-ink-dim after:absolute after:-inset-2 hover:bg-bg3 hover:text-foreground aria-expanded:bg-bg3 aria-expanded:text-foreground pointer-coarse:inline-flex"
+          />
+        }
+      >
+        <MoreHorizontal />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4} className="w-44">
+        {updateItem}
+        {onEdit && (
+          <DropdownMenuItem className="min-h-11" onClick={onEdit}>
+            <Pencil />
+            {t("widget.editShort")}
+          </DropdownMenuItem>
+        )}
+        {onExpand && (
+          <DropdownMenuItem className="min-h-11" onClick={onExpand}>
+            <Maximize2 />
+            {t("widget.expandShort")}
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 

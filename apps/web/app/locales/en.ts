@@ -377,6 +377,8 @@ export const en = {
   "widget.expand": "Expand {name} to full screen",
   "widget.expandShort": "Expand",
   "widget.collapse": "Close",
+  "widget.menuLabel": "{name} actions",
+  "widget.editShort": "Edit routine",
 
   "time.now": "just now",
   "time.minutes": "{n}m ago",

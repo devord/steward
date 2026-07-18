@@ -37,7 +37,10 @@ function SheetContent({
       <SheetPrimitive.Popup
         data-slot="sheet-content"
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground ring-1 ring-foreground/10 outline-none transition-transform duration-200 ease-out data-ending-style:-translate-x-full data-starting-style:-translate-x-full motion-reduce:transition-none",
+          // shadow-lg does the layer separation the scrim can't: the overlay
+          // is a same-tone bg wash, and on light themes a cream panel over a
+          // cream wash read as one plane.
+          "fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground shadow-lg ring-1 ring-foreground/10 outline-none transition-transform duration-200 ease-out data-ending-style:-translate-x-full data-starting-style:-translate-x-full motion-reduce:transition-none",
           className,
         )}
         {...props}
