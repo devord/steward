@@ -394,10 +394,10 @@ export const ptBR: Messages = {
 
   "dialog.title": "Adicionar uma rotina",
   "dialog.description":
-    "Descreva o que o widget mostra; uma rotina o mantém fresco num agendamento ou sob demanda.",
+    "Escolha um template ou descreva seu próprio widget — uma rotina o mantém fresco.",
   "dialog.editTitle": "Editar rotina",
   "dialog.editDescription":
-    "Mude como esta rotina roda. O slug é fixo — exclua e adicione de novo para renomear. Posição e tamanho são definidos na grade.",
+    "Mude como esta rotina roda. Posição e tamanho são definidos na grade.",
   "dialog.prompt": "O que este widget deve mostrar?",
   "dialog.promptPlaceholder":
     "PRs abertos nos nossos repos, agrupados por revisor…",
@@ -409,11 +409,14 @@ export const ptBR: Messages = {
     "Exemplo de renderização — os dados da sua rotina serão outros",
   "dialog.samplePreviewTitle": "Exemplo de renderização de {name}",
   "dialog.name": "Nome",
-  "dialog.namePlaceholder": "Plano do Dia",
+  "dialog.namePlaceholder": "Radar de PRs",
   "dialog.slug": "Slug",
   "dialog.slugTaken": "Já usado por outra rotina",
+  "dialog.slugInvalid": "Letras minúsculas, números e hífens",
+  "dialog.slugFixed": "Fixo — exclua e adicione de novo para renomear",
   "dialog.slugPending": "Definido pelo assunto acima",
   "dialog.customize": "Personalizar",
+  "dialog.customizeSlugLabel": "Personalizar slug",
   "dialog.schedule": "Agendamento",
   "dialog.suggested": "Sugerido — {cron}",
   "dialog.customCron": "Cron personalizado…",
@@ -424,6 +427,7 @@ export const ptBR: Messages = {
   "dialog.presetWeekdays9": "Dias úteis às 9:00",
   "dialog.presetWeeklyMon9": "Semanal, segunda às 9:00",
   "dialog.manual": "Manual — roda sob demanda",
+  "dialog.manualShort": "Manual",
   "dialog.host": "Roda em",
   "dialog.hostCloud": "Nuvem — uma rotina do Claude",
   "dialog.hostLocal": "Local — sua máquina",
