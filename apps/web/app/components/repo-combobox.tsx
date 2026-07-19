@@ -73,8 +73,11 @@ export function RepoCombobox({
         autoFocus={autoFocus}
         placeholder={placeholder}
         aria-invalid={invalid || undefined}
+        // h/text match the input primitive (32px, 40px coarse; text-base
+        // below md so iOS doesn't auto-zoom the focused field) — this field
+        // sits beside Inputs and Selects and must not break the row rhythm.
         className={cn(
-          "flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 font-mono text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30",
+          "flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 font-mono text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:h-10 md:text-sm dark:bg-input/30",
           invalid &&
             "border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40",
         )}

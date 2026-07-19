@@ -45,7 +45,7 @@ import type { DiscoveredTemplate } from "../lib/templates.ts"
 import { frameArtifactHtml } from "../lib/theme.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
 import type { RepoSearchResult } from "../routes/repos.ts"
-import { SCHEDULE_PRESETS } from "../lib/schedules.ts"
+import { SCHEDULE_PRESETS, schedulePhraseKey } from "../lib/schedules.ts"
 import { TokenCombobox } from "./token-combobox.tsx"
 import { CopyableCommand } from "./widget-card.tsx"
 
@@ -121,6 +121,14 @@ function titleCase(token: string): string {
     .join(" ")
 }
 
+/** A template's name for seeding the Name field: the declared name, or its
+    title-cased form when it merely restates the id (`daily-plan` → `Daily
+    Plan`) — a machine string must not ghost into the human name field while
+    the slug caption below shows the real slug. */
+function templateDisplayName(entry: DiscoveredTemplate): string {
+  return entry.name === entry.id ? titleCase(entry.name) : entry.name
+}
+
 /**
  * The subject a template slugs its instances after (ADR-0040): the value of
  * its `subjectParam`, reduced to a bare token — a repo's name without its
@@ -150,11 +158,11 @@ function isRepoRef(token: string): boolean {
 /**
  * The MCP connectors a cloud run may allow (ADR-0018), by account name. The
  * set is small and known, so the field offers it as toggles rather than a
- * free-typed list. Account names are machine strings that must match the
- * connector on the runner's Claude account exactly (`Google_Calendar`, not
- * "Google Calendar"), so they render verbatim in mono. Edit this list to
- * change what's offered; a stored name outside it still renders (see
- * ConnectorField) so an edit never silently drops one.
+ * free-typed list. The *stored* value stays the exact account-name machine
+ * string (`Google_Calendar`); the chip shows its friendly form (underscores
+ * → spaces, sans — the label is display, the YAML keeps the honest string).
+ * Edit this list to change what's offered; a stored name outside it still
+ * renders (see ConnectorField) so an edit never silently drops one.
  */
 const CONNECTOR_CATALOG: readonly string[] = [
   "GitHub",
@@ -324,11 +332,13 @@ export function AddRoutineDialog({
     const suggested = entry.widget.connectors ?? []
     if (suggested.length > 0) {
       setConnectors((current) => [...new Set([...current, ...suggested])])
+      seededConnectors.current = [...suggested]
+      setAdvancedOpen(true)
     }
     // A subject template names its instance after the entered subject; seed
     // the name from the template only otherwise. The slug follows the name via
     // the derivation effect (ADR-0040).
-    if (entry.widget.subjectParam == null) setName(entry.name)
+    if (entry.widget.subjectParam == null) setName(templateDisplayName(entry))
   }, [open, editRoutine, initialTemplate])
 
   // Opening in edit mode seeds the fields from the routine and jumps to the
@@ -370,6 +380,8 @@ export function AddRoutineDialog({
     )
     setExtraRepos(extras)
     setConnectors(editRoutine.connectors ?? [])
+    // Stored connectors are the user's own — never retracted by re-picks.
+    seededConnectors.current = []
     setAdvancedOpen(
       extras.length > 0 || (editRoutine.connectors ?? []).length > 0,
     )
@@ -391,18 +403,33 @@ export function AddRoutineDialog({
     setTouched({})
     setExtraRepos([])
     setConnectors([])
+    seededConnectors.current = []
     setAdvancedOpen(false)
     setCustomizingSlug(false)
   }
 
+  // Connectors the current template pick auto-seeded (as opposed to
+  // hand-toggled): they belong to the pick, so switching or deselecting the
+  // template retracts them instead of silently widening the allowlist a
+  // user never saw (it hides under collapsed Advanced). A manual toggle
+  // claims the whole set — after that, template switches stop retracting.
+  const seededConnectors = useRef<string[]>([])
+
   function pickTemplate(next: DiscoveredTemplate) {
     // The picker is an accelerator, not a gate — a second click deselects
     // back to a prompt-only routine, keeping whatever the user typed but
-    // dropping any name this template auto-filled (the slug follows via the
-    // derivation effect).
+    // dropping any name and connectors this template auto-filled (the slug
+    // follows via the derivation effect).
     if (next.id === templateId) {
       setTemplateId(null)
       if (!nameEdited) setName("")
+      // Snapshot before clearing the ref: the updater runs on the next
+      // render, after the ref has already been reassigned.
+      const seeded = seededConnectors.current
+      seededConnectors.current = []
+      setConnectors((current) =>
+        current.filter((name) => !seeded.includes(name)),
+      )
       return
     }
     setTemplateId(next.id)
@@ -412,18 +439,27 @@ export function AddRoutineDialog({
       setSchedule(next.widget.schedule)
     }
     // The template's suggested connectors join the allowlist (ADR-0020) —
-    // union, not replace, so a hand-added connector survives a re-pick.
+    // union over the hand-added set, minus the previous pick's auto-seeds.
+    // Seeding also opens Advanced: an allowlist grant (ADR-0018) must be
+    // visible on the configure step, never a collapsed surprise.
     const suggested = next.widget.connectors ?? []
-    if (suggested.length > 0) {
-      setConnectors((current) => [...new Set([...current, ...suggested])])
-    }
+    // Snapshot before reassigning the ref — the updater executes later.
+    const seeded = seededConnectors.current
+    seededConnectors.current = [...suggested]
+    setConnectors((current) => [
+      ...new Set([
+        ...current.filter((name) => !seeded.includes(name)),
+        ...suggested,
+      ]),
+    ])
+    if (suggested.length > 0) setAdvancedOpen(true)
     // Re-seed the name from the newly picked template unless the user typed
     // their own — otherwise switching templates strands the first template's
     // name. A subject template names its instance after the subject the user
     // is about to enter (the derivation effect), not the template, so clear it
     // there. The slug follows the name/subject via that effect (ADR-0040).
     if (!nameEdited) {
-      setName(next.widget.subjectParam != null ? "" : next.name)
+      setName(next.widget.subjectParam != null ? "" : templateDisplayName(next))
     }
   }
 
@@ -555,8 +591,25 @@ export function AddRoutineDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={(next) => {
-        if (!next) reset()
+      onOpenChange={(next, eventDetails) => {
+        // Escape or a stray backdrop tap must not destroy a typed draft:
+        // the brief is the product's core artifact. An accidental dismiss
+        // keeps the state for the next open; Cancel, ✕, and submit reset
+        // explicitly. Edit mode always resets — it re-seeds from the
+        // routine on open.
+        if (!next) {
+          const accidental =
+            eventDetails.reason === "escape-key" ||
+            eventDetails.reason === "outside-press"
+          const dirty =
+            instructions.trim().length > 0 ||
+            (nameEdited && name.trim().length > 0) ||
+            slugEdited ||
+            Object.keys(params).length > 0 ||
+            extraRepos.length > 0 ||
+            customCron.trim().length > 0
+          if (!(accidental && !isEdit && dirty)) reset()
+        }
         onOpenChange(next)
       }}
     >
@@ -572,7 +625,15 @@ export function AddRoutineDialog({
             {step === "intent" ? (
               t("dialog.description")
             ) : isEdit ? (
-              t("dialog.editDescription")
+              // The template id is the one identifier that explains the
+              // whole form — edit mode names it like add mode does.
+              <>
+                <span className="font-mono text-primary">
+                  {templateId ?? CUSTOM_TEMPLATE}
+                </span>
+                {" — "}
+                {t("dialog.editDescription")}
+              </>
             ) : template ? (
               <>
                 <span className="font-mono text-primary">{template.id}</span>
@@ -757,10 +818,24 @@ export function AddRoutineDialog({
                         }
                         className="font-mono disabled:opacity-70"
                       />
-                      {slugTaken && (
+                      {slugTaken ? (
                         <p className="text-xs text-destructive">
                           {t("dialog.slugTaken")}
                         </p>
+                      ) : slug.length > 0 && !slugValid ? (
+                        // The taken case had a message; the invalid case
+                        // showed only a red ring — name the rule.
+                        <p className="text-xs text-destructive">
+                          {t("dialog.slugInvalid")}
+                        </p>
+                      ) : (
+                        isEdit && (
+                          // The rename warning lives where it acts — on the
+                          // disabled field — not in the dialog header.
+                          <p className="text-xs text-muted-foreground">
+                            {t("dialog.slugFixed")}
+                          </p>
+                        )
                       )}
                     </div>
                   ) : (
@@ -780,7 +855,14 @@ export function AddRoutineDialog({
                           <span aria-hidden="true">·</span>
                           <button
                             type="button"
-                            className="underline underline-offset-2 hover:text-foreground"
+                            // "Customize" alone is ambiguous to AT — name
+                            // what it customizes.
+                            aria-label={t("dialog.customizeSlugLabel")}
+                            // after-inset hit extension (the widget-bar ⋯
+                            // idiom): a 13px inline link is far under the
+                            // touch floor, and growing its visible box would
+                            // break the caption line.
+                            className="relative underline underline-offset-2 hover:text-foreground pointer-coarse:after:absolute pointer-coarse:after:-inset-y-3 pointer-coarse:after:-inset-x-2"
                             onClick={() => {
                               // Carry the derived slug into the field to tweak.
                               setSlugOverride(slug)
@@ -798,7 +880,12 @@ export function AddRoutineDialog({
 
                 <div className="grid gap-3 sm:grid-cols-2 sm:items-start">
                   <div className="grid gap-2">
-                    <Label>{t("dialog.schedule")}</Label>
+                    {/* htmlFor → trigger id: without it the trigger has no
+                        accessible name — a screen reader hears the bare
+                        value ("Daily at 8:00, button") with no field name. */}
+                    <Label htmlFor="routine-schedule">
+                      {t("dialog.schedule")}
+                    </Label>
                     <Select
                       value={schedule}
                       onValueChange={(next) => {
@@ -808,8 +895,28 @@ export function AddRoutineDialog({
                         }
                       }}
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
+                      <SelectTrigger id="routine-schedule" className="w-full">
+                        {/* Base UI renders the raw value in the trigger —
+                            that's `0 8 * * *` for a preset and the bare
+                            `manual`/`custom` sentinels. Map presets to their
+                            phrase (the shared cron vocabulary, ADR-0025);
+                            an off-list cron renders verbatim in mono
+                            (terminal manners: machine strings stay honest). */}
+                        <SelectValue>
+                          {(value) => {
+                            if (typeof value !== "string") return null
+                            if (value === MANUAL) {
+                              return t("dialog.manualShort")
+                            }
+                            if (value === CUSTOM) return t("dialog.customCron")
+                            const phrase = schedulePhraseKey(value)
+                            return phrase ? (
+                              t(phrase)
+                            ) : (
+                              <span className="font-mono">{value}</span>
+                            )
+                          }}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {template?.widget.schedule && (
@@ -849,14 +956,14 @@ export function AddRoutineDialog({
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label>{t("dialog.host")}</Label>
+                    <Label htmlFor="routine-host">{t("dialog.host")}</Label>
                     <Select
                       value={host}
                       onValueChange={(next) => {
                         if (next === "cloud" || next === "local") setHost(next)
                       }}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger id="routine-host" className="w-full">
                         {/* Base UI renders the raw value in the trigger; map
                             it to a short proper-case label instead of the
                             bare enum. */}
@@ -912,7 +1019,7 @@ export function AddRoutineDialog({
                       type="button"
                       aria-expanded={advancedOpen}
                       onClick={() => setAdvancedOpen((value) => !value)}
-                      className="flex cursor-pointer items-center gap-1 rounded-sm text-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="relative flex cursor-pointer items-center gap-1 rounded-sm text-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:after:absolute pointer-coarse:after:-inset-y-2 pointer-coarse:after:inset-x-0"
                     >
                       <ChevronRightIcon
                         className={cn(
@@ -948,7 +1055,12 @@ export function AddRoutineDialog({
                           <ConnectorField
                             labelledBy="routine-connectors-label"
                             value={connectors}
-                            onChange={setConnectors}
+                            onChange={(next) => {
+                              // A manual toggle claims the set — template
+                              // switches stop retracting auto-seeds.
+                              seededConnectors.current = []
+                              setConnectors(next)
+                            }}
                           />
                           <p className="text-xs text-muted-foreground">
                             {t("dialog.connectorsHint")}
@@ -980,50 +1092,59 @@ export function AddRoutineDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <div
-            className="flex items-center gap-1 self-center sm:mr-auto"
-            aria-label={t("dialog.stepLabel", { n: stepIndex })}
-          >
-            <span className="sr-only">
-              {t("dialog.stepLabel", { n: stepIndex })}
-            </span>
-            {(["intent", "config"] as const).map((mark) => (
-              <span
-                key={mark}
-                aria-hidden
-                className={cn(
-                  "h-1 w-4 rounded-full transition-colors duration-200",
-                  mark === step ? "bg-primary" : "bg-border",
-                )}
-              />
-            ))}
-          </div>
-          {step === "intent" ? (
-            <>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  reset()
-                  onOpenChange(false)
-                }}
-              >
-                {t("dialog.cancel")}
-              </Button>
-              <Button disabled={!hasSource} onClick={() => setStep("config")}>
-                {t("dialog.next")}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" onClick={() => setStep("intent")}>
-                {t("dialog.back")}
-              </Button>
-              <Button disabled={!canSubmit} onClick={submit}>
-                {t(isEdit ? "dialog.save" : "dialog.add")}
-              </Button>
-            </>
+        {/* flex-col (not the footer's default col-reverse): the dots read
+            as progress above the actions; reversed they landed below the
+            last button, orphaned at the sheet's bottom edge. */}
+        <DialogFooter className="flex-col sm:flex-row">
+          {/* Edit mode hides the dots — a prefilled form isn't step 2 of a
+              journey the editor never took. */}
+          {!isEdit && (
+            <div
+              className="flex items-center gap-1 self-center sm:mr-auto"
+              aria-label={t("dialog.stepLabel", { n: stepIndex })}
+            >
+              <span className="sr-only">
+                {t("dialog.stepLabel", { n: stepIndex })}
+              </span>
+              {(["intent", "config"] as const).map((mark) => (
+                <span
+                  key={mark}
+                  aria-hidden
+                  className={cn(
+                    "h-1 w-4 rounded-full transition-colors duration-200",
+                    mark === step ? "bg-primary" : "bg-border",
+                  )}
+                />
+              ))}
+            </div>
           )}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            {step === "intent" ? (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    reset()
+                    onOpenChange(false)
+                  }}
+                >
+                  {t("dialog.cancel")}
+                </Button>
+                <Button disabled={!hasSource} onClick={() => setStep("config")}>
+                  {t("dialog.next")}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => setStep("intent")}>
+                  {t("dialog.back")}
+                </Button>
+                <Button disabled={!canSubmit} onClick={submit}>
+                  {t(isEdit ? "dialog.save" : "dialog.add")}
+                </Button>
+              </>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1084,7 +1205,9 @@ function TemplateCard({
         <Icon
           aria-hidden
           className={cn(
-            "size-4 shrink-0 transition-colors",
+            // size-5: the glyph anchors a two-line row — at size-4 it read
+            // as a stray bullet, not the row's left edge.
+            "size-5 shrink-0 transition-colors",
             selected ? "text-primary" : "text-muted-foreground",
           )}
         />
@@ -1158,8 +1281,10 @@ function TemplatePreview({ html, name }: { html: string; name: string }) {
  * The connector allowlist (ADR-0018) as a set of toggles over the known
  * catalog — the options are predetermined and few, so it's a pick-from-list,
  * not a free-typed field. Selection follows the app's idiom: a translucent
- * accent wash and orange border under mono ink, the check reserved on every
- * chip so toggling never reflows the row. A stored connector the catalog
+ * accent wash and accent border under unchanged mono ink — no per-chip
+ * check (a reserved leading icon left every unchecked chip with a hollow
+ * gap, off-center text, and ragged left edges; the wash + border carry the
+ * state, `aria-pressed` carries it for AT). A stored connector the catalog
  * doesn't list (hand-authored YAML, or a template's suggestion) is appended
  * so an edit round-trips it instead of dropping it.
  */
@@ -1198,20 +1323,19 @@ function ConnectorField({
             aria-pressed={on}
             onClick={() => toggle(name)}
             className={cn(
-              "flex cursor-pointer items-center gap-1.5 rounded-md border py-1 pr-2.5 pl-1.5 font-mono text-xs transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              // pointer-coarse:h-9 — the small-control touch floor (the
+              // Button sm floor): 27px chips beside 40px fields read as
+              // clutter and miss the touch target on phones.
+              "inline-flex cursor-pointer items-center rounded-md border px-2.5 py-1 text-xs transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:h-9 pointer-coarse:px-3",
               on
                 ? "border-primary bg-primary/10 text-foreground"
                 : "border-border text-muted-foreground hover:bg-primary/5 hover:text-foreground",
             )}
           >
-            <CheckIcon
-              aria-hidden
-              className={cn(
-                "size-3.5 shrink-0 text-primary transition-opacity duration-100",
-                on ? "opacity-100" : "opacity-0",
-              )}
-            />
-            {name}
+            {/* Friendly display of the stored machine string: sans with
+                spaces ("Google Calendar"), per the per-string mono rule —
+                the label is prose; the YAML keeps `Google_Calendar`. */}
+            {name.replaceAll("_", " ")}
           </button>
         )
       })}

@@ -1342,11 +1342,17 @@ function GridKnob({
   label,
   value,
   onValueChange,
+  renderValue,
   children,
 }: {
   label: ReactNode
   value: string
   onValueChange: (value: string | null) => void
+  /** Maps the raw value to its display label in the closed trigger — Base
+      UI renders the value verbatim otherwise, leaking sentinels like
+      `fixed` or a bare `150` while the open menu speaks the translated
+      phrase. Omit when the value is its own label (column counts). */
+  renderValue?: (value: string) => ReactNode
   children: ReactNode
 }) {
   return (
@@ -1357,7 +1363,11 @@ function GridKnob({
           size="sm"
           className="h-full rounded-none border-y-0 border-r-0 bg-transparent pr-2 pl-2 text-xs text-ink shadow-none focus-visible:border-l-input focus-visible:ring-0 pointer-coarse:data-[size=sm]:h-full dark:bg-transparent dark:hover:bg-transparent"
         >
-          <SelectValue />
+          <SelectValue>
+            {renderValue &&
+              ((current) =>
+                typeof current === "string" ? renderValue(current) : null)}
+          </SelectValue>
         </SelectTrigger>
       </label>
       <SelectContent>{children}</SelectContent>
@@ -1414,6 +1424,9 @@ function GridSettings({
         onValueChange={(next) => {
           if (next === "fixed" || next === "wide") onChange({ width: next })
         }}
+        renderValue={(current) =>
+          t(current === "wide" ? "grid.widthWide" : "grid.widthFixed")
+        }
       >
         <SelectItem value="fixed">{t("grid.widthFixed")}</SelectItem>
         <SelectItem value="wide">{t("grid.widthWide")}</SelectItem>
@@ -1425,6 +1438,12 @@ function GridSettings({
         onValueChange={(next) => {
           const n = Number(next)
           if (Number.isInteger(n)) onChange({ rowHeight: n })
+        }}
+        renderValue={(current) => {
+          const preset = DENSITY_PRESETS.find(
+            (d) => String(d.value) === current,
+          )
+          return preset ? t(preset.label) : `${current}px`
         }}
       >
         {DENSITY_PRESETS.map((d) => (

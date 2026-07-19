@@ -63,8 +63,15 @@ export function TokenCombobox({
     }
   }, [suggest, query])
 
-  const open = suggestions.filter((entry) => !value.includes(entry))
+  // Re-filter against the *current* query: the async list can be a stale
+  // response for an earlier query, and with `autoHighlight` Enter would
+  // commit whatever stale row happens to be first.
   const typed = query.trim()
+  const open = suggestions.filter(
+    (entry) =>
+      !value.includes(entry) &&
+      entry.toLowerCase().includes(typed.toLowerCase()),
+  )
   const candidate =
     typed.length > 0 &&
     validate(typed) &&
@@ -72,7 +79,9 @@ export function TokenCombobox({
     !open.includes(typed)
       ? typed
       : null
-  const items = candidate ? [...open, candidate] : open
+  // The typed token leads: once the entry passes `validate`, Enter must add
+  // exactly what was typed, never a lookalike suggestion above it.
+  const items = candidate ? [candidate, ...open] : open
 
   return (
     <Combobox.Root
@@ -91,9 +100,13 @@ export function TokenCombobox({
       autoHighlight
       openOnInputClick
     >
+      {/* min-h matches the input/select control heights (32px, 40px coarse);
+          the inline input is capped at 22px so the empty field's content
+          height stays under the floor instead of pushing it to 34px — the
+          one field in the form that sat 2px taller than its neighbors. */}
       <Combobox.Chips
         className={cn(
-          "flex min-h-8 w-full flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-1.5 py-1 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30",
+          "flex min-h-8 w-full flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-1.5 py-1 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 pointer-coarse:min-h-10 dark:bg-input/30",
           invalid &&
             "border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40",
         )}
@@ -105,7 +118,7 @@ export function TokenCombobox({
           >
             {token}
             <Combobox.ChipRemove
-              className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className="relative rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground pointer-coarse:after:absolute pointer-coarse:after:-inset-2"
               aria-label={t("dialog.removeToken", { value: token })}
             >
               <XIcon className="size-3" />
@@ -117,7 +130,10 @@ export function TokenCombobox({
           placeholder={value.length === 0 ? placeholder : undefined}
           onBlur={onBlur}
           aria-invalid={invalid || undefined}
-          className="h-6 min-w-24 flex-1 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
+          // text-base below md like the input primitive (iOS zooms any
+          // focused field under 16px); h-[1.375rem] keeps the empty row's
+          // content height at the 32px control floor.
+          className="h-[1.375rem] min-w-24 flex-1 bg-transparent font-mono text-base outline-none placeholder:text-muted-foreground md:text-sm"
         />
       </Combobox.Chips>
       <Combobox.Portal>

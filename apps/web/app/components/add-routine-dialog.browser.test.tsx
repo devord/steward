@@ -186,6 +186,86 @@ describe("AddRoutineDialog add mode", () => {
     )
   })
 
+  it("speaks the preset phrase in the schedule trigger, never raw cron", async () => {
+    // Base UI renders the raw value by default — the trigger must map it
+    // through the shared cron vocabulary (lib/schedules.ts) the way the
+    // open menu already does.
+    await renderDialog()
+    typeInto(textarea("routine-prompt"), "Anything.")
+    button("Next").click()
+    await vi.waitFor(() =>
+      expect(document.querySelector("#routine-name")).not.toBeNull(),
+    )
+
+    const trigger = document.querySelector("#routine-schedule")
+    expect(trigger?.textContent).toContain("Daily at 8:00")
+    expect(trigger?.textContent).not.toContain("0 8 * * *")
+  })
+
+  it("retracts auto-seeded connectors when their template is unpicked", async () => {
+    // A pick's suggested connectors must follow the pick (ADR-0018 is an
+    // allowlist — deselecting the template takes its grant away instead of
+    // silently widening what the run may use), and seeding opens Advanced
+    // so the grant is visible on the configure step.
+    const calTemplate: DiscoveredTemplate = {
+      ...dailyPlanTemplate,
+      id: "cal-digest",
+      name: "Cal digest",
+      sample: undefined,
+      widget: {
+        ...dailyPlanTemplate.widget,
+        connectors: ["Google_Calendar"],
+      },
+    }
+    await renderDialog({ templates: [calTemplate] })
+
+    buttonContaining("cal-digest").click()
+    await vi.waitFor(() =>
+      expect(buttonContaining("cal-digest").getAttribute("aria-pressed")).toBe(
+        "true",
+      ),
+    )
+    button("Next").click()
+    // Advanced auto-opened by the seeding — the chip is already visible.
+    const chip = await vi.waitFor(() => button("Google Calendar"))
+    expect(chip.getAttribute("aria-pressed")).toBe("true")
+
+    // Back to intent, deselect the card — the seeded grant leaves with it.
+    // The nested prompt only mounts once the custom card is selected again.
+    button("Back").click()
+    await vi.waitFor(() =>
+      expect(buttonContaining("cal-digest").getAttribute("aria-pressed")).toBe(
+        "true",
+      ),
+    )
+    buttonContaining("cal-digest").click()
+    await vi.waitFor(() =>
+      expect(document.querySelector("#routine-prompt")).not.toBeNull(),
+    )
+    typeInto(textarea("routine-prompt"), "Freeform instead.")
+    button("Next").click()
+    await vi.waitFor(() =>
+      expect(document.querySelector("#routine-name")).not.toBeNull(),
+    )
+    button("Advanced").click()
+    const after = await vi.waitFor(() => button("Google Calendar"))
+    expect(after.getAttribute("aria-pressed")).toBe("false")
+  })
+
+  it("keeps a typed draft on Escape, resets on explicit Cancel", async () => {
+    // Escape/backdrop are accident-prone — they close but must not destroy
+    // a typed brief. Cancel is the explicit discard.
+    await renderDialog()
+    typeInto(textarea("routine-prompt"), "A brief worth keeping.")
+    await userEvent.keyboard("{Escape}")
+    // The harness holds `open`, so the panel stays mounted — reset would
+    // have cleared the prompt.
+    expect(textarea("routine-prompt").value).toBe("A brief worth keeping.")
+
+    button("Cancel").click()
+    await vi.waitFor(() => expect(textarea("routine-prompt").value).toBe(""))
+  })
+
   it("seeds the picker from initialTemplate — new routine from template (ADR-0029)", async () => {
     await renderDialog({
       templates: [repoPulseTemplate],
