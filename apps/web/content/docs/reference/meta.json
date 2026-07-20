@@ -5,6 +5,7 @@
     "cli",
     "routines-yaml",
     "dashboards-yaml",
+    "repo-yaml",
     "template-frontmatter",
     "widget-standard",
     "skills"
