@@ -1,11 +1,11 @@
 ---
 title: Data repos
-description: The repo that holds everything Steward knows — layout, discovery by topic, sharing by GitHub permission, display names, and the artifacts branch.
+description: "The repo that holds everything Steward knows: layout, discovery by topic, sharing by GitHub permission, display names, and the artifacts branch."
 ---
 
 Steward stores nothing itself. Every routine definition, dashboard layout,
-template, and published widget lives in a **data repo** you own. The app is
-a renderer over that repo, using your GitHub token.
+template, and published widget lives in a **data repo** you own. The app
+is a renderer over that repo, using your GitHub token.
 
 ## Layout
 
@@ -13,7 +13,7 @@ a renderer over that repo, using your GitHub token.
 <data repo>
 ├── main
 │   ├── data/
-│   │   ├── routines.yaml            # the routine pool — what runs, and when
+│   │   ├── routines.yaml            # the routine pool: what runs, and when
 │   │   ├── dashboards/<slug>.yaml   # one grid layout per board
 │   │   ├── repo.yaml                # optional: display name, section order
 │   │   └── triggers/<slug>.json     # API-trigger token per manual cloud routine
@@ -24,9 +24,9 @@ a renderer over that repo, using your GitHub token.
     └── w/<slug>/index.html          # one published widget per routine
 ```
 
-Two branches, two jobs. `main` is configuration — human-edited, drafted and
+Two branches, two jobs. `main` is configuration: human-edited, drafted and
 diffed in the app, reviewable like any code. `artifacts` is machine
-output — one commit per routine run, touching only that routine's file.
+output: one commit per routine run, touching only that routine's file.
 Because the branch is an orphan, generated commits never pollute `main`'s
 history, never trigger CI, and bypass any branch protection on `main`.
 
@@ -34,31 +34,32 @@ history, never trigger CI, and bypass any branch protection on `main`.
 
 The app doesn't keep a registry of repos. Every data repo carries the
 GitHub topic **`steward-data`**, and the app's repo list is a topic search
-run with _your_ token — the results are exactly the tagged repos you can
-read, plus your home repo (resolved by name, so it appears even before the
-search index catches up).
+run with _your_ token. The results are exactly the tagged repos you can
+read, plus your home repo, which is resolved by name so it appears even
+before the search index catches up.
 
 Consequences worth knowing:
 
-- Repos generated from the [data-repo template](https://github.com/devord/steward-data-template) do **not** inherit its topics. The app's
-  create paths tag the new repo explicitly; if you create one by hand, add
-  the topic yourself.
+- Repos generated from the
+  [data-repo template](https://github.com/devord/steward-data-template)
+  do **not** inherit its topics. The app's create paths tag the new repo
+  explicitly; if you create one by hand, add the topic yourself.
 - "Registering" an existing repo is just adding the tag (push access
   required). Dropping the tag removes the repo from the app without
   touching its data.
-- A repo shared with you appears with **no app-side action at all** — the
-  next topic search finds it.
+- A repo shared with you appears with no app-side action at all. The next
+  topic search finds it.
 
 ## Home repo vs shared repos
 
-Your **home repo** is `steward-data-<login>` — one private repo, created by
+Your **home repo** is `steward-data-<login>`: one private repo, created by
 the first-run wizard, anchoring `/` and the top of the rail. Every other
 data repo is a **shared repo**: an org's, a project's, another person's.
 Same format, same features; the differences are social:
 
-- In a shared repo each routine names a `runner:` — the login whose Claude
-  account owns its cloud schedule. `steward sync` there enacts only entries
-  whose runner matches the signed-in user.
+- In a shared repo each routine names a `runner:`, and each collaborator's
+  `sync` enacts only their own entries. See
+  [Writing routines](/docs/guides/routines#enacting-steward-sync).
 - Concurrent editors are arbitrated by the sync conflict check: a draft
   carries the blob SHAs it was loaded against, and a moved base means
   re-apply, never silent overwrite.
@@ -68,45 +69,47 @@ Same format, same features; the differences are social:
 There is no sharing UI to manage, deliberately. Whoever can read the repo
 sees all its routines, layouts, and artifacts; whoever can push can edit
 config and publish. The rail shows each repo's visibility, a collaborator
-avatar stack when GitHub will list one, and a link out to the repo's access
-settings — indicators and a link, because GitHub remains the one place
-sharing is managed.
+avatar stack when GitHub will list one, and a link out to the repo's
+access settings. Indicators and a link only, because GitHub remains the
+one place sharing is managed.
 
 Note that GitHub has no per-path read permissions: anyone with read access
 sees every file on every branch. Routine definitions and layouts are
-private too (they leak what you track) — that's why the boundary is the
-repo, not a folder.
+private too, since they leak what you track. That's why the boundary is
+the repo, not a folder.
 
 ## Organization access
 
-Steward signs you in with a **classic GitHub OAuth app**, and GitHub lets an
-organization restrict which OAuth apps act on its behalf. When an org has that
-restriction on and hasn't approved Steward, your token reads your own repos but
-stays blind to that org's — even repos you can otherwise see on GitHub.
+Steward signs you in with a classic GitHub OAuth app, and GitHub lets an
+organization restrict which OAuth apps act on its behalf. When an org has
+that restriction on and hasn't approved Steward, your token reads your own
+repos but stays blind to that org's, even repos you can otherwise see on
+GitHub.
 
 The symptom lands in the **Add data repo** dialog:
 
-- **Register existing** won't suggest the org's repos — the picker lists what
-  your token can see — and typing `owner/repo` by hand fails on submit, with the
-  repo reported as missing or the topic tag as denied.
+- **Register existing** won't suggest the org's repos, and typing
+  `owner/repo` by hand fails on submit, with the repo reported as missing
+  or the topic tag as denied.
 - **Create new** into that org fails the same way.
 
-The fix is **org approval of the app**, granted once for the whole org. Classic
-OAuth apps are approved per organization, not per repo, so there is no per-repo
-install request — approval covers every repo in the org at once.
+The fix is org approval of the app, granted once for the whole org.
+Classic OAuth apps are approved per organization, not per repo, so there
+is no per-repo install request.
 
 - **A member requests it.** On GitHub, open **Settings → Applications →
   [Authorized OAuth Apps](https://github.com/settings/connections/applications) →
-  Steward → Organizations** and press **Request** beside the org. (The dialog's
-  **Manage organization access on GitHub** button, shown after a failed
-  register, jumps straight to that page.) The authorization screen offers the
-  same request the first time you sign in.
-- **An org owner approves it.** In the org's **Settings → Third-party access →
-  OAuth app policy**, approve the pending Steward request — or lift the
-  restriction. Owners can also grant access without waiting for a request.
+  Steward → Organizations** and press **Request** beside the org. The
+  dialog's **Manage organization access on GitHub** button, shown after a
+  failed register, jumps straight to that page. The authorization screen
+  offers the same request the first time you sign in.
+- **An org owner approves it.** In the org's **Settings → Third-party
+  access → OAuth app policy**, approve the pending Steward request, or
+  lift the restriction. Owners can also grant access without waiting for
+  a request.
 
-Once the org has approved Steward, its repos surface in the picker and register
-without error; nothing changes on Steward's side.
+Once the org has approved Steward, its repos surface in the picker and
+register without error. Nothing changes on Steward's side.
 
 ## Display names and sections
 
@@ -118,8 +121,8 @@ name: Form Factory
 sections: [Team, Clients, Projects]
 ```
 
-- `name` relabels the rail group only. Identifiers — URLs, prompts, action
-  payloads — never use it. The `owner/repo` slug stays one hover away.
+- `name` relabels the rail group only. Identifiers (URLs, prompts, action
+  payloads) never use it. The `owner/repo` slug stays one hover away.
 - `sections` orders the rail's board sections; membership lives on each
   board's own `section:` field. See
   [Dashboards](/docs/guides/dashboards#sections).
@@ -130,19 +133,19 @@ config change.
 
 ## The artifacts branch
 
-Each routine publishes to `w/<slug>/index.html` — a fixed address known
+Each routine publishes to `w/<slug>/index.html`, a fixed address known
 before the first run, so nothing needs to learn a URL after publishing.
-Isolation is by path: concurrent publishes from different routines can only
-race on the push itself (the publisher rebases and re-pushes), never on
-content.
+Isolation is by path: concurrent publishes from different routines can
+only race on the push itself (the publisher rebases and re-pushes), never
+on content.
 
-History grows by roughly one commit per run, and that history is a feature:
-it _is_ the [run record](/docs/guides/routines#run-history), and the app
-can re-render any past version of a widget from it. If size ever becomes a
-problem, squashing the branch to depth 1 is the escape hatch — at the cost
-of version browsing.
+History grows by roughly one commit per run, and that history is a
+feature: it _is_ the [run record](/docs/guides/routines#run-history), and
+the app can re-render any past version of a widget from it. If size ever
+becomes a problem, squashing the branch to depth 1 is the escape hatch, at
+the cost of version browsing.
 
 ## Leaving
 
-Delete the repo. That's the whole exit: no account data to purge, no export
-to request. Untag it instead if you only want it out of the app.
+Delete the repo. That's the whole exit: no account data to purge, no
+export to request. Untag it instead if you only want it out of the app.

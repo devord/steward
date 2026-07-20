@@ -1,6 +1,6 @@
 ---
 title: Writing routines
-description: Declaring routines in routines.yaml — templates, instructions, params, schedules, enacting with sync, manual runs, run history, and the pool view.
+description: "Declaring routines in routines.yaml: templates, instructions, params, schedules, enacting with sync, manual runs, run history, and the pool view."
 ---
 
 A routine is a declaration, not a script. You state _what_ should be
@@ -29,38 +29,41 @@ routines:
       grouped by owner, with overdue items first.
 ```
 
-Field by field:
+The fields that shape behaviour:
 
-| Field          | Meaning                                                                                                                                                                                      |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `slug`         | Kebab-case identifier; fixed for the routine's life. It _is_ the artifact path (`w/<slug>/index.html`), the receipt filename, and the URL — treat it as immutable.                           |
-| `name`         | Display name on the widget card.                                                                                                                                                             |
-| `template`     | Which `templates/routines/<id>.md` runs. Required — freeform routines name the `custom` built-in. A bad reference hard-fails the run loudly.                                                 |
-| `schedule`     | 5-field cron. Absent means **manual-only**: no staleness badge, updated via the Update button or an interactive run.                                                                         |
-| `host`         | `cloud` (default) or `local`. See [Hosts & scheduling](/docs/guides/hosts-and-scheduling).                                                                                                   |
-| `instructions` | Your standing guidance, passed to the template on every run. Configuration, not conversation — editing it is a normal config commit, never a cloud edit. For `custom`, it's the whole brief. |
-| `params`       | Structured answers to the template's declared params. Params win over prose: if `instructions` and a param disagree, the param is authoritative.                                             |
-| `runner`       | GitHub login whose Claude account owns the cloud resource. Shared repos only.                                                                                                                |
-| `repos`        | Extra source repos a cloud run needs beyond the two always attached (the Steward repo and this data repo). A cloud session reaches **only** attached repos — list everything the run reads.  |
-| `connectors`   | MCP connector allowlist for cloud runs, by account connector name. Absent means **none** — a run never inherits your whole connector set.                                                    |
-| `enabled`      | `false` parks the routine: sync tears down its schedule, the dispatcher declines to run it.                                                                                                  |
+- **`template`** names which `templates/routines/<id>.md` runs. Freeform
+  routines name the `custom` built-in.
+- **`instructions`** is your standing guidance, passed to the template on
+  every run. It's configuration, not conversation: editing it is a normal
+  config commit, never a cloud edit. For `custom`, it's the whole brief.
+- **`params`** holds structured answers to the template's declared params.
+  Params win over prose: if `instructions` and a param disagree, the param
+  is authoritative.
+- **`schedule`** is a 5-field cron. Absent means manual-only.
+- **`repos`** and **`connectors`** grant a cloud run its sources and MCP
+  connectors. See
+  [Hosts & scheduling](/docs/guides/hosts-and-scheduling#cloud).
+
+The full field-by-field schema, with validation rules and defaults, is in
+the [routines.yaml reference](/docs/reference/routines-yaml).
 
 ## Slugs name the subject
 
-A slug should answer _"which one is this?"_ out of context — it's the one
-identifier that can't lie. The wizard derives it as `<subject>-<kind>`:
-two repo-pulse routines watching different repos become `corza-pulse` and
-`acme-pulse`, not `repo-pulse` and `repo-pulse-2`. Renaming a slug means
-delete + re-add (the artifact path and cloud resource follow it), so the
-wizard shows it as a read-only chip with a deliberate override tucked
-behind a disclosure.
+A slug should answer _"which one is this?"_ out of context. It's the one
+identifier that can't lie, and it doubles as the artifact path
+(`w/<slug>/index.html`) and the URL. The wizard derives it as
+`<subject>-<kind>`: two repo-pulse routines watching different repos
+become `corza-pulse` and `acme-pulse`, not `repo-pulse` and
+`repo-pulse-2`. Renaming a slug means delete + re-add (the artifact path
+and cloud resource follow it), so the wizard shows it as a read-only chip
+with a deliberate override tucked behind a disclosure.
 
 ## The add-routine wizard
 
-**Add routine** on any board walks the same shape: pick a template (or keep
-`custom` and type the prompt), answer its params, name it, choose size,
-schedule, and host. Template cards preview their sample render — the actual
-artifact HTML, framed exactly as the board frames a live widget.
+**Add routine** on any board walks the same shape: pick a template (or
+keep `custom` and type the prompt), answer its params, name it, choose
+size, schedule, and host. Template cards preview their sample render, the
+actual artifact HTML, framed exactly as the board frames a live widget.
 
 The wizard mirrors `repos`-type param answers into the routine's `repos:`
 automatically, so a cloud run is born able to read the repos it watches.
@@ -68,13 +71,13 @@ automatically, so a cloud run is born able to read the repos it watches.
 ## Editing is a commit
 
 The app edits a **draft** (localStorage), shows the YAML diff in the Sync
-panel, and persists by direct commit or PR — your choice per sync. Direct
+panel, and persists by direct commit or PR, your choice per sync. Direct
 commit is the default: it's your repo, and review-by-default would be
 ceremony. The PR path exists for teams that want review or run branch
 protection on `main`.
 
 Because the YAML is the source of truth, every edit to what a routine does
-is versioned, diffable, and revertable — and never requires touching the
+is versioned, diffable, and revertable, and never requires touching the
 cloud resource. The one cloud edit in a routine's life is its creation.
 
 ## Enacting: `steward sync`
@@ -86,57 +89,56 @@ npx @devord/steward sync --repo <owner>/<repo>          # plan (read-only)
 npx @devord/steward sync --apply --repo <owner>/<repo>  # reconcile
 ```
 
-`sync` reconciles the YAML against your Claude account and this machine, on
-three axes — trigger (cron / API trigger / launchd calendar), source repos,
-and connectors:
+`sync` reconciles the YAML against your Claude account and this machine.
+What each host × schedule combination enacts, and how triggers, source
+repos, and connectors are reconciled, is covered in
+[Hosts & scheduling](/docs/guides/hosts-and-scheduling); command flags are
+in the [CLI reference](/docs/reference/cli#steward-sync).
 
-- **cloud + schedule** → a scheduled cloud routine.
-- **cloud + manual** → a cloud routine with an API trigger; the token is
-  minted once in the claude.ai UI (sync prompts and commits it to
-  `data/triggers/<slug>.json`).
-- **local + schedule** → a launchd agent
-  (`~/Library/LaunchAgents/org.devord.steward.<slug>.plist`) firing the
-  pointer prompt via headless `claude -p`.
-- **local + manual** → nothing to enact; run it interactively.
+Two behaviours matter day to day:
 
-Orphans are cleaned up: an enacted routine whose YAML entry is gone gets
-deleted. In shared repos, sync only touches entries whose `runner:` matches
-you, and cleanup keys off each resource's repo clause — one person's sync
-can never delete another repo's schedules.
+- **Orphans are cleaned up.** An enacted routine whose YAML entry is gone
+  gets deleted; a disabled entry is torn down too.
+- **Shared repos are runner-scoped.** Sync only touches entries whose
+  `runner:` matches the signed-in `gh` login, and cleanup keys off each
+  resource's repo clause, so one person's sync can never delete another
+  repo's schedules.
+
+Run it after every YAML change; it converges and never duplicates.
 
 ## Manual runs
 
 Three ways to run a routine outside its schedule:
 
-- **Update button** (cloud routines) — the app reads the routine's trigger
-  token from the repo with _your_ GitHub token (readable ⇒ entitled) and
-  fires the API trigger server-side. The run executes as the runner, with
-  the runner's connectors.
-- **Interactive terminal run** —
+- **Update button** (cloud routines): the app fires the routine's
+  [API trigger](/docs/guides/hosts-and-scheduling#manual-runs-and-the-api-trigger)
+  server-side. The run executes as the runner, with the runner's
+  connectors.
+- **Interactive terminal run**:
   `npx @devord/steward run <slug> --repo <owner>/<repo>`. Launches a real
   Claude Code session; this is also the only mode where a template can ask
   you questions before authoring.
-- **Re-mint or repair a trigger** — `npx @devord/steward trigger <slug>`.
+- **Re-mint or repair a trigger**: `npx @devord/steward trigger <slug>`.
 
 ## Run history
 
-A run's evidence is its **publish receipt** — the commit it pushed. The
+A run's evidence is its **publish receipt**, the commit it pushed. The
 routine detail view (click a routine's name in the pool) lists them: when
 each run published, the gap to the previous run judged against the cron
 (`on-schedule` / `late`), the author, and the commit. Opening a receipt
 re-renders that version of the artifact; compare mode puts two side by
-side, older left. Failures leave no receipt by design — a run that died
+side, older left. Failures leave no receipt by design: a run that died
 before publishing shows up as a late gap or staleness, and its session log
 lives on the routine's claude.ai page, which the view links out to.
 
 ## The pool view
 
 `/r/<owner>/<repo>/routines` is the repo's whole pool as one table: state,
-schedule (preset crons read as their picker phrase — "Every 4 hours" —
-with the raw cron on hover), host, owner, and which boards each routine
-is placed on. A
-routine on no board reads `orphan` — still running, still publishing, just
-not placed. The pool view owns the `routines.yaml` surface end to end
-(create, edit, enable/disable, delete, run-now); placement stays a board
-edit. Below the pool, the [templates ledger](/docs/guides/templates#the-templates-ledger)
-lists what the routines are made from.
+schedule (preset crons read as their picker phrase, like "Every 4 hours",
+with the raw cron on hover), host, owner, and which boards each routine is
+placed on. A routine on no board reads `orphan`: still running, still
+publishing, just not placed. The pool view owns the `routines.yaml`
+surface end to end (create, edit, enable/disable, delete, run-now);
+placement stays a board edit. Below the pool, the
+[templates ledger](/docs/guides/templates#the-templates-ledger) lists what
+the routines are made from.

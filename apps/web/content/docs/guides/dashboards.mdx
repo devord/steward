@@ -1,20 +1,20 @@
 ---
 title: Dashboards
-description: Boards as layout files — the grid, editing by drag, sections in the rail, freshness rollups, the full view, and version browsing.
+description: "Boards as layout files: the grid, editing by drag, sections in the rail, freshness rollups, the full view, and version browsing."
 ---
 
 A dashboard is a named grid of widgets: one YAML file per board at
-`data/dashboards/<slug>.yaml`. The directory listing is the index — there
-is no separate registry to drift — and the slug is the board's label
+`data/dashboards/<slug>.yaml`. The directory listing is the index (there
+is no separate registry to drift) and the slug is the board's label
 everywhere, including the rail and the URL.
 
 ## Routes
 
-| URL                          | Board                                                                           |
-| ---------------------------- | ------------------------------------------------------------------------------- |
-| `/`                          | your home repo's `main` board                                                   |
-| `/r/<owner>/<repo>/<slug>`   | any board in any data repo                                                      |
-| `/r/<owner>/<repo>/routines` | the repo's routine pool (a reserved segment — `routines` can't be a board slug) |
+| URL                          | Board                                                                |
+| ---------------------------- | -------------------------------------------------------------------- |
+| `/`                          | your home repo's `main` board                                        |
+| `/r/<owner>/<repo>/<slug>`   | any board in any data repo                                           |
+| `/r/<owner>/<repo>/routines` | the repo's routine pool (reserved; `routines` can't be a board slug) |
 
 ## The grid
 
@@ -24,7 +24,7 @@ grid units:
 ```yaml title="data/dashboards/<slug>.yaml"
 grid:
   columns: 4 # up to 6
-  rowHeight: 150 # px per row unit — board density
+  rowHeight: 150 # px per row unit (board density)
   width: fixed # or `wide` to fill a large monitor
 widgets:
   - routine: corza-pulse
@@ -35,15 +35,16 @@ widgets:
 Desktop renders the board's own column count; tablets get 2 columns,
 phones 1. A widget spans at most 6 columns and 12 rows; a layout whose
 widget would overflow the grid is rejected at parse, never silently
-clipped.
+clipped. Field-level rules are in the
+[dashboards.yaml reference](/docs/reference/dashboards-yaml).
 
 ## Editing
 
 Edit mode makes the grid live: drag by the title bar, resize by the corner
 grip; neighbours slide aside and displaced widgets float back up when
 space frees. Edits accumulate in the board's draft; **Sync** shows the
-YAML diff and commits (or opens a PR). Nothing persists just by viewing —
-only a real drag or resize marks the draft. `e` toggles edit mode; Esc
+YAML diff and commits (or opens a PR). Nothing persists just by viewing.
+Only a real drag or resize marks the draft. `e` toggles edit mode; Esc
 leaves it.
 
 Adding a widget is placing a routine: new routines land on the current
@@ -52,8 +53,7 @@ board at the first free slot, and a pool routine placed on no board (an
 
 ## Keyboard
 
-Boards and the routines pool carry a single-key accelerator layer —
-lazygit manners, no command palette:
+Boards and the routines pool carry a single-key accelerator layer:
 
 | Key     | Action                                    |
 | ------- | ----------------------------------------- |
@@ -64,14 +64,14 @@ lazygit manners, no command palette:
 | `r`     | the repo's routines pool                  |
 | `?`     | the keymap sheet                          |
 
-Keys are pure accelerators — everything stays reachable by pointer and
-Tab. Typing surfaces and any open dialog or menu own their keys, and the
-whole layer can be turned off per device in **Settings → Keyboard**.
+Keys are pure accelerators: everything stays reachable by pointer and Tab.
+Typing surfaces and any open dialog or menu own their keys, and the whole
+layer can be turned off per device in **Settings → Keyboard**.
 
 ## Sections
 
 One repo can hold many boards, and a flat list of a dozen slugs stops
-being glanceable. A board may declare a **section** — a free-text label —
+being glanceable. A board may declare a **section**, a free-text label,
 and the repo may order the sections:
 
 ```yaml title="data/dashboards/corza.yaml"
@@ -82,26 +82,25 @@ section: Clients
 sections: [Team, Clients, Projects]
 ```
 
-Membership rides with the board (moving a board is a one-file commit);
-only the sequence — which can't be derived — lives in `repo.yaml`.
-Ungrouped boards lead in one unlabeled section, so grouping is opt-in and
+Membership rides with the board, so moving a board is a one-file commit;
+only the sequence, which can't be derived, lives in `repo.yaml`. Ungrouped
+boards lead in one unlabeled section, so grouping is opt-in and
 regression-free.
 
 ## Freshness in the rail
 
 Every board row carries an always-on freshness dot and a right-aligned
-age, rolled up from its widgets: the age is the **stalest** widget's last
-run (a board is only as fresh as its oldest content), and the dot marks a
-board with _any_ widget overdue against its own routine's schedule — a
-hollow red ring, against the solid green fill of fresh, so the state
-differs in form, not just hue. The active board's dot is the accent —
-"you are here" outranks freshness on the one row you're already on.
-Colour is never the only signal; the state is named for screen readers
-and on hover.
+age, rolled up from its widgets. The age is the stalest widget's last run,
+because a board is only as fresh as its oldest content. The dot marks a
+board with any widget overdue against its own routine's schedule: a hollow
+red ring, against the solid green fill of fresh, so the state differs in
+form, not just hue. The active board's dot is the accent; "you are here"
+outranks freshness on the one row you're already on. Colour is never the
+only signal; the state is named for screen readers and on hover.
 
 ## The full view
 
-Any widget lifts into a full-screen overlay — the same sandboxed,
+Any widget lifts into a full-screen overlay: the same sandboxed,
 theme-injected iframe at nearly the whole viewport. Tiles are for triage
 and never scroll; the full view scrolls freely and carries every row,
 including whatever the tile's `+N more` folded away. It's the same
@@ -109,15 +108,15 @@ published file both times, responding to size by media query.
 
 ## Version browsing
 
-From a routine's detail view, every publish receipt reopens its render —
+From a routine's detail view, every publish receipt reopens its render:
 the artifact exactly as it was at that commit, framed and sandboxed like
 the live board. Compare mode shows two runs side by side, older left,
-newer right; the raw text diff stays on GitHub (the dialog links the
-compare view). The app renders — its unique job; git diffs text — its.
+newer right. The raw text diff stays on GitHub, which the dialog links to.
+The app renders; git diffs text.
 
 ## Lifecycle
 
 Creating and deleting a board commits its layout file directly (there's
 nothing to draft before the route can render). Deleting a board doesn't
-delete its routines — they stay in the pool, publishing, as orphans until
+delete its routines: they stay in the pool, publishing, as orphans until
 re-placed or deleted from the pool view.
