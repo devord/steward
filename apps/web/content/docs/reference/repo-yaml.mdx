@@ -21,10 +21,3 @@ sections: [Team, Clients, Projects]
 
 A malformed or missing file degrades to defaults ("no display name", "no
 order"), never a failed rail.
-
-## Legacy keys
-
-A repo written before the section rename may carry `groups:`. The parse
-boundary renames it to `sections:` when the new key is absent;
-serialization only ever emits `sections:`, so the first in-app edit
-rewrites the file forward. No migration required.
