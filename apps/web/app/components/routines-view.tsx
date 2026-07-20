@@ -28,6 +28,7 @@ import {
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
 import { KeymapSheet } from "./keymap-sheet.tsx"
 import { NavShell } from "./nav-shell.tsx"
+import { ReadOnlyBadge } from "./read-only-badge.tsx"
 import { SyncPanel } from "./sync-panel.tsx"
 import { RunLocallyDialog } from "./widget-card.tsx"
 import { Button } from "~/components/ui/button"
@@ -137,6 +138,15 @@ export function RoutinesView({
   // flash back to loading.
   const sidebarData = useOptimisticSidebar(sidebar)
   const templatesData = useStreamed(templates, `templates:${repo.full}`)
+  // Read-only access to this pool's repo (ADR-0023): the active repo's push
+  // permission rides the streamed sidebar (SidebarRepo.viewerCanPush) — chrome
+  // data, off the paint path (ADR-0030), the same source repo-group-header
+  // reads. Only an explicit `false` gates the mutating actions; unknown (null,
+  // or the rail not yet resolved) keeps them, with the Sync-time "denied" as
+  // the backstop (ADR-0003) — we never lock out a permission we couldn't read.
+  const viewerCanPush =
+    sidebarData?.repos.find((r) => r.repo === repo.full)?.viewerCanPush ?? null
+  const readOnly = viewerCanPush === false
 
   // A repo-scoped draft key — `__routines__` can't collide with a board slug
   // (real slugs are kebab-case), so the pool's draft never crosses a board's.
@@ -194,8 +204,10 @@ export function RoutinesView({
         .slice(0, 9)
         .map((href, i) => [String(i + 1), () => void navigate(href)]),
     ),
-    a: () => setAdding(true),
-    s: draft != null ? () => setSyncing(true) : undefined,
+    // The create/sync verbs are inert for a read-only viewer — same gate as
+    // the disabled toolbar controls, kept off the keyboard too.
+    a: readOnly ? undefined : () => setAdding(true),
+    s: draft != null && !readOnly ? () => setSyncing(true) : undefined,
     "?": () => setKeymapOpen(true),
   })
 
@@ -308,13 +320,18 @@ export function RoutinesView({
         context="routines"
         actions={
           <>
+            {/* The read-only note leads the cluster: it's why the controls
+                beside it are disabled. Silent unless the viewer can't push. */}
+            {readOnly && <ReadOnlyBadge />}
             {draft != null && (
               // The ledger's own state-chip idiom (StateLabel): yellow as a
               // low-alpha wash + hairline, label in full ink for AA.
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-2 border-yellow/45 bg-yellow/10 font-mono text-xs text-ink hover:bg-yellow/15 dark:hover:bg-yellow/15 max-sm:relative max-sm:min-h-9 max-sm:min-w-9 max-sm:px-0 max-sm:after:absolute max-sm:after:-inset-1"
+                className="gap-2 border-yellow/45 bg-yellow/10 font-mono text-xs text-ink hover:bg-yellow/15 disabled:cursor-not-allowed dark:hover:bg-yellow/15 max-sm:relative max-sm:min-h-9 max-sm:min-w-9 max-sm:px-0 max-sm:after:absolute max-sm:after:-inset-1"
+                disabled={readOnly}
+                title={readOnly ? t("readonly.hint") : undefined}
                 onClick={() => setSyncing(true)}
               >
                 <span aria-hidden className="size-1.5 rounded-full bg-yellow" />
@@ -328,7 +345,9 @@ export function RoutinesView({
                 ToolbarAction sets the same floors and phone treatment). */}
             <Button
               size="sm"
-              className="gap-2 max-sm:relative max-sm:min-h-9 max-sm:min-w-9 max-sm:bg-transparent max-sm:px-0 max-sm:text-primary max-sm:after:absolute max-sm:after:-inset-1 max-sm:hover:bg-primary/10 max-sm:hover:text-primary dark:max-sm:hover:bg-primary/10"
+              className="gap-2 disabled:cursor-not-allowed max-sm:relative max-sm:min-h-9 max-sm:min-w-9 max-sm:bg-transparent max-sm:px-0 max-sm:text-primary max-sm:after:absolute max-sm:after:-inset-1 max-sm:hover:bg-primary/10 max-sm:hover:text-primary dark:max-sm:hover:bg-primary/10"
+              disabled={readOnly}
+              title={readOnly ? t("readonly.hint") : undefined}
               onClick={() => setAdding(true)}
             >
               <CalendarPlus />
@@ -358,7 +377,7 @@ export function RoutinesView({
         </header>
 
         {effective.routines.length === 0 ? (
-          <EmptyState onAdd={() => setAdding(true)} />
+          <EmptyState onAdd={() => setAdding(true)} readOnly={readOnly} />
         ) : (
           <RoutinesTable
             routines={effective.routines}
@@ -369,6 +388,7 @@ export function RoutinesView({
             pending={pending}
             repo={repo}
             homeRepo={homeRepo}
+            viewerCanPush={viewerCanPush}
             now={now}
             onEdit={setEditingRoutine}
             onSetEnabled={setEnabled}
@@ -387,6 +407,7 @@ export function RoutinesView({
           templates={templatesData ?? []}
           routines={effective.routines}
           repo={repo}
+          readOnly={readOnly}
           onUse={setAddingTemplate}
         />
       </NavShell>
@@ -475,6 +496,7 @@ export function RoutinesTable({
   pending,
   repo,
   homeRepo,
+  viewerCanPush = null,
   now,
   onEdit,
   onSetEnabled,
@@ -493,6 +515,10 @@ export function RoutinesTable({
   pending: Record<string, PendingRun>
   repo: RepoInfo
   homeRepo: string
+  /** The viewer's push permission on this repo (ADR-0023). `false` → read-only:
+      the row's mutating actions (edit, toggle, delete, place, run) disable.
+      `true`/`null` (unknown) → full editing; only an explicit `false` gates. */
+  viewerCanPush?: boolean | null
   now: number
   onEdit: (routine: Routine) => void
   onSetEnabled: (slug: string, enabled: boolean) => void
@@ -502,6 +528,7 @@ export function RoutinesTable({
 }) {
   const t = useT()
   const repoOwner = repo.full.split("/")[0]
+  const readOnly = viewerCanPush === false
 
   return (
     // The table bleeds 12px past the content column (NavShell's -mx idiom)
@@ -572,6 +599,7 @@ export function RoutinesTable({
                 dashboards={dashboards}
                 repo={repo}
                 homeRepo={homeRepo}
+                readOnly={readOnly}
                 now={now}
                 onEdit={() => onEdit(routine)}
                 onToggle={() => onSetEnabled(routine.slug, !routine.enabled)}
@@ -632,6 +660,7 @@ function RoutineRow({
   dashboards,
   repo,
   homeRepo,
+  readOnly,
   now,
   onEdit,
   onToggle,
@@ -655,6 +684,9 @@ function RoutineRow({
   dashboards: string[]
   repo: RepoInfo
   homeRepo: string
+  /** Read-only repo (viewerCanPush === false): the row's mutating actions
+      disable, and the run affordances (which end in a push) go inert. */
+  readOnly: boolean
   now: number
   onEdit: () => void
   onToggle: () => void
@@ -751,20 +783,32 @@ function RoutineRow({
           {/* Run is the pool's most frequent verb — one click on row hover,
               not buried in the ⋯ menu. Steps aside while a run is in flight
               (the state chip owns it — one run glyph per row, same rule as
-              the board tile) and for disabled routines, which never run. */}
+              the board tile) and for disabled routines, which never run. A
+              read-only viewer can't trigger a run (it ends in a push they lack),
+              so the affordance renders inert rather than vanishing. */}
           {cloud && routine.enabled && status?.kind !== "running" && (
-            <RunNowAction routine={routine} repo={repo} onFired={onFired} />
+            <RunNowAction
+              routine={routine}
+              repo={repo}
+              readOnly={readOnly}
+              onFired={onFired}
+            />
           )}
           {/* Local routines can't be fired from here — the run button opens
               the how-to-run-it modal instead of the cloud /run path. */}
           {!cloud && routine.enabled && (
-            <RunLocallyAction routine={routine} repo={repo} />
+            <RunLocallyAction
+              routine={routine}
+              repo={repo}
+              readOnly={readOnly}
+            />
           )}
           <RowMenu
             routine={routine}
             committed={committed}
             routineId={routineId}
             dashboards={dashboards}
+            readOnly={readOnly}
             onEdit={onEdit}
             onToggle={onToggle}
             onDelete={onDelete}
@@ -936,11 +980,15 @@ export function TemplatesSection({
   templates,
   routines,
   repo,
+  readOnly = false,
   onUse,
 }: {
   templates: DiscoveredTemplate[]
   routines: Routine[]
   repo: RepoInfo
+  /** Read-only repo: "New routine from template" instantiates a routine (a
+      draft that could never sync), so it disables. Unknown/pushable → enabled. */
+  readOnly?: boolean
   onUse: (templateId: string) => void
 }) {
   const t = useT()
@@ -1035,6 +1083,7 @@ export function TemplatesSection({
                 template={template}
                 usedBy={usedBy.get(template.id) ?? []}
                 repo={repo}
+                readOnly={readOnly}
                 onUse={() => onUse(template.id)}
               />
             ))}
@@ -1068,11 +1117,13 @@ function TemplateRow({
   template,
   usedBy,
   repo,
+  readOnly,
   onUse,
 }: {
   template: DiscoveredTemplate
   usedBy: string[]
   repo: RepoInfo
+  readOnly: boolean
   onUse: () => void
 }) {
   const t = useT()
@@ -1168,8 +1219,17 @@ function TemplateRow({
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label={t("templates.use", { name: template.name })}
-            className={rowActionCls}
+            aria-label={
+              readOnly
+                ? t("readonly.hint")
+                : t("templates.use", { name: template.name })
+            }
+            title={readOnly ? t("readonly.hint") : undefined}
+            disabled={readOnly}
+            className={cn(
+              rowActionCls,
+              readOnly && "cursor-not-allowed opacity-50",
+            )}
             onClick={onUse}
           >
             <CalendarPlus />
@@ -1188,10 +1248,12 @@ function TemplateRow({
 function RunNowAction({
   routine,
   repo,
+  readOnly,
   onFired,
 }: {
   routine: Routine
   repo: RepoInfo
+  readOnly: boolean
   onFired: () => void
 }) {
   const t = useT()
@@ -1208,18 +1270,23 @@ function RunNowAction({
         ? t("widget.updateNoTrigger", { slug: routine.slug })
         : t("widget.updateFailed")
       : null
-  const label = error ?? t("routines.runNow", { name: routine.name })
+  const label = readOnly
+    ? t("readonly.hint")
+    : (error ?? t("routines.runNow", { name: routine.name }))
   return (
     <Button
       variant="ghost"
       size="icon-xs"
       aria-label={label}
       title={label}
-      disabled={busy}
+      disabled={busy || readOnly}
       className={cn(
         rowActionCls,
         (busy || error != null) && "opacity-100",
         error != null && "text-destructive",
+        // Read-only: rest at a dimmed, unmistakably inert state rather than the
+        // hover-revealed default (the toolbar badge carries the reason).
+        readOnly && "cursor-not-allowed opacity-50",
       )}
       onClick={() =>
         void fetcher.submit(
@@ -1242,13 +1309,17 @@ function RunNowAction({
 function RunLocallyAction({
   routine,
   repo,
+  readOnly,
 }: {
   routine: Routine
   repo: RepoInfo
+  readOnly: boolean
 }) {
   const t = useT()
   const [open, setOpen] = useState(false)
-  const label = t("widget.runLocalOpen", { name: routine.name })
+  const label = readOnly
+    ? t("readonly.hint")
+    : t("widget.runLocalOpen", { name: routine.name })
   return (
     <>
       <Button
@@ -1256,7 +1327,11 @@ function RunLocallyAction({
         size="icon-xs"
         aria-label={label}
         title={label}
-        className={rowActionCls}
+        disabled={readOnly}
+        className={cn(
+          rowActionCls,
+          readOnly && "cursor-not-allowed opacity-50",
+        )}
         onClick={() => setOpen(true)}
       >
         <Play />
@@ -1276,6 +1351,7 @@ function RowMenu({
   committed,
   routineId,
   dashboards,
+  readOnly,
   onEdit,
   onToggle,
   onDelete,
@@ -1285,6 +1361,9 @@ function RowMenu({
   committed: boolean
   routineId: string | undefined
   dashboards: string[]
+  /** Read-only repo: the mutating items (edit, add to board, enable/disable,
+      delete) disable; "Open in claude.ai" — a read-only link — stays live. */
+  readOnly: boolean
   onEdit: () => void
   onToggle: () => void
   onDelete: () => void
@@ -1307,12 +1386,12 @@ function RowMenu({
         <MoreHorizontal />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={4} className="w-52">
-        <DropdownMenuItem onClick={onEdit}>
+        <DropdownMenuItem disabled={readOnly} onClick={onEdit}>
           <Pencil />
           {t("routines.edit")}
         </DropdownMenuItem>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger disabled={readOnly}>
             <LayoutGrid />
             {t("routines.addToBoard")}
           </DropdownMenuSubTrigger>
@@ -1355,12 +1434,16 @@ function RowMenu({
             {t("routines.openInClaude")}
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={onToggle}>
+        <DropdownMenuItem disabled={readOnly} onClick={onToggle}>
           <Power />
           {routine.enabled ? t("routines.disable") : t("routines.enable")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={onDelete}>
+        <DropdownMenuItem
+          variant="destructive"
+          disabled={readOnly}
+          onClick={onDelete}
+        >
           <Trash2 />
           {t("routines.delete")}
         </DropdownMenuItem>
@@ -1369,13 +1452,25 @@ function RowMenu({
   )
 }
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
+function EmptyState({
+  onAdd,
+  readOnly,
+}: {
+  onAdd: () => void
+  readOnly: boolean
+}) {
   const t = useT()
   return (
     <div className="rounded-lg border border-border-dim px-6 py-12 text-center">
       <p className="text-sm text-foreground">{t("routines.emptyTitle")}</p>
       <p className="mt-1 text-sm text-ink-dim">{t("routines.emptyHint")}</p>
-      <Button className="mt-4 gap-2" size="sm" onClick={onAdd}>
+      <Button
+        className="mt-4 gap-2 disabled:cursor-not-allowed"
+        size="sm"
+        disabled={readOnly}
+        title={readOnly ? t("readonly.hint") : undefined}
+        onClick={onAdd}
+      >
         <CalendarPlus />
         {t("routines.new")}
       </Button>

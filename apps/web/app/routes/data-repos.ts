@@ -45,6 +45,10 @@ export interface DataRepoOwners {
   orgs: string[]
   /** Conventional repo-name prefix, for the create form's default. */
   prefix: string
+  /** GitHub's authorization page for this OAuth app — where a member requests
+      org approval and an owner grants it. The client id is public, not a
+      secret (ADR-0004), so it's safe to hand to the browser. */
+  oauthAppUrl: string
 }
 
 export async function loader({ request }: { request: Request }) {
@@ -55,6 +59,7 @@ export async function loader({ request }: { request: Request }) {
     login: auth.login,
     orgs,
     prefix: env().STEWARD_DATA_REPO_PREFIX,
+    oauthAppUrl: `https://github.com/settings/connections/applications/${env().GITHUB_CLIENT_ID}`,
   } satisfies DataRepoOwners
 }
 

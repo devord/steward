@@ -4,10 +4,16 @@ import { render } from "vitest-browser-react"
 
 import "../app.css"
 import { AddDataRepoDialog } from "./add-data-repo-dialog.tsx"
+import type { DataRepoResult } from "../routes/data-repos.ts"
 
 const KNOWN = ["alice/steward-data-alice"]
 
-async function renderDialog() {
+// The loader hands the browser this app's OAuth authorization page (ADR-0004);
+// the dialog links to it when a register is denied or the repo reads missing.
+const OAUTH_APP_URL =
+  "https://github.com/settings/connections/applications/Iv1.testclientid"
+
+async function renderDialog(actionResult?: DataRepoResult) {
   const router = createMemoryRouter([
     {
       path: "/",
@@ -19,7 +25,9 @@ async function renderDialog() {
         login: "alice",
         orgs: ["acme"],
         prefix: "steward-data-",
+        oauthAppUrl: OAUTH_APP_URL,
       }),
+      action: () => actionResult ?? null,
     },
   ])
   return render(<RouterProvider router={router} />)
@@ -31,6 +39,11 @@ const input = (id: string): HTMLInputElement | null =>
 const submitButton = (label: string): HTMLButtonElement | null =>
   [...document.querySelectorAll("button")].find(
     (el) => el.textContent?.trim() === label,
+  ) ?? null
+
+const manageLink = (): HTMLAnchorElement | null =>
+  [...document.querySelectorAll("a")].find((el) =>
+    el.textContent?.includes("Manage organization access on GitHub"),
   ) ?? null
 
 describe("AddDataRepoDialog", () => {
@@ -71,5 +84,48 @@ describe("AddDataRepoDialog", () => {
     // A fresh owner/repo arms the submit.
     await screen.getByLabelText("Repository").fill("acme/steward-data-acme")
     await expect.poll(() => submitButton("Register")?.disabled).toBe(false)
+  })
+
+  // A denied/missing register is usually the org not having approved the
+  // classic OAuth app — offer the jump to GitHub where that's granted.
+  it.each(["denied", "missing"] as const)(
+    "offers the Manage access link, pointed at the OAuth app, when register fails with %s",
+    async (error) => {
+      const screen = await renderDialog({ ok: false, error })
+      await screen.getByRole("radio", { name: /register/i }).click()
+
+      // Arm and submit a fresh owner/repo — the action answers with the error.
+      await screen.getByLabelText("Repository").fill("acme/steward-data-acme")
+      await expect.poll(() => submitButton("Register")?.disabled).toBe(false)
+      submitButton("Register")?.click()
+
+      // The link surfaces below the error, opening this app's authorization
+      // page in a new tab.
+      await expect
+        .poll(() => manageLink()?.getAttribute("href"))
+        .toBe(OAUTH_APP_URL)
+      const link = manageLink()
+      expect(link?.target).toBe("_blank")
+      expect(link?.rel).toBe("noopener noreferrer")
+    },
+  )
+
+  it("shows no Manage access link for an unrelated register error", async () => {
+    const screen = await renderDialog({ ok: false, error: "not-data-repo" })
+    await screen.getByRole("radio", { name: /register/i }).click()
+
+    await screen.getByLabelText("Repository").fill("acme/steward-data-acme")
+    await expect.poll(() => submitButton("Register")?.disabled).toBe(false)
+    submitButton("Register")?.click()
+
+    // The error copy lands, but this failure isn't an access problem.
+    await expect
+      .poll(() =>
+        [...document.querySelectorAll("p")].some((el) =>
+          el.textContent?.includes("data/routines.yaml"),
+        ),
+      )
+      .toBe(true)
+    expect(manageLink()).toBeNull()
   })
 })

@@ -75,6 +75,10 @@ export const ptBR: Messages = {
   "header.settings": "Ajustes",
   "header.signOut": "Sair",
 
+  "readonly.badge": "Somente leitura",
+  "readonly.hint":
+    "Você tem acesso de leitura — editar exige acesso de push no GitHub.",
+
   "nav.boards": "Painéis",
   "nav.openMenu": "Abrir navegação",
   "nav.collapse": "Recolher a barra lateral",
@@ -264,6 +268,7 @@ export const ptBR: Messages = {
   "addRepo.errMissing": "Repo não existe — ou esta conta não pode vê-lo.",
   "addRepo.errNotDataRepo":
     "Esse repo não tem data/routines.yaml — crie um a partir do template, ou adicione o arquivo antes.",
+  "addRepo.manageAccess": "Gerenciar acesso da organização no GitHub",
 
   "newDash.title": "Novo painel",
   "newDash.description":

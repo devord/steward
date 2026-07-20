@@ -107,6 +107,12 @@ dashboards appear in their app with no further setup. Revoke access and
 they disappear. There is no other access control to configure —
 [by design](/docs/architecture/security).
 
+If a client org restricts OAuth apps, its repos may not appear in the picker
+or may fail to register until the org approves Steward — an org-level GitHub
+setting, not a per-repo grant. See
+[Organization access](/docs/guides/data-repos#organization-access) for how a
+member requests approval and an owner grants it.
+
 ## Where things live
 
 | Thing               | Where                                           |
