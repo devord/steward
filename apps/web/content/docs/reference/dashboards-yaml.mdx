@@ -1,12 +1,12 @@
 ---
-title: dashboards.yaml & repo.yaml
-description: The layout file schema — data/dashboards/<slug>.yaml grid and widgets — and data/repo.yaml display metadata.
+title: dashboards.yaml
+description: The dashboard layout file — data/dashboards/<slug>.yaml grid and widgets, the fit invariant, and size presets.
 ---
 
-## `data/dashboards/<slug>.yaml`
-
-One file per board; the filename is the board's slug, label, and URL
-segment. `routines` is reserved (it's the pool view's URL segment).
+One file per board at `data/dashboards/<slug>.yaml`; the filename is the
+board's slug, label, and URL segment. `routines` is reserved (it's the pool
+view's URL segment). Repo-level display metadata lives separately, in
+[`repo.yaml`](/docs/reference/repo-yaml).
 
 ```yaml title="data/dashboards/corza.yaml"
 section: Clients # optional — rail section this board files under
@@ -20,7 +20,7 @@ widgets:
     size: { cols: 2, rows: 1 }
 ```
 
-### Fields
+## Fields
 
 | Field                | Type             | Rules                                                                                                                                                                                           |
 | -------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -36,7 +36,7 @@ One cross-field invariant: a widget must fit the board it lives on —
 `position.col + size.cols − 1 ≤ grid.columns`. A hand-authored layout that
 overflows the grid is rejected at parse, never silently clipped at render.
 
-### Size presets
+## Size presets
 
 The add-widget wizard offers named shapes instead of raw steppers —
 intents, not dimensions (columns clamp to the board's own count at pick
@@ -50,27 +50,9 @@ time):
 | `tall`   | 2 × 3 |
 | `hero`   | 4 × 3 |
 
-## `data/repo.yaml`
-
-Optional repo-level display metadata. A repo without one renders under its
-short repo name.
-
-```yaml title="data/repo.yaml"
-name: Form Factory
-sections: [Team, Clients, Projects]
-```
-
-| Field      | Type   | Rules                                                                                                                                                                                                                |
-| ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`     | string | Optional, ≤ 50 chars, non-blank. Relabels the repo's rail group for everyone who reads the repo. UI only — URLs, prompts, and payloads never use it; rail order keeps sorting by slug.                               |
-| `sections` | list   | Optional. Order of the rail's board sections. Membership rides on each board's `section:`; a section a board names but this list omits sorts after, alphabetically; a listed name no board uses contributes nothing. |
-
-A malformed or missing file degrades to defaults — "no display name", "no
-order" — never a failed rail.
-
 ## Legacy keys
 
-Files written before the section rename may carry `group:` / `groups:`.
-The parse boundary renames them to `section:` / `sections:` when the new
-key is absent; serialization only ever emits the new keys, so the first
-in-app edit rewrites a file forward. No migration required.
+A board written before the section rename may carry `group:`. The parse
+boundary renames it to `section:` when the new key is absent; serialization
+only ever emits `section:`, so the first in-app edit rewrites the file
+forward. No migration required.
