@@ -39,9 +39,10 @@ export function Landing() {
           one piece of nav a signed-out visitor gets, in the corner devs
           look for it. */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-3 sm:top-6 sm:right-6">
+        {/* Body size, not the metadata floor — this is nav, small as it is. */}
         <a
           href="/docs"
-          className="rounded-md px-1.5 py-1 font-mono text-xs text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="rounded-md px-1.5 py-1 font-mono text-sm text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {t("landing.docs")}
         </a>
@@ -352,7 +353,9 @@ function ClosingCta() {
  * The page's last line: a quiet rail of further reading for whoever the
  * closing CTA didn't convert — the docs, the quickstart, and the agent
  * surface (llms.txt, a literal filename in every locale). Mono lowercase,
- * the pager voice; chrome, not argument, so no reveal choreography.
+ * the pager voice; chrome, not argument, so no reveal choreography. The
+ * links take ink-dim, not ink-faint — they must be read to be used, and
+ * faint ink is reserved for metadata.
  */
 function LandingFooter() {
   const t = useT()
@@ -374,7 +377,7 @@ function LandingFooter() {
           <a
             key={href}
             href={href}
-            className="rounded-md font-mono text-xs text-ink-faint transition-colors outline-none hover:text-ink-dim focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="rounded-md font-mono text-xs text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {label}
           </a>
