@@ -35,14 +35,17 @@ export function Landing() {
   const t = useT()
   return (
     <main className="landing-bg relative min-h-dvh">
-      {/* The corner chrome: a quiet docs link beside the mode toggle — the
-          one piece of nav a signed-out visitor gets, in the corner devs
-          look for it. */}
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-3 sm:top-6 sm:right-6">
-        {/* Body size, not the metadata floor — this is nav, small as it is. */}
+      {/* The corner chrome: the docs link beside the mode toggle — the one
+          piece of nav a signed-out visitor gets, in the corner devs look
+          for it. The link wears the toggle's own control-chip dress
+          (border + bg1, stretched to the same height) so the corner reads
+          as one statusline of controls; a bare word next to a framed
+          neighbor read as a label, not a link. Body size, not the metadata
+          floor — this is nav, small as it is. */}
+      <div className="absolute top-4 right-4 z-10 flex items-stretch gap-2 sm:top-6 sm:right-6">
         <a
           href="/docs"
-          className="rounded-md px-1.5 py-1 font-mono text-sm text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex items-center rounded-lg border border-border-dim bg-bg1 px-3 font-mono text-sm text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {t("landing.docs")}
         </a>
