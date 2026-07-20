@@ -1,12 +1,13 @@
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { describe, expect, it, vi } from "vitest"
+import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 
 import type { Routine } from "@steward/schema"
 
 import "../app.css"
-import type { ArtifactInfo } from "../lib/dashboard.server.ts"
-import { RoutinesTable } from "./routines-view.tsx"
+import type { ArtifactInfo, SidebarData } from "../lib/dashboard.server.ts"
+import { RoutinesTable, RoutinesView } from "./routines-view.tsx"
 
 const NOW = 1_770_000_000_000
 const HOUR = 3_600_000
@@ -245,5 +246,115 @@ describe("RoutinesTable", () => {
     await openMenu("Changelog")
     menuItem("Delete")?.click()
     expect(onDelete).toHaveBeenCalledWith("changelog")
+  })
+
+  // Read-only access (ADR-0023): a viewer who can't push must not be able to
+  // start a mutation from a row — every edit is a draft that could only fail at
+  // Sync (ADR-0003), so the row's actions disable up front.
+  it("read-only repo: disables the inline run button and the menu's mutating items", async () => {
+    await renderTable({ viewerCanPush: false })
+
+    // The inline run affordance rests visible but disabled (not hidden) — the
+    // menu trigger stays enabled so its non-mutating items (claude.ai) still open.
+    const changelogRow = [...document.querySelectorAll("tr")].find((tr) =>
+      tr.textContent?.includes("Changelog"),
+    )
+    expect(changelogRow?.querySelector("button[disabled]")).not.toBeNull()
+
+    await openMenu("Changelog")
+    expect(menuItem("Delete")?.hasAttribute("data-disabled")).toBe(true)
+    expect(menuItem("Edit")?.hasAttribute("data-disabled")).toBe(true)
+    expect(menuItem("Disable")?.hasAttribute("data-disabled")).toBe(true)
+  })
+
+  // `true` and `null` (unknown) must both leave the row fully interactive — we
+  // never gate on a permission we couldn't read. `null` is the harness default.
+  it("unknown push permission (null): the row's actions stay enabled", async () => {
+    const { onDelete } = await renderTable({ viewerCanPush: null })
+    await openMenu("Changelog")
+    const del = menuItem("Delete")
+    expect(del?.hasAttribute("data-disabled")).toBe(false)
+    del?.click()
+    expect(onDelete).toHaveBeenCalledWith("changelog")
+  })
+})
+
+// The pool's read-only signal end to end: RoutinesView derives push permission
+// from the streamed sidebar (SidebarRepo.viewerCanPush) for the active repo,
+// then shows the badge and disables the toolbar's create verb — the same shape
+// the board carries. Rendered whole so the sidebar → gating path is exercised.
+describe("RoutinesView read-only access", () => {
+  function sidebar(viewerCanPush: boolean | null): SidebarData {
+    return {
+      repos: [
+        {
+          repo: HOME_REPO,
+          name: "steward-data",
+          displayName: null,
+          isHome: true,
+          private: true,
+          collaborators: null,
+          viewerIsAdmin: null,
+          viewerCanPush,
+          sections: [],
+          dashboards: [],
+        },
+      ],
+      complete: true,
+      degraded: false,
+    }
+  }
+
+  async function renderView(viewerCanPush: boolean | null) {
+    await page.viewport(1280, 900)
+    const router = createMemoryRouter([
+      {
+        path: "/",
+        element: (
+          <RoutinesView
+            repo={{
+              full: HOME_REPO,
+              name: "steward-data",
+              isShared: viewerCanPush === false,
+            }}
+            homeRepo={HOME_REPO}
+            sidebar={sidebar(viewerCanPush)}
+            templates={[]}
+            login="alice"
+            displayName="Alice"
+            now={NOW}
+            pool={{
+              routines: { routines: [daily, changelog, triage] },
+              baseSha: "r1",
+              baseFile: "routines: []\n",
+              boardsByRoutine: { "daily-plan": ["main"] },
+              dashboards: ["main"],
+            }}
+            artifacts={Promise.resolve(artifacts)}
+          />
+        ),
+      },
+      { path: "*", element: <p>ELSEWHERE</p> },
+    ])
+    await render(<RouterProvider router={router} />)
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain("Daily plan"),
+    )
+  }
+
+  it("read-only repo: shows the badge and disables the New routine control", async () => {
+    await renderView(false)
+    expect(
+      document.querySelector('[data-testid="read-only-badge"]'),
+    ).not.toBeNull()
+    const create = page.getByRole("button", { name: "New routine" })
+    expect(create.element().hasAttribute("disabled")).toBe(true)
+  })
+
+  it("unknown push permission (null): no badge, New routine enabled", async () => {
+    await renderView(null)
+    expect(document.querySelector('[data-testid="read-only-badge"]')).toBeNull()
+    const create = page.getByRole("button", { name: "New routine" })
+    expect(create.element().hasAttribute("disabled")).toBe(false)
   })
 })

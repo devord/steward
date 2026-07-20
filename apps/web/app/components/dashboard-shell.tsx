@@ -1,6 +1,7 @@
 import { CalendarPlus, Check, PencilRuler } from "lucide-react"
 
 import { NavShell } from "./nav-shell.tsx"
+import { ReadOnlyBadge } from "./read-only-badge.tsx"
 import { Button } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
 import type { SidebarData } from "../lib/dashboard.server.ts"
@@ -27,6 +28,7 @@ export function DashboardShell({
   displayName,
   hasDraft,
   editing,
+  readOnly,
   wide,
   onSync,
   onAdd,
@@ -45,6 +47,10 @@ export function DashboardShell({
   displayName?: string | null
   hasDraft: boolean
   editing: boolean
+  /** The viewer has read-only access to this board's repo (viewerCanPush ===
+      false, ADR-0023): disable the edit entry points and show the badge, so a
+      reader can't build a draft that could never sync (ADR-0003). */
+  readOnly: boolean
   /** Widen the content cap to fill a large monitor (else a centered width). */
   wide: boolean
   onSync: () => void
@@ -90,6 +96,10 @@ export function DashboardShell({
       context={dashboardSlug}
       actions={
         <>
+          {/* The read-only note sits first in the cluster (ADR-0023): it's the
+              reason the controls beside it are disabled, so it reads before
+              them. Silent unless the viewer is explicitly read-only. */}
+          {readOnly && <ReadOnlyBadge />}
           {hasDraft && (
             // The routines ledger's state-chip idiom (StateLabel): the yellow
             // rides a low-alpha wash and hairline while the label stays full
@@ -101,6 +111,10 @@ export function DashboardShell({
               icon={
                 <span aria-hidden className="size-1.5 rounded-full bg-yellow" />
               }
+              // A read-only viewer can't sync a draft (the commit is denied):
+              // the badge explains why the control is inert.
+              disabled={readOnly}
+              title={readOnly ? t("readonly.hint") : undefined}
               onClick={onSync}
             />
           )}
@@ -114,6 +128,8 @@ export function DashboardShell({
             className="max-sm:bg-transparent max-sm:text-primary max-sm:hover:bg-primary/10 max-sm:hover:text-primary dark:max-sm:hover:bg-primary/10"
             label={t("header.addRoutine")}
             icon={<CalendarPlus />}
+            disabled={readOnly}
+            title={readOnly ? t("readonly.hint") : undefined}
             onClick={onAdd}
           />
           <ToolbarAction
@@ -131,6 +147,8 @@ export function DashboardShell({
             icon={
               editing ? <Check className="text-primary" /> : <PencilRuler />
             }
+            disabled={readOnly}
+            title={readOnly ? t("readonly.hint") : undefined}
             onClick={onToggleEdit}
           />
         </>
@@ -163,7 +181,7 @@ function ToolbarAction({
     <Button
       size="sm"
       className={cn(
-        "max-sm:relative max-sm:min-h-9 max-sm:min-w-9 max-sm:px-0 max-sm:after:absolute max-sm:after:-inset-1",
+        "max-sm:relative max-sm:min-h-9 max-sm:min-w-9 max-sm:px-0 max-sm:after:absolute max-sm:after:-inset-1 disabled:cursor-not-allowed",
         className,
       )}
       {...props}

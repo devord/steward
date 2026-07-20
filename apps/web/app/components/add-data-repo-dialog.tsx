@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
 import { useFetcher, useNavigate } from "react-router"
 
-import { Button } from "~/components/ui/button"
+import { ArrowUpRight } from "lucide-react"
+
+import { Button, buttonVariants } from "~/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -248,19 +250,39 @@ export function AddDataRepoDialog({
           )}
 
           {error && (
-            <p className="text-xs text-destructive">
-              {t(
-                error === "denied"
-                  ? "addRepo.errDenied"
-                  : error === "template"
-                    ? "addRepo.errTemplate"
-                    : error === "exists"
-                      ? "addRepo.errExists"
-                      : error === "missing"
-                        ? "addRepo.errMissing"
-                        : "addRepo.errNotDataRepo",
-              )}
-            </p>
+            <div className="flex flex-col items-start gap-2">
+              <p className="text-xs text-destructive">
+                {t(
+                  error === "denied"
+                    ? "addRepo.errDenied"
+                    : error === "template"
+                      ? "addRepo.errTemplate"
+                      : error === "exists"
+                        ? "addRepo.errExists"
+                        : error === "missing"
+                          ? "addRepo.errMissing"
+                          : "addRepo.errNotDataRepo",
+                )}
+              </p>
+              {/* denied/missing on a client-org repo is most often the classic
+                  OAuth app not being approved for that org (ADR-0004) — nothing
+                  we can grant server-side. Jump to this app's authorization
+                  page, whose per-org panel carries the Grant/Request buttons. */}
+              {(error === "denied" || error === "missing") &&
+                owners.data?.oauthAppUrl && (
+                  <a
+                    href={owners.data.oauthAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "sm" }),
+                    )}
+                  >
+                    {t("addRepo.manageAccess")}
+                    <ArrowUpRight aria-hidden className="size-3.5" />
+                  </a>
+                )}
+            </div>
           )}
         </div>
 

@@ -129,6 +129,15 @@ export function DashboardBoard({
   // and picker never flash back to loading.
   const sidebarData = useOptimisticSidebar(sidebar)
   const templatesData = useStreamed(templates, `templates:${view.dataRepo}`)
+  // Read-only access to this board's repo (ADR-0023): the active repo's push
+  // permission rides the streamed sidebar (SidebarRepo.viewerCanPush) — chrome
+  // data, off the paint path (ADR-0030), the same source repo-group-header
+  // already reads. Only an explicit `false` gates the UI; unknown (null, or the
+  // rail not yet resolved) keeps full editing, with the Sync-time "denied" as
+  // the backstop (ADR-0003) — we never lock out a permission we couldn't read.
+  const readOnly =
+    sidebarData?.repos.find((r) => r.repo === view.dataRepo)?.viewerCanPush ===
+    false
   const revalidator = useRevalidator()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -350,7 +359,9 @@ export function DashboardBoard({
     const alreadyPlaced = dashboard.widgets.some(
       (w) => w.routine === placeParam,
     )
-    if (exists && !alreadyPlaced) {
+    // A read-only viewer can't place a routine (the layout edit could never
+    // sync) — strip the param and stay out of edit mode.
+    if (exists && !alreadyPlaced && !readOnly) {
       placeRoutine(placeParam)
       setEditing(true)
     }
@@ -470,7 +481,9 @@ export function DashboardBoard({
     measureBeforeMount: true,
   })
   const breakpoint = useViewportBreakpoint()
-  const gridEditing = editing && breakpoint === "lg"
+  // Never arm drag/resize for a read-only viewer — a belt-and-suspenders guard
+  // over the entry-point gating (editing can't be entered when read-only).
+  const gridEditing = editing && breakpoint === "lg" && !readOnly
 
   // Esc leaves edit mode — the app-wide "close this layer" key (every dialog
   // honors it; edit mode is the one modal-ish state that didn't). Exiting is
@@ -513,9 +526,11 @@ export function DashboardBoard({
         .slice(0, 9)
         .map((href, i) => [String(i + 1), () => void navigate(href)]),
     ),
-    e: () => setEditing((value) => !value),
-    a: () => setAdding(true),
-    s: draft != null ? () => setSyncing(true) : undefined,
+    // The edit verbs (e/a/s) are inert for a read-only viewer — the same gate
+    // the disabled toolbar controls carry, kept off the keyboard too.
+    e: readOnly ? undefined : () => setEditing((value) => !value),
+    a: readOnly ? undefined : () => setAdding(true),
+    s: draft != null && !readOnly ? () => setSyncing(true) : undefined,
     r: () => void navigate(routinesHref(view.dataRepo)),
     "?": () => setKeymapOpen(true),
   })
@@ -560,13 +575,16 @@ export function DashboardBoard({
         displayName={displayName}
         hasDraft={draft != null}
         editing={editing}
+        readOnly={readOnly}
         // Canvas cap: `wide` fills a large monitor (still bounded so the board
         // stays composed, not stretched edge-to-edge); `fixed` keeps the
         // comfortable centered reading width.
         wide={wide}
-        onSync={() => setSyncing(true)}
-        onAdd={() => setAdding(true)}
-        onToggleEdit={() => setEditing((value) => !value)}
+        // The shell disables these controls when read-only; the handlers stay
+        // no-ops there too so an errant keyboard/focus path can't enter editing.
+        onSync={() => !readOnly && setSyncing(true)}
+        onAdd={() => !readOnly && setAdding(true)}
+        onToggleEdit={() => !readOnly && setEditing((value) => !value)}
         onDeleteBoard={(repo, slug) => setDeleteTarget({ repo, slug })}
         onRenameBoard={(repo, slug) => {
           // Pull the board's current section and the repo's known sections
@@ -751,9 +769,12 @@ export function DashboardBoard({
             body-text contrast even though it rests quiet. */}
         {unplaced.length > 0 &&
           !editing &&
+          !readOnly &&
           dashboard.widgets.length > 0 && (
             // Prose, so sans (the per-string rule); the whole line is the
             // affordance — clicking it enters edit mode with the pool open.
+            // Withheld for a read-only viewer: it opens edit mode, which they
+            // can't use — nothing to nudge toward.
             <p className="mt-6 text-xs text-ink-dim">
               <button
                 type="button"

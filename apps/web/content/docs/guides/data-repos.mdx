@@ -77,6 +77,37 @@ sees every file on every branch. Routine definitions and layouts are
 private too (they leak what you track) — that's why the boundary is the
 repo, not a folder.
 
+## Organization access
+
+Steward signs you in with a **classic GitHub OAuth app**, and GitHub lets an
+organization restrict which OAuth apps act on its behalf. When an org has that
+restriction on and hasn't approved Steward, your token reads your own repos but
+stays blind to that org's — even repos you can otherwise see on GitHub.
+
+The symptom lands in the **Add data repo** dialog:
+
+- **Register existing** won't suggest the org's repos — the picker lists what
+  your token can see — and typing `owner/repo` by hand fails on submit, with the
+  repo reported as missing or the topic tag as denied.
+- **Create new** into that org fails the same way.
+
+The fix is **org approval of the app**, granted once for the whole org. Classic
+OAuth apps are approved per organization, not per repo, so there is no per-repo
+install request — approval covers every repo in the org at once.
+
+- **A member requests it.** On GitHub, open **Settings → Applications →
+  [Authorized OAuth Apps](https://github.com/settings/connections/applications) →
+  Steward → Organizations** and press **Request** beside the org. (The dialog's
+  **Manage organization access on GitHub** button, shown after a failed
+  register, jumps straight to that page.) The authorization screen offers the
+  same request the first time you sign in.
+- **An org owner approves it.** In the org's **Settings → Third-party access →
+  OAuth app policy**, approve the pending Steward request — or lift the
+  restriction. Owners can also grant access without waiting for a request.
+
+Once the org has approved Steward, its repos surface in the picker and register
+without error; nothing changes on Steward's side.
+
 ## Display names and sections
 
 Repo slugs make noisy labels, so a data repo may carry a display name in

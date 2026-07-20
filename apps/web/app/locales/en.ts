@@ -76,6 +76,14 @@ export const en = {
   "header.settings": "Settings",
   "header.signOut": "Sign out",
 
+  // Read-only signal (ADR-0003/0023): a data repo the viewer can read but not
+  // push to can't be edited — every edit is a draft that could never sync. The
+  // badge sits by the now-disabled edit controls so a reader learns it up
+  // front, not at the Sync-time "denied". Git word "push" stays verbatim.
+  "readonly.badge": "Read-only",
+  "readonly.hint":
+    "You have read access — editing needs push access on GitHub.",
+
   "nav.boards": "Boards",
   "nav.openMenu": "Open navigation",
   "nav.collapse": "Collapse sidebar",
@@ -269,6 +277,7 @@ export const en = {
   "addRepo.errMissing": "No such repo — or this account can't see it.",
   "addRepo.errNotDataRepo":
     "That repo has no data/routines.yaml — create one from the template instead, or add the file first.",
+  "addRepo.manageAccess": "Manage organization access on GitHub",
 
   "newDash.title": "New dashboard",
   "newDash.description":

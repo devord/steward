@@ -41,6 +41,7 @@ function view(): DashboardBase {
 
 async function renderBoard(
   artifacts: Promise<Record<string, ArtifactInfo>> = Promise.resolve({}),
+  { viewerCanPush = true }: { viewerCanPush?: boolean | null } = {},
 ) {
   const router = createMemoryRouter([
     {
@@ -63,7 +64,9 @@ async function renderBoard(
                 private: true,
                 collaborators: null,
                 viewerIsAdmin: true,
-                viewerCanPush: true,
+                // The active board's repo — its push permission drives the
+                // read-only gating (ADR-0023). Default pushable.
+                viewerCanPush,
                 sections: [],
                 dashboards: [
                   {
@@ -203,5 +206,48 @@ describe("DashboardBoard", () => {
       .poll(() => document.body.textContent)
       .toContain("GitHub unreachable — retries on next refresh")
     expect(document.body.textContent).toContain("Daily")
+  })
+
+  // Read-only access (ADR-0023): a viewer who can read but not push must see
+  // the state up front — the edit entry points disable and a calm badge names
+  // why — so they never build a draft that could only fail at Sync (ADR-0003).
+  it("read-only repo: disables the edit controls, shows the badge, and won't arm editing", async () => {
+    await page.viewport(1280, 900)
+    await renderBoard(Promise.resolve({}), { viewerCanPush: false })
+    await expect.poll(() => document.body.textContent).toContain("Daily")
+
+    // The badge names the state next to the (now-disabled) actions.
+    await expect
+      .poll(() => document.querySelector('[data-testid="read-only-badge"]'))
+      .not.toBeNull()
+    expect(document.body.textContent).toContain("Read-only")
+
+    // Edit + Add rest visible but disabled — never silently hidden.
+    const edit = page.getByRole("button", { name: "Edit", exact: true })
+    const add = page.getByRole("button", { name: "Add routine" })
+    expect(edit.element().hasAttribute("disabled")).toBe(true)
+    expect(add.element().hasAttribute("disabled")).toBe(true)
+
+    // The keyboard verb can't enter edit mode either.
+    await userEvent.keyboard("e")
+    expect(document.querySelector(".dash-grid.is-editing")).toBeNull()
+  })
+
+  // Unknown permission (null) must behave exactly as pushable — we never lock
+  // out a viewer whose access we merely couldn't read (the Sync "denied" stays
+  // the backstop). `true` is the existing tests' default; this pins `null`.
+  it("unknown push permission (null): full editing, no badge", async () => {
+    await page.viewport(1280, 900)
+    await renderBoard(Promise.resolve({}), { viewerCanPush: null })
+    await expect.poll(() => document.body.textContent).toContain("Daily")
+
+    expect(document.querySelector('[data-testid="read-only-badge"]')).toBeNull()
+    const edit = page.getByRole("button", { name: "Edit", exact: true })
+    expect(edit.element().hasAttribute("disabled")).toBe(false)
+
+    await userEvent.click(edit)
+    await expect
+      .poll(() => document.querySelector(".dash-grid.is-editing"))
+      .not.toBeNull()
   })
 })
