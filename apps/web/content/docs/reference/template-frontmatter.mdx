@@ -1,11 +1,11 @@
 ---
 title: Template frontmatter
-description: The widget frontmatter block that makes a markdown file a routine template — params, sizes, connectors, subject-derived slugs.
+description: "The widget frontmatter block that makes a markdown file a routine template: params, sizes, connectors, subject-derived slugs."
 ---
 
 A file at `templates/routines/<id>.md` becomes a routine template when its
 frontmatter carries a valid `widget:` block. Files without one are
-invisible to the picker — deliberately so for the `custom` built-in. The
+invisible to the picker, deliberately so for the `custom` built-in. The
 file's basename is the template id that `routines.yaml`'s `template:`
 references.
 
@@ -38,7 +38,7 @@ widget:
 | ------------- | ------ | ------------------------------------------ |
 | `name`        | string | Optional; defaults to the template id.     |
 | `description` | string | **Required.** The picker card's one-liner. |
-| `widget`      | block  | Required for discovery — see below.        |
+| `widget`      | block  | Required for discovery; see below.         |
 
 ## The `widget:` block
 
@@ -48,7 +48,7 @@ widget:
 | `sizes.default` | `{ cols, rows }` | Optional. Pre-fills the wizard's size step.                                                                                                                                            |
 | `sizes.min`     | `{ cols, rows }` | Optional. The smallest size the artifact is designed for.                                                                                                                              |
 | `schedule`      | string           | Optional suggested 5-field cron; pre-fills the wizard.                                                                                                                                 |
-| `params`        | list             | Optional. Inputs the wizard collects — see below. Keys must be unique.                                                                                                                 |
+| `params`        | list             | Optional. Inputs the wizard collects; see below. Keys must be unique.                                                                                                                  |
 | `connectors`    | list             | Optional connector names the template's cloud runs typically need; picking the template pre-fills the routine's `connectors:` allowlist (which otherwise defaults to none).            |
 | `subjectParam`  | string           | Optional. The param key that carries the routine's _subject_; the wizard slugs instances `<subject>-<kind>` (`corza-pulse`) instead of after the template. Must name a declared param. |
 | `kind`          | slug             | Optional slug stem after the subject. Defaults to the template id's last hyphen segment (`repo-pulse` → `pulse`).                                                                      |
@@ -71,7 +71,7 @@ widget:
   skips** files with no frontmatter, invalid frontmatter, or an invalid
   `widget:` block. If your template doesn't appear in the picker, validate
   its frontmatter first.
-- A UTF-8 BOM and CRLF line endings are tolerated — a Windows-committed
+- A UTF-8 BOM and CRLF line endings are tolerated; a Windows-committed
   template doesn't vanish.
 - A data-repo template **shadows** a same-named built-in; the templates
   ledger tags the override.
@@ -82,6 +82,6 @@ widget:
 ## Sample renders
 
 A sibling `templates/routines/<id>.sample.html` is picked up as the
-template's preview in the add-routine picker — real artifact HTML, framed
+template's preview in the add-routine picker: real artifact HTML, framed
 like a live widget, captioned as an example. Optional; costs one contents
 fetch only when present.

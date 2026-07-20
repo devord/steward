@@ -1,6 +1,6 @@
 ---
 title: repo.yaml
-description: The data repo's display metadata — data/repo.yaml rail name and section order.
+description: "The data repo's display metadata: data/repo.yaml rail name and section order."
 ---
 
 Optional repo-level display metadata at `data/repo.yaml`. A repo without
@@ -16,15 +16,15 @@ sections: [Team, Clients, Projects]
 
 | Field      | Type   | Rules                                                                                                                                                                                                                                                                           |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`     | string | Optional, ≤ 50 chars, non-blank. Relabels the repo's rail group for everyone who reads the repo. UI only — URLs, prompts, and payloads never use it; rail order keeps sorting by slug.                                                                                          |
+| `name`     | string | Optional, ≤ 50 chars, non-blank. Relabels the repo's rail group for everyone who reads the repo. UI only: URLs, prompts, and payloads never use it; rail order keeps sorting by slug.                                                                                           |
 | `sections` | list   | Optional. Order of the rail's board sections. Membership rides on each board's `section:` (see [`dashboards.yaml`](/docs/reference/dashboards-yaml)); a section a board names but this list omits sorts after, alphabetically; a listed name no board uses contributes nothing. |
 
-A malformed or missing file degrades to defaults — "no display name", "no
-order" — never a failed rail.
+A malformed or missing file degrades to defaults ("no display name", "no
+order"), never a failed rail.
 
 ## Legacy keys
 
 A repo written before the section rename may carry `groups:`. The parse
-boundary renames it to `sections:` when the new key is absent; serialization
-only ever emits `sections:`, so the first in-app edit rewrites the file
-forward. No migration required.
+boundary renames it to `sections:` when the new key is absent;
+serialization only ever emits `sections:`, so the first in-app edit
+rewrites the file forward. No migration required.

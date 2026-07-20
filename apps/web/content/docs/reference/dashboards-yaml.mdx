@@ -1,15 +1,15 @@
 ---
 title: dashboards.yaml
-description: The dashboard layout file — data/dashboards/<slug>.yaml grid and widgets, the fit invariant, and size presets.
+description: "The dashboard layout file: data/dashboards/<slug>.yaml grid and widgets, the fit invariant, and size presets."
 ---
 
 One file per board at `data/dashboards/<slug>.yaml`; the filename is the
-board's slug, label, and URL segment. `routines` is reserved (it's the pool
-view's URL segment). Repo-level display metadata lives separately, in
+board's slug, label, and URL segment. `routines` is reserved (it's the
+pool view's URL segment). Repo-level display metadata lives separately, in
 [`repo.yaml`](/docs/reference/repo-yaml).
 
 ```yaml title="data/dashboards/corza.yaml"
-section: Clients # optional — rail section this board files under
+section: Clients # optional; rail section this board files under
 grid:
   columns: 4 # 1–6, default 4
   rowHeight: 150 # px per row unit, default 150
@@ -22,23 +22,24 @@ widgets:
 
 ## Fields
 
-| Field                | Type             | Rules                                                                                                                                                                                           |
-| -------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `section`            | string           | Optional, ≤ 40 chars. Boards sharing a value cluster under one rail sub-heading; absent → the board leads the repo's unlabeled section. Order across sections comes from `repo.yaml`, not here. |
-| `grid.columns`       | int              | 1–6, default 4. The board's desktop resolution; tablets render 2, phones 1.                                                                                                                     |
-| `grid.rowHeight`     | int              | Default 150. Row unit in px — board density.                                                                                                                                                    |
-| `grid.width`         | enum             | `fixed` centers the board at reading width; `wide` fills a large monitor.                                                                                                                       |
-| `widgets[].routine`  | slug             | The routine whose artifact this cell renders.                                                                                                                                                   |
-| `widgets[].position` | `{ col, row }`   | 1-indexed. Rows are unbounded.                                                                                                                                                                  |
-| `widgets[].size`     | `{ cols, rows }` | `cols` 1–6, `rows` 1–12.                                                                                                                                                                        |
+| Field                | Type             | Rules                                                                                                                                                                                               |
+| -------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `section`            | string           | Optional, ≤ 40 chars. Boards sharing a value cluster under one rail sub-heading; absent means the board leads the repo's unlabeled section. Order across sections comes from `repo.yaml`, not here. |
+| `grid.columns`       | int              | 1–6, default 4. The board's desktop resolution; tablets render 2, phones 1.                                                                                                                         |
+| `grid.rowHeight`     | int              | Default 150. Row unit in px; board density.                                                                                                                                                         |
+| `grid.width`         | enum             | `fixed` centers the board at reading width; `wide` fills a large monitor.                                                                                                                           |
+| `widgets[].routine`  | slug             | The routine whose artifact this cell renders.                                                                                                                                                       |
+| `widgets[].position` | `{ col, row }`   | 1-indexed. Rows are unbounded.                                                                                                                                                                      |
+| `widgets[].size`     | `{ cols, rows }` | `cols` 1–6, `rows` 1–12.                                                                                                                                                                            |
 
-One cross-field invariant: a widget must fit the board it lives on —
-`position.col + size.cols − 1 ≤ grid.columns`. A hand-authored layout that
-overflows the grid is rejected at parse, never silently clipped at render.
+One cross-field invariant: a widget must fit the board it lives on
+(`position.col + size.cols − 1 ≤ grid.columns`). A hand-authored layout
+that overflows the grid is rejected at parse, never silently clipped at
+render.
 
 ## Size presets
 
-The add-widget wizard offers named shapes instead of raw steppers —
+The add-widget wizard offers named shapes instead of raw steppers:
 intents, not dimensions (columns clamp to the board's own count at pick
 time):
 
@@ -53,6 +54,6 @@ time):
 ## Legacy keys
 
 A board written before the section rename may carry `group:`. The parse
-boundary renames it to `section:` when the new key is absent; serialization
-only ever emits `section:`, so the first in-app edit rewrites the file
-forward. No migration required.
+boundary renames it to `section:` when the new key is absent;
+serialization only ever emits `section:`, so the first in-app edit
+rewrites the file forward. No migration required.
