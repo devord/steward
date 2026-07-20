@@ -50,10 +50,3 @@ time):
 | `wide`   | 4 × 1 |
 | `tall`   | 2 × 3 |
 | `hero`   | 4 × 3 |
-
-## Legacy keys
-
-A board written before the section rename may carry `group:`. The parse
-boundary renames it to `section:` when the new key is absent;
-serialization only ever emits `section:`, so the first in-app edit
-rewrites the file forward. No migration required.
