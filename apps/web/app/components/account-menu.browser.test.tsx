@@ -31,6 +31,21 @@ async function openMenu() {
   await vi.waitFor(() => expect(modeTile("Dark")).not.toBeNull())
 }
 
+describe("AccountMenu docs item", () => {
+  it("links to the docs in a new tab", async () => {
+    await openMenu()
+
+    const docs = [
+      ...document.querySelectorAll<HTMLAnchorElement>('[role="menu"] a'),
+    ].find((el) => el.textContent === "Docs")
+    if (!docs) throw new Error("no Docs menu item")
+    expect(docs.getAttribute("href")).toBe("/docs")
+    // A new tab — the reader keeps the board open beside the docs.
+    expect(docs.getAttribute("target")).toBe("_blank")
+    expect(docs.getAttribute("rel")).toBe("noreferrer")
+  })
+})
+
 describe("AccountMenu mode row", () => {
   afterEach(() => {
     // updateAppearance persists + stamps the document; undo both so the

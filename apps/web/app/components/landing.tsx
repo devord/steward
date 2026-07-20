@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import {
+  ArrowRight,
   Blocks,
   Check,
   ChevronsDown,
@@ -34,7 +35,18 @@ export function Landing() {
   const t = useT()
   return (
     <main className="landing-bg relative min-h-dvh">
-      <LandingModeToggle />
+      {/* The corner chrome: a quiet docs link beside the mode toggle — the
+          one piece of nav a signed-out visitor gets, in the corner devs
+          look for it. */}
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-3 sm:top-6 sm:right-6">
+        <a
+          href="/docs"
+          className="rounded-md px-1.5 py-1 font-mono text-xs text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          {t("landing.docs")}
+        </a>
+        <LandingModeToggle />
+      </div>
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {/* Viewport one: the pitch and the one action. */}
         <div className="relative flex min-h-dvh flex-col justify-center gap-12 py-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-16">
@@ -83,6 +95,8 @@ export function Landing() {
           <FeaturesSection />
           <ClosingCta />
         </div>
+
+        <LandingFooter />
       </div>
     </main>
   )
@@ -235,6 +249,20 @@ function LoopSection() {
       >
         {t("landing.loop.prereqs")}
       </p>
+      {/* The hand-off for the reader the loop convinced: the quickstart is
+          the next step, and this is the highest-intent moment to offer it. */}
+      <a
+        href="/docs/getting-started/quickstart"
+        className="landing-reveal-item group mt-4 inline-flex items-center gap-1.5 rounded-md text-sm text-ink-dim underline underline-offset-2 transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        style={cssVars({ "--i": 6 })}
+      >
+        {t("landing.loop.quickstart")}
+        <ArrowRight
+          aria-hidden
+          {...sharp}
+          className="size-3.5 text-primary/70 transition-colors group-hover:text-primary"
+        />
+      </a>
     </section>
   )
 }
@@ -320,6 +348,42 @@ function ClosingCta() {
   )
 }
 
+/**
+ * The page's last line: a quiet rail of further reading for whoever the
+ * closing CTA didn't convert — the docs, the quickstart, and the agent
+ * surface (llms.txt, a literal filename in every locale). Mono lowercase,
+ * the pager voice; chrome, not argument, so no reveal choreography.
+ */
+function LandingFooter() {
+  const t = useT()
+  const links = [
+    { href: "/docs", label: t("landing.docs") },
+    {
+      href: "/docs/getting-started/quickstart",
+      label: t("landing.footer.quickstart"),
+    },
+    { href: "/llms.txt", label: "llms.txt" },
+  ]
+  return (
+    <footer className="border-t border-border-dim py-8">
+      <nav
+        aria-label={t("landing.footer.label")}
+        className="flex flex-wrap items-center gap-x-6 gap-y-2"
+      >
+        {links.map(({ href, label }) => (
+          <a
+            key={href}
+            href={href}
+            className="rounded-md font-mono text-xs text-ink-faint transition-colors outline-none hover:text-ink-dim focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
+    </footer>
+  )
+}
+
 function SignInButton({
   size,
   className,
@@ -357,7 +421,7 @@ function LandingModeToggle() {
     <div
       role="radiogroup"
       aria-label={t("settings.mode")}
-      className="absolute top-4 right-4 z-10 flex gap-0.5 rounded-lg border border-border-dim bg-bg1 p-0.5 sm:top-6 sm:right-6"
+      className="flex gap-0.5 rounded-lg border border-border-dim bg-bg1 p-0.5"
     >
       {APPEARANCE_MODES.map(({ mode, Icon, labelKey }) => {
         const active = prefs.mode === mode
