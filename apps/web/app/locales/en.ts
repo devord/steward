@@ -13,6 +13,8 @@ export const en = {
   "landing.privacy":
     "Your data is yours — it lives in a private GitHub repo you own; the app stores nothing.",
   "landing.deviceLink": "Sign in with a device code instead",
+  // Lowercase mono, like the `more` cue — a nav token, not prose.
+  "landing.docs": "docs",
   // Pager voice, deliberately lowercase mono next to a ▾ glyph — like the
   // pipeline tokens; the aria label speaks full chrome.
   "landing.more": "more",
@@ -32,6 +34,7 @@ export const en = {
   "landing.loop.widget": "The dashboard renders the file in a sandboxed frame.",
   "landing.loop.prereqs":
     "All it takes: a GitHub account and Claude Code — routines run in the cloud or on your machine.",
+  "landing.loop.quickstart": "Read the quickstart",
 
   "landing.data.title": "Your data is yours",
   "landing.data.repo":
@@ -53,6 +56,11 @@ export const en = {
     "Every widget shows when it last ran, straight from commit history — and a stale one says so.",
 
   "landing.cta": "Glance instead of digging.",
+
+  // Footer links keep the pager voice: lowercase mono tokens. `llms.txt` is
+  // a literal filename and stays verbatim across locales.
+  "landing.footer.label": "Footer",
+  "landing.footer.quickstart": "quickstart",
 
   "device.title": "Sign in with a device code",
   "device.intro":
@@ -96,6 +104,7 @@ export const en = {
   "nav.fresh": "Up to date",
   "account.menu": "Account",
   "account.githubAccount": "GitHub account",
+  "account.docs": "Docs",
 
   "empty.fact": "The grid is empty",
   "empty.hint":

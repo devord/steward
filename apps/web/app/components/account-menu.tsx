@@ -1,6 +1,6 @@
 import { useSubmit } from "react-router"
 
-import { ChevronsUpDown, LogOut, Settings } from "lucide-react"
+import { BookOpen, ChevronsUpDown, LogOut, Settings } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
 import {
@@ -174,6 +174,15 @@ export function AccountMenu({
         <DropdownMenuItem render={<Link to="/settings" onClick={onNavigate} />}>
           <Settings />
           {t("header.settings")}
+        </DropdownMenuItem>
+
+        {/* A new tab, like the docs layout's "Open the app" backlink — the
+            reader keeps the board open beside the docs. */}
+        <DropdownMenuItem
+          render={<a href="/docs" target="_blank" rel="noreferrer" />}
+        >
+          <BookOpen />
+          {t("account.docs")}
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

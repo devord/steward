@@ -14,6 +14,7 @@ export const ptBR: Messages = {
   "landing.privacy":
     "Seus dados são seus — vivem em um repo privado do GitHub que é seu; o app não guarda nada.",
   "landing.deviceLink": "Entrar com um código de dispositivo",
+  "landing.docs": "docs",
   "landing.more": "mais",
   "landing.moreLabel": "Rolar para como funciona",
 
@@ -31,6 +32,7 @@ export const ptBR: Messages = {
   "landing.loop.widget": "O painel renderiza o arquivo em um frame isolado.",
   "landing.loop.prereqs":
     "Só é preciso uma conta no GitHub e o Claude Code — rotinas rodam na nuvem ou na sua máquina.",
+  "landing.loop.quickstart": "Leia o guia rápido",
 
   "landing.data.title": "Seus dados são seus",
   "landing.data.repo":
@@ -52,6 +54,9 @@ export const ptBR: Messages = {
     "Todo widget mostra quando rodou pela última vez, direto do histórico de commits — e um atrasado avisa.",
 
   "landing.cta": "Bata o olho em vez de cavar.",
+
+  "landing.footer.label": "Rodapé",
+  "landing.footer.quickstart": "guia rápido",
 
   "device.title": "Entrar com um código de dispositivo",
   "device.intro":
@@ -91,6 +96,7 @@ export const ptBR: Messages = {
   "nav.fresh": "Em dia",
   "account.menu": "Conta",
   "account.githubAccount": "Conta do GitHub",
+  "account.docs": "Docs",
 
   "empty.fact": "A grade está vazia",
   "empty.hint":
