@@ -18,7 +18,9 @@ contrast floors below from transcribed values — Solarized and Ayu were
 evaluated and rejected on that second test.
 
 **Gruvbox dark hard remains canonical**: the server renders it, artifacts
-are authored in it, and it is the fresh-install dark default.
+are authored in it, and it was the fresh-install dark default (the
+fresh-install default later moved to Flexoki — ADR-0046 — while the anchor
+stayed gruvbox-dark).
 
 Mechanics:
 

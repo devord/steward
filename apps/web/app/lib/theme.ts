@@ -5,9 +5,10 @@
  * Each theme carries the full Steward token set (the roles DESIGN.md
  * defines: surfaces bg…bg3, borders, inks, the accent pair, and the status
  * colors), transcribed from its upstream palette — no invented colors.
- * Gruvbox dark hard remains the canonical default: artifacts are authored
+ * Gruvbox dark hard remains the canonical anchor: artifacts are authored
  * in it (docs/widget-standard.md) and the server renders it before the
- * client preference is known.
+ * client preference is known. The *fresh-install* default is a separate
+ * choice — a new viewer now starts in the Flexoki pair (ADR-0046).
  *
  * The user's choice is an **appearance preference**: a `mode`
  * (`system` | `light` | `dark`) plus a `lightTheme` and a `darkTheme` slot
@@ -513,10 +514,18 @@ export const themeEntries: readonly [ThemeName, Theme][] = themeNames.map(
   (name): [ThemeName, Theme] => [name, themes[name]],
 )
 
-/** The canonical default — what the server renders and artifacts are authored in. */
+/**
+ * The canonical anchor — what the server renders on `:root` and the palette
+ * artifacts are authored in and inline at rest (docs/widget-standard.md).
+ * Stays gruvbox-dark even as the fresh-install default moves (ADR-0046):
+ * retargeting it would strand every published artifact's inlined palette,
+ * since `artifactThemeStyle` returns null for it. Distinct from the
+ * fresh-install slots below — the palette a new user *starts* in.
+ */
 export const DEFAULT_THEME: ThemeName = "gruvbox-dark"
-export const DEFAULT_DARK_THEME: ThemeName = "gruvbox-dark"
-export const DEFAULT_LIGHT_THEME: ThemeName = "gruvbox-light"
+/** Fresh-install slots for a viewer with no stored preference (ADR-0046). */
+export const DEFAULT_DARK_THEME: ThemeName = "flexoki-dark"
+export const DEFAULT_LIGHT_THEME: ThemeName = "flexoki-light"
 
 /** A family that ships both a light and a dark member — one pick fills both slots. */
 export interface ThemeFamily {
@@ -622,7 +631,7 @@ export const APPEARANCE_STORAGE_KEY = "steward-appearance"
 /** Custom event fired after a preference write, for same-tab subscribers. */
 export const APPEARANCE_EVENT = "steward:appearance"
 
-/** Fresh default: follow the OS with the gruvbox pair — dark stays dark. */
+/** Fresh default: follow the OS with the Flexoki pair (ADR-0046). */
 export const DEFAULT_APPEARANCE: AppearancePrefs = {
   mode: "system",
   lightTheme: DEFAULT_LIGHT_THEME,
