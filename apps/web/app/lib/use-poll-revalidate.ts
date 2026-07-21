@@ -19,16 +19,28 @@ export function usePollRevalidate({ fast }: { fast: boolean }) {
   const stateRef = useRef(revalidator.state)
   stateRef.current = revalidator.state
   const revalidate = revalidator.revalidate
+  // When the last revalidation started. 0 → never: the first focus always
+  // catches up, which is the case the visibility handler exists for.
+  const lastRunRef = useRef(0)
 
   useEffect(() => {
+    const interval = fast ? FAST_MS : AMBIENT_MS
     const tick = () => {
       // Skip while hidden (don't poll a backgrounded tab) or mid-flight.
       if (document.hidden || stateRef.current !== "idle") return
+      lastRunRef.current = Date.now()
       void revalidate()
     }
-    const id = window.setInterval(tick, fast ? FAST_MS : AMBIENT_MS)
+    const id = window.setInterval(tick, interval)
     const onVisible = () => {
-      if (!document.hidden) tick()
+      if (document.hidden) return
+      // Becoming visible catches a backgrounded board up at once — but only if
+      // it is actually behind. Every revalidation re-runs the whole loader fan
+      // -out (the board's artifacts and the rail's per-repo reads), so glancing
+      // at another tab and back would otherwise fire that burst per flip, for
+      // data that cannot have moved in the interim.
+      if (Date.now() - lastRunRef.current < interval) return
+      tick()
     }
     document.addEventListener("visibilitychange", onVisible)
     return () => {

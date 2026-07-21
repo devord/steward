@@ -48,8 +48,12 @@ interface MockRepoMeta {
   /** GitHub template-repository flag. */
   isTemplate: boolean
   /** "forbidden" → the collaborators endpoint answers 403 (viewer lacks
-      push access), exactly GitHub's behavior for plain readers. */
-  collaborators: { login: string; avatar_url: string }[] | "forbidden"
+      push access), exactly GitHub's behavior for plain readers. "unavailable"
+      → a 503, the transient class that must stay distinguishable from it. */
+  collaborators:
+    | { login: string; avatar_url: string }[]
+    | "forbidden"
+    | "unavailable"
 }
 
 const repoMeta = new Map<string, Partial<MockRepoMeta>>()
@@ -325,6 +329,9 @@ export const githubHandlers = [
       const { collaborators } = metaFor(repo)
       if (collaborators === "forbidden") {
         return new HttpResponse(null, { status: 403 })
+      }
+      if (collaborators === "unavailable") {
+        return new HttpResponse(null, { status: 503 })
       }
       return json(request, collaborators)
     },

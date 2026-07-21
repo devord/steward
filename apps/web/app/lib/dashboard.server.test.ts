@@ -1,16 +1,24 @@
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 
-import { failGenerate, failPath, seedRepo } from "../mocks/github.ts"
+import {
+  failGenerate,
+  failPath,
+  seedRepo,
+  seedRepoMeta,
+} from "../mocks/github.ts"
 import {
   createDataRepoOr503,
   loadArtifactVersion,
   loadDashboard,
   loadDashboardStructureOr503,
+  loadSidebar,
   repoExistsOr503,
   streamPlacements,
 } from "./dashboard.server.ts"
 import { GitHubError } from "./github.server.ts"
+import { __resetRepoCache } from "./repos.server.ts"
 
+const LOGIN = "daniel"
 const DATA_REPO = "daniel/steward-data-daniel"
 const MAIN_BOARD = {
   repo: DATA_REPO,
@@ -550,5 +558,122 @@ describe("loadArtifactVersion", () => {
     )
 
     expect(version).toEqual({ html: null, unreachable: true })
+  })
+})
+
+/**
+ * The rail's failure modes all look the same on screen: a board that lost its
+ * section renders as an ungrouped board, a repo whose collaborators failed
+ * renders as a solo private repo, a repo whose freshness failed renders as
+ * never-published. Each is a plausible rail, which is why `degraded` — the
+ * flag that keeps a result out of the SWR cache — has to distinguish "this is
+ * the answer" from "we could not read the answer".
+ */
+describe("loadSidebar", () => {
+  beforeEach(() => __resetRepoCache())
+
+  const SECTIONED_YAML = `section: clients
+${DASHBOARD_YAML}`
+
+  function seedRail() {
+    seedRepo(DATA_REPO, {
+      "data/routines.yaml": ROUTINES_YAML,
+      "data/repo.yaml": "name: Personal\nsections:\n  - clients\n",
+      "data/dashboards/main.yaml": DASHBOARD_YAML,
+      "data/dashboards/corza.yaml": SECTIONED_YAML,
+    })
+  }
+
+  it("groups boards by their section, and is not degraded", async () => {
+    seedRail()
+
+    const sidebar = await loadSidebar("token", LOGIN)
+
+    expect(sidebar.degraded).toBe(false)
+    expect(sidebar.repos[0].sections).toEqual(["clients"])
+    expect(sidebar.repos[0].dashboards).toEqual([
+      expect.objectContaining({ slug: "corza", section: "clients" }),
+      expect.objectContaining({ slug: "main", section: null }),
+    ])
+  })
+
+  it("degrades when a board's section read fails, rather than silently ungrouping it", async () => {
+    // The reported bug: a transient failure on one board's layout dropped it
+    // out of its section, and the resulting rail was cached as authoritative.
+    seedRail()
+    failPath(DATA_REPO, "data/dashboards/corza.yaml", {
+      status: 503,
+      endpoint: "contents",
+    })
+
+    const sidebar = await loadSidebar("token", LOGIN)
+
+    // Still renders — best-effort, never a failed rail...
+    expect(sidebar.repos[0].dashboards).toEqual([
+      expect.objectContaining({ slug: "corza", section: null }),
+      expect.objectContaining({ slug: "main", section: null }),
+    ])
+    // ...but marked, so streamSidebar won't cache this shape.
+    expect(sidebar.degraded).toBe(true)
+  })
+
+  it("treats a board with no layout file as genuinely ungrouped, not degraded", async () => {
+    // The other side of the same coin: absent is an answer, and a rail built
+    // from answers must stay cacheable.
+    seedRail()
+    seedRepo(DATA_REPO, { "data/dashboards/orphan.yaml": "" })
+    failPath(DATA_REPO, "data/dashboards/orphan.yaml", {
+      status: 404,
+      endpoint: "contents",
+    })
+
+    const sidebar = await loadSidebar("token", LOGIN)
+
+    expect(sidebar.degraded).toBe(false)
+    expect(sidebar.repos[0].dashboards).toContainEqual(
+      expect.objectContaining({ slug: "orphan", section: null }),
+    )
+  })
+
+  it("degrades when the section order cannot be read", async () => {
+    // Losing repo.yaml reshuffles every section into alphabetical order —
+    // invisible on screen, so it must not be cached.
+    seedRail()
+    failPath(DATA_REPO, "data/repo.yaml", { status: 503, endpoint: "contents" })
+
+    const sidebar = await loadSidebar("token", LOGIN)
+
+    expect(sidebar.repos[0].sections).toEqual([])
+    expect(sidebar.degraded).toBe(true)
+  })
+
+  it("degrades when collaborators fail transiently, but not for a plain reader's 403", async () => {
+    seedRail()
+    seedRepoMeta(DATA_REPO, { collaborators: "forbidden" })
+
+    const reader = await loadSidebar("token", LOGIN)
+
+    expect(reader.repos[0].collaborators).toBeNull()
+    expect(reader.degraded).toBe(false)
+
+    __resetRepoCache()
+    seedRepoMeta(DATA_REPO, { collaborators: "unavailable" })
+
+    const flaky = await loadSidebar("token", LOGIN)
+
+    expect(flaky.repos[0].collaborators).toBeNull()
+    expect(flaky.degraded).toBe(true)
+  })
+
+  it("degrades when freshness cannot be read, rather than dating every board unknown", async () => {
+    seedRail()
+    failPath(DATA_REPO, "", { status: 503, endpoint: "commits" })
+
+    const sidebar = await loadSidebar("token", LOGIN)
+
+    expect(
+      sidebar.repos[0].dashboards.every((board) => board.lastRunAt === null),
+    ).toBe(true)
+    expect(sidebar.degraded).toBe(true)
   })
 })

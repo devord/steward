@@ -28,6 +28,7 @@ import {
   listCollaborators,
   listDirectory,
   listPathCommits,
+  type RepoFile,
   repoExists,
 } from "./github.server.ts"
 import { listDataRepos } from "./repos.server.ts"
@@ -242,36 +243,65 @@ export async function listDashboards(
 
 /**
  * listDashboards plus each board's section, for the rail: one extra
- * ETag-cached read per board, behind the sidebar's SWR window. Every read is
- * best-effort — a missing or malformed layout file is just "ungrouped, no
- * freshness" (the row shows its slug), never a failed group.
+ * ETag-cached read per board, behind the sidebar's SWR window.
+ *
+ * A missing or malformed layout file is genuinely "ungrouped, no freshness"
+ * (the row shows its slug) — a permanent fact about that file. A *failed* read
+ * is not: it looks identical in the row, but it means the board's real section
+ * is unknown. The two must not collapse into the same value, because the rail
+ * that results is structurally wrong (boards silently leave their sections)
+ * yet indistinguishable from a correct one — so it would be cached and served
+ * as authoritative. Reads are still best-effort, never a failed group; the
+ * `degraded` flag is how the caller keeps the result out of the SWR cache.
  *
  * Ordered by slug — the row's label (ADR-0039), so the rail reads as sorted.
  */
 async function listSidebarBoards(
   token: string,
   repo: string,
-): Promise<RawSidebarBoard[] | null> {
+): Promise<SidebarBoardListing | null> {
   const slugs = await listDashboards(token, repo)
   if (!slugs) return null
+  let degraded = false
   const boards = await Promise.all(
     slugs.map(async (slug) => {
       // One read yields the row's section and (kept for freshness, ADR-0035)
-      // the routine slugs its widgets render — a malformed or missing file
-      // degrades both (ungrouped, no freshness); the row shows its slug.
-      const meta = await getFile(token, repo, dashboardPath(slug), "main")
-        .then((raw) => (raw ? parseDashboardFile(raw.text) : null))
-        .catch(() => null)
-      return {
+      // the routine slugs its widgets render.
+      const ungrouped: RawSidebarBoard = {
         slug,
-        section: meta?.section ?? null,
-        routineSlugs: meta?.widgets.map((widget) => widget.routine) ?? [],
+        section: null,
+        routineSlugs: [],
+      }
+      let raw: RepoFile | null
+      try {
+        raw = await getFile(token, repo, dashboardPath(slug), "main")
+      } catch {
+        // Transient (rate limit, 5xx, timeout): the section is unknown, not
+        // absent. Render ungrouped, but say the rail can't be trusted.
+        degraded = true
+        return ungrouped
+      }
+      // 404: the layout file really is gone — ungrouped is the truth.
+      if (!raw) return ungrouped
+      try {
+        const meta = parseDashboardFile(raw.text)
+        return {
+          slug,
+          section: meta.section ?? null,
+          routineSlugs: meta.widgets.map((widget) => widget.routine),
+        }
+      } catch {
+        // Malformed layout: also the truth, and re-reading won't change it.
+        return ungrouped
       }
     }),
   )
-  return boards.sort((a, b) =>
-    a.slug.localeCompare(b.slug, undefined, { sensitivity: "base" }),
-  )
+  return {
+    boards: boards.sort((a, b) =>
+      a.slug.localeCompare(b.slug, undefined, { sensitivity: "base" }),
+    ),
+    degraded,
+  }
 }
 
 /** How many artifacts-branch commits the rail scans for freshness — one page
@@ -335,6 +365,14 @@ interface RawSidebarBoard {
   routineSlugs: string[]
 }
 
+/** listSidebarBoards' result: the rows, plus whether any row's section had to
+    be guessed because its read failed (as opposed to the file being absent or
+    malformed, which is a real answer). See {@link SidebarData.degraded}. */
+interface SidebarBoardListing {
+  boards: RawSidebarBoard[]
+  degraded: boolean
+}
+
 /** One rail group: a data repo and its boards. */
 export interface SidebarRepo {
   /** `owner/name`. */
@@ -372,11 +410,14 @@ export interface SidebarData {
   /** false → discovery degraded: groups may be missing. The rail renders a
       quiet notice, never an error. */
   complete: boolean
-  /** true → data behind the rail failed to load transiently: a repo's board
-      listing (an empty group here is indistinguishable from a real one) or
-      partial discovery. Best-effort is still returned to render, but a
-      degraded rail is never cached (streamSidebar), so the next navigation
-      retries live instead of stranding the gap for the SWR window. */
+  /** true → some data behind the rail failed to load transiently: a repo's
+      board listing, a board's section, the section order, collaborators, or
+      freshness. Every one of those degrades to a rail that renders cleanly and
+      reads as authoritative — an empty group looks like a repo with no boards,
+      a null section looks like an ungrouped board — which is precisely why the
+      flag exists. Best-effort is still returned to render, but a degraded rail
+      is never cached (streamSidebar), so the next navigation retries live
+      instead of stranding the wrong shape for the SWR window. */
   degraded: boolean
 }
 
@@ -392,45 +433,67 @@ export async function loadSidebar(
 ): Promise<SidebarData> {
   const now = Date.now()
   const listing = await listDataRepos(token, login, override)
-  // A failed board listing (rate limit, 5xx, network) stays isolated to its
-  // own repo group per ADR-0023, but it marks the whole load degraded so the
-  // empty group it produces is never cached as if the repo simply had no
-  // boards (streamSidebar). Collaborators/repo.yaml are best-effort by
-  // contract — their absence is expected, not a degrade.
+  // Every transient read failure behind the rail marks the whole load degraded,
+  // so the best-effort rail it produces is rendered but never cached
+  // (streamSidebar) — the next navigation retries live and self-heals. The bar
+  // is *not* "did the rail fail to render": a partial rail renders fine and
+  // looks authoritative, which is exactly why serving it stale for the whole
+  // max-age window is the bug. Anything a re-read could change belongs here.
+  // A permanent answer — no repo.yaml, a plain reader who can't list
+  // collaborators, nothing published yet — is expected, not a degrade.
   let degraded = false
   const repos = await Promise.all(
     listing.repos.map(async (repo) => {
       const [boards, collaborators, repoFile, publishDates, routines] =
         await Promise.all([
-          // A failed board listing marks the whole load degraded (never cached),
-          // so its empty group isn't mistaken for a repo with no boards.
+          // A failed board listing stays isolated to its own repo group per
+          // ADR-0023, so its empty group isn't mistaken for a repo with no
+          // boards; a failed per-board section read degrades too (see
+          // listSidebarBoards).
           listSidebarBoards(token, repo.full).catch(() => {
             degraded = true
             return null
           }),
-          // Best-effort by contract (403 for plain readers → null).
-          listCollaborators(token, repo.full),
-          // Best-effort too: an absent or malformed repo.yaml is just "no
-          // display name", never a failed rail.
+          // null is the documented "not listable" (403 plain reader / 404);
+          // anything transient throws, and the avatar stack silently
+          // collapsing to a lock glyph must not be cached as the answer.
+          listCollaborators(token, repo.full).catch(() => {
+            degraded = true
+            return null
+          }),
+          // Best-effort: an absent or malformed repo.yaml is just "no display
+          // name and no section order", never a failed rail. A *failed* read
+          // is transient, though — and losing the order silently reshuffles
+          // every section, so it degrades.
           getFile(token, repo.full, REPO_FILE_PATH, "main")
             .then((raw) => (raw ? parseRepoFile(raw.text) : null))
-            .catch(() => null),
-          // Freshness inputs (ADR-0035), both best-effort — a flaky read just
-          // degrades every board's dot to "unknown", never a failed rail (so,
-          // unlike the board listing, these don't mark the load degraded):
-          // one artifacts-branch page dates each widget's last publish,
-          listArtifactPublishDates(token, repo.full, FRESHNESS_COMMITS).catch(
-            () => null,
-          ),
-          // and routines.yaml carries the schedules `isStale` judges against.
+            .catch(() => {
+              degraded = true
+              return null
+            }),
+          // Freshness inputs (ADR-0035). listArtifactPublishDates already
+          // distinguishes "nothing published" (empty map) from failure (null),
+          // so a null here is transient: every board's dot in this repo drops
+          // to "unknown" at once, which reads as real data and must not stick.
+          listArtifactPublishDates(token, repo.full, FRESHNESS_COMMITS)
+            .catch(() => null)
+            .then((dates) => {
+              if (dates == null) degraded = true
+              return dates
+            }),
+          // routines.yaml carries the schedules `isStale` judges against.
           getFile(token, repo.full, "data/routines.yaml", "main")
             .then((raw) => (raw ? parseRoutinesFile(raw.text) : null))
-            .catch(() => null),
+            .catch(() => {
+              degraded = true
+              return null
+            }),
         ])
+      if (boards?.degraded) degraded = true
       const routinesBySlug = new Map(
         (routines?.routines ?? []).map((routine) => [routine.slug, routine]),
       )
-      const dashboards: SidebarBoard[] = (boards ?? []).map(
+      const dashboards: SidebarBoard[] = (boards?.boards ?? []).map(
         ({ routineSlugs, ...board }) => ({
           ...board,
           ...rollUpFreshness(routineSlugs, publishDates, routinesBySlug, now),

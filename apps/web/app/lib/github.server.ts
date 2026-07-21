@@ -276,31 +276,33 @@ export interface Collaborator {
 }
 
 /**
- * Who has access to a repo — the sidebar's avatar stack. Strictly
- * best-effort: GitHub requires push access to list collaborators, so a
- * plain reader gets a 403; any failure (403, 404, outage) returns null and
- * the UI simply omits the stack. Never throws.
+ * Who has access to a repo — the sidebar's avatar stack. Best-effort by
+ * contract: GitHub requires push access to list collaborators, so a plain
+ * reader gets a 403. That, and a 404, return null — the viewer simply can't
+ * list them, a permanent answer for this token, and the UI omits the stack.
+ *
+ * Every other non-2xx (5xx, 429, a network blip surfaced by `gh`) throws
+ * instead of flattening to the same null. An omitted stack is invisible next
+ * to a real one, so a transient failure returning null would let the caller
+ * cache "nobody has access" as though it were the answer.
  */
 export async function listCollaborators(
   token: string,
   repo: string,
   limit = 6,
 ): Promise<Collaborator[] | null> {
-  try {
-    const res = await gh(
-      token,
-      `/repos/${repo}/collaborators?per_page=${limit}`,
-    )
-    if (!res.ok) return null
-    const parsed = collaboratorsSchema.safeParse(await res.json())
-    if (!parsed.success) return null
-    return parsed.data.map(({ login, avatar_url }) => ({
-      login,
-      avatarUrl: avatar_url,
-    }))
-  } catch {
-    return null
+  const res = await gh(token, `/repos/${repo}/collaborators?per_page=${limit}`)
+  if (res.status === 403 || res.status === 404) return null
+  if (!res.ok) {
+    throw new GitHubError(res.status, `${repo} collaborators → ${res.status}`)
   }
+  // A payload we can't read is not transient — re-reading won't change it.
+  const parsed = collaboratorsSchema.safeParse(await res.json())
+  if (!parsed.success) return null
+  return parsed.data.map(({ login, avatar_url }) => ({
+    login,
+    avatarUrl: avatar_url,
+  }))
 }
 
 const topicsSchema = z.object({ names: z.array(z.string()) })
