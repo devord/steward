@@ -62,8 +62,37 @@ const dailyPlanTemplate: DiscoveredTemplate = {
   sample: "<main><h1>Daily plan</h1><p>Ship the picker preview.</p></main>",
 }
 
+/** Enough discovered templates to put the picker over FILTER_THRESHOLD, so
+    the filter renders. Ids and artifact lines are distinct enough to tell a
+    one-hit query from a several-hit one. */
+const manyTemplates: DiscoveredTemplate[] = (
+  [
+    ["corza-progress", "Corza build progress, stage by stage", "repo"],
+    ["repo-intel", "Weekly strategic briefing for the repo", "repo"],
+    ["repo-stats", "PRs per person over time", "repo"],
+    ["ticket-gaps", "Tickets to create where code lags the spec", "repo"],
+    ["release-notes", "What shipped since the last tag", "builtin"],
+    ["inbox-triage", "Unanswered threads older than a day", "builtin"],
+    ["cal-week", "The week ahead: meetings and focus blocks", "builtin"],
+  ] as const
+).map(([id, artifact, source]) => ({
+  id,
+  name: id,
+  description: artifact,
+  widget: { artifact, sizes: { default: { cols: 2, rows: 2 } } },
+  source,
+}))
+
 const hasText = (text: string) =>
   document.body.textContent?.includes(text) ?? false
+
+/** Every pick row currently rendered, by id, in DOM order — custom first,
+    then the grouped templates. The id is the row's inner-most leading span
+    (the outer one wraps id + description together). */
+const rowIds = (): string[] =>
+  [...document.querySelectorAll("[data-row]")].map(
+    (row) => row.querySelector("span span")?.textContent?.trim() ?? "",
+  )
 
 const previewFrame = (): HTMLIFrameElement | null =>
   document.querySelector<HTMLIFrameElement>('iframe[title$="sample render"]')
@@ -369,6 +398,135 @@ describe("AddRoutineDialog add mode", () => {
       expect.objectContaining({ slug: "corza-pulse", name: "Corza" }),
       expect.anything(),
     )
+  })
+
+  it("offers no filter until the list is long enough to need one", async () => {
+    // Progressive disclosure: two templates fit on screen, so a search box
+    // would be chrome that earns nothing.
+    await renderDialog({ templates: [repoPulseTemplate, dailyPlanTemplate] })
+    expect(document.querySelector("#routine-template-filter")).toBeNull()
+  })
+
+  it("narrows the list to matching templates, keeping custom reachable", async () => {
+    await renderDialog({ templates: manyTemplates })
+
+    const filter = input("routine-template-filter")
+    expect(rowIds()).toHaveLength(manyTemplates.length + 1)
+
+    typeInto(filter, "repo")
+    // Matches on id (repo-intel, repo-stats) and on the artifact line
+    // (corza-progress says nothing about repos; repo-intel's does).
+    await vi.waitFor(() =>
+      expect(rowIds()).toEqual(["custom", "repo-intel", "repo-stats"]),
+    )
+    // The escape hatch never filters away — it holds the typed brief.
+    expect(hasText("Describe it yourself")).toBe(true)
+  })
+
+  it("names a query that matched nothing and points back at custom", async () => {
+    await renderDialog({ templates: manyTemplates })
+
+    typeInto(input("routine-template-filter"), "kanban")
+    await vi.waitFor(() => expect(rowIds()).toEqual(["custom"]))
+    expect(hasText("No template matches")).toBe(true)
+    expect(hasText("kanban")).toBe(true)
+  })
+
+  it("keeps the picked template visible under a query it doesn't match", async () => {
+    // A pick must not vanish behind a query typed after it, or Next is
+    // enabled with nothing visibly chosen.
+    await renderDialog({ templates: manyTemplates })
+
+    buttonContaining("cal-week").click()
+    await vi.waitFor(() =>
+      expect(buttonContaining("cal-week").getAttribute("aria-pressed")).toBe(
+        "true",
+      ),
+    )
+    typeInto(input("routine-template-filter"), "ticket")
+    await vi.waitFor(() =>
+      expect(rowIds()).toEqual(["custom", "ticket-gaps", "cal-week"]),
+    )
+    // Carried as the pick, not counted as a hit — the no-match line stays off
+    // because "ticket" really did match something.
+    expect(hasText("No template matches")).toBe(false)
+  })
+
+  it("takes the single match on Enter from the filter, and advances", async () => {
+    // The fzf move: type enough to leave one, press Enter. Two keystrokes
+    // beat scrolling a dozen rows.
+    const { onAdd } = await renderDialog({ templates: manyTemplates })
+
+    const filter = input("routine-template-filter")
+    typeInto(filter, "inbox")
+    await vi.waitFor(() => expect(rowIds()).toEqual(["custom", "inbox-triage"]))
+
+    await userEvent.click(filter)
+    await userEvent.keyboard("{Enter}")
+
+    // Picked *and* stepped forward — the name seeded from the template.
+    await vi.waitFor(() =>
+      expect(input("routine-name").value).toBe("Inbox Triage"),
+    )
+    button("Add to draft").click()
+    expect(onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ template: "inbox-triage" }),
+      expect.anything(),
+    )
+  })
+
+  it("leaves Enter alone while the filter still has several matches", async () => {
+    await renderDialog({ templates: manyTemplates })
+
+    const filter = input("routine-template-filter")
+    typeInto(filter, "repo")
+    await vi.waitFor(() => expect(rowIds()).toHaveLength(3))
+
+    await userEvent.click(filter)
+    await userEvent.keyboard("{Enter}")
+    // Still on the intent step: ambiguous input picks nothing.
+    expect(document.querySelector("#routine-name")).toBeNull()
+  })
+
+  it("walks the list from the keyboard, skipping custom on the way in", async () => {
+    // Terminal manners: the filter hands off to the templates it filters —
+    // the brief has its own field, so ArrowDown steps past custom.
+    await renderDialog({ templates: manyTemplates })
+
+    const filter = input("routine-template-filter")
+    await userEvent.click(filter)
+    await userEvent.keyboard("{ArrowDown}")
+    expect(document.activeElement?.textContent).toContain("corza-progress")
+
+    await userEvent.keyboard("{ArrowDown}")
+    expect(document.activeElement?.textContent).toContain("repo-intel")
+
+    await userEvent.keyboard("{End}")
+    expect(document.activeElement?.textContent).toContain("cal-week")
+
+    // ArrowUp off the top walks back out the way it came in.
+    await userEvent.keyboard("{Home}")
+    await userEvent.keyboard("{ArrowUp}")
+    expect(document.activeElement?.id).toBe("routine-template-filter")
+  })
+
+  it("clears the filter on Escape instead of closing the dialog", async () => {
+    // One key must not do two things: Escape empties the field first, and
+    // only closes once there's nothing left to clear.
+    await renderDialog({ templates: manyTemplates })
+
+    const filter = input("routine-template-filter")
+    typeInto(filter, "repo")
+    await vi.waitFor(() => expect(rowIds()).toHaveLength(3))
+
+    await userEvent.click(filter)
+    await userEvent.keyboard("{Escape}")
+    await vi.waitFor(() =>
+      expect(rowIds()).toHaveLength(manyTemplates.length + 1),
+    )
+    // Still open — the harness holds `open`, so a close would have reset the
+    // step, but the picker is what must survive.
+    expect(hasText("Add a routine")).toBe(true)
   })
 
   it("reveals an editable slug via Customize on a subject template (ADR-0040)", async () => {

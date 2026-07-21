@@ -109,8 +109,16 @@ function DialogFooter({
   return (
     <div
       data-slot="dialog-footer"
+      // One row that wraps, at every width — not a stacked-then-row fork.
+      // Stretching to full width was the vendored default; below `sm` it gave
+      // a 13:1 accent slab for a two-word verb, and a ghost dismiss with no
+      // boundary at all — a text label whose hover wash then spanned the whole
+      // footer, the same "full-height slab" DESIGN.md rejects for header
+      // actions. Buttons keep their content width here and wrap onto their own
+      // line only when they genuinely don't fit (three actions, a long pt-BR
+      // label, a 320px phone), which is what the stacking was really buying.
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 px-4 py-3 sm:flex-row sm:justify-end",
+        "-mx-4 -mb-4 flex flex-wrap items-center justify-end gap-2 rounded-b-xl border-t bg-muted/50 px-4 py-3",
         className,
       )}
       {...props}

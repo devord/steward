@@ -56,6 +56,73 @@ const templates: DiscoveredTemplate[] = [
     },
     source: "repo",
   },
+  // The scale case the picker has to survive: a data repo that has grown a
+  // shelf of its own templates (ADR-0015/0021). Descriptions are the real
+  // long ones — the picker must not decide the pick by truncating them.
+  ...(
+    [
+      [
+        "corza-progress",
+        "Corza build progress — next-milestone readiness, stage, and per-team burndown",
+        "repo",
+      ],
+      [
+        "repo-intel",
+        "Weekly strategic briefing — headlines, deep dives, and what to watch next week",
+        "repo",
+      ],
+      [
+        "repo-stats",
+        "PRs per person over time — merged + open, scrubbable day by day",
+        "repo",
+      ],
+      [
+        "ticket-gaps",
+        "Tickets to create where the shipped code lags the knowledge-base spec",
+        "repo",
+      ],
+      [
+        "release-notes",
+        "What shipped since the last tag, grouped by surface and written for humans",
+        "repo",
+      ],
+      [
+        "oncall-digest",
+        "Overnight alerts, their blast radius, and which are still unacknowledged",
+        "repo",
+      ],
+      [
+        "inbox-triage",
+        "Unanswered threads older than a day, by sender",
+        "builtin",
+      ],
+      [
+        "cal-week",
+        "The week ahead: meetings, focus blocks, and the gaps",
+        "builtin",
+      ],
+      [
+        "spend-watch",
+        "Cloud spend against budget, by service and trend",
+        "builtin",
+      ],
+      [
+        "reading-queue",
+        "Saved links you haven't opened, oldest first",
+        "builtin",
+      ],
+    ] as const
+  ).map(([id, artifact, source]) => ({
+    id,
+    name: id,
+    description: artifact,
+    widget: {
+      artifact,
+      sizes: { default: { cols: 2, rows: 2 }, min: { cols: 1, rows: 1 } },
+      schedule: "0 8 * * *",
+    },
+    source,
+  })),
 ]
 
 const editable: Routine = {

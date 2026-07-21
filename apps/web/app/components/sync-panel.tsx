@@ -316,9 +316,14 @@ export function SyncPanel({
           </div>
         )}
 
+        {/* The widest footer in the app — a checkbox plus two verbs, and
+            pt-BR spells them out ("Descartar rascunho" / "Commit na main").
+            gap-3 because the checkbox needs more air from the buttons than
+            they need from each other; the footer's own wrap handles the
+            320px case by dropping each verb onto its own line. */}
         {!synced && (
-          <DialogFooter className="flex-col gap-3 sm:flex-row sm:items-center">
-            <Label className="flex shrink-0 items-center gap-2 text-sm font-normal whitespace-nowrap text-muted-foreground sm:mr-auto">
+          <DialogFooter className="gap-3">
+            <Label className="mr-auto flex shrink-0 items-center gap-2 text-sm font-normal whitespace-nowrap text-muted-foreground">
               <Checkbox
                 checked={asPr}
                 onCheckedChange={(checked) => setAsPr(checked === true)}

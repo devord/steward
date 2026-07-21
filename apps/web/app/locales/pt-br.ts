@@ -416,6 +416,9 @@ export const ptBR: Messages = {
   "dialog.customCard": "Descreva você mesmo — sua descrição é o brief",
   "dialog.sourceRepo": "Deste repo",
   "dialog.sourceBuiltin": "Nativo",
+  "dialog.filterTemplates": "Filtrar templates",
+  "dialog.templateNoMatch":
+    "Nenhum template corresponde a “{query}” — descreva você mesmo acima",
   "dialog.samplePreview":
     "Exemplo de renderização — os dados da sua rotina serão outros",
   "dialog.samplePreviewTitle": "Exemplo de renderização de {name}",

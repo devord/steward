@@ -426,6 +426,9 @@ export const en = {
   "dialog.customCard": "Describe it yourself — your description is the brief",
   "dialog.sourceRepo": "This repo",
   "dialog.sourceBuiltin": "Built-in",
+  "dialog.filterTemplates": "Filter templates",
+  "dialog.templateNoMatch":
+    "No template matches “{query}” — describe it yourself above",
   "dialog.samplePreview": "Sample render — your routine's data will differ",
   "dialog.samplePreviewTitle": "{name} sample render",
   "dialog.name": "Name",
