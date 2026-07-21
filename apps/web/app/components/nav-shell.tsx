@@ -189,15 +189,16 @@ export function NavShell({
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* h-11 + border-b, the same box as the rail's brand row → continuous
-            top hairline across the two columns. z-30 clears a lifted card
+        {/* h-11 + border-b, the same box *and* the same border tier as the
+            rail's brand row → continuous top hairline across the two columns;
+            the default `border` tier would step darker mid-line. z-30 clears a lifted card
             (drag z-20) so a widget dragged up to the top can't cover it. */}
         {/* Below lg the row relaxes to h-12: the brand lockup steps up to
             text-base there (the wordmark must not read smaller than the 16px
             widget titles it sits above) and touch targets take their coarse
             floors, so the desktop-slim 44px row would crowd. On lg it stays
             the same h-11 box as the rail's brand row → unbroken hairline. */}
-        <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center border-b bg-background lg:h-11">
+        <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center border-b border-border-dim bg-background lg:h-11">
           <div
             className={cn(
               "mx-auto flex h-full w-full items-center gap-1.5 px-4 sm:px-6",
