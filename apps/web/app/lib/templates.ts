@@ -1,9 +1,11 @@
 import type { RoutineTemplate } from "@steward/schema"
 
-/** Where a discovered routine template was read from — its picker badge
-    (ADR-0021/0023). `builtin` = the product repo's `templates/routines/`,
-    shipped in the app bundle and available on every board; `repo` = the
-    board's own data repo, scoped to that repo's boards. */
+/** Where a discovered routine template was read from — the picker groups its
+    rows under this (ADR-0021/0023), data repo first, so the source is said
+    once per group rather than badged onto every row. `builtin` = the product
+    repo's `templates/routines/`, shipped in the app bundle and available on
+    every board; `repo` = the board's own data repo, scoped to that repo's
+    boards. */
 export type TemplateSource = "builtin" | "repo"
 
 /** A routine template as the add-routine picker renders it. */

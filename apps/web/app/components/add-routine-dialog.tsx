@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import type { ReactNode } from "react"
+import type { KeyboardEvent, ReactNode } from "react"
 
 import type {
   Routine,
@@ -8,19 +8,10 @@ import type {
   WidgetSize,
 } from "@steward/schema"
 import { repoRefSchema, slugSchema, templateKind } from "@steward/schema"
-import {
-  Activity,
-  CheckIcon,
-  ChevronRightIcon,
-  LayoutGrid,
-  ListChecks,
-  PenLine,
-} from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { CheckIcon, ChevronRightIcon, SearchIcon } from "lucide-react"
 
 import { cn } from "~/lib/utils"
 
-import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import {
   Dialog,
@@ -62,17 +53,18 @@ const CUSTOM = "custom"
     `widget:` block, so discovery never offers it. */
 const CUSTOM_TEMPLATE = "custom"
 
-/** Per-template glyphs for the picker's leading anchor. Known built-ins get
-    a specific mark; a discovered (repo/team) template falls back to the
-    generic widget glyph. The icon is decoration for the id, never the pick
-    target — chrome stays quiet, accent only when selected. */
-const TEMPLATE_ICONS: Record<string, LucideIcon> = {
-  custom: PenLine,
-  "daily-plan": ListChecks,
-  "repo-pulse": Activity,
-}
-const templateIcon = (id: string): LucideIcon =>
-  TEMPLATE_ICONS[id] ?? LayoutGrid
+/**
+ * Above this many discovered templates the picker grows a filter field. Below
+ * it the whole list is on screen at once and a search box is chrome that earns
+ * nothing (product register: progressive disclosure over permanent furniture).
+ */
+const FILTER_THRESHOLD = 6
+
+/** Marks a pick row for the list's arrow-key navigation. `custom` carries
+    `data-row="custom"` so ArrowDown from the filter can skip it — the filter
+    browses templates; the brief has its own field. */
+const ROW_SELECTOR = "[data-row]"
+const TEMPLATE_ROW_SELECTOR = "[data-row='template']"
 
 type Step = "intent" | "config"
 
@@ -234,6 +226,9 @@ export function AddRoutineDialog({
   const [step, setStep] = useState<Step>("intent")
   const [instructions, setInstructions] = useState("")
   const [templateId, setTemplateId] = useState<string | null>(null)
+  // Narrows the template list (ADR-0015 discovery can surface dozens across
+  // source repos). Not part of the draft — a filter is a view, not an answer.
+  const [query, setQuery] = useState("")
   const [name, setName] = useState("")
   const [nameEdited, setNameEdited] = useState(false)
   // The slug is derived (see `derivedSlug`), not stored — `slugOverride` holds
@@ -257,6 +252,56 @@ export function AddRoutineDialog({
     () => templates.find((entry) => entry.id === templateId) ?? null,
     [templates, templateId],
   )
+
+  // The filter matches the three strings a picker row shows or implies: the
+  // id you'd type from memory, the human name, and the artifact line.
+  const matched = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (q.length === 0) return templates
+    return templates.filter(
+      (entry) =>
+        entry.id.toLowerCase().includes(q) ||
+        entry.name.toLowerCase().includes(q) ||
+        entry.widget.artifact.toLowerCase().includes(q),
+    )
+  }, [templates, query])
+
+  // The *selected* template stays on screen whether or not it matches — a
+  // pick must never vanish behind a query typed after it, leaving Next
+  // enabled with nothing visibly chosen. It rides along as the pick, though,
+  // not as a hit: the no-match line and the one-hit Enter shortcut both read
+  // `matched`, so neither is fooled by a query that found nothing.
+  const visibleTemplates = useMemo(() => {
+    const picked = templates.find(
+      (entry) => entry.id === templateId && !matched.includes(entry),
+    )
+    return picked ? [...matched, picked] : matched
+  }, [templates, matched, templateId])
+
+  // Grouped by source instead of badged per row: with a dozen templates the
+  // repeated "This repo"/"Built-in" pills were louder than the ids they sat
+  // beside. The repo's own templates lead — the board's local vocabulary
+  // before the shipped one (ADR-0021 shadowing has the same precedence).
+  const groups = useMemo(
+    () =>
+      (
+        [
+          { key: "repo", label: t("dialog.sourceRepo") },
+          { key: "builtin", label: t("dialog.sourceBuiltin") },
+        ] as const
+      )
+        .map((group) => ({
+          ...group,
+          entries: visibleTemplates.filter(
+            (entry) => entry.source === group.key,
+          ),
+        }))
+        .filter((group) => group.entries.length > 0),
+    [visibleTemplates, t],
+  )
+
+  const showFilter = templates.length > FILTER_THRESHOLD
+  const noMatch = query.trim().length > 0 && matched.length === 0
   /** The picked template's declared inputs (ADR-0020); [] when prompt-only or
       the template isn't currently discoverable. */
   const declaredParams = template?.widget.params ?? []
@@ -391,6 +436,7 @@ export function AddRoutineDialog({
     setStep("intent")
     setInstructions("")
     setTemplateId(null)
+    setQuery("")
     setName("")
     setNameEdited(false)
     setSlugEdited(false)
@@ -465,6 +511,66 @@ export function AddRoutineDialog({
 
   function setParam(key: string, value: ParamValue) {
     setParams((current) => ({ ...current, [key]: value }))
+  }
+
+  // Terminal manners: the picker is a list you drive from the keyboard, not a
+  // tab-stop-per-item stack. Focus *is* the active row (no parallel "active"
+  // state to drift out of sync with it), so Enter/Space pick natively and
+  // screen readers announce the row they land on.
+  const listRef = useRef<HTMLDivElement>(null)
+  const filterRef = useRef<HTMLInputElement>(null)
+
+  const rowsIn = (selector: string): HTMLButtonElement[] => [
+    ...(listRef.current?.querySelectorAll<HTMLButtonElement>(selector) ?? []),
+  ]
+
+  function onListKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const target = event.target
+    // The custom row nests a textarea: arrows there move the caret through
+    // the brief, they don't leave the field.
+    if (!(target instanceof HTMLElement)) return
+    if (target instanceof HTMLTextAreaElement) return
+    const keys = ["ArrowDown", "ArrowUp", "Home", "End"]
+    if (!keys.includes(event.key)) return
+    const rows = rowsIn(ROW_SELECTOR)
+    if (rows.length === 0) return
+    event.preventDefault()
+    if (event.key === "Home") return rows[0]?.focus()
+    if (event.key === "End") return rows.at(-1)?.focus()
+    // -1 (focus was on the list box itself, not a row) lands on the first row
+    // for ArrowDown and walks back out to the filter for ArrowUp.
+    const current = target.closest(ROW_SELECTOR)
+    const index = rows.findIndex((row) => row === current)
+    const next = index + (event.key === "ArrowDown" ? 1 : -1)
+    // Above the first row is the filter, not a wrap to the bottom — the list
+    // reads top-to-bottom, so ArrowUp walks out of it the way it came in.
+    if (next < 0) return filterRef.current?.focus()
+    rows[Math.min(next, rows.length - 1)]?.focus()
+  }
+
+  function onFilterKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault()
+      // Into the templates, skipping the custom row: you're in the filter
+      // because you're browsing, and the brief has its own field below.
+      rowsIn(TEMPLATE_ROW_SELECTOR)[0]?.focus()
+      return
+    }
+    if (event.key === "Enter" && matched.length === 1) {
+      // Narrowed to one — take it. The fzf move: type enough, press Enter.
+      event.preventDefault()
+      const only = matched[0]
+      if (only && only.id !== templateId) pickTemplate(only)
+      setStep("config")
+      return
+    }
+    if (event.key === "Escape" && query.length > 0) {
+      // Clear the filter; the dialog's own Escape only applies once the
+      // field is empty, so one key never does two things at once.
+      event.preventDefault()
+      event.stopPropagation()
+      setQuery("")
+    }
   }
 
   function paramMissing(param: WidgetParam): boolean {
@@ -688,21 +794,56 @@ export function AddRoutineDialog({
           >
             {step === "intent" ? (
               // Template is the step's one question (ADR-0022): the custom
-              // card leads, selected by default with the prompt nested inside
+              // row leads, selected by default with the prompt nested inside
               // it, so opening the dialog and typing stays the on-ramp.
               <div className="grid gap-2">
-                <Label>{t("dialog.template")}</Label>
-                <div className="grid gap-1.5">
-                  <TemplateCard
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                  <Label id="routine-template-label">
+                    {t("dialog.template")}
+                  </Label>
+                  {showFilter && (
+                    <div className="relative w-full sm:w-56">
+                      <SearchIcon
+                        aria-hidden
+                        className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+                      />
+                      <Input
+                        ref={filterRef}
+                        id="routine-template-filter"
+                        type="search"
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        onKeyDown={onFilterKeyDown}
+                        placeholder={t("dialog.filterTemplates")}
+                        aria-label={t("dialog.filterTemplates")}
+                        aria-controls="routine-template-list"
+                        // pl-8 clears the glyph; the native search decorations
+                        // are suppressed in app.css — the field is ours.
+                        className="pl-8"
+                      />
+                    </div>
+                  )}
+                </div>
+                {/* A list, not a stack of cards: rows sit flush and only the
+                    picked one draws a border, so a dozen templates read as one
+                    column of ids rather than a dozen boxes. */}
+                <div
+                  ref={listRef}
+                  id="routine-template-list"
+                  role="group"
+                  aria-labelledby="routine-template-label"
+                  onKeyDown={onListKeyDown}
+                  className="grid"
+                >
+                  <TemplateRow
+                    kind="custom"
                     id={CUSTOM_TEMPLATE}
-                    icon={PenLine}
-                    badge={t("dialog.sourceBuiltin")}
                     description={t("dialog.customCard")}
                     selected={isCustom}
                     onPick={() => setTemplateId(null)}
                   >
                     {isCustom && (
-                      // Seamless writing area, not a boxed input: the card's
+                      // Seamless writing area, not a boxed input: the row's
                       // own border frames the brief, so the field carries no
                       // border/fill/ring of its own (that nesting read as a
                       // box-in-a-box). The hairline above sets it apart; the
@@ -718,41 +859,71 @@ export function AddRoutineDialog({
                           setInstructions(event.target.value)
                         }
                         placeholder={t("dialog.promptPlaceholder")}
-                        rows={3}
+                        // Two rows, grown by `field-sizing-content` as the
+                        // brief gets longer. A fixed three-row box pushed the
+                        // first template below the fold on open — the list has
+                        // to be visible for the picker to read as a picker.
+                        rows={2}
                         // text-base below md, like the input/textarea
                         // primitives: iOS Safari auto-zooms any focused field
                         // under 16px, and the zoom wrecks the dialog.
-                        className="field-sizing-content min-h-[4.5rem] w-full resize-none bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
+                        className="field-sizing-content min-h-[2.5rem] w-full resize-none bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
                       />
                     )}
-                  </TemplateCard>
-                  {templates.map((entry) => (
-                    <TemplateCard
-                      key={entry.id}
-                      id={entry.id}
-                      icon={templateIcon(entry.id)}
-                      badge={t(
-                        entry.source === "repo"
-                          ? "dialog.sourceRepo"
-                          : "dialog.sourceBuiltin",
-                      )}
-                      description={entry.widget.artifact}
-                      selected={entry.id === templateId}
-                      onPick={() => pickTemplate(entry)}
+                  </TemplateRow>
+                  {groups.map((group) => (
+                    // A real labelled group, not a caption floating above
+                    // rows: the source is what the badge used to say per row,
+                    // so AT has to hear it on the way in or it's simply gone.
+                    <div
+                      key={group.key}
+                      role="group"
+                      aria-labelledby={`routine-template-group-${group.key}`}
                     >
-                      {/* Selecting a card reveals its sample render — see what
-                          the template makes before committing a routine to it
-                          (ADR-0037). Nested like the custom card's prompt, so
-                          only the picked card renders (one iframe at a time)
-                          and a template with no sample just has no panel. */}
-                      {entry.id === templateId && entry.sample != null && (
-                        <TemplatePreview
-                          html={entry.sample}
-                          name={entry.name}
-                        />
-                      )}
-                    </TemplateCard>
+                      {/* The rail's landmark caption tier (11px tracked caps):
+                          says the source once per group instead of pinning a
+                          badge to every row. */}
+                      <div
+                        id={`routine-template-group-${group.key}`}
+                        className="mt-3 mb-1 px-2.5 text-[11px] font-semibold tracking-wider text-ink-dim uppercase"
+                      >
+                        {group.label}
+                      </div>
+                      {group.entries.map((entry) => (
+                        <TemplateRow
+                          key={entry.id}
+                          kind="template"
+                          id={entry.id}
+                          description={entry.widget.artifact}
+                          selected={entry.id === templateId}
+                          onPick={() => pickTemplate(entry)}
+                        >
+                          {/* Selecting a row reveals its sample render — see
+                              what the template makes before committing a
+                              routine to it (ADR-0037). Nested like the custom
+                              row's prompt, so only the picked one renders (one
+                              iframe at a time) and a template with no sample
+                              just has no panel. */}
+                          {entry.id === templateId && entry.sample != null && (
+                            <TemplatePreview
+                              html={entry.sample}
+                              name={entry.name}
+                            />
+                          )}
+                        </TemplateRow>
+                      ))}
+                    </div>
                   ))}
+                  {noMatch && (
+                    // States the fact and the next action in one line — and
+                    // the next action is the row still sitting right above it.
+                    <p
+                      role="status"
+                      className="mt-3 px-2.5 text-xs text-muted-foreground"
+                    >
+                      {t("dialog.templateNoMatch", { query: query.trim() })}
+                    </p>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1092,15 +1263,16 @@ export function AddRoutineDialog({
           </div>
         </div>
 
-        {/* flex-col (not the footer's default col-reverse): the dots read
-            as progress above the actions; reversed they landed below the
-            last button, orphaned at the sheet's bottom edge. */}
-        <DialogFooter className="flex-col sm:flex-row">
+        <DialogFooter>
           {/* Edit mode hides the dots — a prefilled form isn't step 2 of a
               journey the editor never took. */}
           {!isEdit && (
+            // mr-auto at every width now that the footer is one wrapping row:
+            // progress on the left, actions on the right, phone and desktop
+            // alike. The old stacked layout had to hoist the dots above the
+            // buttons or they were orphaned against the sheet's bottom edge.
             <div
-              className="flex items-center gap-1 self-center sm:mr-auto"
+              className="mr-auto flex items-center gap-1"
               aria-label={t("dialog.stepLabel", { n: stepIndex })}
             >
               <span className="sr-only">
@@ -1118,7 +1290,9 @@ export function AddRoutineDialog({
               ))}
             </div>
           )}
-          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          {/* Wraps too, so the pair drops to its own line together instead of
+              the second button overflowing the footer's left edge. */}
+          <div className="flex flex-wrap justify-end gap-2">
             {step === "intent" ? (
               <>
                 <Button
@@ -1152,91 +1326,101 @@ export function AddRoutineDialog({
 }
 
 /**
- * One template card in the intent step: mono id + source badge + the
- * artifact line — the pick is about what the widget shows. Size, schedule,
- * and params surface where they act (the grid and the configure step),
- * never as pre-pick metadata. The `custom` built-in renders through the
- * same card, synthesized by the wizard (it has no `widget:` block to
- * discover) — its prompt nests inside the card as `children`, under a
- * hairline, so the card's one border owns both and the field never reads
- * as a sibling list item.
+ * One pick row in the intent step: mono id over the artifact line — the pick
+ * is about what the widget shows. Size, schedule, and params surface where
+ * they act (the grid and the configure step), never as pre-pick metadata.
+ *
+ * A row, not a card. A dozen bordered boxes read as a wall and cost a border
+ * plus padding each; here rows sit flush in one column and **only the picked
+ * one draws a border**, so the mono ids share a left edge you can scan like a
+ * file list. The source badge moved to the group caption above (it repeated
+ * verbatim on every row), and the per-template glyph went with it — the
+ * discovered majority all fell back to the same generic mark, so the column of
+ * identical icons was noise standing between the eye and the id.
+ *
+ * The `custom` built-in renders through this same row, synthesized by the
+ * wizard (it has no `widget:` block to discover) — its prompt nests as
+ * `children`, under a hairline, so the row's one border owns both and the
+ * field never reads as a sibling list item.
  */
-function TemplateCard({
+function TemplateRow({
+  kind,
   id,
-  icon: Icon,
-  badge,
   description,
   selected,
   onPick,
   children,
 }: {
+  /** `custom` is the escape hatch, not a discovered template: it leads the
+      list ungrouped, and the filter's ArrowDown skips past it. */
+  kind: "custom" | "template"
   id: string
-  /** Leading glyph — the row's fixed left anchor (see TEMPLATE_ICONS). */
-  icon: LucideIcon
-  /** Translated source label (Built-in / Team / Private). */
-  badge: string
   description: string
   selected: boolean
   onPick: () => void
-  /** Rendered inside the card below a hairline — the custom card's prompt. */
+  /** Rendered inside the row below a hairline — the prompt, or the sample. */
   children?: ReactNode
 }) {
   return (
     <div
       className={cn(
-        "rounded-lg border text-sm transition-colors",
+        // border-transparent, not border-0: the picked row's border must not
+        // shift its neighbours by a pixel when it appears.
+        "rounded-lg border border-transparent text-sm transition-colors",
         // Selection is a translucent accent wash under unchanged ink (the
         // DESIGN.md idiom, same family as the app's menu/nav highlights) —
         // theme-symmetric where a solid bg-muted fill wasn't: on the light
         // ramp bg2 sits two steps below the dialog surface and read as a
         // heavy dark block, while on dark it was a whisper. Hover lives on
         // the container: with nothing nested the header button fills it.
-        selected
-          ? "border-primary bg-primary/10"
-          : "border-border hover:bg-primary/5",
+        selected ? "border-primary bg-primary/10" : "hover:bg-primary/5",
       )}
     >
       <button
         type="button"
+        data-row={kind}
         aria-pressed={selected}
         onClick={onPick}
-        className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex w-full cursor-pointer items-start gap-3 rounded-lg px-2.5 py-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <Icon
-          aria-hidden
-          className={cn(
-            // size-5: the glyph anchors a two-line row — at size-4 it read
-            // as a stray bullet, not the row's left edge.
-            "size-5 shrink-0 transition-colors",
-            selected ? "text-primary" : "text-muted-foreground",
-          )}
-        />
-        {/* min-w-0 lets the one-line description truncate instead of pushing
-            the check off — every row stays the same height. */}
+        {/* min-w-0 keeps a long id truncating instead of pushing the check
+            off the row. */}
         <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
-            <span className="font-mono text-xs text-primary">{id}</span>
-            <Badge
-              variant="secondary"
-              className="h-[18px] px-1.5 font-mono text-xs text-ink-dim"
-            >
-              {badge}
-            </Badge>
+          {/* Body size (15px), not the 13px metadata floor: in a list you
+              scan, the id is the row's label, and the size step is what
+              separates it from the description under it.
+
+              Ink, not accent, until picked. Every id was accent when this was
+              a stack of three cards; at a dozen rows that made the accent the
+              list's background colour and left selection with nothing of its
+              own to say. Restrained means the accent marks the pick. */}
+          <span
+            className={cn(
+              "block truncate font-mono text-sm transition-colors",
+              selected ? "text-primary" : "text-foreground",
+            )}
+          >
+            {id}
           </span>
-          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-            {description}
+          {/* Two lines, not one truncated: the artifact line is the whole
+              basis for the pick, and "…readiness, stage, and per…" withheld
+              exactly the part being decided on. */}
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            <span className="line-clamp-2">{description}</span>
           </span>
         </span>
         <CheckIcon
           aria-hidden
           className={cn(
-            "size-4 shrink-0 text-primary transition-opacity duration-100",
+            // mt-1 optically centres the check on the id line, not on the
+            // two-line block — it belongs to the name it confirms.
+            "mt-1 size-4 shrink-0 text-primary transition-opacity duration-100",
             selected ? "opacity-100" : "opacity-0",
           )}
         />
       </button>
       {children && (
-        <div className="border-t border-border-dim px-3 pt-2.5 pb-3">
+        <div className="border-t border-border-dim px-2.5 pt-2.5 pb-2.5">
           {children}
         </div>
       )}
@@ -1258,8 +1442,16 @@ function TemplatePreview({ html, name }: { html: string; name: string }) {
     () => frameArtifactHtml(html, theme, "tile", ARTIFACT_FONT_STYLE),
     [html, theme],
   )
+  // Picking a row near the bottom of a long list opens the preview below the
+  // fold — the reveal would be invisible, which is the whole point of it.
+  // `nearest` only scrolls when it has to, and instantly: this is the list
+  // catching up with the pick, not an animation the user waits through.
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => {
+    ref.current?.scrollIntoView({ block: "nearest" })
+  }, [])
   return (
-    <figure className="grid gap-1.5">
+    <figure ref={ref} className="grid gap-1.5">
       <div className="overflow-hidden rounded-md border border-border-dim">
         {/* Never `loading="lazy"` on a srcdoc iframe: Chromium defers it even
             in-viewport, leaving the preview blank until a scroll. */}

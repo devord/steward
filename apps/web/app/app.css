@@ -172,6 +172,16 @@
     padding-right: env(safe-area-inset-right);
   }
 
+  /* `type="search"` for the semantics, not for WebKit's cancel button:
+     it is browser chrome we can't theme, so it lands as a gray glyph the
+     palettes don't own. Clearing a filter is Escape, or select-and-delete
+     like any other field. */
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
   /* Terminal-style selection: a translucent accent wash under unchanged
      ink. A solid accent fill with inverted text dropped selected text
      below AA on the light palettes; the wash keeps body contrast intact
