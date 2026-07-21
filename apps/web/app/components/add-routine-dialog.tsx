@@ -164,6 +164,7 @@ const CONNECTOR_CATALOG: readonly string[] = [
   "Slack",
   "Linear",
   "Notion",
+  "Figma",
 ]
 
 /**
