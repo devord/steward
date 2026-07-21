@@ -66,6 +66,30 @@ ink roles while a tint wash, dot, or sign carries the tone (several light
 palettes have no AA-clearing yellow/green for small text). Chrome code uses
 tokens only; a literal hex breaks every non-default theme.
 
+## Shape
+
+Radius signals elevation, so only things that float carry it: dialogs,
+popovers, menus, pills, and controls keep `--radius` (8px, and its `sm`/`md`
+steps). **The widget frame is square.** A board cell has no fill — the
+artifact is repainted flush to the board and the border is the cell's only
+frame — so that hairline is a _pane_ edge in the tmux/lazygit sense, not a
+card outline, and a radius there would round nothing (the artifact inside is
+a flat rectangle). Square also lets the cells resolve into the board's
+implied grid instead of each floating alone. Everything that stands in the
+same slot follows: the loading skeleton, the drag-and-drop placeholder
+(`app.css`), and the empty-board well; a rounded stand-in under a square
+tile flickers shape mid-load.
+
+Chrome that floats over an artifact shares the artifact's edge, not its own.
+The tile's shell padding is `12px 14px` (widget-standard), so the widget-card
+title bar takes a 14px inline inset: the routine name sits on the same left
+edge as the artifact's first line, and the freshness readout on the same
+right edge as its content. That shared edge is what makes a frameless
+heading and a flush body read as one block — with no divider between them,
+there is nothing to excuse a different inset. Where a header is a real
+filled bar instead (the lightbox, the edit-mode drag handle), it is its own
+surface and sets its own inset.
+
 ## Typography
 
 - Sans: Geist Variable (bundled via fontsource), for UI copy.

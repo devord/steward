@@ -1544,8 +1544,10 @@ function FileLine({ text, file }: { text: string; file: string }) {
 
 function EmptyDashboard({ onAdd }: { onAdd: () => void }) {
   const t = useT()
+  // Square, like the tiles that will replace it — this well stands exactly
+  // where the widgets go, so it speaks the board's pane language.
   return (
-    <main className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-24 text-center">
+    <main className="flex flex-col items-center gap-2 border border-dashed py-24 text-center">
       <p className="font-mono text-sm text-ink-dim">{t("empty.fact")}</p>
       <p className="max-w-lg text-balance text-sm text-muted-foreground">
         {t("empty.hint")}

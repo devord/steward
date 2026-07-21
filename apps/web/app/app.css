@@ -364,7 +364,8 @@
     background: var(--color-primary);
     opacity: 0.12;
     border: 1px dashed var(--color-primary);
-    border-radius: var(--radius-lg);
+    /* Square, like the card that will land in it (widget-card) — a rounded
+       well under a square tile shows its corners through the drop. */
   }
 
   /* The card being moved/resized floats above its neighbors. */

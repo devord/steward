@@ -229,7 +229,16 @@ export function WidgetCard({
           // so the header's z-20 leaks to the root and — tying the app header's
           // own z-20 but later in the DOM — paints over the sticky page header
           // when a tall card scrolls up under it.
-          "group relative isolate flex size-full flex-col overflow-hidden rounded-lg border",
+          // Square, not rounded. The border here isn't wrapping an elevated
+          // card — there's no fill to soften and the artifact inside is a flush
+          // rectangle — so it reads as a *pane* edge, the tmux/lazygit frame
+          // DESIGN.md asks for, not the SaaS card outline a radius implies
+          // ("rounded-everything" is a named anti-reference). Square corners
+          // also let the cells resolve into the board's implied grid instead of
+          // each floating on its own. The skeleton, the drop placeholder
+          // (app.css) and the empty-board well match, or the frame flickers
+          // shape mid-load.
+          "group relative isolate flex size-full flex-col overflow-hidden border",
           // The widget reads as a section of the page, not an elevated card:
           // the artifact is repainted flush to the board (TILE_FLUSH_STYLE) and
           // the title/freshness float frameless over it (see the view header),
@@ -331,8 +340,20 @@ export function WidgetCard({
              owns the top of the cell — a full step above the 13px freshness
              beside it, which stays quiet in ink-dim. Whitespace and that
              weight/size jump are the block's separation; there is no divider.
-             State reads as pills, not prose (ADR-0009). */
-          <header className="flex min-h-8 items-center gap-2 py-1.5 pr-2.5 pl-2.5">
+             State reads as pills, not prose (ADR-0009).
+
+             The 14px inline inset is not a chrome-local choice: it is the
+             artifact's own tile body padding (`12px 14px`, widget-standard §
+             shell), so the name shares one left edge with the artifact's first
+             line and the freshness readout shares the right edge with its
+             content. A frameless heading floating over flush content has no
+             divider to excuse a different inset — the shared edge *is* what
+             makes the two read as one block. Fix it here rather than by
+             flattening the artifact's padding: that padding is a published
+             contract every artifact (and the raw page) already ships with, and
+             zeroing it would only move the misalignment, gluing content to the
+             hover border. */
+          <header className="flex min-h-8 items-center gap-2 px-3.5 py-1.5">
             <span className="min-w-0 truncate font-mono text-base font-semibold text-foreground">
               {routine.name}
             </span>
