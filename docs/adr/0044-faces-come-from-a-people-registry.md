@@ -24,14 +24,21 @@ in a git repo, `login → { name, src }`, where `src` is a 48px `data:` URI read
 to inline. Reading it is a file read from a repo the run already mounts as a
 source — no network, so it cannot fail by host.
 
-The reference producer is `Form-Factory/certifications`, which already curates
-what this needs and curates it better than GitHub does: a roster with a
-`github:` login per person, a Slack-sourced photo, and a real display name.
-`Daniel Moraes`, never the handle `danielmoraes` — and never the default
+The reference producer is `Form-Factory/people`, a repo whose only job is the
+roster: a `github:` login per person, a Slack-sourced photo, a real display
+name. `Daniel Moraes`, never the handle `danielmoraes` — and never the default
 identicon GitHub serves for someone who never uploaded one. It builds the 48px
 map as a committed, CI-drift-checked artifact (`data/avatars-48.json`, 38
 people in 53KB) precisely so consumers read one small file instead of
 downscaling 4.8MB photos at run time.
+
+**A registry is a repo that exists to be a registry.** The roster was first
+curated inside `Form-Factory/certifications`, for that app's own people pages,
+and reading it there would have worked. It was still wrong: it makes a
+certifications app the org's identity source, so every consumer that wants a
+face inherits a dependency on a product it has nothing to do with, and that
+app's data model becomes a public contract by accident. A registry other tools
+join against is its own concern and gets its own repo.
 
 **The templates stay generic.** `people` is an optional param naming
 `owner/repo:path`, not a hard-wired repo: the built-in templates ship to every
