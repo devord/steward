@@ -85,12 +85,74 @@ describe("TemplatesSection", () => {
   it("cross-references the routines using each template; unused is named", async () => {
     await renderSection()
     const text = document.body.textContent ?? ""
-    // daily-plan is used twice, repo-pulse once…
-    for (const slug of ["morning", "standup", "pulse"]) {
-      expect(text).toContain(slug)
-    }
-    // …and team-okrs by nothing — the ledger's orphan twin.
+    // A single user renders in the cell; repo-pulse's only routine is `pulse`.
+    expect(text).toContain("pulse")
+    // …and team-okrs is used by nothing — the ledger's orphan twin.
     expect(text).toContain("unused")
+  })
+
+  it("collapses a multi-routine cell to the first slug plus a counted rest", async () => {
+    // daily-plan is used by `morning` and `standup`: the cell shows the first
+    // and defers the rest to the popover, so the row stays one line wide.
+    await renderSection()
+    const text = document.body.textContent ?? ""
+    expect(text).toContain("morning")
+    expect(text).not.toContain("standup")
+    expect(
+      document.querySelector('button[aria-label="Show all 2 routines"]'),
+    ).not.toBeNull()
+  })
+
+  it("opens the whole list of using routines from the counted rest", async () => {
+    await renderSection()
+    document
+      .querySelector<HTMLButtonElement>(
+        'button[aria-label="Show all 2 routines"]',
+      )
+      ?.click()
+    await vi.waitFor(() => {
+      const links = [...document.querySelectorAll("a")].filter(
+        (a) => a.getAttribute("href")?.startsWith("#routine-") === true,
+      )
+      // Every user is named in the popover, the first one included.
+      expect(links.map((a) => a.getAttribute("href"))).toEqual(
+        expect.arrayContaining(["#routine-morning", "#routine-standup"]),
+      )
+    })
+  })
+
+  it("keeps a long-slug used-by cell off the row actions, on one line", async () => {
+    // The bug this collapse exists for: slugs never break mid-word, so a
+    // wrapping list both stacked the row and spilled a long name over the
+    // action button beside it.
+    await renderSection({
+      templates: [dailyPlan],
+      routines: routines.slice(0, 2).map((entry, i) => ({
+        ...entry,
+        slug: i === 0 ? "turtle-beach-hydrogen-stats" : "corza-repo-stats",
+      })),
+    })
+    const row = document.querySelector("tbody tr")
+    const cells = [...(row?.querySelectorAll("td") ?? [])]
+    const action = cells.at(-1)?.querySelector("button")
+    const head = cells
+      .at(-2)
+      ?.querySelector<HTMLElement>('[data-slot="cross-ref-head"]')
+    if (row == null || action == null || head == null) {
+      throw new Error("used-by cell or row action missing")
+    }
+    // The slug outgrows its box (it can't break mid-word) — the point is that
+    // the box clips it instead of letting it paint over the row actions, which
+    // a wrapping list, being `overflow: visible`, did.
+    expect(head.scrollWidth).toBeGreaterThan(head.clientWidth)
+    expect(getComputedStyle(head).overflowX).toBe("hidden")
+    expect(head.getBoundingClientRect().right).toBeLessThanOrEqual(
+      action.getBoundingClientRect().left,
+    )
+    // Clipped, so the full slug has to stay recoverable.
+    expect(head.title).toBe("turtle-beach-hydrogen-stats")
+    // And the row is one line, not one line per routine.
+    expect(row.getBoundingClientRect().height).toBeLessThan(48)
   })
 
   it("starts a new routine from the row's template", async () => {

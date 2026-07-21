@@ -159,6 +159,26 @@ describe("RoutinesTable", () => {
     expect(document.body.textContent).toContain("orphan")
   })
 
+  it("collapses a multi-board cell to the first board plus a counted rest", async () => {
+    // A routine on both boards: the cell names the first and defers the rest
+    // to a popover, so the column can't outgrow its one-line box.
+    await renderTable({
+      boardsByRoutine: { "daily-plan": ["main", "ops"] },
+    })
+    const trigger = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Show all 2 boards"]',
+    )
+    expect(trigger).not.toBeNull()
+    expect(document.body.textContent).not.toContain("ops")
+    trigger?.click()
+    await vi.waitFor(() => {
+      const boards = [...document.querySelectorAll("a")]
+        .map((a) => a.textContent?.trim())
+        .filter((label) => label === "main" || label === "ops")
+      expect(boards).toContain("ops")
+    })
+  })
+
   it("speaks a preset schedule as its picker phrase, cron in the tooltip", async () => {
     // A preset cron reads as the phrase the picker offered ("Hourly"), with
     // the raw expression as the native title + sr-only echo; an off-preset
