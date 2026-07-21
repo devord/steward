@@ -1,0 +1,23 @@
+# Optional metadata for this data repo. Every key here is optional — delete
+# the file and Steward falls back to the repo's short name and alphabetical
+# ordering everywhere.
+
+# Display name for this repo's group in the rail. The owner/repo slug stays
+# visible in the access popover; identifiers never use this name.
+# name: My Team
+
+# Order of the rail's dashboard sections. Membership rides on each board's
+# own `section:` field; this list carries only the sequence. A section a
+# board names but this list omits sorts after these, alphabetically.
+# sections:
+#   - Clients
+#   - Internal
+
+# Order of the widget bands inside every board in this repo. Membership
+# rides on each routine's `category:`; this list carries only the sequence —
+# which is worth stating because it is neither alphabetical nor creation
+# order. A category a routine names but this list omits sorts after these,
+# alphabetically; a name here that no routine uses renders nothing.
+# categories:
+#   - Project Management
+#   - Engineering
