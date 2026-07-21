@@ -53,18 +53,25 @@
         font-variant-numeric: tabular-nums;
         overflow: hidden;
       }
-      /* Sections breathe more than rows (rows run 4–6px, sections 14px), and
-         the separation is a `gap` on every element that stacks sections —
-         `main` and each column wrapper, which is what `.stack` marks. A gap
-         skips a section hidden by a tier query and skips the visually-hidden
-         heading; a sibling margin (`+`) would count both and open the glance
-         tiers on dead space. Its one cost is that it reaches only direct
-         children, so a wrapper that stacks sections must carry `.stack`. */
+
+      /* The one-grid rule (design.md · Ledger rows). Both sections are the
+         same table — a finding and an already-unblocked ticket answer the
+         same columns — so the tracks live on `main` and every layer down to
+         the row relays them with `subgrid`. Per-list grids would give each
+         section its own widths, which is the misaligned-state smell.
+
+         Tracks: state · body · confidence · ticket · copy. The copy track
+         only exists from the 2×2 tier up, where the button is shown; a
+         declared-but-empty track reserves its gutter down the right of every
+         row for a cell that will never fill it. */
       main,
       .stack {
         display: grid;
         align-content: start;
-        gap: 14px;
+        grid-template-columns:
+          max-content minmax(0, 1fr)
+          max-content max-content;
+        gap: 14px 10px;
         min-height: 0;
       }
       main {
@@ -72,6 +79,15 @@
            script can measure it — a squeezed main paints over the footer
            while scrollHeight stays clean. */
         flex-shrink: 0;
+      }
+      /* Anything that is not a table cell spans the whole width. Once a
+         section is a grid, its <h2> is a grid *item*: left to auto-place it
+         lands in the state column and sizes that track to the width of the
+         label plus the Copy-all button, opening a dead rail down the left of
+         every row and collapsing the header's own `flex: 1` hairline. */
+      main > :is(h1, .stat),
+      .tbl > h2 {
+        grid-column: 1 / -1;
       }
       /* A second label inside one section is the case no gap can reach. */
       :is(section, .section) > * + h2 {
@@ -123,7 +139,9 @@
         white-space: nowrap;
       }
 
-      /* Section header carries the count and the Copy-all action. */
+      /* Section header carries the count and the Copy-all action. The
+         held-back figure is provenance, not a count of what's here; it lives
+         on the provenance line and is not repeated up here. */
       h2 {
         display: flex;
         align-items: center;
@@ -134,7 +152,6 @@
         letter-spacing: 0.05em;
         text-transform: uppercase;
         color: var(--color-ink-dim);
-        margin-bottom: 6px;
       }
       h2 .count {
         font-weight: 400;
@@ -146,63 +163,178 @@
         background: var(--color-border-dim);
       }
 
-      /* Ledger of recommendations. */
-      ul {
-        list-style: none;
-        padding: 0;
-        display: grid;
-        grid-template-columns: max-content 1fr max-content;
-        gap: 4px 10px;
-      }
-      li {
+      /* The relay. `.tbl` marks every layer between `main` and the row; a
+         plain block anywhere in this chain computes `subgrid` to `none` and
+         collapses each row to one cell per line. `.stat` is deliberately
+         outside it — it is a KPI, not a row. Row gaps are each layer's own
+         (rows are not subgridded); the column gutter comes from `main`. */
+      .tbl,
+      .tbl ul,
+      .tbl li {
         grid-column: 1 / -1;
         display: grid;
         grid-template-columns: subgrid;
+      }
+      /* The header relays too, but its `display` belongs to the tier query
+         below — folding it into the rule above would out-specify the
+         `display: none` default and pin the header open on every tier. */
+      .tbl .colhead {
+        grid-column: 1 / -1;
+        grid-template-columns: subgrid;
+      }
+      .tbl {
+        row-gap: 6px;
+      }
+      .tbl ul {
+        list-style: none;
+        padding: 0;
+        row-gap: 4px;
+      }
+      .tbl li {
+        /* One shared line box per row (design.md · Ledger rows): a length,
+           not a ratio, so the 14px lead and the 12px mono cells build
+           identical boxes and their baselines coincide. */
+        line-height: 20px;
         align-items: baseline;
       }
-      .title {
+
+      /* Column headers. What made `high` read as a priority was an unnamed
+         column, so from the 2×2 tier up the value columns say what they are.
+         The state column needs none: its glyphs carry a word from 700px. */
+      .colhead {
+        display: none;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: 20px;
+        color: var(--color-ink-faint);
+      }
+      .colhead .h-conf {
+        grid-column: 3;
+        text-align: right;
+      }
+      .colhead .h-tkt {
+        grid-column: 4;
+      }
+      @media (min-width: 480px) and (min-height: 240px) {
+        .tbl .colhead {
+          display: grid;
+        }
+      }
+
+      /* State (design.md · Queue table): one fixed column, never a worded
+         pill per row — fifteen capsules out-shout the fifteen titles they
+         annotate. Icon at tile widths with the word sr-only and on `title`;
+         the 12px mono word returns from the wide tier up. `align-self:
+         start` on a 20px box centres the glyph on the row's *first* line, so
+         a two-line row's marker stays beside its lead instead of drifting
+         down between the lines. */
+      .st {
+        grid-column: 1;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: 20px;
+        align-self: start;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-orange);
+      }
+      .st.drift {
+        color: var(--color-yellow);
+      }
+      .st svg {
+        width: 12px;
+        height: 12px;
+        flex: none;
+      }
+      .st .word {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
+      @media (min-width: 700px) {
+        .st .word {
+          position: static;
+          width: auto;
+          height: auto;
+          overflow: visible;
+          clip: auto;
+        }
+      }
+
+      /* Body: lead + detail (design.md · Ledger rows), each on its own line.
+         Inline detail wraps into the lead on short titles and onto its own
+         line on long ones, which is what made the rows read as ragged. */
+      .body {
+        grid-column: 2;
+        min-width: 0;
+      }
+      .body .lead-txt {
+        display: block;
         font-weight: 500;
         color: var(--color-ink);
       }
-      /* Evidence: spec → code. Hidden on the shortest tiers. */
-      .evidence {
-        margin-top: 2px;
+      .body .detail {
+        display: block;
         font-family: var(--font-mono);
         font-size: 12px;
         color: var(--color-ink-dim);
       }
-      .evidence .arrow {
+      .body .arrow {
         color: var(--color-ink-faint);
         padding: 0 4px;
       }
-      .evidence .code {
+      .body .id {
         color: var(--color-ink-faint);
       }
-      /* Single-line title on short tiles. */
+      /* Single-line rows on short tiles. */
       @media (max-height: 300px) {
-        .title {
+        .body .lead-txt {
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
-        .evidence {
+        .body .detail {
+          display: none;
+        }
+      }
+      /* Wide but short (the 4×2 cell) is the tier that has width to spare and
+         no height at all. Two-line rows spend that height on evidence and
+         leave one finding above the fold; dropping to one line per row spends
+         the width on the list instead, which is what a wide tile is for. */
+      @media (min-width: 700px) and (max-height: 340px) {
+        .body .lead-txt {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .body .detail {
           display: none;
         }
       }
 
-      /* Trailing cell: confidence, jira, copy. */
-      .trail {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        justify-self: end;
-        white-space: nowrap;
-      }
+      /* Confidence: its own column, and its own encoding. The word stays
+         (state is never colour alone) but steps down the neutral ink ramp,
+         so trust reads as how loud the row is and the column self-sorts
+         without spending an accent on it. */
       .conf {
+        grid-column: 3;
+        justify-self: stretch;
+        text-align: right;
         font-family: var(--font-mono);
         font-size: 12px;
         color: var(--color-ink-faint);
       }
+      .conf.high {
+        color: var(--color-ink);
+      }
+      .conf.med {
+        color: var(--color-ink-dim);
+      }
+
       a {
         color: inherit;
         text-decoration: underline;
@@ -212,80 +344,92 @@
       a:hover {
         text-decoration-color: var(--color-ink-dim);
       }
-      .jira {
+      /* Ticket: a link keeps the ink register, never browser blue (design.md
+         · Link). No ticket leaves the cell empty — under a named column,
+         absence reads cleaner than ten rows of "no ticket". */
+      .tkt {
+        grid-column: 4;
         font-family: var(--font-mono);
         font-size: 12px;
-        color: var(--color-blue);
+        color: var(--color-ink-dim);
       }
-      .jira.none {
-        color: var(--color-ink-faint);
-        text-decoration: none;
-      }
-
-      /* State pill (design.md · Pill): gap = attn-orange circle-dashed,
-         drift = yellow git-compare-arrows (the shared icon vocabulary).
-         Pills fill the shared column and center in it, so "gap" and
-         "drift" read as one aligned rail, not two ragged capsules; they
-         center vertically on the row, never on the text baseline. */
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        height: 18px;
-        padding: 0 7px;
-        border-radius: 999px;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        line-height: 1;
-        align-self: center;
-        justify-self: stretch;
-        color: var(--color-orange);
-        border: 1px solid
-          color-mix(in srgb, var(--color-orange) 40%, transparent);
-        background: color-mix(in srgb, var(--color-orange) 10%, transparent);
-      }
-      .pill svg {
-        width: 12px;
-        height: 12px;
-        flex: none;
-      }
-      .pill.drift {
-        color: var(--color-yellow);
-        border-color: color-mix(in srgb, var(--color-yellow) 40%, transparent);
-        background: color-mix(in srgb, var(--color-yellow) 10%, transparent);
+      .tkt:hover {
+        color: var(--color-ink);
       }
 
-      /* The copy action — a ghost button in the pill's tone vocabulary, no
-         fill. Hidden below the 2×2 tier, where a row has room for it. */
+      /* Copy: an icon button, not a third rail of capsules. Always present
+         and tappable (never hover-gated), 24px of target centred on the
+         row's first line, with the word sr-only so it is still the button's
+         accessible name and can flip to "Copied". */
       .copy {
         display: none;
         align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        margin-block: -2px;
+        padding: 0;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--color-ink-faint);
+        cursor: pointer;
+      }
+      .copy {
+        grid-column: 5;
+        align-self: start;
+      }
+      .copy svg {
+        width: 14px;
+        height: 14px;
+      }
+      .copy:hover {
+        color: var(--color-ink);
+        background: var(--color-bg2);
+      }
+      .copy:focus-visible {
+        outline: 1px solid var(--color-ink-dim);
+        outline-offset: 1px;
+      }
+      .copy .i-done {
+        display: none;
+      }
+      .copy.done {
+        color: var(--color-green);
+      }
+      .copy.done .i-copy {
+        display: none;
+      }
+      .copy.done .i-done {
+        display: block;
+      }
+      /* Copy all is one button, not fifteen, so it keeps its word. */
+      .copy.copy-all {
+        width: auto;
         height: 20px;
+        margin: 0 0 0 4px;
         padding: 0 8px;
+        border: 1px solid var(--color-border);
         border-radius: 999px;
         font-family: var(--font-mono);
         font-size: 12px;
         line-height: 1;
         color: var(--color-ink-dim);
-        background: transparent;
-        border: 1px solid var(--color-border);
-        cursor: pointer;
       }
-      .copy:hover {
-        color: var(--color-ink);
+      .copy.copy-all:hover {
         border-color: var(--color-ink-dim);
       }
-      .copy.done {
-        color: var(--color-green);
+      .copy.copy-all.done {
         border-color: color-mix(in srgb, var(--color-green) 40%, transparent);
       }
-      .copy-all {
-        margin-left: 4px;
-      }
       @media (min-width: 360px) and (min-height: 240px) {
-        .copy,
-        .copy-all {
+        main,
+        .stack {
+          grid-template-columns:
+            max-content minmax(0, 1fr)
+            max-content max-content max-content;
+        }
+        .copy {
           display: inline-flex;
         }
       }
@@ -314,23 +458,31 @@
         }
       }
 
-      [data-fit-more] {
+      /* The fit script's trailing note is an <li>, so the relay above claims
+         it as a subgrid row and drops "+2 more" into the *state* column,
+         sizing that track to the note and opening a dead rail beside every
+         glyph on exactly the tiers that overflow. It is a full-width note,
+         not a row: opt it back out. */
+      .tbl [data-fit-more] {
+        grid-column: 1 / -1;
+        display: block;
         font-family: var(--font-mono);
         font-size: 12px;
         color: var(--color-ink-dim);
       }
 
       /* Ready now — tickets already unblocked and actionable: content, not
-         provenance, so it gets a section. Secondary to the glance — short
-         tiles drop it whole rather than orphaning its header. */
-      .ready ul {
-        grid-template-columns: max-content 1fr;
+         provenance, so it gets a section. Same table, fewer cells: no state,
+         no confidence, and the detail rides inline because the row is one
+         line. Secondary to the glance — short tiles drop it whole rather
+         than orphaning its header. */
+      .ready .body .lead-txt,
+      .ready .body .detail {
+        display: inline;
       }
-      .ready .jira {
-        align-self: baseline;
-      }
-      .ready .detail {
-        color: var(--color-ink-dim);
+      .ready .body .detail {
+        font-family: var(--font-sans);
+        font-size: 14px;
       }
       @media (max-height: 379px) {
         [data-steward-tile] .ready {
@@ -364,11 +516,11 @@
         main,
         footer {
           /* Cap the measure and left-align (design.md · Ledger rows): the
-             row body is a wrapping title+evidence, so a leader doesn't fit —
+             row body is a wrapping lead+detail, so a leader doesn't fit —
              but an uncapped 1fr body still flings the trailing confidence /
-             ticket / Copy cluster to the far frame edge on a wide tile or the
-             full view. Capped, the cluster stays a short reach from the row;
-             the slack falls to the right. */
+             ticket / copy cluster to the far frame edge on a wide tile or
+             the full view. Capped, the cluster stays a short reach from the
+             row; the slack falls to the right. */
           width: 100%;
           max-width: 46rem;
           margin-inline: 0 auto;
@@ -376,7 +528,7 @@
         /* The page opens the rhythm up: parts of a page, not rows of a tile. */
         main,
         .stack {
-          gap: 28px;
+          row-gap: 28px;
         }
         :is(section, .section) > * + h2 {
           margin-top: 28px;
@@ -395,10 +547,10 @@
           padding: 40px 32px;
           overflow: auto;
         }
-        li {
+        .tbl li {
           padding-block: 8px;
         }
-        li + li {
+        .tbl li + li {
           border-top: 1px solid var(--color-border-dim);
         }
       }
@@ -418,24 +570,28 @@
       </section>
 
       <!-- 2×1 and up -->
-      <section class="ledger" aria-labelledby="title">
+      <section class="ledger tbl" aria-labelledby="title">
         <h2>
-          Recommended <span class="count">5 · 2 held back</span>
+          Recommended <span class="count">5</span>
           <span class="rule"></span>
           <button
             type="button"
             class="copy copy-all"
             data-copy-all
-            aria-label="Copy all recommendations as one prompt"
+            title="Copy all recommendations as one prompt"
           >
-            Copy all
+            <span data-label>Copy all</span>
           </button>
         </h2>
+        <div class="colhead" aria-hidden="true">
+          <span class="h-conf">confidence</span>
+          <span class="h-tkt">ticket</span>
+        </div>
         <ul data-fit-list>
           <li
             data-prompt="/eng:triage Create a ticket: Add a staleness badge to overdue widgets. The spec at docs/widget-standard.md §Addressing & freshness requires a staleness badge when a run is overdue relative to the routine's schedule; apps/web/app/components/widget-card.tsx renders freshness but has no overdue branch (gap). Acceptance: an overdue widget shows the staleness badge. Possibly related: none."
           >
-            <span class="pill"
+            <span class="st" title="gap — specified, not built"
               ><svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -453,30 +609,54 @@
                 <path d="M21.818 10.1a10 10 0 0 1 0 3.8" />
                 <path d="M3.721 6.391a10 10 0 0 1 2.7-2.69" />
                 <path d="M6.391 20.279a10 10 0 0 1-2.69-2.7" /></svg
-              >gap</span
+              ><span class="word">gap</span></span
             >
-            <span>
-              <span class="title"
+            <span class="body">
+              <span class="lead-txt"
                 >Add a staleness badge to overdue widgets</span
               >
-              <span class="evidence"
+              <span class="detail"
                 >widget-standard §Freshness<span class="arrow">→</span
-                ><span class="code">widget-card.tsx</span></span
+                ><span class="id">widget-card.tsx</span></span
               >
             </span>
-            <span class="trail">
-              <span class="conf">high</span>
-              <span class="jira none" title="No Jira ticket found"
-                >no ticket</span
+            <span class="conf high" title="confidence: high">high</span>
+            <button type="button" class="copy" title="Copy as a triage prompt">
+              <svg
+                class="i-copy"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
               >
-              <button type="button" class="copy">Copy</button>
-            </span>
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path
+                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+                />
+              </svg>
+              <svg
+                class="i-done"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              <span class="sr-only" data-label>Copy</span>
+            </button>
           </li>
 
           <li
             data-prompt="/eng:triage Create a ticket: Full-view overlay must close on Escape. The spec at knowledge-base/accessibility.md §Overlays requires Esc to dismiss any full-screen overlay; the full-view lightbox in apps/web/app/components/widget-full-view.tsx registers no keydown handler (gap). Acceptance: pressing Esc closes the full view and returns focus to the tile. Possibly related: none."
           >
-            <span class="pill"
+            <span class="st" title="gap — specified, not built"
               ><svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -494,28 +674,54 @@
                 <path d="M21.818 10.1a10 10 0 0 1 0 3.8" />
                 <path d="M3.721 6.391a10 10 0 0 1 2.7-2.69" />
                 <path d="M6.391 20.279a10 10 0 0 1-2.69-2.7" /></svg
-              >gap</span
+              ><span class="word">gap</span></span
             >
-            <span>
-              <span class="title">Full-view overlay must close on Escape</span>
-              <span class="evidence"
+            <span class="body">
+              <span class="lead-txt"
+                >Full-view overlay must close on Escape</span
+              >
+              <span class="detail"
                 >accessibility.md §Overlays<span class="arrow">→</span
-                ><span class="code">widget-full-view.tsx</span></span
+                ><span class="id">widget-full-view.tsx</span></span
               >
             </span>
-            <span class="trail">
-              <span class="conf">high</span>
-              <span class="jira none" title="No Jira ticket found"
-                >no ticket</span
+            <span class="conf high" title="confidence: high">high</span>
+            <button type="button" class="copy" title="Copy as a triage prompt">
+              <svg
+                class="i-copy"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
               >
-              <button type="button" class="copy">Copy</button>
-            </span>
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path
+                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+                />
+              </svg>
+              <svg
+                class="i-done"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              <span class="sr-only" data-label>Copy</span>
+            </button>
           </li>
 
           <li
             data-prompt="/eng:triage Create a ticket: Person-relative render leaks the runner login. The spec at docs/adr/0039-person-relative-content.md requires the static markup to be viewer-neutral; the repo-pulse enhancer bakes a 'Yours' label into the published markup instead of resolving it against __STEWARD_VIEWER__ at render time (drift). Acceptance: the raw page shows no 'yours' before a viewer is injected. Possibly related: STEW-214 (marked Done — verify)."
           >
-            <span class="pill drift"
+            <span class="st drift" title="drift — built, but not as specified"
               ><svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -531,35 +737,62 @@
                 <circle cx="19" cy="18" r="3" />
                 <path d="M12 18H7a2 2 0 0 1-2-2V9" />
                 <path d="m9 15 3 3-3 3" /></svg
-              >drift</span
+              ><span class="word">drift</span></span
             >
-            <span>
-              <span class="title"
+            <span class="body">
+              <span class="lead-txt"
                 >Person-relative render leaks the runner login</span
               >
-              <span class="evidence"
+              <span class="detail"
                 >ADR-0039<span class="arrow">→</span
-                ><span class="code">repo-pulse enhancer</span></span
+                ><span class="id">repo-pulse enhancer</span></span
               >
             </span>
-            <span class="trail">
-              <span class="conf">med</span>
-              <a
-                class="jira"
-                href="https://acme.atlassian.net/browse/STEW-214"
-                target="_blank"
-                rel="noopener"
-                title="Marked Done — a weak signal, verify"
-                >STEW-214</a
+            <span class="conf med" title="confidence: medium">med</span>
+            <a
+              class="tkt"
+              href="https://acme.atlassian.net/browse/STEW-214"
+              target="_blank"
+              rel="noopener"
+              title="Marked Done — a weak signal, verify"
+              >STEW-214</a
+            >
+            <button type="button" class="copy" title="Copy as a triage prompt">
+              <svg
+                class="i-copy"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
               >
-              <button type="button" class="copy">Copy</button>
-            </span>
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path
+                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+                />
+              </svg>
+              <svg
+                class="i-done"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              <span class="sr-only" data-label>Copy</span>
+            </button>
           </li>
 
           <li
             data-prompt="/eng:triage Create a ticket: Surface the dry-run clause on the receipt. The spec at docs/adr/0017-dry-runs.md defines a dry run as the pointer prompt plus a dry clause; run-routine composes the clause but the receipt view in apps/web/app/components/routine-detail.tsx omits it, so a dry run is indistinguishable from a real one (gap). Acceptance: a dry-run receipt is labelled as such. Possibly related: none."
           >
-            <span class="pill"
+            <span class="st" title="gap — specified, not built"
               ><svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -577,30 +810,54 @@
                 <path d="M21.818 10.1a10 10 0 0 1 0 3.8" />
                 <path d="M3.721 6.391a10 10 0 0 1 2.7-2.69" />
                 <path d="M6.391 20.279a10 10 0 0 1-2.69-2.7" /></svg
-              >gap</span
+              ><span class="word">gap</span></span
             >
-            <span>
-              <span class="title"
+            <span class="body">
+              <span class="lead-txt"
                 >Surface the dry-run clause on the receipt</span
               >
-              <span class="evidence"
+              <span class="detail"
                 >ADR-0017 §Dry runs<span class="arrow">→</span
-                ><span class="code">routine-detail.tsx</span></span
+                ><span class="id">routine-detail.tsx</span></span
               >
             </span>
-            <span class="trail">
-              <span class="conf">med</span>
-              <span class="jira none" title="No Jira ticket found"
-                >no ticket</span
+            <span class="conf med" title="confidence: medium">med</span>
+            <button type="button" class="copy" title="Copy as a triage prompt">
+              <svg
+                class="i-copy"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
               >
-              <button type="button" class="copy">Copy</button>
-            </span>
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path
+                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+                />
+              </svg>
+              <svg
+                class="i-done"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              <span class="sr-only" data-label>Copy</span>
+            </button>
           </li>
 
           <li
             data-prompt="/eng:triage Create a ticket: Grid row height ignores board density. The spec at docs/widget-standard.md §The grid says the row unit is adjustable via grid.rowHeight as board density; packages/schema and the grid renderer hard-code ~150px, so the density control has no effect (drift). Acceptance: changing grid.rowHeight re-flows the board. Possibly related: STEW-190."
           >
-            <span class="pill drift"
+            <span class="st drift" title="drift — built, but not as specified"
               ><svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -616,64 +873,93 @@
                 <circle cx="19" cy="18" r="3" />
                 <path d="M12 18H7a2 2 0 0 1-2-2V9" />
                 <path d="m9 15 3 3-3 3" /></svg
-              >drift</span
+              ><span class="word">drift</span></span
             >
-            <span>
-              <span class="title">Grid row height ignores board density</span>
-              <span class="evidence"
+            <span class="body">
+              <span class="lead-txt"
+                >Grid row height ignores board density</span
+              >
+              <span class="detail"
                 >widget-standard §Grid<span class="arrow">→</span
-                ><span class="code">dashboard.ts</span></span
+                ><span class="id">dashboard.ts</span></span
               >
             </span>
-            <span class="trail">
-              <span class="conf">low</span>
-              <a
-                class="jira"
-                href="https://acme.atlassian.net/browse/STEW-190"
-                target="_blank"
-                rel="noopener"
-                title="Open ticket may already cover this"
-                >STEW-190</a
+            <span class="conf low" title="confidence: low">low</span>
+            <a
+              class="tkt"
+              href="https://acme.atlassian.net/browse/STEW-190"
+              target="_blank"
+              rel="noopener"
+              title="Open ticket may already cover this"
+              >STEW-190</a
+            >
+            <button type="button" class="copy" title="Copy as a triage prompt">
+              <svg
+                class="i-copy"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
               >
-              <button type="button" class="copy">Copy</button>
-            </span>
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path
+                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+                />
+              </svg>
+              <svg
+                class="i-done"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              <span class="sr-only" data-label>Copy</span>
+            </button>
           </li>
         </ul>
       </section>
 
       <!-- Tickets already unblocked and actionable — content, not
            provenance (design.md · Provenance line), so it earns a
-           section. -->
-      <section class="ready">
+           section, and it rides the same columns as the table above. -->
+      <section class="ready tbl">
         <h2>
           Ready now <span class="count">2</span>
           <span class="rule"></span>
         </h2>
         <ul data-fit-list>
           <li>
+            <span class="body"
+              ><span class="lead-txt">Request Access form</span>
+              <span class="detail">Ready for Agent</span></span
+            >
             <a
-              class="jira"
+              class="tkt"
               href="https://acme.atlassian.net/browse/STEW-137"
               target="_blank"
               rel="noopener"
               >STEW-137</a
             >
-            <span
-              ><span class="title">Request Access form</span>
-              <span class="detail">Ready for Agent</span></span
-            >
           </li>
           <li>
+            <span class="body"
+              ><span class="lead-txt">Checkout apps — Avalara/FedEx/UPS</span>
+              <span class="detail">Ready for Agent</span></span
+            >
             <a
-              class="jira"
+              class="tkt"
               href="https://acme.atlassian.net/browse/STEW-64"
               target="_blank"
               rel="noopener"
               >STEW-64</a
-            >
-            <span
-              ><span class="title">Checkout apps — Avalara/FedEx/UPS</span>
-              <span class="detail">Ready for Agent</span></span
             >
           </li>
         </ul>
@@ -720,12 +1006,17 @@
           }
           document.body.removeChild(ta)
         }
+        // Confirmation is the green check for the eye and the button's own
+        // accessible name for a screen reader — the row button's word is
+        // sr-only, the Copy-all button's is its visible label, and one swap
+        // serves both.
         function flash(btn, label) {
-          var prev = btn.textContent
-          btn.textContent = label
+          var word = btn.querySelector("[data-label]")
+          var prev = word && word.textContent
+          if (word) word.textContent = label
           btn.classList.add("done")
           setTimeout(function () {
-            btn.textContent = prev
+            if (word) word.textContent = prev
             btn.classList.remove("done")
           }, 1500)
         }
@@ -833,6 +1124,14 @@
         }
         addEventListener("DOMContentLoaded", fit)
         addEventListener("resize", fit)
+        // The board injects the chrome mono into every frame (ADR-0031), and
+        // it lands *after* DOMContentLoaded. Fitting only on that event
+        // measures fallback-font metrics and then never looks again: the
+        // swap grows every row a little, and the tile silently over-fills —
+        // trailing rows and the provenance line clip below the fold with no
+        // "+N more" to admit it. Re-fit once the faces settle.
+        if (document.fonts && document.fonts.ready)
+          document.fonts.ready.then(fit)
       })()
     </script>
   </body>
