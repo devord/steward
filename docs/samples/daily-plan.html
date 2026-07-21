@@ -1014,13 +1014,31 @@
           // from the whole artifact, or a tile can only ever shrink.
           var state = lists.map(function (list) {
             var more = reset(list)
+            // `.now` and [data-fit-keep] rows are load-bearing — the now marker,
+            // a repo that has gone quiet, the one failing check. Trimming them is
+            // how a tile ends up cheerfully reporting only good news.
             var items = [].filter.call(list.children, function (el) {
-              return el !== more && !el.classList.contains("now")
+              return (
+                el !== more &&
+                !el.classList.contains("now") &&
+                !el.hasAttribute("data-fit-keep")
+              )
             })
             items.forEach(function (el) {
               el.hidden = false
             })
-            return { list: list, more: more, items: items }
+            return {
+              list: list,
+              more: more,
+              items: items,
+              // Trimming is resumable across sweeps, so the running count and
+              // the exhausted flag live here rather than in the loop below.
+              hidden: 0,
+              done: false,
+              // A pinned row is itself a reason for the section to stay —
+              // collapsing would discard the row that was marked load-bearing.
+              pinned: list.querySelectorAll("[data-fit-keep], .now").length,
+            }
           })
           // Overflow lives on <body> — html/body pin overflow:hidden, so the
           // clipped region never surfaces on documentElement.scrollHeight.
@@ -1030,41 +1048,64 @@
           function over() {
             return height() > doc.clientHeight
           }
-          state.forEach(function (s) {
-            var hidden = 0
-            while (over() && hidden < s.items.length) {
+          // Trim one list as far as it will go right now; report whether it
+          // moved. Resumable — a list that yields early resumes from its own
+          // `hidden` count on a later sweep rather than starting over.
+          function trim(s) {
+            if (s.done) return false
+            var moved = false
+            while (over() && s.hidden < s.items.length) {
               // The next hide would empty this list: drop the whole section
               // instead. A tier is a viewport, not a crop — a section that does
-              // not fit this tier is not part of it.
-              if (hidden + 1 === s.items.length) {
+              // not fit this tier is not part of it. A pinned row overrides that:
+              // the section stays, carrying the row that had to survive.
+              if (s.hidden + 1 === s.items.length && s.pinned === 0) {
                 var box = owner(s.list)
                 box.setAttribute("data-fit-collapsed", "")
                 box.hidden = true
-                return
+                s.done = true
+                return true
               }
               var before = height()
-              var el = s.items[s.items.length - ++hidden]
+              var el = s.items[s.items.length - ++s.hidden]
               el.hidden = true
-              // In multi-column tiers hiding a short-column item frees no
-              // height — revert and leave this list whole.
+              // Hiding this row freed no height: in a multi-column tier some
+              // other column is the constraint right now. Put it back and
+              // yield — a later sweep retries once that column has given way.
               if (height() >= before) {
                 el.hidden = false
-                hidden--
-                break
+                s.hidden--
+                return moved
               }
+              moved = true
               s.more.hidden = false
-              s.more.textContent = "+" + hidden + " more"
+              s.more.textContent = "+" + s.hidden + " more"
             }
-          })
+            if (s.hidden >= s.items.length) s.done = true
+            return moved
+          }
+          // Sweep until nothing moves. One ordered pass is not enough in a
+          // multi-column tier: the ledger in the right column frees no height
+          // while the left column is the taller one, so it yields — and a
+          // single-pass fit never returns to it, leaving the tile overflowing
+          // with rows still available to trim. Each sweep either hides at least
+          // one row or ends the loop, and rows are finite, so this terminates.
+          var progress = true
+          while (over() && progress) {
+            progress = false
+            state.forEach(function (s) {
+              if (trim(s)) progress = true
+            })
+          }
         }
         addEventListener("DOMContentLoaded", fit)
         addEventListener("resize", fit)
-        // The board injects the chrome mono into every frame (ADR-0031), and
-        // it lands *after* DOMContentLoaded. Fitting only on that event
-        // measures fallback-font metrics and then never looks again: the
-        // swap grows every row a little, and the tile silently over-fills —
-        // trailing rows and the provenance line clip below the fold with no
-        // "+N more" to admit it. Re-fit once the faces settle.
+        // The board injects the chrome mono into every frame (ADR-0031), and it
+        // lands *after* DOMContentLoaded. Fitting only on that event measures
+        // fallback-font metrics and then never looks again: the swap grows every
+        // row a little and the tile silently over-fills — trailing rows and the
+        // provenance line clip below the fold with no "+N more" to admit it.
+        // Re-fit once the faces settle.
         if (document.fonts && document.fonts.ready)
           document.fonts.ready.then(fit)
       })()
