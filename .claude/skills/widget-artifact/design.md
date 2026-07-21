@@ -687,6 +687,38 @@ neutral (`var(--color-ink-faint)`). The one-accent-per-tier rule still
 holds: on a drift list the bars _are_ that accent, so nothing else on the
 tile competes.
 
+**The inline-span trap.** Every bar in this language is drawn on a
+`<span>`, and `height` / `width` **do nothing on an inline box**. The
+markup above only works because `.mag-cell` is `display: grid`, which
+blockifies `.track` as a grid item. Lift that same `<span class="track">`
+into an ordinary inline context — a hand-rolled `name · bar · %` row, a
+bar dropped inside a `<summary>` — and it computes to `display: inline`,
+collapses to **0×0**, and the percentage-width `<i>` inside it resolves
+against a zero-width containing block. The bar vanishes in total silence:
+no error, no overflow, no layout shift, and the row still looks plausible
+because the trailing number is right there. It is invisible in review and
+has shipped that way.
+
+So any bar outside a grid/flex parent states its own box:
+
+```css
+.track {
+  display: block;
+  width: 100%;
+  position: relative;
+  height: 4px;
+}
+.track > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+}
+```
+
+Verify by measurement, never by eye: a bar whose
+`getBoundingClientRect().height` is `0` is the bug, and a screenshot of a
+cropped tile will not tell you.
+
 #### Queue table (the PR-queue archetype)
 
 For rows of tracked items that each carry an identity plus several
@@ -1062,6 +1094,97 @@ state needs one, pick the plainest lucide match and use it everywhere.
 Plainest, specifically: `git-compare-arrows` is six strokes and turns to
 mush at 12px, which is why "record in doubt" takes `circle-alert` rather
 than borrowing the drift glyph.
+
+**The progress-ring family (a lifecycle, not a set of states).** When a
+row's state is one **position along a single track** — planned → in
+progress → in review → landed — the glyphs are not independent
+pictograms, they are one disc at four fill fractions: `○` planned (ring
+only), `◐` in progress (half wedge), `◕` in review / nearing
+(three-quarter wedge), `●` landed (full disc, and the only tinted one,
+`--color-green`). Fill fraction _is_ the encoding, so shape carries the
+vocabulary and colour stays out of it.
+
+Two rules keep the family readable:
+
+- **Never mix a pictogram into the ring family.** Swapping lucide
+  `check` in for "landed" is the tempting move — it means done
+  everywhere else in this table — but a bare tick has no disc, so it
+  breaks the silhouette the other three rows teach and the column stops
+  reading as one scale. Inside a lifecycle, `●` means done; `check`
+  stays for standalone binary states (a CI cell, an approval).
+- **Draw the fraction as an arc, never a pie slice.** A circle plus a
+  radius plus an arc renders as a **clock face** at 12px, which reads as
+  "pending/scheduled" — a different state in the table above. The radius
+  line is what makes the hand; drop it and stroke a thick arc over a thin
+  base ring instead.
+
+One geometry serves all four: `r="5"` gives a circumference of
+`2π·5 = 31.42`, so the fraction is just the first number of the
+`stroke-dasharray`, and `rotate(-90 6 6)` starts it at twelve o'clock.
+
+```html
+<!-- planned: base ring only -->
+<svg class="ring" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+  <circle
+    cx="6"
+    cy="6"
+    r="5"
+    fill="none"
+    stroke="var(--color-border-dim)"
+    stroke-width="1.3"
+  />
+</svg>
+
+<!-- in progress: half arc (15.71 = 31.42 / 2) -->
+<svg class="ring" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+  <circle
+    cx="6"
+    cy="6"
+    r="5"
+    fill="none"
+    stroke="var(--color-border-dim)"
+    stroke-width="1.3"
+  />
+  <circle
+    cx="6"
+    cy="6"
+    r="5"
+    fill="none"
+    stroke="var(--color-ink)"
+    stroke-width="2.4"
+    stroke-dasharray="15.71 31.42"
+    transform="rotate(-90 6 6)"
+  />
+</svg>
+
+<!-- in review: three-quarter arc (23.56) — swap the dasharray only -->
+<!-- landed: solid disc, the one tinted state -->
+<svg class="ring" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+  <circle cx="6" cy="6" r="5" fill="var(--color-green)" />
+</svg>
+```
+
+A dropped/cancelled row stays in the family too: the base ring plus a
+small ink-faint ✕, not a red pictogram.
+
+Where a widget shows both an aggregate strip of these counts and rows
+carrying the same states, the strip is what teaches the vocabulary, so
+the rows **must** use the identical four glyphs.
+
+**Align the glyph to the first line, not the row.** A state glyph in its
+own grid cell defaults to sitting against the row's full height, so on a
+row that wraps to three lines the icon drifts to the vertical middle and
+detaches from the key it labels. Inline glyphs (`.key svg` above) already
+ride the first line via `vertical-align`; a glyph that owns a cell states
+it:
+
+```css
+.row > .glyph {
+  align-self: start;
+  /* optical: centre the 12px glyph on the first line box, not its top */
+  margin-top: 0.15em;
+}
+```
 
 ```html
 <span class="key"
