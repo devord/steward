@@ -443,9 +443,12 @@ function RunsBody({
     // The pool table's -mx-3 bleed: row wash breathes past the content
     // column while the edge cells pad the text back to the page rail.
     <div className="-mx-3 overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+      {/* The pool ledger's contract too: one 13px line box for every cell, so
+          the receipt link lines up with the columns beside it instead of
+          sitting a few pixels low inside a taller line box. */}
+      <table className="w-full border-collapse text-xs">
         <thead>
-          <tr className="border-b border-border text-left align-bottom font-mono text-xs text-ink-faint">
+          <tr className="border-b border-border text-left align-bottom font-mono whitespace-nowrap text-ink-faint">
             {compareMode && (
               <th scope="col" className="w-8 px-3 py-1.5 font-normal">
                 <span className="sr-only">{t("runs.compare")}</span>
