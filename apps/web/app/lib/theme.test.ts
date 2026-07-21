@@ -257,6 +257,33 @@ describe("every theme clears the contrast floors", () => {
       expect(contrast(t.accent, t.bg)).toBeGreaterThanOrEqual(3)
       expect(contrast(t.accentDeep, t.bg)).toBeGreaterThanOrEqual(3)
     })
+    // The three border tiers, graded and ordered. Nothing enforced these
+    // before, which is how every light theme's border drifted to within one
+    // ramp step of its own canvas (kanagawa-lotus bottomed out at 1.16:1).
+    it(`${name}: control boundaries ≥ 3:1 — WCAG 1.4.11`, () => {
+      // Inputs, selects and checkboxes are fill-less, so `borderStrong` is
+      // the only thing identifying them on either surface they sit on.
+      expect(contrast(t.borderStrong, t.bg)).toBeGreaterThanOrEqual(3)
+      expect(contrast(t.borderStrong, t.bg1)).toBeGreaterThanOrEqual(3)
+    })
+    it(`${name}: object edges ≥ 1.5:1, plane hairlines ≥ 1.2:1`, () => {
+      for (const surface of [t.bg, t.bg1]) {
+        expect(contrast(t.border, surface)).toBeGreaterThanOrEqual(1.5)
+        expect(contrast(t.borderDim, surface)).toBeGreaterThanOrEqual(1.2)
+      }
+    })
+    it(`${name}: the tiers stay strictly ordered on both surfaces`, () => {
+      // A tier that outweighs the one above it inverts the hierarchy: a
+      // divider louder than the card edge it sits inside.
+      for (const surface of [t.bg, t.bg1]) {
+        expect(contrast(t.borderDim, surface)).toBeLessThan(
+          contrast(t.border, surface),
+        )
+        expect(contrast(t.border, surface)).toBeLessThan(
+          contrast(t.borderStrong, surface),
+        )
+      }
+    })
     it(`${name}: cards separate from the canvas`, () => {
       // The surface hierarchy is the product ("widgets glow, chrome
       // recedes"): a card must sit visibly off the page in every theme.

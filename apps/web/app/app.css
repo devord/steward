@@ -47,6 +47,7 @@
   --color-bg2: var(--palette-bg2);
   --color-bg3: var(--palette-bg3);
   --color-border-dim: var(--palette-border-dim);
+  --color-border-strong: var(--palette-border-strong);
   --color-ink: var(--palette-ink);
   --color-ink-dim: var(--palette-ink-dim);
   --color-ink-faint: var(--palette-ink-faint);
@@ -122,7 +123,10 @@
   --accent-foreground: var(--palette-ink);
   --destructive: var(--palette-red);
   --border: var(--palette-border);
-  --input: var(--palette-border);
+  /* Inputs, selects and checkboxes are fill-less (`bg-transparent`), so this
+     hairline is the only thing identifying the control — WCAG 1.4.11's 3:1
+     applies to it, which the decorative `--palette-border` never clears. */
+  --input: var(--palette-border-strong);
   --ring: var(--palette-accent-deep);
   --chart-1: var(--palette-accent);
   --chart-2: var(--palette-yellow);

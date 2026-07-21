@@ -42,10 +42,17 @@ export interface ThemeTokens {
   bg2: string
   /** Hover fills, secondary controls. */
   bg3: string
-  /** Strong borders, inputs. */
+  /** Object edges: popovers, board cells, table head rules. ≥1.5:1 on bg/bg1. */
   border: string
-  /** Hairlines inside cards. */
+  /** Hairlines splitting the flat plane. ≥1.2:1 on bg/bg1. */
   borderDim: string
+  /**
+   * Control boundaries — inputs, selects, checkboxes, outline buttons.
+   * Those controls are fill-less, so this hairline is the only thing that
+   * identifies them: WCAG 2.1 SC 1.4.11 applies and the floor is 3:1 on
+   * both bg and bg1 (`theme.test.ts` enforces it).
+   */
+  borderStrong: string
   /** Body text. */
   ink: string
   /** Secondary text. */
@@ -87,6 +94,15 @@ export interface Theme {
  * tone, so widgets read as the elevated surface ("widgets glow, chrome
  * recedes") instead of the whole page collapsing into one near-white plane.
  * Dark themes get the same hierarchy for free from their upstream bg ramps.
+ *
+ * The three border tiers are graded, not decorative: `borderDim` splits the
+ * flat plane (≥1.2:1), `border` edges objects — popovers, board cells, table
+ * head rules (≥1.5:1), and `borderStrong` bounds the fill-less controls where
+ * the hairline is the only affordance (≥3:1, WCAG 1.4.11). Light palettes
+ * ship shallow neutral ramps, so their roles sat one step from the canvas and
+ * every light theme's border read as a ghost; each is repointed one step down
+ * its own ramp, which cascades the old `border` into `borderDim`.
+ *
  * Documented residuals:
  *  - Rosé Pine has no green, so `green` reuses foam;
  *  - where a palette's own dim/faint ink misses AA on its canvas, the role
@@ -100,7 +116,14 @@ export interface Theme {
  *    against white, and it dips to 4.49:1 on the deeper board surface;
  *  - Kanagawa Lotus's signature lotusOrange misses AA as an accent (2.66:1
  *    on its own canvas, 3.04:1 for button text), so `accent` is repointed
- *    to lotusBlue4 — the nearest AA-clearing tone in the same palette.
+ *    to lotusBlue4 — the nearest AA-clearing tone in the same palette;
+ *  - Lotus's light ramp is the most compressed in the registry — nothing
+ *    sits between lotusWhite0 (1.16:1, the ghost this replaced) and
+ *    lotusViolet1 — so its `borderDim` lands at 1.95:1, heavier than its
+ *    siblings' hairlines. Its `border`/`borderStrong` take lotusGray3/2
+ *    rather than the nearer lotusBlue3: a blue hairline on that khaki
+ *    canvas reads as a different theme, and the warm grays hold the family
+ *    line with Wave (2.46:1 / 2.56:1).
  */
 export const themes = {
   "gruvbox-dark": {
@@ -113,6 +136,7 @@ export const themes = {
       bg3: "#3c3836",
       border: "#504945",
       borderDim: "#3c3836",
+      borderStrong: "#7c6f64",
       ink: "#ebdbb2",
       inkDim: "#a89984",
       inkFaint: "#928374",
@@ -138,6 +162,7 @@ export const themes = {
       bg3: "#d5c4a1",
       border: "#bdae93",
       borderDim: "#d5c4a1",
+      borderStrong: "#7c6f64",
       ink: "#3c3836",
       inkDim: "#665c54",
       inkFaint: "#7c6f64",
@@ -161,6 +186,7 @@ export const themes = {
       bg3: "#45475a",
       border: "#585b70",
       borderDim: "#313244",
+      borderStrong: "#6c7086",
       ink: "#cdd6f4",
       inkDim: "#a6adc8",
       inkFaint: "#7f849c",
@@ -184,8 +210,9 @@ export const themes = {
       bg1: "#eff1f5",
       bg2: "#e6e9ef",
       bg3: "#ccd0da",
-      border: "#bcc0cc",
-      borderDim: "#ccd0da",
+      border: "#acb0be",
+      borderDim: "#bcc0cc",
+      borderStrong: "#6c6f85",
       ink: "#4c4f69",
       inkDim: "#5c5f77",
       inkFaint: "#6c6f85",
@@ -208,7 +235,8 @@ export const themes = {
       bg2: "#26233a",
       bg3: "#403d52",
       border: "#524f67",
-      borderDim: "#26233a",
+      borderDim: "#403d52",
+      borderStrong: "#6e6a86",
       ink: "#e0def4",
       inkDim: "#908caa",
       inkFaint: "#6e6a86",
@@ -233,8 +261,9 @@ export const themes = {
       bg1: "#fffaf3",
       bg2: "#f2e9e1",
       bg3: "#dfdad9",
-      border: "#cecacd",
-      borderDim: "#dfdad9",
+      border: "#9893a5",
+      borderDim: "#cecacd",
+      borderStrong: "#797593",
       ink: "#575279",
       inkDim: "#575279",
       inkFaint: "#797593",
@@ -258,6 +287,7 @@ export const themes = {
       bg3: "#3b4261",
       border: "#414868",
       borderDim: "#292e42",
+      borderStrong: "#737aa2",
       ink: "#c0caf5",
       inkDim: "#a9b1d6",
       inkFaint: "#737aa2",
@@ -279,8 +309,9 @@ export const themes = {
       bg1: "#e6e7ed",
       bg2: "#d6d8df",
       bg3: "#c1c2c7",
-      border: "#c1c2c7",
+      border: "#9da0ab",
       borderDim: "#c1c2c7",
+      borderStrong: "#73767d",
       ink: "#343b59",
       inkDim: "#343b59",
       inkFaint: "#707280",
@@ -308,6 +339,7 @@ export const themes = {
       bg3: "#21262d",
       border: "#30363d",
       borderDim: "#21262d",
+      borderStrong: "#6e7681",
       ink: "#e6edf3",
       inkDim: "#7d8590",
       inkFaint: "#6e7681",
@@ -334,8 +366,9 @@ export const themes = {
       bg1: "#ffffff",
       bg2: "#f6f8fa",
       bg3: "#d0d7de",
-      border: "#d0d7de",
-      borderDim: "#d8dee4",
+      border: "#afb8c1",
+      borderDim: "#d0d7de",
+      borderStrong: "#6e7781",
       ink: "#1f2328",
       inkDim: "#57606a",
       inkFaint: "#6e7781",
@@ -360,7 +393,8 @@ export const themes = {
       bg2: "#282726",
       bg3: "#343331",
       border: "#403e3c",
-      borderDim: "#282726",
+      borderDim: "#343331",
+      borderStrong: "#6f6e69",
       ink: "#cecdc3",
       inkDim: "#b7b5ac",
       inkFaint: "#878580",
@@ -384,8 +418,9 @@ export const themes = {
       bg1: "#fffcf0",
       bg2: "#e6e4d9",
       bg3: "#dad8ce",
-      border: "#cecdc3",
-      borderDim: "#e6e4d9",
+      border: "#b7b5ac",
+      borderDim: "#cecdc3",
+      borderStrong: "#878580",
       ink: "#100f0f",
       inkDim: "#575653",
       inkFaint: "#6f6e69",
@@ -410,7 +445,8 @@ export const themes = {
       bg2: "#2a2a37",
       bg3: "#363646",
       border: "#54546d",
-      borderDim: "#2a2a37",
+      borderDim: "#363646",
+      borderStrong: "#727169",
       ink: "#dcd7ba",
       inkDim: "#c8c093",
       inkFaint: "#727169",
@@ -434,8 +470,9 @@ export const themes = {
       bg1: "#f2ecbc",
       bg2: "#e7dba0",
       bg3: "#d5cea3",
-      border: "#d5cea3",
-      borderDim: "#dcd5ac",
+      border: "#8a8980",
+      borderDim: "#a09cac",
+      borderStrong: "#716e61",
       ink: "#43436c",
       inkDim: "#545464",
       inkFaint: "#766b90",
@@ -640,6 +677,7 @@ const TOKEN_VARS: readonly [keyof ThemeTokens, string][] = [
   ["bg3", "--palette-bg3"],
   ["border", "--palette-border"],
   ["borderDim", "--palette-border-dim"],
+  ["borderStrong", "--palette-border-strong"],
   ["ink", "--palette-ink"],
   ["inkDim", "--palette-ink-dim"],
   ["inkFaint", "--palette-ink-faint"],

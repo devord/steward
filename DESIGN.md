@@ -32,8 +32,9 @@ gruvbox-dark row of the registry):
 | `bg1` / `--card`                 | `#282828`    | widget cards, panels                         |
 | `bg2` / `--muted`                | `#32302f`    | edit-mode surfaces, wells                    |
 | `bg3` / `--secondary`            | `#3c3836`    | hover fills, secondary controls              |
-| `border` / `--border`            | `#504945`    | strong borders, inputs                       |
-| `border-dim`                     | `#3c3836`    | hairlines inside cards                       |
+| `border` / `--border`            | `#504945`    | object edges: popovers, cells, head rules    |
+| `border-dim`                     | `#3c3836`    | hairlines splitting the flat plane           |
+| `border-strong` / `--input`      | `#7c6f64`    | control boundaries: inputs, checkboxes       |
 | `ink` / `--foreground`           | `#ebdbb2`    | body text                                    |
 | `ink-dim` / `--muted-foreground` | `#a89984`    | secondary text                               |
 | `ink-faint`                      | `#928374`    | metadata only, never body copy               |
@@ -58,6 +59,15 @@ palette's lightest tone, so widgets glow against the board instead of the
 whole page collapsing into one near-white plane. Button labels take `bg1`
 (each palette's brightest/most-neutral surface, full AA on every accent);
 selection is a translucent accent wash under unchanged ink.
+
+Borders are three graded tiers, not one value dimmed: `border-dim` splits the
+flat plane (≥1.2:1 on `bg`/`bg1`), `border` edges objects that must read as
+distinct — popovers, board cells, table head rules (≥1.5:1) — and
+`border-strong` bounds the fill-less controls. Inputs, selects, checkboxes and
+outline buttons carry no fill, so that hairline is the only thing identifying
+them: it answers to WCAG 1.4.11 and clears 3:1 on both surfaces. Pick by what
+the line is doing, not by how loud you want it; `theme.test.ts` holds every
+theme to all three floors and to their ordering.
 
 Strategy: **restrained**. Near-monochrome chrome, accent ≤10% of any
 screen. Yellow/green/red appear only when they mean something (stale,
