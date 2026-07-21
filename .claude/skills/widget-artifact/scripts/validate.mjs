@@ -138,6 +138,14 @@ for (const file of files) {
     errors.push(
       "data-fit-list present but no fit script (data-steward-tile never read)",
     )
+  // A list trimmed to zero items leaves its <h2> advertising content that is
+  // no longer there. The current snippet collapses the owning section and
+  // marks it; an artifact on the older snippet has no such marker.
+  if (hasFitList && !html.includes("data-fit-collapsed"))
+    warnings.push(
+      "fit script predates the empty-section collapse — a fully trimmed " +
+        "section will render as a heading over a bare `+N more` (SKILL.md)",
+    )
   if (!hasFitList) {
     const longList = [
       ...html.matchAll(/<[ou]l[^>]*>([\s\S]*?)<\/[ou]l>/g),
@@ -162,11 +170,69 @@ for (const file of files) {
       'static text says "you/your(s)" — person-relative content is render-time (ADR-0039)',
     )
 
-  // — Palette discipline (tokens only) —
-  const canonical = new Set(Object.values(TOKENS))
   const styles = [...html.matchAll(/<style[\s\S]*?<\/style>/g)]
     .map((m) => m[0])
     .join("\n")
+
+  // — Section rhythm (design.md · Section · Rhythm) —
+  // Sections must breathe more than the rows inside them, and the separation
+  // is a `gap` on every element that stacks sections. A `gap` reaches only its
+  // direct children, so a column wrapper that forgets one drops its sections
+  // flush against the row above while `main { gap }` still sits there looking
+  // healthy. That is a structural question — which element stacks the
+  // sections, and does it declare a gap — so answer it structurally.
+  {
+    // Selectors that declare a gap, reduced to the classes they name.
+    const gapped = new Set()
+    let mainHasGap = false
+    for (const [, sel, body] of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (!/(?:^|[\s;{])(?:row-)?gap\s*:/.test(body)) continue
+      if (/(?:^|[\s,>+~])main\b/.test(sel)) mainHasGap = true
+      for (const [, cls] of sel.matchAll(/\.([\w-]+)/g)) gapped.add(cls)
+    }
+
+    // Walk the markup, tracking which element directly holds each <section>.
+    const VOID = new Set(["meta", "link", "br", "img", "input", "hr", "source"])
+    const markup = html
+      .replace(/<script[\s\S]*?<\/script>/g, "")
+      .replace(/<style[\s\S]*?<\/style>/g, "")
+    const stack = []
+    for (const [, close, name, attrs] of markup.matchAll(
+      /<(\/)?([a-zA-Z][\w-]*)((?:[^>"]|"[^"]*")*)>/g,
+    )) {
+      const el = name.toLowerCase()
+      if (close) {
+        for (let i = stack.length - 1; i >= 0; i--)
+          if (stack[i].tag === el) {
+            const [done] = stack.splice(i)
+            // Only a container holding two or more sections owes a rhythm.
+            if (done && done.sections > 1 && !done.ok)
+              warnings.push(
+                `<${done.tag}${done.cls ? "." + done.cls.split(/\s+/)[0] : ""}> ` +
+                  `stacks ${done.sections} sections but declares no gap — ` +
+                  "`main`'s gap stops at its own children, so these labels sit " +
+                  "flush (design.md · Section · Rhythm: mark it `.stack`)",
+              )
+            break
+          }
+        continue
+      }
+      if (VOID.has(el) || /\/\s*$/.test(attrs)) continue
+      const cls = attrs.match(/\bclass\s*=\s*"([^"]*)"/)?.[1] || ""
+      const classes = cls.split(/\s+/).filter(Boolean)
+      const isSection = el === "section" || classes.includes("section")
+      if (isSection && stack.length) stack[stack.length - 1].sections++
+      stack.push({
+        tag: el,
+        cls,
+        sections: 0,
+        ok: (el === "main" && mainHasGap) || classes.some((c) => gapped.has(c)),
+      })
+    }
+  }
+
+  // — Palette discipline (tokens only) —
+  const canonical = new Set(Object.values(TOKENS))
   for (const [hex] of styles.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
     if (!canonical.has(hex.toLowerCase()))
       warnings.push(`non-palette hex in CSS: ${hex} — paint via var(--color-*)`)

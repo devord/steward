@@ -116,6 +116,27 @@ It hides trailing items until the page fits and says how many it hid:
   // scroll, so collapse trailing items that overflow into "+N more".
   // Runs only on the board — the frame stamps data-steward-tile.
   ;(function () {
+    // The collapsible unit is the whole section — heading included. Trimming
+    // a list to zero items would otherwise leave an <h2> advertising content
+    // that is no longer under it.
+    function owner(list) {
+      return list.closest("[data-fit-section], section") || list
+    }
+    function reset(list) {
+      var box = owner(list)
+      if (box.hasAttribute("data-fit-collapsed")) {
+        box.removeAttribute("data-fit-collapsed")
+        box.hidden = false
+      }
+      var more = list.querySelector("[data-fit-more]")
+      if (!more) {
+        more = document.createElement("li")
+        more.setAttribute("data-fit-more", "")
+        list.appendChild(more)
+      }
+      more.hidden = true
+      return more
+    }
     function fit() {
       if (!document.documentElement.hasAttribute("data-steward-tile")) return
       var doc = document.documentElement
@@ -123,44 +144,65 @@ It hides trailing items until the page fits and says how many it hid:
       var lists = [].slice
         .call(document.querySelectorAll("[data-fit-list]"))
         .reverse()
-      lists.forEach(function (list) {
-        var more = list.querySelector("[data-fit-more]")
-        if (!more) {
-          more = document.createElement("li")
-          more.setAttribute("data-fit-more", "")
-          list.appendChild(more)
-        }
+      // Reset every list before measuring: a re-fit after a resize must start
+      // from the whole artifact, or a tile can only ever shrink.
+      var state = lists.map(function (list) {
+        var more = reset(list)
+        // `.now` and [data-fit-keep] rows are load-bearing — the now marker,
+        // a repo that has gone quiet, the one failing check. Trimming them is
+        // how a tile ends up cheerfully reporting only good news.
         var items = [].filter.call(list.children, function (el) {
-          return el !== more && !el.classList.contains("now")
+          return (
+            el !== more &&
+            !el.classList.contains("now") &&
+            !el.hasAttribute("data-fit-keep")
+          )
         })
         items.forEach(function (el) {
           el.hidden = false
         })
-        more.hidden = true
-        // Overflow lives on <body> — html/body pin overflow:hidden, so the
-        // clipped region never surfaces on documentElement.scrollHeight.
-        var over = function () {
-          return (
-            Math.max(doc.scrollHeight, document.body.scrollHeight) >
-            doc.clientHeight
-          )
+        return {
+          list: list,
+          more: more,
+          items: items,
+          // A pinned row is itself a reason for the section to stay —
+          // collapsing would discard the row that was marked load-bearing.
+          pinned: list.querySelectorAll("[data-fit-keep], .now").length,
         }
+      })
+      // Overflow lives on <body> — html/body pin overflow:hidden, so the
+      // clipped region never surfaces on documentElement.scrollHeight.
+      function height() {
+        return Math.max(doc.scrollHeight, document.body.scrollHeight)
+      }
+      function over() {
+        return height() > doc.clientHeight
+      }
+      state.forEach(function (s) {
         var hidden = 0
-        while (over() && hidden < items.length) {
-          var before = Math.max(doc.scrollHeight, document.body.scrollHeight)
-          var el = items[items.length - ++hidden]
+        while (over() && hidden < s.items.length) {
+          // The next hide would empty this list: drop the whole section
+          // instead. A tier is a viewport, not a crop — a section that does
+          // not fit this tier is not part of it. A pinned row overrides that:
+          // the section stays, carrying the row that had to survive.
+          if (hidden + 1 === s.items.length && s.pinned === 0) {
+            var box = owner(s.list)
+            box.setAttribute("data-fit-collapsed", "")
+            box.hidden = true
+            return
+          }
+          var before = height()
+          var el = s.items[s.items.length - ++hidden]
           el.hidden = true
           // In multi-column tiers hiding a short-column item frees no
           // height — revert and leave this list whole.
-          if (
-            Math.max(doc.scrollHeight, document.body.scrollHeight) >= before
-          ) {
+          if (height() >= before) {
             el.hidden = false
             hidden--
             break
           }
-          more.hidden = false
-          more.textContent = "+" + hidden + " more"
+          s.more.hidden = false
+          s.more.textContent = "+" + hidden + " more"
         }
       })
     }
@@ -174,6 +216,21 @@ Style `[data-fit-more]` as a 12px mono `--color-ink-dim` line; it is a
 count, not content. Non-list layouts follow the same rule by other means
 (shorter text via `min-height` queries, clamped paragraphs); what matters
 is that nothing overflows a tile silently.
+
+**Rows that carry bad news survive the trim.** Mark them `data-fit-keep`
+(the now marker's `.now` class does the same job). Fit-trimming is
+bottom-up, and the rows that sort to the bottom are often the quiet
+ones — a repo with zero commits, a check that never ran. Left untagged,
+the tile trims away exactly the absence the reader needed to see.
+
+**A trimmed-to-nothing section collapses whole.** A heading over a bare
+`+7 more` is the worst reading of a tier: it names content and delivers
+none, and it spends the heading's height doing it. The snippet drops the
+owning `<section>` instead — wrap a list in its own `<section>`, or mark
+the unit with `data-fit-section` when one section holds two lists and only
+one should go. Better still, decide the tier deliberately: a section the
+2×2 tier was never meant to carry belongs behind a `min-width`/`min-height`
+query, so it is never rendered and never trimmed.
 
 ## Person-relative content (ADR-0039)
 

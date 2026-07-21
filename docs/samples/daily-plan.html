@@ -65,14 +65,29 @@
       /* Content top-aligned so the list reads top-down; overflowing content
          tops out and lets fit-lists trim. The one-row glance tier centers
          its lone KPI instead (below), so a sparse tile isn't adrift. */
-      main {
+      /* Sections breathe more than rows (rows run 4–6px, sections 14px), and
+         the separation is a `gap` on every element that stacks sections —
+         `main` and each column wrapper, which is what `.stack` marks. A gap
+         skips a section hidden by a tier query and skips the visually-hidden
+         heading; a sibling margin (`+`) would count both and open the glance
+         tiers on dead space. Its one cost is that it reaches only direct
+         children, so a wrapper that stacks sections must carry `.stack`. */
+      main,
+      .stack {
         display: grid;
-        gap: 12px;
+        align-content: start;
+        gap: 14px;
         min-height: 0;
+      }
+      main {
         /* Unshrunk, so overflow pushes past the body edge where the fit
            script can measure it — a squeezed main paints over the footer
            while scrollHeight stays clean. */
         flex-shrink: 0;
+      }
+      /* A second label inside one section is the case no gap can reach. */
+      :is(section, .section) > * + h2 {
+        margin-top: 14px;
       }
       @media (max-height: 160px) {
         [data-steward-tile] main {
@@ -421,7 +436,17 @@
             "prio blocks"
             "carry blocks";
           align-content: start;
-          gap: 20px 48px;
+          /* A genuine multi-column grid whose items *are* the sections, so the
+             one gap carries both axes: 28px of page rhythm down the rows, 48px
+             of gutter between the two columns. */
+          gap: 28px 48px;
+        }
+        /* The page opens the rhythm up: parts of a page, not rows of a tile. */
+        .stack {
+          gap: 28px;
+        }
+        :is(section, .section) > * + h2 {
+          margin-top: 28px;
         }
         .stat {
           display: none;
@@ -956,6 +981,27 @@
       // scroll, so collapse trailing items that overflow into "+N more".
       // Runs only on the board — the frame stamps data-steward-tile.
       ;(function () {
+        // The collapsible unit is the whole section — heading included. Trimming
+        // a list to zero items would otherwise leave an <h2> advertising content
+        // that is no longer under it.
+        function owner(list) {
+          return list.closest("[data-fit-section], section") || list
+        }
+        function reset(list) {
+          var box = owner(list)
+          if (box.hasAttribute("data-fit-collapsed")) {
+            box.removeAttribute("data-fit-collapsed")
+            box.hidden = false
+          }
+          var more = list.querySelector("[data-fit-more]")
+          if (!more) {
+            more = document.createElement("li")
+            more.setAttribute("data-fit-more", "")
+            list.appendChild(more)
+          }
+          more.hidden = true
+          return more
+        }
         function fit() {
           if (!document.documentElement.hasAttribute("data-steward-tile"))
             return
@@ -964,47 +1010,50 @@
           var lists = [].slice
             .call(document.querySelectorAll("[data-fit-list]"))
             .reverse()
-          lists.forEach(function (list) {
-            var more = list.querySelector("[data-fit-more]")
-            if (!more) {
-              more = document.createElement("li")
-              more.setAttribute("data-fit-more", "")
-              list.appendChild(more)
-            }
+          // Reset every list before measuring: a re-fit after a resize must start
+          // from the whole artifact, or a tile can only ever shrink.
+          var state = lists.map(function (list) {
+            var more = reset(list)
             var items = [].filter.call(list.children, function (el) {
               return el !== more && !el.classList.contains("now")
             })
             items.forEach(function (el) {
               el.hidden = false
             })
-            more.hidden = true
-            // Overflow lives on <body> — html/body pin overflow:hidden, so
-            // it never surfaces on documentElement.scrollHeight.
-            var over = function () {
-              return (
-                Math.max(doc.scrollHeight, document.body.scrollHeight) >
-                doc.clientHeight
-              )
-            }
+            return { list: list, more: more, items: items }
+          })
+          // Overflow lives on <body> — html/body pin overflow:hidden, so the
+          // clipped region never surfaces on documentElement.scrollHeight.
+          function height() {
+            return Math.max(doc.scrollHeight, document.body.scrollHeight)
+          }
+          function over() {
+            return height() > doc.clientHeight
+          }
+          state.forEach(function (s) {
             var hidden = 0
-            while (over() && hidden < items.length) {
-              var before = Math.max(
-                doc.scrollHeight,
-                document.body.scrollHeight,
-              )
-              var el = items[items.length - ++hidden]
+            while (over() && hidden < s.items.length) {
+              // The next hide would empty this list: drop the whole section
+              // instead. A tier is a viewport, not a crop — a section that does
+              // not fit this tier is not part of it.
+              if (hidden + 1 === s.items.length) {
+                var box = owner(s.list)
+                box.setAttribute("data-fit-collapsed", "")
+                box.hidden = true
+                return
+              }
+              var before = height()
+              var el = s.items[s.items.length - ++hidden]
               el.hidden = true
               // In multi-column tiers hiding a short-column item frees no
               // height — revert and leave this list whole.
-              if (
-                Math.max(doc.scrollHeight, document.body.scrollHeight) >= before
-              ) {
+              if (height() >= before) {
                 el.hidden = false
                 hidden--
                 break
               }
-              more.hidden = false
-              more.textContent = "+" + hidden + " more"
+              s.more.hidden = false
+              s.more.textContent = "+" + hidden + " more"
             }
           })
         }
