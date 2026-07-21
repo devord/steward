@@ -924,12 +924,18 @@ One block list, three renderings (see `docs/samples/daily-plan.html`):
   everything else off the block: a **details column** to the grid's
   right (a third grid column, `minmax(180px, 280px)`) carries each
   block's `goal:` note as 12px ink-dim text spanning the same grid rows
-  as its block — top-aligned to the block's start, clamped to the
-  block's height (`overflow: hidden`), a hairline's gap from the box it
-  annotates. The note sits _beside_ the time it belongs to and the grid
-  stops wasting its right half. Every block still carries a `title`
-  tooltip with its full range, label, and note, so
-  nothing clamped is lost. The now line crosses the grid at the
+  as its block — top-aligned to the block's start, a hairline's gap from
+  the box it annotates, and clamped to the block's height **in whole
+  line boxes**: round the available height down to a multiple of the
+  line box (`max-height: max(1lh, round(down, calc(100% - 2px), 1lh))`
+  over an `overflow: hidden`, with the raw `calc(100% - 2px)` clamp
+  declared first as the fallback), so an overflowing note truncates at
+  a line edge. A mid-line crop of half-height letters is the one way
+  this column must never degrade — the widget standard's no-ambiguous-
+  crop rule applies inside the artifact too, not just at the tile edge.
+  The note sits _beside_ the time it belongs to and the grid stops
+  wasting its right half. Every block still carries a `title` tooltip
+  with its full range, label, and note, so nothing clamped is lost. The now line crosses the grid at the
   current time, its mono chip sitting in the ruler gutter,
   calendar-style; the script measures a ruler row for its position (the
   tile tier's `--slot` is a container expression, not a length). The chip
