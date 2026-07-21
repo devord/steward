@@ -1,6 +1,8 @@
 import {
+  parseRepoFile,
   REPO_FILE_PATH,
   REPO_NAME_MAX,
+  type RepoFile,
   serializeRepoFile,
 } from "@steward/schema"
 
@@ -135,9 +137,23 @@ export async function action({ request }: { request: Request }) {
         REPO_FILE_PATH,
         "main",
       )
-      if (name === "") {
-        // Clear: the display name is repo.yaml's only field today, so an
-        // unset name means the file itself goes (absent is the honest blank).
+      // The name is one field among several (`sections`, `categories`) — read
+      // the rest through so a rename never drops orders it doesn't own.
+      // Best-effort, as in the section-rename path: a malformed repo.yaml is
+      // treated as no siblings, never a failed rename.
+      let siblings: Omit<RepoFile, "name"> = {}
+      if (current) {
+        try {
+          const { name: _drop, ...rest } = parseRepoFile(current.text)
+          siblings = rest
+        } catch {
+          siblings = {}
+        }
+      }
+      const hasSiblings = Object.keys(siblings).length > 0
+      if (name === "" && !hasSiblings) {
+        // Clear, and the name was all the file held — the file itself goes
+        // (absent is the honest blank).
         if (current) {
           await deleteFile(auth.token, repo.full, REPO_FILE_PATH, {
             message: "Clear repo display name",
@@ -147,8 +163,13 @@ export async function action({ request }: { request: Request }) {
         }
       } else {
         await putFile(auth.token, repo.full, REPO_FILE_PATH, {
-          content: serializeRepoFile({ name }),
-          message: `Set repo display name to ${name}`,
+          content: serializeRepoFile(
+            name === "" ? siblings : { ...siblings, name },
+          ),
+          message:
+            name === ""
+              ? "Clear repo display name"
+              : `Set repo display name to ${name}`,
           branch: "main",
           ...(current ? { sha: current.sha } : {}),
         })

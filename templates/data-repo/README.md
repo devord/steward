@@ -16,7 +16,8 @@
 
 - **`data/routines.yaml`**: what runs, and when.
 - **`data/dashboards/<slug>.yaml`**: one grid layout per board (`main` is the default).
-- **`data/repo.yaml`**: optional rail display name and section order.
+- **`data/repo.yaml`**: optional rail display name, section order, and widget
+  band order (`categories:`).
 - **`data/triggers/<slug>.json`**: API-trigger token for a manual cloud routine.
 - **`templates/routines/<id>.md`**: routine templates, shown in the app's picker.
 - **`templates/routines/<id>.sample.html`**: optional sample render for a

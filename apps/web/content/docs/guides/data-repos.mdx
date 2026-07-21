@@ -15,7 +15,7 @@ is a renderer over that repo, using your GitHub token.
 │   ├── data/
 │   │   ├── routines.yaml            # the routine pool: what runs, and when
 │   │   ├── dashboards/<slug>.yaml   # one grid layout per board
-│   │   ├── repo.yaml                # optional: display name, section order
+│   │   ├── repo.yaml                # optional: display name, section + band order
 │   │   └── triggers/<slug>.json     # API-trigger token per manual cloud routine
 │   └── templates/
 │       └── routines/<id>.md         # this repo's routine templates (+ optional
@@ -111,7 +111,7 @@ is no per-repo install request.
 Once the org has approved Steward, its repos surface in the picker and
 register without error. Nothing changes on Steward's side.
 
-## Display names and sections
+## Display names, sections, and band order
 
 Repo slugs make noisy labels, so a data repo may carry a display name in
 `data/repo.yaml`:
@@ -119,6 +119,7 @@ Repo slugs make noisy labels, so a data repo may carry a display name in
 ```yaml
 name: Form Factory
 sections: [Team, Clients, Projects]
+categories: [Project Management, Engineering]
 ```
 
 - `name` relabels the rail group only. Identifiers (URLs, prompts, action
@@ -126,8 +127,16 @@ sections: [Team, Clients, Projects]
 - `sections` orders the rail's board sections; membership lives on each
   board's own `section:` field. See
   [Dashboards](/docs/guides/dashboards#sections).
+- `categories` orders the widget bands inside every board in the repo;
+  membership lives on each routine's `category:`. There's no UI for the
+  order — it's neither alphabetical nor creation order, so it can only be
+  stated here.
 
-Both fields are optional; a malformed file degrades to defaults, never a
+Both order lists carry sequence only. A name a board or routine uses but the
+list omits sorts after the listed ones, alphabetically; a name here that
+nothing uses is ignored rather than rendering an empty band.
+
+Every field is optional; a malformed file degrades to defaults, never a
 broken rail. Editing the name in the app is a commit, like every other
 config change.
 
