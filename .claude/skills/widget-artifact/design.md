@@ -1276,6 +1276,63 @@ span.avatar {
 </a>
 ```
 
+#### Where the face comes from (ADR-0044)
+
+Rule 1 means the bytes must be in the file, so a run has to resolve every
+person **before** it authors anything. Resolve once per person and reuse on
+every row — a window has far fewer people than it has rows.
+
+Four steps, each falling into the next:
+
+1. **The people registry**, when the routine sets `params.people` (an
+   `owner/repo:path` naming a committed JSON map, `login → { name, src }`,
+   whose `src` is a 48px `data:` URI). Read it from the mounted checkout;
+   fall back to `gh api repos/<owner>/<repo>/contents/<path>` (base64 in
+   `.content`) if the repo is a source the environment did not check out.
+   Keys are lowercased, so look up `login | tr '[:upper:]' '[:lower:]'`.
+   **This is the only step that cannot fail by environment** — no network,
+   no host, no token scope. It is why the chain exists in this order.
+2. **`gh api users/<login>`** for the display name (`.name // .login`) of
+   anyone the registry doesn't carry. `api.github.com` is reachable
+   everywhere, so this step is dependable even where the next one isn't.
+3. **The avatar image**, best-effort, for those same people:
+
+   ```bash
+   for attempt in 1 2; do
+     [ -n "$avatar_url" ] && gh api "${avatar_url}&s=48" > "$tmp/$login" 2>/dev/null && break
+     curl -fsSL "${avatar_url}&s=48" -o "$tmp/$login" && break        # no auth header
+     curl -fsSL "https://github.com/$login.png?size=48" -o "$tmp/$login" && break
+     sleep 2
+   done
+   ```
+
+   Verify it is an image (`file -b --mime-type`) before base64ing it into a
+   `data:<mime>;base64,…` URI — never inline an error page as if it were a
+   face. **Expect this step to fail on scheduled runs.** Every path here
+   ends at `avatars.githubusercontent.com`, which a repository-scoped cloud
+   session does not reach; the same code gets every face locally. That split
+   is the whole reason for step 1, and it is not worth reporting.
+
+4. **The initial circle** — the floor, and a legitimate render.
+
+**Report a missing face only when it has an address.** Someone _in_ the
+registry rendering as an initial is a data bug worth one clause in the
+provenance line (they need a `github:` or an `avatar:` upstream). Someone
+outside it — a bot, an outside contributor, a first-time committer — is
+expected and silent. An undifferentiated "avatars unavailable" caveat says
+nothing actionable and trains the reader to skip the line.
+
+**A registry that is set but unreadable is the loud case.** Registries live
+in private repos, and a run reaches one only if that repo is in the
+routine's `repos:` (ADR-0018) and the account running it has access —
+neither of which is true by default, and both of which can be revoked
+without touching the routine. The fallback chain will quietly carry such a
+run all the way down to initials, which looks exactly like a routine that
+never configured a registry at all. So: `params.people` set and the read
+failing is a **configuration defect**, named in the provenance line with the
+repo it could not read. Silence there is how this bug class stays invisible
+for another few months.
+
 ### Meter (and the one-progress rule)
 
 Progress as a segmented bar (done/total), 4px tall: one shape plus its
