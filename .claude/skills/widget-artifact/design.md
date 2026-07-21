@@ -985,6 +985,95 @@ honestly (`+N more`), never by pastness. See the script in
 }
 ```
 
+### Stage strip (the act timeline)
+
+A project's named acts as one horizontal row — a **real sequence with one
+current act**, the altitude read ("which act are we in"). It is not a
+progress bar and never duplicates one: the meter answers _how far_, the
+strip answers _where_ — a widget may carry one of each, no more.
+
+Anatomy is **dot → label → connector**, per item: the connector joins an
+item to the _next_ one, so a label can never collide with the following
+act's dot (connector-before-label is the collision bug). Done acts read
+ink-dim with a filled dot; the current act full ink at weight 500 with an
+**orange now-dot** (the sanctioned now marker — it spends the tile's
+accent budget); upcoming acts ink-faint with a hollow ring. The strip is
+a whole row of chrome, so gate it on **height** (roughly
+`min-height: 560px` — page-tall surfaces), never width: a short-wide tile
+spends its rows on content.
+
+```css
+.stage ol {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.stage li {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-ink-faint);
+}
+.stage li:last-child {
+  flex: none;
+}
+.stage .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex: none;
+  border: 1px solid var(--color-ink-faint);
+}
+.stage .label {
+  margin-left: 6px;
+  white-space: nowrap;
+}
+.stage .conn {
+  flex: 1;
+  min-width: 14px;
+  height: 1px;
+  background: var(--color-border-dim);
+  margin: 0 10px;
+}
+.stage li.done {
+  color: var(--color-ink-dim);
+}
+.stage li.done .dot {
+  border-color: var(--color-ink-dim);
+  background: var(--color-ink-dim);
+}
+.stage li.now {
+  color: var(--color-ink);
+  font-weight: 500;
+}
+.stage li.now .dot {
+  border-color: var(--color-orange);
+  background: var(--color-orange);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-orange) 25%, transparent);
+}
+```
+
+```html
+<ol>
+  <li class="done">
+    <span class="dot"></span><span class="label">Discovery</span
+    ><span class="conn"></span>
+  </li>
+  <li class="now">
+    <span class="dot"></span><span class="label">Build</span
+    ><span class="conn"></span>
+  </li>
+  <li><span class="dot"></span><span class="label">Launch</span></li>
+</ol>
+```
+
+(The Meter's anti-stepper rule stands: numbered circles duplicating a
+bar are still banned. The strip earns its row only when the acts are
+genuinely named stages and the current one is a fact, not a percent.)
+
 ### Provenance line
 
 The run's method facts — what was audited, how much, what was held back,
