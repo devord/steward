@@ -7,6 +7,7 @@ import {
   loadDashboard,
   loadDashboardStructureOr503,
   repoExistsOr503,
+  streamPlacements,
 } from "./dashboard.server.ts"
 import { GitHubError } from "./github.server.ts"
 
@@ -451,6 +452,57 @@ describe("loadDashboardStructureOr503", () => {
     ).catch((e) => e)) as { init?: ResponseInit }
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(401)
+  })
+})
+
+// The board's orphan test (ADR-0042): a routine is only "not on the grid" if
+// no board in the repo places it, so the answer has to come from every layout.
+describe("streamPlacements", () => {
+  it("maps each routine to the boards that place it", async () => {
+    seedConfig()
+    seedRepo(DATA_REPO, {
+      "data/dashboards/corza.yaml": `grid: { columns: 4, rowHeight: 150 }
+widgets:
+  - routine: corza-prs
+    position: { col: 1, row: 1 }
+    size: { cols: 2, rows: 2 }
+  - routine: daily-plan
+    position: { col: 3, row: 1 }
+    size: { cols: 2, rows: 2 }
+`,
+    })
+
+    // Board order follows listDashboards' sort, so: corza before main.
+    expect(await streamPlacements("token", DATA_REPO)).toEqual({
+      // Placed twice — a routine may be arranged on any number of boards.
+      "daily-plan": ["corza", "main"],
+      "corza-prs": ["corza"],
+    })
+  })
+
+  // A hole in the map is indistinguishable from an orphan, and the board acts
+  // on that answer (it offers to delete the routine from the repo). So an
+  // unreadable layout has to poison the whole result rather than quietly drop
+  // its board's placements.
+  it("returns null when any board's layout can't be read", async () => {
+    seedConfig()
+    seedRepo(DATA_REPO, {
+      "data/dashboards/corza.yaml": `grid: { columns: 4, rowHeight: 150 }
+widgets:
+  - routine: corza-prs
+    position: { col: 1, row: 1 }
+    size: { cols: 2, rows: 2 }
+`,
+    })
+    failPath(DATA_REPO, "data/dashboards/corza.yaml", { status: 500 })
+
+    expect(await streamPlacements("token", DATA_REPO)).toBeNull()
+  })
+
+  it("returns null when the repo has no readable dashboards dir", async () => {
+    seedRepo(DATA_REPO, { "data/routines.yaml": ROUTINES_YAML })
+
+    expect(await streamPlacements("token", DATA_REPO)).toBeNull()
   })
 })
 

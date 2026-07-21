@@ -105,10 +105,10 @@ export const ptBR: Messages = {
 
   "offgrid.title": "Fora da grade",
   "offgrid.hint":
-    "No {file} compartilhado deste repo — coloque uma, ou exclua-a do repo.",
+    "No {file} compartilhado deste repo, mas em nenhum painel — coloque uma, ou exclua-a do repo.",
   "offgrid.delete": "Excluir {name} do repo",
   "offgrid.edit": "Editar {name}",
-  "offgrid.viewHint": "{n} fora deste painel — Editar para colocar",
+  "offgrid.viewHint": "{n} em nenhum painel — Editar para colocar",
 
   "routine.deleteTitle": "Excluir {name}?",
   "routine.deleteBody":

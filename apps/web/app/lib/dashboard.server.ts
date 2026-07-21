@@ -676,9 +676,79 @@ export interface RoutinesPool {
   baseFile: string | null
   /** Board slugs each routine is placed on, keyed by routine slug. A slug
       absent here (or mapped to []) is an orphan: in the pool, on no board. */
-  boardsByRoutine: Record<string, string[]>
+  boardsByRoutine: Placements
   /** Every board slug in the repo — the add-to-board picker's options. */
   dashboards: string[]
+}
+
+/** Board slugs each routine is placed on, keyed by routine slug — the one
+    fact a single board's layout can't answer (ADR-0025). A slug absent (or
+    mapped to []) is an orphan: in the pool, on no board. */
+export type Placements = Record<string, string[]>
+
+/**
+ * Read every board layout in the repo to learn which boards place which
+ * routines. `degraded` marks that at least one layout couldn't be read, so
+ * its placements are missing from the map: callers that merely *annotate*
+ * rows can use a degraded map as-is, but callers that *assert* orphanhood
+ * must not — an unread board is exactly where the missing placement hides.
+ */
+async function readPlacements(
+  token: string,
+  repo: string,
+  dashboards: string[],
+): Promise<{ placements: Placements; degraded: boolean }> {
+  let degraded = false
+  const layouts = await Promise.all(
+    dashboards.map((slug) =>
+      getFile(token, repo, dashboardPath(slug), "main")
+        .then((raw) => {
+          // The slug came from the directory listing, so an absent file is a
+          // read that lost a race, not a board without a layout — unknown
+          // placements either way.
+          if (!raw) {
+            degraded = true
+            return null
+          }
+          return { slug, file: parseDashboardFile(raw.text) }
+        })
+        .catch(() => {
+          degraded = true
+          return null
+        }),
+    ),
+  )
+  const placements: Placements = {}
+  for (const layout of layouts) {
+    if (!layout) continue
+    for (const widget of layout.file.widgets) {
+      ;(placements[widget.routine] ??= []).push(layout.slug)
+    }
+  }
+  return { placements, degraded }
+}
+
+/**
+ * The repo's placement map for one board's "Not on the grid" parking lot,
+ * streamed (ADR-0030) — the board never waits on the per-board reads, which
+ * are the same ETag-cached layouts the rail already fetches.
+ *
+ * null means *unknown*, not *nothing placed*: a degraded read would otherwise
+ * present a routine that lives on a sibling board as an orphan, next to a
+ * button offering to delete it from the repo. The parking lot hides itself
+ * instead — the pool view (ADR-0025) is the surface that owns orphans.
+ */
+export function streamPlacements(
+  token: string,
+  repo: string,
+): Promise<Placements | null> {
+  return listDashboards(token, repo)
+    .then(async (slugs) => {
+      if (!slugs) return null
+      const { placements, degraded } = await readPlacements(token, repo, slugs)
+      return degraded ? null : placements
+    })
+    .catch(() => null)
 }
 
 export async function loadRoutinesPool(
@@ -694,31 +764,17 @@ export async function loadRoutinesPool(
     : { routines: [] }
   const dashboards = slugs ?? []
 
-  // Read each board's layout to learn placements. One flaky board degrades to
-  // "placements unknown for that board" (dropped from the map), never a failed
-  // page — the same failure-isolation the sidebar's per-repo listing uses.
-  const layouts = await Promise.all(
-    dashboards.map((slug) =>
-      getFile(token, repo, dashboardPath(slug), "main")
-        .then((raw) =>
-          raw ? { slug, file: parseDashboardFile(raw.text) } : null,
-        )
-        .catch(() => null),
-    ),
-  )
-  const boardsByRoutine: Record<string, string[]> = {}
-  for (const layout of layouts) {
-    if (!layout) continue
-    for (const widget of layout.file.widgets) {
-      ;(boardsByRoutine[widget.routine] ??= []).push(layout.slug)
-    }
-  }
+  // One flaky board degrades to "placements unknown for that board" (dropped
+  // from the map), never a failed page — the same failure-isolation the
+  // sidebar's per-repo listing uses. The table annotates rows rather than
+  // acting on them, so a hole costs a "where is this placed" chip, not truth.
+  const { placements } = await readPlacements(token, repo, dashboards)
 
   return {
     routines,
     baseSha: routinesRaw?.sha ?? null,
     baseFile: routinesRaw?.text ?? null,
-    boardsByRoutine,
+    boardsByRoutine: placements,
     dashboards,
   }
 }

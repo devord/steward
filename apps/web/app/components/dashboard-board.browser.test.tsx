@@ -1,11 +1,15 @@
 import { createMemoryRouter, RouterProvider } from "react-router"
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 
 import "../app.css"
 import { DashboardBoard } from "./dashboard-board.tsx"
-import type { ArtifactInfo, DashboardBase } from "../lib/dashboard.server.ts"
+import type {
+  ArtifactInfo,
+  DashboardBase,
+  Placements,
+} from "../lib/dashboard.server.ts"
 
 function view(): DashboardBase {
   return {
@@ -41,16 +45,26 @@ function view(): DashboardBase {
 
 async function renderBoard(
   artifacts: Promise<Record<string, ArtifactInfo>> = Promise.resolve({}),
-  { viewerCanPush = true }: { viewerCanPush?: boolean | null } = {},
+  {
+    viewerCanPush = true,
+    base = view(),
+    placements = {},
+  }: {
+    viewerCanPush?: boolean | null
+    base?: DashboardBase
+    /** Repo-wide placement map (ADR-0042); null = unknown. */
+    placements?: Placements | null
+  } = {},
 ) {
   const router = createMemoryRouter([
     {
       path: "/",
       element: (
         <DashboardBoard
-          view={view()}
+          view={base}
           artifacts={artifacts}
           templates={[]}
+          placements={placements}
           login="alice"
           displayName="Alice"
           now={Date.now()}
@@ -111,6 +125,13 @@ async function renderBoard(
 }
 
 describe("DashboardBoard", () => {
+  // Layout edits land in a localStorage draft (ADR-0003) keyed by repo+board,
+  // which every test here shares — clear it so one test's unplaced widget
+  // can't seed the next test's board.
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   // Regression: the always-mounted delete dialog, closed by default, used to
   // call `dashboardPath("")` to build its body — and an empty, non-kebab slug
   // makes the schema throw, tripping the root error boundary the moment any
@@ -249,5 +270,122 @@ describe("DashboardBoard", () => {
     await expect
       .poll(() => document.querySelector(".dash-grid.is-editing"))
       .not.toBeNull()
+  })
+
+  // "Not on the grid" (ADR-0042). A repo's routine pool is shared across its
+  // boards, so the parking lot's old "absent from *this* board" test paraded
+  // every sibling board's routines here — a client board's work showing up
+  // under an unrelated one, each row beside a button offering to delete it
+  // from the repo out from under the board that renders it.
+  describe("the off-grid parking lot lists orphans only", () => {
+    /** `daily` on this board, `sibling` on another, `homeless` on none. */
+    function pool(): DashboardBase {
+      const base = view()
+      base.routines.routines.push(
+        {
+          slug: "sibling",
+          name: "Sibling",
+          template: "daily",
+          schedule: "0 * * * *",
+          enabled: true,
+        },
+        {
+          slug: "homeless",
+          name: "Homeless",
+          template: "daily",
+          schedule: "0 * * * *",
+          enabled: true,
+        },
+      )
+      return base
+    }
+
+    it("hides a routine placed on a sibling board, keeps the orphan", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), {
+        base: pool(),
+        placements: { daily: ["main"], sibling: ["corza"] },
+      })
+      await expect.poll(() => document.body.textContent).toContain("Daily")
+
+      // View mode counts orphans only — one, not two.
+      await expect
+        .poll(() => document.body.textContent)
+        .toContain("1 on no dashboard")
+
+      await userEvent.click(
+        page.getByRole("button", { name: "Edit", exact: true }),
+      )
+      await expect
+        .poll(() => document.body.textContent)
+        .toContain("Not on the grid")
+      // Its "delete from the repo" control is the thing that must never be
+      // offered for a routine another board renders.
+      expect(
+        page
+          .getByRole("button", { name: "Delete Homeless from the repo" })
+          .elements().length,
+      ).toBe(1)
+      expect(
+        page
+          .getByRole("button", { name: "Delete Sibling from the repo" })
+          .elements().length,
+      ).toBe(0)
+    })
+
+    // Unknown placements (still streaming, or a degraded read) must not be read
+    // as "nothing is placed anywhere" — that reinstates the false claim for
+    // every routine in the pool.
+    it("stays hidden while placements are unknown", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), {
+        base: pool(),
+        placements: null,
+      })
+      await expect.poll(() => document.body.textContent).toContain("Daily")
+      // Polled, not asserted once: useStreamed seeds from the last value held
+      // for this key, so a previous test's map can paint for one frame.
+      await expect
+        .poll(() => document.body.textContent)
+        .not.toContain("on no dashboard")
+
+      await userEvent.click(
+        page.getByRole("button", { name: "Edit", exact: true }),
+      )
+      await expect
+        .poll(() => document.querySelector(".dash-grid.is-editing"))
+        .not.toBeNull()
+      await expect
+        .poll(() => document.body.textContent)
+        .not.toContain("Not on the grid")
+    })
+
+    // This board's placement comes from the *draft*, not the committed map:
+    // unplacing a widget deliberately leaves the routine in the pool, and it
+    // has to land in the parking lot right then — not one sync later.
+    it("catches a widget unplaced in the draft, before any sync", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), {
+        base: pool(),
+        // The committed map still says `daily` is on this board.
+        placements: { daily: ["main"], sibling: ["corza"] },
+      })
+      await expect.poll(() => document.body.textContent).toContain("Daily")
+
+      await userEvent.click(
+        page.getByRole("button", { name: "Edit", exact: true }),
+      )
+      await userEvent.click(
+        page.getByRole("button", { name: "Remove Daily from grid" }),
+      )
+      await expect
+        .poll(
+          () =>
+            page
+              .getByRole("button", { name: "Delete Daily from the repo" })
+              .elements().length,
+        )
+        .toBe(1)
+    })
   })
 })

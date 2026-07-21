@@ -55,6 +55,7 @@ import { cn } from "~/lib/utils"
 import type {
   ArtifactInfo,
   DashboardBase,
+  Placements,
   SidebarData,
 } from "../lib/dashboard.server.ts"
 import {
@@ -104,6 +105,7 @@ export function DashboardBoard({
   view,
   artifacts,
   templates,
+  placements,
   login,
   displayName,
   now,
@@ -116,6 +118,11 @@ export function DashboardBoard({
   /** The add-routine picker's templates, streamed (ADR-0030): only the
       dialog reads them, so the board never waits on the discovery reads. */
   templates: DiscoveredTemplate[] | Promise<DiscoveredTemplate[]>
+  /** Which boards place each routine, repo-wide — the parking lot's orphan
+      test (ADR-0042), streamed (ADR-0030). null = *unknown* (still streaming,
+      or the read degraded), not *nothing placed*: the parking lot stays
+      hidden rather than call a sibling board's routine homeless. */
+  placements: Placements | null | Promise<Placements | null>
   login: string
   displayName?: string | null
   now: number
@@ -129,6 +136,7 @@ export function DashboardBoard({
   // and picker never flash back to loading.
   const sidebarData = useOptimisticSidebar(sidebar)
   const templatesData = useStreamed(templates, `templates:${view.dataRepo}`)
+  const placementsData = useStreamed(placements, `placements:${view.dataRepo}`)
   // Read-only access to this board's repo (ADR-0023): the active repo's push
   // permission rides the streamed sidebar (SidebarRepo.viewerCanPush) — chrome
   // data, off the paint path (ADR-0030), the same source repo-group-header
@@ -266,7 +274,26 @@ export function DashboardBoard({
 
   const routinesBySlug = new Map(routines.routines.map((r) => [r.slug, r]))
   const placed = new Set(dashboard.widgets.map((w) => w.routine))
-  const unplaced = routines.routines.filter((r) => !placed.has(r.slug))
+  // "Not on the grid" means *orphan* — in the pool, on no board in the repo
+  // (ADR-0042) — not merely "absent from this board". A repo's pool is shared
+  // across its boards (ADR-0025), so the looser test paraded every sibling
+  // board's routines here, each beside a button offering to delete it from
+  // the repo out from under the board that renders it.
+  //
+  // This board's own truth comes from the *draft* (`placed`), not the map:
+  // unplacing a widget leaves the routine in the pool by design, and it must
+  // land here immediately rather than after a sync. Other boards come from the
+  // committed map, and an unknown map hides the section entirely.
+  const unplaced =
+    placementsData == null
+      ? []
+      : routines.routines.filter(
+          (r) =>
+            !placed.has(r.slug) &&
+            !(placementsData[r.slug] ?? []).some(
+              (board) => board !== view.dashboardSlug,
+            ),
+        )
   // Below the 4-column breakpoint widgets stack in source order, so render
   // them in visual (row, col) order — the phone/tablet stack then reads
   // top-left to bottom-right like the full board.

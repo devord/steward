@@ -8,6 +8,7 @@ import { DEFAULT_DASHBOARD } from "../lib/repos.ts"
 import {
   loadArtifacts,
   loadDashboardStructureOr503,
+  streamPlacements,
   streamSidebar,
 } from "../lib/dashboard.server.ts"
 import { requireDataRepo, resolveHomeRepo } from "../lib/repos.server.ts"
@@ -60,6 +61,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   // not awaited.
   const artifacts = loadArtifacts(auth.token, ref, view.routines)
   const templates = streamTemplates(auth.token, repo.full)
+  const placements = streamPlacements(auth.token, repo.full)
   return {
     login: auth.login,
     displayName: auth.name ?? null,
@@ -67,6 +69,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     view,
     artifacts,
     templates,
+    placements,
     sidebar,
   }
 }
@@ -81,6 +84,7 @@ export default function RepoDashboard({ loaderData }: Route.ComponentProps) {
       view={loaderData.view}
       artifacts={loaderData.artifacts}
       templates={loaderData.templates}
+      placements={loaderData.placements}
       login={loaderData.login}
       displayName={loaderData.displayName}
       now={loaderData.now}
