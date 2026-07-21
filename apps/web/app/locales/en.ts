@@ -13,8 +13,11 @@ export const en = {
   "landing.privacy":
     "Your data is yours — it lives in a private GitHub repo you own; the app stores nothing.",
   "landing.deviceLink": "Sign in with a device code instead",
-  // Lowercase mono, like the `more` cue — a nav token, not prose.
+  // Lowercase mono, like the `more` cue — nav tokens, not prose. `github` is
+  // a proper noun held lowercase because it's a token in this statusline,
+  // the same way `llms.txt` is; the account menu spells it properly.
   "landing.docs": "docs",
+  "landing.github": "github",
   // Pager voice, deliberately lowercase mono next to a ▾ glyph — like the
   // pipeline tokens; the aria label speaks full chrome.
   "landing.more": "more",
@@ -105,6 +108,10 @@ export const en = {
   "account.menu": "Account",
   "account.githubAccount": "GitHub account",
   "account.docs": "Docs",
+  // Not bare "GitHub" — with a GitHub avatar and "GitHub account" two rows
+  // up, the word alone would read as something about the signed-in account.
+  // "Source" names what the row actually opens.
+  "account.source": "Source on GitHub",
 
   "empty.fact": "The grid is empty",
   "empty.hint":

@@ -11,11 +11,13 @@ import {
 import type { LucideIcon } from "lucide-react"
 
 import { handleRadioKeydown } from "./appearance-settings.tsx"
+import { GithubMark } from "./github-mark.tsx"
 import { Wordmark } from "./logo.tsx"
 import { buttonVariants } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
 import { APPEARANCE_MODES } from "../lib/appearance-modes.ts"
 import { cssVars } from "../lib/css.ts"
+import { STEWARD_REPO_URL } from "../lib/project.ts"
 import { useAppearance } from "../lib/use-appearance.ts"
 import { useT } from "../lib/i18n.tsx"
 
@@ -35,20 +37,26 @@ export function Landing() {
   const t = useT()
   return (
     <main className="landing-bg relative min-h-dvh">
-      {/* The corner chrome: the docs link beside the mode toggle — the one
-          piece of nav a signed-out visitor gets, in the corner devs look
-          for it. The link wears the toggle's own control-chip dress
-          (border + bg1, stretched to the same height) so the corner reads
-          as one statusline of controls; a bare word next to a framed
-          neighbor read as a label, not a link. Body size, not the metadata
-          floor — this is nav, small as it is. */}
+      {/* The corner chrome: docs and the source repo beside the mode toggle —
+          the nav a signed-out visitor gets, in the corner devs look for it.
+          Each link wears the toggle's own control-chip dress (border + bg1,
+          stretched to the same height) so the corner reads as one statusline
+          of controls; a bare word next to a framed neighbor read as a label,
+          not a link. Body size, not the metadata floor — this is nav, small
+          as it is.
+
+          `github` is a word here, not the octocat, though it is the octocat
+          in the account menu and the docs nav. The mark is already spent on
+          this page: it's the sign-in button's glyph, and that button has to
+          be unmistakable. A second octocat one corner away would make the
+          mark mean both "authenticate" and "source". Each surface uses the
+          vocabulary it already has — words in this statusline, icon+label in
+          menus — which is the same split `docs` follows. */}
       <div className="absolute top-4 right-4 z-10 flex items-stretch gap-2 sm:top-6 sm:right-6">
-        <a
-          href="/docs"
-          className="flex items-center rounded-lg border border-border-dim bg-bg1 px-3 font-mono text-sm text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          {t("landing.docs")}
-        </a>
+        <CornerLink href="/docs">{t("landing.docs")}</CornerLink>
+        <CornerLink href={STEWARD_REPO_URL} external>
+          {t("landing.github")}
+        </CornerLink>
         <LandingModeToggle />
       </div>
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -103,6 +111,35 @@ export function Landing() {
         <LandingFooter />
       </div>
     </main>
+  )
+}
+
+/* --- Corner chrome -------------------------------------------------------- */
+
+/**
+ * One chip in the top-right statusline. Sized off the mode toggle beside it
+ * (`items-stretch` on the row does the matching), so the corner keeps one
+ * height whatever it holds. `external` marks a departure from the site and
+ * gets the app's off-site treatment: a new tab, so the landing survives the
+ * trip.
+ */
+function CornerLink({
+  href,
+  external = false,
+  children,
+}: {
+  href: string
+  external?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <a
+      href={href}
+      {...(external && { target: "_blank", rel: "noreferrer" })}
+      className="flex items-center rounded-lg border border-border-dim bg-bg1 px-3 font-mono text-sm text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      {children}
+    </a>
   )
 }
 
@@ -354,11 +391,12 @@ function ClosingCta() {
 
 /**
  * The page's last line: a quiet rail of further reading for whoever the
- * closing CTA didn't convert — the docs, the quickstart, and the agent
- * surface (llms.txt, a literal filename in every locale). Mono lowercase,
- * the pager voice; chrome, not argument, so no reveal choreography. The
- * links take ink-dim, not ink-faint — they must be read to be used, and
- * faint ink is reserved for metadata.
+ * closing CTA didn't convert — the docs, the quickstart, the source, and the
+ * agent surface (llms.txt, a literal filename in every locale). Mono
+ * lowercase, the pager voice; chrome, not argument, so no reveal
+ * choreography. The links take ink-dim, not ink-faint — they must be read to
+ * be used, and faint ink is reserved for metadata. `github` sits last of the
+ * three human destinations, after the two that keep the reader on the site.
  */
 function LandingFooter() {
   const t = useT()
@@ -368,6 +406,7 @@ function LandingFooter() {
       href: "/docs/getting-started/quickstart",
       label: t("landing.footer.quickstart"),
     },
+    { href: STEWARD_REPO_URL, label: t("landing.github"), external: true },
     { href: "/llms.txt", label: "llms.txt" },
   ]
   return (
@@ -376,10 +415,11 @@ function LandingFooter() {
         aria-label={t("landing.footer.label")}
         className="flex flex-wrap items-center gap-x-6 gap-y-2"
       >
-        {links.map(({ href, label }) => (
+        {links.map(({ href, label, external }) => (
           <a
             key={href}
             href={href}
+            {...(external && { target: "_blank", rel: "noreferrer" })}
             className="rounded-md font-mono text-xs text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {label}
@@ -454,20 +494,6 @@ function LandingModeToggle() {
         )
       })}
     </div>
-  )
-}
-
-/** The GitHub mark, currentColor so it inherits the button's ink. */
-function GithubMark({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      aria-hidden
-      fill="currentColor"
-      className={className}
-    >
-      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
-    </svg>
   )
 }
 

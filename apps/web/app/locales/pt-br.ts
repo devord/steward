@@ -15,6 +15,7 @@ export const ptBR: Messages = {
     "Seus dados são seus — vivem em um repo privado do GitHub que é seu; o app não guarda nada.",
   "landing.deviceLink": "Entrar com um código de dispositivo",
   "landing.docs": "docs",
+  "landing.github": "github",
   "landing.more": "mais",
   "landing.moreLabel": "Rolar para como funciona",
 
@@ -97,6 +98,7 @@ export const ptBR: Messages = {
   "account.menu": "Conta",
   "account.githubAccount": "Conta do GitHub",
   "account.docs": "Docs",
+  "account.source": "Código no GitHub",
 
   "empty.fact": "A grade está vazia",
   "empty.hint":

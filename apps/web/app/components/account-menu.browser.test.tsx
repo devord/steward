@@ -4,6 +4,7 @@ import { render } from "vitest-browser-react"
 
 import "../app.css"
 import { AccountMenu } from "./account-menu.tsx"
+import { STEWARD_REPO_URL } from "../lib/project.ts"
 import { APPEARANCE_STORAGE_KEY } from "../lib/theme.ts"
 
 const modeTile = (label: string): HTMLElement | null =>
@@ -31,18 +32,36 @@ async function openMenu() {
   await vi.waitFor(() => expect(modeTile("Dark")).not.toBeNull())
 }
 
-describe("AccountMenu docs item", () => {
+const menuLink = (text: string): HTMLAnchorElement => {
+  const link = [
+    ...document.querySelectorAll<HTMLAnchorElement>('[role="menu"] a'),
+  ].find((el) => el.textContent === text)
+  if (!link) throw new Error(`no "${text}" menu item`)
+  return link
+}
+
+describe("AccountMenu outbound links", () => {
   it("links to the docs in a new tab", async () => {
     await openMenu()
 
-    const docs = [
-      ...document.querySelectorAll<HTMLAnchorElement>('[role="menu"] a'),
-    ].find((el) => el.textContent === "Docs")
-    if (!docs) throw new Error("no Docs menu item")
+    const docs = menuLink("Docs")
     expect(docs.getAttribute("href")).toBe("/docs")
     // A new tab — the reader keeps the board open beside the docs.
     expect(docs.getAttribute("target")).toBe("_blank")
     expect(docs.getAttribute("rel")).toBe("noreferrer")
+  })
+
+  it("links to the source repo in a new tab", async () => {
+    await openMenu()
+
+    const source = menuLink("Source on GitHub")
+    expect(source.getAttribute("href")).toBe(STEWARD_REPO_URL)
+    expect(source.getAttribute("target")).toBe("_blank")
+    expect(source.getAttribute("rel")).toBe("noreferrer")
+    // The octocat is decorative; the row's text is its accessible name.
+    expect(source.querySelector("svg")?.getAttribute("aria-hidden")).toBe(
+      "true",
+    )
   })
 })
 

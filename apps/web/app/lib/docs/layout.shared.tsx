@@ -1,9 +1,13 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared"
 import { ArrowUpRight } from "lucide-react"
 
+import { GithubMark } from "~/components/github-mark.tsx"
+import { STEWARD_REPO_URL } from "~/lib/project.ts"
+
 /**
  * Shared docs-layout options: the wordmark (theme-swapped like the app
- * chrome's) leading back to the docs index, and one link out to the board.
+ * chrome's) leading back to the docs index, and two links out — the board
+ * and the source repo.
  */
 export function baseOptions(): BaseLayoutProps {
   return {
@@ -27,14 +31,25 @@ export function baseOptions(): BaseLayoutProps {
       ),
       url: "/docs",
     },
-    // Opens the board in a new tab — the reader keeps the docs open beside
-    // it; the arrow marks the hand-off out of the docs surface.
+    // Both open in a new tab — the reader keeps the docs open beside them;
+    // the arrow marks the hand-off out of the docs surface. Two peers in one
+    // shape: this layout renders `links` down the sidebar, where fumadocs'
+    // compact `type: "icon"` variant stretches to full width and reads as an
+    // empty button, so the repo is a plain item like its neighbour. Drawn
+    // with the app's own octocat rather than fumadocs' `githubUrl` shortcut,
+    // which injects a second, differently-traced GitHub mark.
     links: [
       {
         text: "Open the app",
         url: "/",
         external: true,
         icon: <ArrowUpRight />,
+      },
+      {
+        text: "Source on GitHub",
+        url: STEWARD_REPO_URL,
+        external: true,
+        icon: <GithubMark className="size-4" />,
       },
     ],
   }

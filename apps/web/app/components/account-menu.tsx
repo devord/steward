@@ -2,6 +2,7 @@ import { useSubmit } from "react-router"
 
 import { BookOpen, ChevronsUpDown, LogOut, Settings } from "lucide-react"
 
+import { GithubMark } from "./github-mark.tsx"
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
 import {
   DropdownMenu,
@@ -15,6 +16,7 @@ import {
 import { Link } from "~/components/ui/link"
 import { cn } from "~/lib/utils"
 import { APPEARANCE_MODES } from "../lib/appearance-modes.ts"
+import { STEWARD_REPO_URL } from "../lib/project.ts"
 import { useAppearance } from "../lib/use-appearance.ts"
 import { useT } from "../lib/i18n.tsx"
 
@@ -183,6 +185,21 @@ export function AccountMenu({
         >
           <BookOpen />
           {t("account.docs")}
+        </DropdownMenuItem>
+
+        {/* Steward is open source; the repo sits under the docs as the other
+            half of "read about this thing", both leaving to their own tab.
+            Here the octocat is the right glyph — this menu's vocabulary is
+            icon+label, and unlike the landing there's no sign-in button
+            nearby for the mark to be confused with. Sized to match lucide's
+            rendered glyphs, which the menu sizes to `size-4`. */}
+        <DropdownMenuItem
+          render={
+            <a href={STEWARD_REPO_URL} target="_blank" rel="noreferrer" />
+          }
+        >
+          <GithubMark className="size-4" />
+          {t("account.source")}
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
