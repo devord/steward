@@ -144,6 +144,64 @@ media block:
 }
 ```
 
+**One capped column is the single-block case, not the default.** The cap
+above keeps one ledger's trailing values near their labels; it is not a
+licence to stack five blocks in a 56rem ribbon down the left of a 2000px
+frame. An artifact carrying several independent blocks (a ledger, a
+composition, two breakdowns) should become a **real multi-column page** at
+the wide tier: the lead block takes the larger share, the parallel lists run
+as columns beside it, and the provenance line spans the foot. The cap then
+moves down a level, so each block bounds its **own** measure and the page
+grid spends the width on content instead of margin. Gate it on both axes
+(`min-width: 1100px` and `min-height: 560px`); a wide-but-short tile has no
+room for a tall left stack beside two lists and should keep the stacked
+layout.
+
+Flatten wrappers with `display: contents` so nested blocks become real
+columns of the page grid, and place by `grid-template-areas`, since the
+areas map is the layout, readable at a glance:
+
+```css
+@media (min-width: 1100px) and (min-height: 560px) {
+  main {
+    /* Shares, not caps: `minmax(0, 34rem)` sizes the track to its
+       max-content and stops, so columns hug and the outer allowance is
+       never spent. An fr component makes them divide the frame. */
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "head head head"
+      "led  proj req"
+      "comp proj req"
+      "prov prov prov";
+    grid-template-rows: auto auto 1fr auto;
+    align-items: start;
+    column-gap: 40px;
+    row-gap: 30px;
+  }
+  .breakdowns,
+  .breakdowns .cols {
+    display: contents;
+  }
+}
+```
+
+**The outer cap scales with the column count**, so the shell's `56rem` is a
+floor, not a constant: ~56rem for one capped column, ~72rem for two
+(`repo-intel`'s main + rail), ~88rem for three (`request-queue`'s ledger +
+two breakdowns). Different numbers across artifacts are the rule working,
+not drift; what stays fixed is that the cap exists and the slack falls to
+the right.
+
+Give `main` **`flex-grow: 1`** at this tier and let the last content row
+take `1fr`, so the provenance line lands on the page's bottom edge as a real
+foot rather than the content trailing off mid-frame with dead space beneath
+it. Grow only: never write it as `flex: 1 1 auto`, which resets
+`flex-shrink` to 1 and hands back the squeeze the shell pins shut above, so
+overflow would hide inside the body box where the fit pass cannot see it.
+Do **not** answer leftover height by padding rows or by uncapping a list
+that is capped for editorial reasons: an artifact with little to say should
+look calm, not inflated.
+
 Width alone cannot tell a wide tile from the full view, since a 4-column
 tile is also ≥900px. Layout (columns, roomier rows) and the page heading key
 on the media query; only the generosity that would break a tile (outer
@@ -311,6 +369,8 @@ li {
   display: grid;
   grid-template-columns: subgrid;
   align-items: baseline;
+  /* One shared line box for the row — see below. */
+  line-height: 20px;
 }
 .key {
   font-family: var(--font-mono);
@@ -319,6 +379,22 @@ li {
   white-space: nowrap;
 }
 ```
+
+**One shared line box per row.** `align-items: baseline` shares a baseline
+but _not_ a box. A row mixing 14px body with 12px mono keys builds line
+boxes of 20.3px and 17.4px, so the row's height comes from the tallest cell
+while every shorter cell carries different leading. Each cell's optical
+centre then lands somewhere else, the group sits low inside its own padding,
+and a column of those rows reads as drifting rather than set. Give the `li`
+a **length** `line-height` (not a unitless ratio): a length inherits at the
+same computed value whatever the cell's font-size, so every cell builds an
+identical box and baseline and centre coincide. This is the ledger form of
+the rule the app chrome already follows, that cells only align across a row
+if they share a line-height.
+
+Keep `align-items: baseline` once the boxes match. Baseline is what makes
+mixed-size text sit on one line; centring equal boxes instead would leave
+adjacent 14px and 12px text on baselines ~1px apart, which reads as a step.
 
 ```html
 <ul>
@@ -330,6 +406,15 @@ Add trailing columns by widening the template
 (`max-content 1fr max-content`): the right column takes the value that
 answers the glance (a count, an age, "9 need you"). Key colors are semantic:
 orange for ranks/priority, aqua for times, yellow for carry-overs.
+
+**Keep the track count equal to the children count.** A `subgrid` row
+inherits every track the parent declares, whether or not the row has a cell
+for it. Declare three tracks, give each `li` two spans, and the third track
+still reserves its width: invisible dead space down the right of every row
+that no cell will ever fill, silently widening the block past the measure
+you thought you set. When a trailing value lives _inside_ a composed cell (a
+bar and its number in one `.mag-cell`), that cell is **one** child, so the
+parent declares two tracks, not three.
 
 **Lead + detail.** A row body is never one undifferentiated sentence. A
 list whose every row is a uniform 14px line reads as a wall, however good
