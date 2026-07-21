@@ -3,7 +3,7 @@ name: widget-artifact
 description: >-
   The artifact authoring contract (docs/widget-standard.md): how to write
   the single self-contained HTML file a steward widget renders. Use
-  whenever producing or reviewing a widget artifact — routine skills author
+  whenever producing or reviewing a widget artifact. Routine skills author
   content, this skill dictates the file.
 ---
 
@@ -11,10 +11,10 @@ description: >-
 
 The artifact is rendered inside `<iframe srcdoc sandbox="allow-scripts">`:
 scripts allowed, **no** same-origin. **No network is the contract, not a
-browser guarantee** — the sandbox doesn't block fetches, but external
+browser guarantee.** The sandbox doesn't block fetches, but external
 resources are forbidden by hard requirement 1 and may break, hang, or leak
 at render time. The iframe is the widget body, so plain `@media` queries
-respond to the widget's grid size — no JS needed for responsiveness.
+respond to the widget's grid size, with no JS needed for responsiveness.
 
 ## Hard requirements
 
@@ -27,17 +27,17 @@ respond to the widget's grid size — no JS needed for responsiveness.
      progressively (KPI row → line items → sparkline). Author with
      `min-width`/`min-height` queries that reveal sections, like the
      reference artifact.
-   - **Fit the height at every tier** (ADR-0019): tiles never scroll — the
-     board pins the iframe's overflow shut — so a list that doesn't fit must
+   - **Fit the height at every tier** (ADR-0019): tiles never scroll, since
+     the board pins the iframe's overflow shut, so a list that doesn't fit must
      degrade to fewer items plus a visible `+N more` line, never crop
      mid-line. Use the fit-to-height snippet below on every unbounded list.
    - **Full view** (`≥ ~900px`): the dashboard lifts the widget into a
      full-screen overlay rendering this same file (no separate full-screen
-     variant to author). The widest tier must read like a page — cap the
+     variant to author). The widest tier must read like a page: cap the
      content column (`max-width` ~`72ch`/`900px`, centered) so nothing runs
      edge-to-edge, and use the height for the fullest detail (every row, full
      history), not a bigger single number.
-3. **The shared theme tokens only** — the gruvbox palette below, with
+3. **The shared theme tokens only**, the gruvbox palette below, with
    `color-scheme: dark`. Do not invent colors.
 4. **Generation time**: `<meta name="widget-generated-at" content="<ISO-8601 UTC>">`
    plus a visible compact timestamp in a `<footer>`
@@ -50,7 +50,7 @@ respond to the widget's grid size — no JS needed for responsiveness.
 
 ## The token snippet
 
-Inline exactly this in `:root` — the values MUST stay identical to the
+Inline exactly this in `:root`. The values MUST stay identical to the
 `@theme` block in `apps/web/app/app.css` (ADR-0007); if they differ, fix
 whichever side drifted:
 
@@ -79,36 +79,36 @@ whichever side drifted:
 }
 ```
 
-The mono stack leads with **"Geist Mono Variable"** — the chrome's own
-mono — but the artifact never loads a webfont itself (rule 1 stands): the
+The mono stack leads with **"Geist Mono Variable"**, the chrome's own
+mono, but the artifact never loads a webfont itself (rule 1 stands): the
 board injects the face into the iframe at render time (ADR-0031), so on
 the dashboard the artifact matches the chrome, and the raw page falls back
 to the system mono after the comma.
 
 Conventions on top: page background `--color-bg1` (matches the widget
-card), body/data text `--color-ink` at **14px** (the readable floor — the
-artifact is the content that glows, so it never reads smaller than the
+card), body/data text `--color-ink` at **14px** (the readable floor, since
+the artifact is the content that glows, so it never reads smaller than the
 chrome body around it; **nothing below 12px**), section labels **12px** mono
-`--color-ink-dim` (readable, not a faint 10px eyebrow — earn hierarchy with
+`--color-ink-dim` (readable, not a faint 10px eyebrow; earn hierarchy with
 weight and color, and drop the label entirely when the section is
-self-evident), accents from the named colors — orange for
+self-evident), accents from the named colors: orange for
 priorities/primary, aqua for times, yellow for warnings/carry-overs, red
 only for genuinely bad states. At the 1×1 tier the KPI number carries the
 glance; detail tiers get the 14px body.
 
-**Compose from the design language** — read `design.md` (next to this
+**Compose from the design language.** Read `design.md` (next to this
 file) before authoring. It carries the shared shell (vertical centering,
 tile-vs-page split) and the component set every artifact picks from:
 section rules, ledger rows, the stat tier, pills, dots, meters,
 sparklines, the now marker, empty states, and the tier playbook. One
-board, one language — don't invent per-routine visuals.
+board, one language; don't invent per-routine visuals.
 
 ## The fit-to-height snippet
 
 The board stamps `data-steward-tile` on `<html>` and clips overflow
 (ADR-0019); the raw page and the full-view lightbox carry no stamp and keep
-every row. Mark each unbounded list with `data-fit-list` and inline this —
-it hides trailing items until the page fits and says how many it hid:
+every row. Mark each unbounded list with `data-fit-list` and inline this.
+It hides trailing items until the page fits and says how many it hid:
 
 ```html
 <script>
@@ -170,23 +170,24 @@ it hides trailing items until the page fits and says how many it hid:
 </script>
 ```
 
-Style `[data-fit-more]` as a 12px mono `--color-ink-dim` line — it is a
+Style `[data-fit-more]` as a 12px mono `--color-ink-dim` line; it is a
 count, not content. Non-list layouts follow the same rule by other means
 (shorter text via `min-height` queries, clamped paragraphs); what matters
 is that nothing overflows a tile silently.
 
 ## Person-relative content (ADR-0039)
 
-"You" is resolved when the artifact is _rendered_, not when it is built —
-the same file is shown to everyone who can see the board. Two shapes:
+"You" is resolved when the artifact is _rendered_, not when it is built,
+since the same file is shown to everyone who can see the board. Two shapes:
 
-- **Person-owned** (one subject — a daily plan): name the owner in the
-  **third person** ("Daniel's Daily Plan", "Daniel has 3 left"), decided at
-  build time. Never write "your" — a stranger must read whose it is.
+- **Person-owned** (one subject, such as a daily plan): name the owner in
+  the **third person** ("Daniel's Daily Plan", "Daniel has 3 left"), decided
+  at build time. Never write "your"; a stranger must read whose it is.
 - **Shared, per-viewer facets** ("yours" / "needs your review" differ per
-  reader): publish **viewer-neutral** — group by an objective axis, stamp
-  rows with raw relationship data (`data-author`, requested reviewers), no
-  "you" — then enhance against the injected viewer.
+  reader): publish **viewer-neutral**, grouping by an objective axis,
+  stamping rows with raw relationship data (`data-author`, requested
+  reviewers), and carrying no "you", then enhance against the injected
+  viewer.
 
 The board injects `window.__STEWARD_VIEWER__ = { login, name? }` into the
 iframe at render time (like the theme/font); the raw page injects nothing.
@@ -225,22 +226,22 @@ final DOM.
 ## Reference
 
 The canonical samples in the app repo's `docs/samples/` show the design
-language end-to-end — structure, breakpoint technique, and footer
-included. Open the one matching your archetype before authoring; imitate
-its structure (never a previous run's markup — `run-routine` §4):
+language end-to-end, including structure, breakpoint technique, and footer.
+Open the one matching your archetype before authoring; imitate
+its structure (never a previous run's markup, per `run-routine` §4):
 
-- `daily-plan.html` — the plan/ledger archetype: sections, ledger rows,
+- `daily-plan.html`: the plan/ledger archetype, with sections, ledger rows,
   lead + detail bodies, the Newport time grid with its details column,
   the by-type and by-project totals, the now marker.
-- `repo-pulse.html` — the stats/pulse + queue archetype: the stat tier,
+- `repo-pulse.html`: the stats/pulse + queue archetype, with the stat tier,
   the queue table with per-state icon columns, avatars, dots, trailing
   values.
-- `ticket-gaps.html` — the recommendations archetype: icon pills in an
+- `ticket-gaps.html`: the recommendations archetype, with icon pills in an
   aligned state column, copy actions, the provenance line.
 
 ## Validate before publishing
 
-Run the bundled validator on the finished file — it checks the
+Run the bundled validator on the finished file. It checks the
 deterministic half of the contract (self-containment, token drift,
 meta/footer, fit-list wiring, type floors, anchor targets, media-query
 grammar):
@@ -249,7 +250,7 @@ grammar):
 node <steward checkout>/.claude/skills/widget-artifact/scripts/validate.mjs <artifact.html>
 ```
 
-Fix every **error** and re-run until clean — never publish with errors.
+Fix every **error** and re-run until clean; never publish with errors.
 **Warnings** are judgment calls: resolve or consciously accept each one.
 The validator cannot see composition (hierarchy, density, alignment);
 that half stays on you and `design.md`.
@@ -258,16 +259,16 @@ that half stays on you and `design.md`.
 
 - [ ] `validate.mjs` passes with zero errors
 - [ ] No external request of any kind (grep for `http`, `//`, `url(`)
-- [ ] Renders sensibly at 340×160 (1×1) — the KPI essence, no overflow
+- [ ] Renders sensibly at 340×160 (1×1): the KPI essence, no overflow
 - [ ] Reveals more at 700×310 and full size
-- [ ] Nothing overflows any tile height — unbounded lists carry
+- [ ] Nothing overflows any tile height; unbounded lists carry
       `data-fit-list` + the fit-to-height snippet, and truncation shows as
       `+N more`, never a mid-line crop
-- [ ] Full view (~1400×900) reads like a page — content column capped and
-      centered, extra height spent on detail, not one giant number
+- [ ] Full view (~1400×900) reads like a page, with the content column
+      capped and centered, extra height spent on detail, not one giant number
 - [ ] `widget-generated-at` meta + visible footer timestamp
 - [ ] Only palette colors; `color-scheme: dark` set
 - [ ] Empty state designed, not accidental
-- [ ] No "you"/"your" baked into the static render — person-owned artifacts
+- [ ] No "you"/"your" baked into the static render; person-owned artifacts
       name the owner (third person); shared ones publish viewer-neutral and
       enhance from `window.__STEWARD_VIEWER__`, degrading to neutral (ADR-0039)

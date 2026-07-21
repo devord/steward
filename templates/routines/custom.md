@@ -2,15 +2,15 @@
 name: custom
 description: >-
   The freeform routine template (ADR-0022): the routine's instructions are
-  the whole content brief. No widget: block on purpose — the wizard's
-  prompt field is this template's input, so the picker never offers it as
-  a card.
+  the whole content brief. No widget: block on purpose, because the
+  wizard's prompt field is this template's input, so the picker never
+  offers it as a card.
 ---
 
 # Custom
 
 The routine's `instructions` from `data/routines.yaml` are the entire
-content brief — there is no fixed procedure here. Read them as the user's
+content brief; there is no fixed procedure here. Read them as the user's
 standing request for what this widget should show each run, and use
 whatever the run environment reaches (connected tools, attached repos,
 the previous artifact on the `artifacts` branch) to fulfill it.
@@ -24,5 +24,5 @@ add detail only as space allows.
 
 Degrade gracefully: when the instructions name data sources this
 environment can't reach, publish what you can with an explicit note of
-what was skipped — and with no instructions at all, publish an explicit
+what was skipped. With no instructions at all, publish an explicit
 empty state asking the user to describe the widget.
