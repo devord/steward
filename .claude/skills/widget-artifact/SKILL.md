@@ -234,12 +234,23 @@ It hides trailing items until the page fits and says how many it hid:
     }
     addEventListener("DOMContentLoaded", fit)
     addEventListener("resize", fit)
+    // The board injects the chrome mono into every frame (ADR-0031), and it
+    // lands *after* DOMContentLoaded. Fitting only on that event measures
+    // fallback-font metrics and then never looks again: the swap grows every
+    // row a little and the tile silently over-fills — trailing rows and the
+    // provenance line clip below the fold with no "+N more" to admit it.
+    // Re-fit once the faces settle.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit)
   })()
 </script>
 ```
 
 Style `[data-fit-more]` as a 12px mono `--color-ink-dim` line; it is a
-count, not content. Non-list layouts follow the same rule by other means
+count, not content. **It is an `<li>`, so a subgridded row rule
+(`.tbl li { display: grid }`) will claim it as a row and drop its text into
+the first column, sizing that track to the note.** Where rows are subgrid,
+opt it back out (`display: block`, `grid-column: 1 / -1`). Non-list layouts
+follow the same rule by other means
 (shorter text via `min-height` queries, clamped paragraphs); what matters
 is that nothing overflows a tile silently.
 
@@ -329,8 +340,10 @@ its structure (never a previous run's markup, per `run-routine` §4):
 - `repo-pulse.html`: the stats/pulse + queue archetype, with the stat tier,
   the queue table with per-state icon columns, avatars, dots, trailing
   values.
-- `ticket-gaps.html`: the recommendations archetype, with icon pills in an
-  aligned state column, copy actions, the provenance line.
+- `ticket-gaps.html`: the recommendations archetype — the queue table read
+  as findings-plus-qualifiers, with the glyph state column, named value
+  columns, confidence on the ink ramp, per-row icon actions, the provenance
+  line.
 
 ## Validate before publishing
 

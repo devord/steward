@@ -1059,6 +1059,14 @@
         }
         addEventListener("DOMContentLoaded", fit)
         addEventListener("resize", fit)
+        // The board injects the chrome mono into every frame (ADR-0031), and
+        // it lands *after* DOMContentLoaded. Fitting only on that event
+        // measures fallback-font metrics and then never looks again: the
+        // swap grows every row a little, and the tile silently over-fills —
+        // trailing rows and the provenance line clip below the fold with no
+        // "+N more" to admit it. Re-fit once the faces settle.
+        if (document.fonts && document.fonts.ready)
+          document.fonts.ready.then(fit)
       })()
     </script>
   </body>

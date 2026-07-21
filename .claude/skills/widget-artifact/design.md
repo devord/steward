@@ -466,6 +466,38 @@ mistake: the CSS looks right, and a header row that happens to sit directly
 under `main` still aligns perfectly while every list under a section
 collapses.
 
+**Everything that is not a cell must be told to span.** Moving the grid up
+to `main` turns every previously-innocent block into a grid _item_, and an
+unplaced item lands in track 1 and sizes it. Two bite every time:
+
+- The section `<h2>`. Left unplaced it sits in the first column and sizes
+  that track to the label plus its action button — a dead rail down the left
+  of every row — while its own `flex: 1` hairline collapses to nothing in a
+  `max-content` track. The heading is not a cell.
+- The fit script's `[data-fit-more]` note. It is an `<li>`, so a subgridded
+  row rule claims it and drops "+2 more" into the **state** column, sizing
+  that track to the note — and only on the tiers that actually overflow,
+  which is why it reads as "the icons are indented on small tiles only".
+
+Both want the same escape, and a subgridded row rule must not out-specify
+it:
+
+```css
+main > :is(h1, .stat),
+.tbl > h2 {
+  grid-column: 1 / -1;
+}
+.tbl [data-fit-more] {
+  grid-column: 1 / -1;
+  display: block; /* opt out of the row rule above */
+}
+```
+
+The same trap catches any element whose `display` is tier-gated: folding it
+into the relay rule (`.tbl, .tbl .colhead, .tbl ul { display: grid }`)
+out-specifies its own `display: none` default and pins it open on every
+tier. Relay the tracks there, and let the media query own `display`.
+
 **Lead + detail.** A row body is never one undifferentiated sentence. A
 list whose every row is a uniform 14px line reads as a wall, however good
 the data. The body opens with a short **lead** (the item's name, the thing
@@ -726,6 +758,43 @@ not a rainbow of state pills: keep review-state icons in their semantic
 tone at low volume (a passing CI check is `ink-faint`, since healthy states
 stay quiet), and let the one orange marker carry the "act here" signal.
 
+**A recommendation list is a queue, not a ledger.** The archetype reaches
+past PRs to anything that is _findings plus per-finding qualifiers_ — a
+gap/drift audit, a triage list, a lint report. The tell that one has been
+built as a ledger instead: a worded pill per row, and two qualifiers sharing
+one trailing cell. `docs/samples/ticket-gaps.html` is the worked example.
+Three failures come as a set, and so do their fixes:
+
+- **The pill rail.** Fifteen `gap`/`drift` capsules down the left out-shout
+  the fifteen titles, and stretching them to fill a fixed column only makes
+  each one wider. Same fix as any queue state: the glyph column, word
+  sr-only + `title` on tiles, word back from `≥700px`. Capsules are for
+  states that appear _occasionally_; a column where every row has a value is
+  a column, not fifteen badges.
+- **The trailing blob.** A confidence and a ticket key rendered side by side
+  in one flex cell, both 12px mono ink-faint, read as one string — and an
+  unnamed `high` reads as a _priority_, which is a different claim about the
+  row. Give each its own track, and from the 2×2 tier up **name the value
+  columns** in a 12px mono ink-faint header row that relays the same subgrid.
+  Naming the column is the fix; restyling the value is not.
+- **The rating that spends an accent.** A three-step qualifier (confidence,
+  certainty, severity-of-evidence) does not need a colour or a new glyph:
+  keep the word and step it down the **neutral ink ramp** (`high` ink, `med`
+  ink-dim, `low` ink-faint), so trust reads as how loud the row is and the
+  column self-sorts. State is still never colour alone — the word carries it.
+
+The absence rule earns its keep here: with the column named, ten rows of
+`no ticket` become ten empty cells, and the eye stops reading filler.
+
+**Per-row actions are icon buttons.** A row-level action (copy, dismiss,
+open) is the icon vocabulary in a borderless button, never an outlined
+capsule per row — that is the pill rail again wearing a border. Keep it
+always present and tappable rather than revealed on hover, give it ≥24px of
+target centred on the row's _first_ line, and put the word in an sr-only
+span so it is still the button's accessible name and can flip to "Copied".
+One button that acts on the whole section (Copy all) keeps its word: it is
+one, not fifteen.
+
 ### Disclosure (the rows behind a derived figure)
 
 A widget states derived figures — a bar's %, a readiness count, a verdict.
@@ -887,6 +956,15 @@ the word alone and costs 16px. When pills sit in a ledger column, the column
 is fixed-width and the pill **centers vertically on its row**
 (`align-self: center`, never baseline, because a capsule on a text baseline
 floats high) and aligns with its neighbours down the list.
+
+**One pill per row is a column wearing a costume.** If every row in a list
+carries one, it is a state column and belongs in the Queue table's glyph
+form, not a capsule rail — see that section. And centring only survives
+single-line rows: on a row whose body wraps to a lead plus a detail line,
+`align-self: center` floats the marker down _between_ the two lines, where it
+reads as annotating the wrong row. A marker beside a possibly-wrapping body
+takes `align-self: start` on a box the height of the row's line-height, so it
+centres on the row's **first** line.
 
 ```css
 .pill {
