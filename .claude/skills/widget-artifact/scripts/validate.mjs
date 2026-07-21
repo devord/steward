@@ -76,6 +76,50 @@ function parseSelector(sel) {
   return parts
 }
 
+// Expand `:is(...)` / `:where(...)` into the alternatives they stand for, so
+// `main > :is(h1, .stat)` becomes `main > h1` and `main > .stat`. The matcher
+// below waves pseudo-classes through, which is right for state (`:hover`
+// proves nothing about static markup) and wrong for these two: they carry
+// real element names, so waving them through lets a rule that places two
+// children claim to place *every* child. Specificity is not modelled — no
+// check here asks which rule wins, only which elements a rule can reach.
+function expandSelector(sel) {
+  let out = [sel]
+  for (let pass = 0; pass < 4; pass++) {
+    let changed = false
+    const next = []
+    for (const one of out) {
+      const at = one.match(/:(?:is|where)\(/)
+      if (!at) {
+        next.push(one)
+        continue
+      }
+      const open = at.index + at[0].length - 1
+      let depth = 0
+      let close = -1
+      for (let i = open; i < one.length; i++) {
+        if (one[i] === "(") depth++
+        else if (one[i] === ")" && --depth === 0) {
+          close = i
+          break
+        }
+      }
+      if (close < 0) {
+        next.push(one)
+        continue
+      }
+      changed = true
+      const head = one.slice(0, at.index)
+      const tail = one.slice(close + 1)
+      for (const alt of splitSelectorList(one.slice(open + 1, close)))
+        next.push(head + alt + tail)
+    }
+    out = next
+    if (!changed) break
+  }
+  return out
+}
+
 // Does a compound describe this element? Verify what the tag states outright
 // (name, id, classes, plain attributes) and let everything else — pseudo
 // classes, :is(), functional selectors — pass. A permissive match costs a
@@ -151,6 +195,34 @@ function describe(el) {
     el.classes.length ? "." + el.classes[0] : ""
   }>`
 }
+
+// Split a track list into its tracks. Line names are not tracks, and a
+// function's inner spaces (`minmax(0, 1fr)`) do not separate anything.
+function trackList(value) {
+  const out = []
+  let depth = 0
+  let named = false
+  let buf = ""
+  for (const c of value) {
+    if (c === "[") named = true
+    else if (c === "]") named = false
+    if (named || c === "]") continue
+    if (c === "(") depth++
+    else if (c === ")") depth--
+    if (depth === 0 && /\s/.test(c)) {
+      if (buf) out.push(buf)
+      buf = ""
+      continue
+    }
+    buf += c
+  }
+  if (buf) out.push(buf)
+  return out
+}
+
+// A track sized by its contents, as opposed to one that absorbs slack. These
+// are what make an unplaced item destructive rather than merely untidy.
+const CONTENT_TRACK = /^(?:max-content|min-content|auto|fit-content\(.*\))$/
 
 const files = process.argv.slice(2)
 if (files.length === 0) {
@@ -485,6 +557,126 @@ for (const file of files) {
           "`display: grid; grid-template-columns: subgrid` so it relays the " +
           "tracks (design.md · Ledger rows)",
       )
+    }
+  }
+
+  // — Unplaced items in a content-sized shell (design.md · Everything that
+  //   is not a cell must be told to span) —
+  // Moving the row grid up to `main` turns every block under it into a grid
+  // *item*, and an unplaced item lands in track 1 and sizes it. Where track 1
+  // is content-sized and a later track takes the slack — the queue-table and
+  // ledger shells, `max-content minmax(0, 1fr) …` — that is not a nudge but a
+  // collapse: the stray block's max-content width becomes the width of the
+  // avatar/marker rail, and the `1fr` body column it stole from goes to zero,
+  // so every title vanishes and the trailing cells slide off the edge. The
+  // CSS reads fine at every line, which is why it surfaces as "the widget
+  // broke" rather than as a mistake anyone can point at. The provenance line
+  // is the usual culprit: it is authored as a sibling of `main` in the
+  // samples, and moving it inside is a one-line edit with no visible warning.
+  {
+    const shells = []
+    const placed = []
+    const relays = []
+    for (const [, sel, body] of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const template = body.match(
+        /(?:^|[\s;{])grid-template-columns\s*:\s*([^;}]+)/,
+      )?.[1]
+      // A subgrid parent inherits its tracks, so track 1 is not knowable here;
+      // its children are cells, which are placed by the row rule in any case.
+      const isShell =
+        template &&
+        !/\bsubgrid\b/.test(template) &&
+        !/\brepeat\(/.test(template) &&
+        trackList(template).length > 1 &&
+        CONTENT_TRACK.test(trackList(template)[0])
+      const isRelay = template && /\bsubgrid\b/.test(template)
+      // Anything that answers "which column?" excuses the item, as does
+      // leaving the flow altogether.
+      const isPlaced =
+        /(?:^|[\s;{])grid-(?:column|area)(?:-start)?\s*:/.test(body) ||
+        /(?:^|[\s;{])display\s*:\s*contents\b/.test(body) ||
+        /(?:^|[\s;{])position\s*:\s*(?:absolute|fixed)\b/.test(body)
+      if (!isShell && !isPlaced && !isRelay) continue
+      for (const one of splitSelectorList(sel).flatMap(expandSelector)) {
+        if (one.startsWith("@")) continue
+        const parts = parseSelector(one)
+        if (!parts.length) continue
+        if (isShell) shells.push(parts)
+        if (isPlaced) placed.push(parts)
+        if (isRelay) relays.push(parts)
+      }
+    }
+
+    // Only a shell that *relays* its tracks is in scope. A content-first grid
+    // whose own children are its cells — a ruler beside its list, in
+    // `max-content 1fr` — is auto-placement working as designed, and every
+    // child would read as a violation. The bug needs the other shape: tracks
+    // published up at `main` for subgridded rows far below, where the
+    // shell's own children are blocks that were never cells at all.
+    if (shells.length && relays.length) {
+      const stray = new Map()
+      const relayed = new Set()
+      const stack = []
+      for (const [, close, name, attrs] of markup.matchAll(
+        /<(\/)?([a-zA-Z][\w-]*)((?:[^>"]|"[^"]*")*)>/g,
+      )) {
+        const tag = name.toLowerCase()
+        if (close) {
+          for (let i = stack.length - 1; i >= 0; i--)
+            if (stack[i].tag === tag) {
+              stack.splice(i)
+              break
+            }
+          continue
+        }
+        if (VOID.has(tag) || /\/\s*$/.test(attrs)) continue
+        const el = { tag, id: "", classes: [], attrs: {} }
+        for (const [, attr, value] of attrs.matchAll(
+          /\b([-\w:]+)\s*=\s*"([^"]*)"/g,
+        ))
+          el.attrs[attr.toLowerCase()] = value
+        el.id = el.attrs.id || ""
+        el.classes = (el.attrs.class || "").split(/\s+/).filter(Boolean)
+
+        const chain = [...stack, el]
+        // Any subgrid descendant proves the nearest enclosing shell publishes
+        // its tracks downward rather than spending them on its own children.
+        if (relays.some((parts) => selectorMatches(parts, chain)))
+          for (let i = stack.length - 1; i >= 0; i--)
+            if (stack[i].shell !== undefined) {
+              relayed.add(stack[i].shell)
+              break
+            }
+
+        const parent = stack[stack.length - 1]
+        const shell = parent && parent.shell
+        if (shell !== undefined) {
+          if (!placed.some((parts) => selectorMatches(parts, chain))) {
+            const key = shell + " " + describe(el)
+            const seen = stray.get(key)
+            if (seen) seen.count++
+            else stray.set(key, { shell, parent, el, count: 1 })
+          }
+        }
+        if (shells.some((parts) => selectorMatches(parts, chain)))
+          el.shell = chain.map(describe).join(" ")
+        stack.push(el)
+      }
+
+      for (const { shell, parent, el, count } of stray.values()) {
+        if (!relayed.has(shell)) continue
+        errors.push(
+          `${describe(el)} is a direct child of the ${describe(parent)} grid ` +
+            `but is never placed` +
+            (count > 1 ? ` (${count} elements)` : "") +
+            " — an unplaced item lands in track 1, and that track is " +
+            "content-sized, so it inflates to this block's width and starves " +
+            "the flexible column beside it (titles collapse to zero, trailing " +
+            "cells slide off the tile). Give it `grid-column: 1 / -1`, or " +
+            "author it as a sibling of the grid (design.md · Everything that " +
+            "is not a cell must be told to span)",
+        )
+      }
     }
   }
 

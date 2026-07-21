@@ -468,7 +468,7 @@ collapses.
 
 **Everything that is not a cell must be told to span.** Moving the grid up
 to `main` turns every previously-innocent block into a grid _item_, and an
-unplaced item lands in track 1 and sizes it. Two bite every time:
+unplaced item lands in track 1 and sizes it. Three bite every time:
 
 - The section `<h2>`. Left unplaced it sits in the first column and sizes
   that track to the label plus its action button — a dead rail down the left
@@ -478,9 +478,17 @@ unplaced item lands in track 1 and sizes it. Two bite every time:
   row rule claims it and drops "+2 more" into the **state** column, sizing
   that track to the note — and only on the tiers that actually overflow,
   which is why it reads as "the icons are indented on small tiles only".
+- The **provenance line**. It is authored as a sibling of `main` in the
+  samples, so it never meets the grid there; moving it inside — a one-line
+  edit, and a tempting one, since the line reads as content — hands track 1
+  a full sentence of dot-separated facts. That track is `max-content`, so it
+  inflates to the whole sentence and the `minmax(0, 1fr)` body column beside
+  it goes to **zero**: every row title vanishes and the trailing cells slide
+  off the tile. Nothing about the CSS looks wrong, which is why this reads as
+  "the widget broke" rather than as a mistake with an address.
 
-Both want the same escape, and a subgridded row rule must not out-specify
-it:
+All three want the same escape, and a subgridded row rule must not
+out-specify it:
 
 ```css
 main > :is(h1, .stat),
@@ -492,6 +500,12 @@ main > :is(h1, .stat),
   display: block; /* opt out of the row rule above */
 }
 ```
+
+`validate.mjs` catches the general case: an unplaced direct child of a grid
+whose first track is content-sized and whose tracks are relayed by a subgrid
+descendant. It cannot catch a grid that spends its own tracks on its own
+children (a ruler beside its list, in `max-content 1fr`), where
+auto-placement is the design — so the rule above is the author's to hold.
 
 The same trap catches any element whose `display` is tier-gated: folding it
 into the relay rule (`.tbl, .tbl .colhead, .tbl ul { display: grid }`)
@@ -1469,6 +1483,12 @@ footer**, dot-separated facts, never a paragraph:
 
 ```css
 .provenance {
+  /* Inert wherever the line is a plain block, load-bearing the moment it
+     sits inside a grid: as an unplaced item it would land in track 1 and
+     size that track to the whole sentence (see · Everything that is not a
+     cell must be told to span). Carry it always — the line moves between
+     shells more often than the shells get re-read. */
+  grid-column: 1 / -1;
   display: none;
   font-family: var(--font-mono);
   font-size: 12px;
@@ -1487,6 +1507,11 @@ footer**, dot-separated facts, never a paragraph:
   }
 }
 ```
+
+Author it as a **sibling of `main`**, directly before the `<footer>`, the way
+the samples do; it is the run's chrome, not a section. Inside a page grid it
+is legitimate too (the `"prov prov prov"` area above), which is exactly why
+the span above travels with the component.
 
 **Never prose.** A sentence about the method sitting among the sections
 reads as misplaced body copy (the blob smell); decompose it into countable
