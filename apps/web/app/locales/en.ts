@@ -113,10 +113,10 @@ export const en = {
 
   "offgrid.title": "Not on the grid",
   "offgrid.hint":
-    "In this repo's shared {file} — place one, or delete it from the repo.",
+    "In this repo's shared {file} but on no dashboard — place one, or delete it from the repo.",
   "offgrid.delete": "Delete {name} from the repo",
   "offgrid.edit": "Edit {name}",
-  "offgrid.viewHint": "{n} not on this board — Edit to place",
+  "offgrid.viewHint": "{n} on no dashboard — Edit to place",
 
   "routine.deleteTitle": "Delete {name}?",
   "routine.deleteBody":

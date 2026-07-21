@@ -8,6 +8,7 @@ import {
   loadArtifacts,
   loadDashboardStructureOr503,
   repoExistsOr503,
+  streamPlacements,
   streamSidebar,
 } from "../lib/dashboard.server.ts"
 import { resolveHomeRepo } from "../lib/repos.server.ts"
@@ -64,6 +65,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   // add-routine picker reads them.
   const artifacts = loadArtifacts(auth.token, ref, view.routines)
   const templates = streamTemplates(auth.token, dataRepo)
+  const placements = streamPlacements(auth.token, dataRepo)
   return {
     kind: "dashboard" as const,
     origin,
@@ -73,6 +75,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     view,
     artifacts,
     templates,
+    placements,
     sidebar,
   }
 }
@@ -87,6 +90,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       view={loaderData.view}
       artifacts={loaderData.artifacts}
       templates={loaderData.templates}
+      placements={loaderData.placements}
       login={loaderData.login}
       displayName={loaderData.displayName}
       now={loaderData.now}
