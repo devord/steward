@@ -2,8 +2,9 @@
 
 The domain glossary for Steward: **dashboards** (in any of a user's data
 repos, private or shared) of **widgets**, each rendering an **artifact**
-that a scheduled **routine** regenerates — reports that update themselves. Architecture decisions live in [`docs/adr/`](./docs/adr/);
-the artifact authoring contract in [`docs/widget-standard.md`](./docs/widget-standard.md).
+that a scheduled **routine** regenerates. Reports that update themselves.
+Architecture decisions live in [`docs/adr/`](./docs/adr/); the artifact
+authoring contract in [`docs/widget-standard.md`](./docs/widget-standard.md).
 
 ## Language
 
@@ -11,12 +12,12 @@ the artifact authoring contract in [`docs/widget-standard.md`](./docs/widget-sta
 A unit of work: "produce this widget's artifact from this template, on
 this schedule or on demand." Defined declaratively in a data repo's
 `data/routines.yaml` (slug, name, template; optional instructions,
-params, schedule, host, runner, enabled) — the repo's routine pool.
+params, schedule, host, runner, enabled), which is the repo's routine pool.
 Executed by Claude Code on its **host**, always via the same stable
 pointer prompt at the `run-routine` skill (ADR-0005). Every routine
-names a `template:` — freeform ones name the `custom` built-in, whose
-whole brief is the routine's `instructions` (ADR-0022); no `schedule:` =
-**manual** — updated via the Update button or an interactive CLI run,
+names a `template:`; freeform ones name the `custom` built-in, whose
+whole brief is the routine's `instructions` (ADR-0022). No `schedule:` =
+**manual**, updated via the Update button or an interactive CLI run,
 staleness badge suppressed (ADR-0016).
 _Avoid_: job, cron, automation, workflow
 
@@ -24,26 +25,25 @@ _Avoid_: job, cron, automation, workflow
 Where a routine's runs execute (ADR-0012). `cloud` = an Anthropic cloud
 routine on the runner's account (connectors, subscription billing, laptop
 off, daily caps; manual cloud routines carry an API trigger instead of a
-cron, ADR-0016). `local` = the runner's machine — the only host that can
+cron, ADR-0016). `local` = the runner's machine, the only host that can
 read local data: launchd plists written by `routines:sync` when scheduled,
 a plain interactive session when manual. Interactive skills (they ask
 questions before authoring) are necessarily `local` + manual.
 
 **Run**:
-One execution of a routine on its host — a schedule fires, the app fires
+One execution of a routine on its host. A schedule fires, the app fires
 the API trigger, or a terminal session runs the pointer prompt. Every run
 ends by publishing, so its evidence is its **publish receipt**: the one
 commit touching `w/<slug>/index.html` on the artifacts branch
 (ADR-0002/0026). The routine detail view derives run history from those
-receipts (ADR-0033), and reopens each receipt's render — or two side by
-side to compare (ADR-0038); a run that fails before publishing leaves no
-receipt —
-its session log lives on the routine's claude.ai page, which the app links
-to but cannot read (the trigger token is trigger-only, ADR-0016).
+receipts (ADR-0033), and reopens each receipt's render, or two side by
+side to compare (ADR-0038). A run that fails before publishing leaves no
+receipt; its session log lives on the routine's claude.ai page, which the
+app links to but cannot read (the trigger token is trigger-only, ADR-0016).
 _Avoid_: execution, invocation, job run
 
 **Dashboard**:
-A named grid of widgets — one layout file per dashboard at
+A named grid of widgets, one layout file per dashboard at
 `data/dashboards/<slug>.yaml` in a data repo (optional `name:` for
 display). The directory listing is the index. The home repo's `main` is
 the default `/` renders; every other board lives at
@@ -59,15 +59,15 @@ pool.
 _Avoid_: card, tile, panel
 
 **Artifact**:
-The single self-contained, responsive HTML file a routine publishes —
-the thing a widget renders. Addressed by convention, never by URL:
+The single self-contained, responsive HTML file a routine publishes, the
+thing a widget renders. Addressed by convention, never by URL:
 `artifacts` branch of the owner's data repo, path `w/<slug>/index.html`
 (ADR-0002). Must follow the widget standard (no external requests, gruvbox
 tokens, media-query responsive).
 _Avoid_: report, page, output file
 
 **Shared repo** (`steward`):
-This repository — the product. The web app, `packages/schema`, the contract
+This repository, the product. The web app, `packages/schema`, the contract
 skills (`run-routine`, `widget-artifact`, `publish-widget`), the data-repo
 template, and the built-in routine templates (`templates/routines/`,
 ADR-0021). Team- or user-specific templates live in the narrowest data
@@ -75,47 +75,47 @@ repo all their users can read (ADR-0014/0021), never here. Team-visible;
 never contains user data.
 
 **Data repo**:
-A repo holding one routine pool, its dashboards, and its templates —
-a user can have any number (ADR-0023). `main` holds config
+A repo holding one routine pool, its dashboards, and its templates. A
+user can have any number (ADR-0023). `main` holds config
 (`data/routines.yaml`, `data/dashboards/*.yaml`), the repo's routine
 templates (`templates/routines/`, ADR-0021), and any API-trigger tokens
 (ADR-0016); the orphan `artifacts` branch holds published artifacts.
 Discovered by the `steward-data` GitHub **topic**: every tagged repo the
 viewer's token can read appears in the app. Access is GitHub repo
-permissions — there is no other access control (ADR-0001/0023).
+permissions, and there is no other access control (ADR-0001/0023).
 _Avoid_: user repo, config repo
 
 **Home repo** (`steward-data-<login>`):
-The one data repo resolved by naming convention rather than topic — one
+The one data repo resolved by naming convention rather than topic. One
 private repo per user, created from the template by the first-run wizard.
 Anchors `/`, the setup wizard, and the top of the rail (ADR-0001/0023).
 _Avoid_: personal repo (a home repo is one of possibly many private ones)
 
 **Shared (data) repo**:
-Any data repo that isn't the viewer's home repo — an org's, or another
+Any data repo that isn't the viewer's home repo: an org's, or another
 user's shared with them. Whoever can read it sees all its routines,
 layouts, and artifacts; local/cloud enactment follows the runner rule.
 Different shared repos may belong to entirely different circles of people
 (ADR-0023, superseding ADR-0010's single team repo).
-_Avoid_: team repo (legacy — implies there is exactly one)
+_Avoid_: team repo (legacy; implies there is exactly one)
 
 **Topic** (`steward-data`, env `DATA_REPO_TOPIC`):
-The GitHub topic marking a repo as a data repo — the whole registry is a
+The GitHub topic marking a repo as a data repo. The whole registry is a
 topic search with the viewer's token (ADR-0023). Create paths tag new
 repos explicitly (template generation doesn't copy topics); registering
 an existing repo is adding the tag.
 
 **Runner**:
-The GitHub login whose Claude account owns a routine's cloud resource —
-its schedule and its API trigger; the canonical executor of scheduled and
+The GitHub login whose Claude account owns a routine's cloud resource,
+its schedule and its API trigger. The canonical executor of scheduled and
 manual cloud runs alike (`runner:` in `routines.yaml`, ADR-0016/0023).
-Meaningful in shared repos — each collaborator's `routines:sync` enacts
-only their own entries; home pools leave it unset (the owner is the
+Meaningful in shared repos, where each collaborator's `routines:sync`
+enacts only their own entries; home pools leave it unset (the owner is the
 runner).
 
 **Routine template**:
 A parameterized routine definition the wizard instantiates: a plain
-markdown file at `templates/routines/<id>.md` — frontmatter (`name`,
+markdown file at `templates/routines/<id>.md`, with frontmatter (`name`,
 `description`, the `widget:` block: artifact line, sizes, schedule,
 params, suggested connectors), body = the authoring procedure the
 dispatcher follows (ADR-0021, replacing content skills). Lives in the
@@ -123,9 +123,9 @@ narrowest repo all its users can read: this repo (**built-in**, shipped
 in the app bundle), the team data repo (**team**), or a personal data
 repo (**private**). The picker discovers data-repo templates live via
 the contents API (ADR-0015); files without a `widget:` block never
-appear (deliberately so for the `custom` built-in — the wizard's prompt
-field is its input); a data-repo template shadows a same-named built-in.
-Templates are authored in Claude Code sessions, never in the app — the
+appear (deliberately so for the `custom` built-in, whose input is the
+wizard's prompt field); a data-repo template shadows a same-named built-in.
+Templates are authored in Claude Code sessions, never in the app. The
 app's writable surface stays routines.yaml + layouts (ADR-0022).
 _Avoid_: skill (that's the contract tier), recipe, preset, blueprint
 
@@ -143,7 +143,7 @@ _Avoid_: argument, option, setting
 A routine run for testing: same pointer prompt with a dry clause. The
 dispatcher resolves config and skills from the local working tree (dirty
 state included) and `publish-widget` writes to a local file opened in the
-browser — nothing is pushed, the live widget is untouched (ADR-0017).
+browser. Nothing is pushed, and the live widget is untouched (ADR-0017).
 Launched via `pnpm routine <slug> --dry`.
 
 **Draft**:
@@ -156,13 +156,13 @@ never the repo directly; the Sync panel turns a draft into a commit or PR
 The act of persisting a draft: direct commit to the data repo's `main`
 (default), or a `dash/config-<timestamp>` branch plus PR when review is
 wanted. A moved base SHA means conflict: re-apply the draft on the new
-base — on the team repo this is also how concurrent editors are kept from
+base. On the team repo this is also how concurrent editors are kept from
 overwriting each other (ADR-0010).
 
 **Publish**:
 The last step of every routine run: write the artifact to
 `w/<slug>/index.html` on the data repo's `artifacts` branch, commit, push
-(the `publish-widget` skill). Publishing is a git push — there is no upload,
+(the `publish-widget` skill). Publishing is a git push. There is no upload,
 no CDN, no external host (ADR-0002).
 
 **Dispatcher** (`run-routine` skill):
@@ -176,7 +176,7 @@ down to one stable line (ADR-0005).
 
 1. A run starts: a schedule fires (cloud routine or local launchd), someone
    clicks Update (the app fires the runner's API trigger server-side), or
-   someone runs the routine in a terminal (`pnpm routine <slug>`) — every
+   someone runs the routine in a terminal (`pnpm routine <slug>`). Every
    path is the same pointer prompt (ADR-0005/0012/0016).
 2. `run-routine` reads `data/routines.yaml`, follows the routine's
    template or prompt, and authors the artifact per the widget standard.

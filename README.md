@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  Reports that update themselves — a dashboard of living widgets, each
+  Reports that update themselves. A dashboard of living widgets, each
   regenerated on schedule by a Claude Code routine and published to a
   GitHub repo you own.
 </p>
@@ -15,20 +15,19 @@
 ## Why
 
 Every developer keeps a handful of reports that only stay current while
-someone refreshes them by hand — opening the tool, running the update,
+someone refreshes them by hand: opening the tool, running the update,
 shipping the change. The daily plan, the review queue, the status update,
-the changelog. They rot the moment the author gets busy, and a stale
-report is worse than none.
+the changelog. They rot the moment the author gets busy.
 
-Steward hands the chore to **routines**: each widget on the dashboard is
+Steward hands the chore to **routines**. Each widget on the dashboard is
 a small self-contained HTML artifact that a scheduled Claude Code routine
 regenerates and publishes.
 
-And your data is yours. There is no database and no artifact host:
-everything — routines, layouts, published widgets — lives in a private
-GitHub repo you own. The app is a stateless renderer working with your
-token; privacy is GitHub's repo boundary, not app logic. Share access
-with whoever you like; leaving is deleting a repo.
+Your data is yours. There is no database and no artifact host. Routines,
+layouts, and published widgets all live in a private GitHub repo you own.
+The app is a stateless renderer working with your token, so privacy is
+GitHub's repo boundary rather than app logic. Share access with whoever
+you like; leaving is deleting a repo.
 
 ## How it works
 
@@ -43,17 +42,17 @@ GitHub is the whole backend:
 
 The loop:
 
-1. **Add a routine** in the UI — describe the widget or start from a
+1. **Add a routine** in the UI. Describe the widget or start from a
    template, name it, pick a size, a schedule (or manual), and a host.
    **Sync** commits it to your data repo.
-2. **A run fires** — a cloud schedule, local launchd, an update-button
+2. **A run fires**, from a cloud schedule, local launchd, an update-button
    click, or `steward run <slug>` in a terminal. Every path is one stable
    line: _"Run the steward routine `<slug>` — follow the `run-routine`
    skill."_
-3. **The routine publishes** — it writes a self-contained, responsive HTML
+3. **The routine publishes.** It writes a self-contained, responsive HTML
    artifact ([docs/widget-standard.md](./docs/widget-standard.md)) and
    pushes it to your `artifacts` branch. Publishing _is_ the git push.
-4. **The dashboard renders** — the app fetches your artifacts with your
+4. **The dashboard renders.** The app fetches your artifacts with your
    token and shows each in a sandboxed iframe; the last commit becomes its
    "Ran 2h ago" freshness readout.
 
@@ -68,10 +67,10 @@ Prerequisites: a GitHub account; Claude Code (for routines to run).
 2. First run: accept the wizard that creates your private
    `steward-data-<you>` repo from the template.
 3. **Add a routine** (prompt → name → size → schedule/host) and **Sync**.
-4. **Enact it** — each widget card prints the exact line:
+4. **Enact it.** Each widget card prints the exact line:
    `npx @devord/steward sync --apply --repo <owner>/steward-data-<owner>`. It
    creates the cloud routine or launchd agent and reconciles drift on every
-   later run. Scheduled-local (launchd) routines want a stable install —
+   later run. Scheduled-local (launchd) routines want a stable install:
    `npm i -g @devord/steward`.
 5. Missed a trigger? Mint one with
    `npx @devord/steward trigger <slug> --repo <owner>/steward-data-<owner>`.
@@ -93,11 +92,11 @@ pnpm build                   # production build
 
 Workspace layout:
 
-| Path              | What                                                                       |
-| ----------------- | -------------------------------------------------------------------------- |
-| `apps/web`        | React Router v8 app (framework mode, SSR, Tailwind 4)                      |
-| `packages/schema` | zod schemas for routines/dashboards/templates — buildless, source-exported |
-| `packages/cli`    | the `@devord/steward` routines CLI — bundled + published to npm            |
-| `.claude/skills`  | the contract skills (run-routine, widget-artifact, publish-widget)         |
-| `templates/`      | the data-repo template and the built-in routine templates                  |
-| `docs/`           | ADRs, widget standard, roadmap                                             |
+| Path              | What                                                                      |
+| ----------------- | ------------------------------------------------------------------------- |
+| `apps/web`        | React Router v8 app (framework mode, SSR, Tailwind 4)                     |
+| `packages/schema` | zod schemas for routines/dashboards/templates; buildless, source-exported |
+| `packages/cli`    | the `@devord/steward` routines CLI; bundled + published to npm            |
+| `.claude/skills`  | the contract skills (run-routine, widget-artifact, publish-widget)        |
+| `templates/`      | the data-repo template and the built-in routine templates                 |
+| `docs/`           | ADRs, widget standard, roadmap                                            |

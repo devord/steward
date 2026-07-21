@@ -24,7 +24,7 @@ GitHub OAuth (ADR-0004), session cookie, first-run wizard creating
 from the shared repo and config + artifacts from the user's data repo. Grid
 renders widgets in sandboxed `srcdoc` iframes; "ran Xh ago" footers from
 commit history; placeholder for never-published. Sample artifact at
-`docs/samples/daily-plan.html` — hand-push it per the template README to
+`docs/samples/daily-plan.html`; hand-push it per the template README to
 prove the render path.
 **Risk retired 2026-07-09:** deployed to Vercel (project `steward`,
 production `READY` from `main`, OAuth env vars live); the RR7 peer concern
@@ -41,11 +41,11 @@ stale-base conflict detection. App chrome moved to shadcn/Base UI + cva
 ## M4 — Execution loop end-to-end ✅ (code)
 
 `run-routine`, `widget-artifact`, `publish-widget` skills; the `steward` CLI
-(`packages/cli`, published as `@devord/steward`, ADR-0036) — `sync` plans by
+(`packages/cli`, published as `@devord/steward`, ADR-0036). `sync` plans by
 default, `--apply` drives a headless claude run. Acceptance still to run live:
-schedule `daily-plan`, watch the
-widget refresh in the deployed app with no manual step (ADR-0005) — needs
-the deployed app plus a data repo on a real account.
+schedule `daily-plan`, watch the widget refresh in the deployed app with no
+manual step (ADR-0005). Needs the deployed app plus a data repo on a real
+account.
 
 ## M5 — Polish / v2 backlog
 
@@ -55,9 +55,9 @@ footer); drag-and-drop layout; multi-repo/org support via team dashboards
 `/team/<slug>` routes, `runner:`-scoped `routines:sync`); template preview
 in the add-routine picker (ADR-0037: built-ins reuse their `docs/samples/`
 archetype, repo templates a `templates/routines/<id>.sample.html` sibling);
-artifact version browsing + compare on the routine detail view (ADR-0038) —
-each run's receipt reopens its render, two compare side by side, text diff
-stays on GitHub. Open backlog:
+artifact version browsing + compare on the routine detail view (ADR-0038),
+where each run's receipt reopens its render, two compare side by side, and
+the text diff stays on GitHub. Open backlog:
 external/PIN-gated artifact sharing (second publish target),
 `instructionsFile:` for long-form routine guidance, dashboard rename
 (today: delete + recreate), dashboard display names in the switcher
@@ -98,7 +98,7 @@ Facts still to verify live (acceptance, alongside M4's): claude.ai
 connectors under headless `claude -p` (launchd); plugins-repo install
 inside the cloud routine environment (else the dispatcher's clone
 fallback kicks in); whether a cloud routine can be created with **no
-schedule at all** (API-trigger-only) or only via the web UI — sync's
+schedule at all** (API-trigger-only) or only via the web UI, where sync's
 apply prompt asks the schedule tooling and reports back; the fire API
 endpoint/beta header shape (`ANTHROPIC_ROUTINES_BETA` overrides the
 pinned value).
@@ -106,7 +106,7 @@ pinned value).
 ## M7 — Routine pool view ✅ (code)
 
 Implements ADR-0025 (built 2026-07-12): a per-repo `Routines` surface at
-`/r/:owner/:repo/routines` — the whole `routines.yaml` pool as one
+`/r/:owner/:repo/routines`: the whole `routines.yaml` pool as one
 terminal-calm table (state, schedule, host, owner, on-boards, claude.ai
 link), surfacing orphan routines the board view can't show. Full actions
 (edit, enable/disable, delete, run-now) over a repo-scoped routines draft
@@ -117,15 +117,15 @@ already in the picker).
 
 ## Watch items
 
-- **GitHub API rate limit** (5k/h authed) — batch loader fetches, ETags.
-- **Artifacts-branch growth** (~1 commit/run) — squash to depth 1 if it ever
+- **GitHub API rate limit** (5k/h authed): batch loader fetches, ETags.
+- **Artifacts-branch growth** (~1 commit/run): squash to depth 1 if it ever
   bites, at the cost of version browsing.
-- **Cloud routine limits** — daily run caps (API-fired runs count too);
+- **Cloud routine limits**: daily run caps (API-fired runs count too);
   local schedule / team runner runs the same pointer prompt when they bind.
-- **Routines fire API is research preview** — surface verified 2026-07-10
+- **Routines fire API is research preview**: surface verified 2026-07-10
   (`POST …/routines/{trigger-id}/fire`, `anthropic-version: 2023-06-01`,
   `anthropic-beta: experimental-cc-routine-2026-04-01`, token minting
   UI-only); `ANTHROPIC_ROUTINES_BETA` overrides the pinned header when it
   changes (ADR-0016).
-- **Palette duplication** — `@theme` block vs the `widget-artifact` token
+- **Palette duplication**: `@theme` block vs the `widget-artifact` token
   snippet must stay identical (ADR-0007).

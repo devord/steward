@@ -11,23 +11,23 @@ repo.
 The register is the board's own: terminal-calm, near-monochrome, color
 only where it means something. Mono for machine values (times, counts,
 slugs, repo names, ages), sans for human titles. Hierarchy comes from
-weight, color, and alignment — never from shrinking type below the floors
+weight, color, and alignment, never from shrinking type below the floors
 (14px body, 12px labels/meta).
 
 **No motion.** An artifact is glanced at, not watched: it must look settled
-the moment it paints. Never animate chart geometry or values on load — bars
-growing, numbers counting up, labels traveling read as flicker in a tile and
-overlap mid-transition. If something genuinely must move (it almost never
+the moment it paints. Never animate chart geometry or values on load. Bars
+growing, numbers counting up, and labels traveling read as flicker in a tile
+and overlap mid-transition. If something genuinely must move (it almost never
 does), keep it ≤200ms ease-out and gate it behind
 `@media (prefers-reduced-motion: no-preference)`.
 
 Stretch the tiers so each artifact has **one datum that is clearly the most
-important pixel** — the heading where there is one, the stat number at 1×1,
+prominent**: the heading where there is one, the stat number at 1×1,
 otherwise the datum that answers the glance. The three type tiers (heading →
-section label → body) must read as three, not one narrow band: the heading is
-the heaviest and darkest (16px medium on tiles, 18px semibold on the page —
+section label → body) must read as three, not one narrow band. The heading is
+the heaviest and darkest (16px medium on tiles, 18px semibold on the page;
 see Heading); the section label is the _quiet_ organizer (12px, ink-dim,
-uppercase, tracked — small and dim, never a second heading); body is the
+uppercase, tracked, small and dim, never a second heading); body is the
 content between them. Cards carry no border by design, so this hierarchy plus
 the whitespace rhythm between blocks _is_ the separation. Never let a section
 label out-weigh the heading it sits under.
@@ -92,7 +92,7 @@ footer {
 }
 ```
 
-Off the board (raw page, full-view lightbox — no `data-steward-tile`
+Off the board (raw page, full-view lightbox, with no `data-steward-tile`
 stamp), trade tile compactness for page generosity inside the ≥900px
 media block:
 
@@ -117,10 +117,10 @@ media block:
 }
 ```
 
-Width alone cannot tell a wide tile from the full view — a 4-column tile
-is also ≥900px. Layout (columns, roomier rows) and the page heading key on
-the media query; only the generosity that would break a tile — outer
-padding, `overflow: auto` — keys on `:root:not([data-steward-tile])`. Never
+Width alone cannot tell a wide tile from the full view, since a 4-column
+tile is also ≥900px. Layout (columns, roomier rows) and the page heading key
+on the media query; only the generosity that would break a tile (outer
+padding, `overflow: auto`) keys on `:root:not([data-steward-tile])`. Never
 gate an element on the stamp while still reserving its grid row: on a wide
 tile the row then sits empty and reads as dead top margin (show it from the
 wide grid up instead).
@@ -129,35 +129,36 @@ wide grid up instead).
 
 ### Heading
 
-The artifact's own page title — the document's `<h1>`, in **two registers**.
+The artifact's own page title, the document's `<h1>`, in **two registers**.
 On a tile the chrome's own title bar (widget name, 16px mono semibold) sits
 directly above the artifact, and the artifact's heading must never out-size
-or out-weigh it — an inner heading larger than the widget's name reads as
-two products stacked. So on tiles the visible heading is mono, **16px,
+or out-weigh it, because an inner heading larger than the widget's name reads
+as two products stacked. So on tiles the visible heading is mono, **16px,
 weight 500**, full ink: within the chrome's scale, a step _below_ the
-chrome's 600 weight. Off the board (raw page, full-view lightbox — no
+chrome's 600 weight. Off the board (raw page, full-view lightbox, with no
 `data-steward-tile` stamp) there is no chrome bar competing, and the heading
 steps up to **18px semibold** as the page's own title. Either register takes
 an optional ink-dim subtitle (14px sans) for a caption. The iframe is its own outline, so this
 `<h1>` roots the section `<h2>`s below (never a `<p>` sitting above orphaned
 headings). The glance tiers lean on the chrome's title bar (name +
-freshness) and drop the _visible_ title — but hide it visually (the
+freshness) and drop the _visible_ title, but hide it visually (the
 `.sr-only` pattern below), never `display: none`, so the `<h1>` stays in the
 a11y tree and keeps rooting the section `<h2>`s at every iframe size; restore
 the visible title from the wide grid up (≥900px) and on the raw/full page,
-where there's room. Distinct from the chrome's freshness — carry the content
-the title bar can't: for daily-plan the day the plan is _for_, not when it ran.
+where there's room. Distinct from the chrome's freshness: carry the content
+the title bar can't, so for daily-plan that is the day the plan is _for_, not
+when it ran.
 
 An artifact that shows no visible title (glance-only, leaning entirely on the
-chrome bar — e.g. repo-pulse) still roots its sections with a visually-hidden
+chrome bar, e.g. repo-pulse) still roots its sections with a visually-hidden
 `<h1>` (the widget's name), so the document outline is never a run of `<h2>`s
 with no parent.
 
-The heading is the artifact's anchor — the most important pixel on any tier
+The heading is the artifact's anchor, the most prominent element on any tier
 that shows it, a clear step above the 12px section labels below it (which
 stay ink-dim and quiet); a hair of negative tracking keeps the mono from
-reading as a data string. **No word in the heading takes an accent color** —
-not the owner's name, not the date: the accent budget belongs to the data
+reading as a data string. **No word in the heading takes an accent color**,
+not the owner's name and not the date: the accent budget belongs to the data
 (one accent element per tile tier), and a colored name pulls the eye to the
 least actionable pixel on the surface.
 
@@ -197,14 +198,14 @@ least actionable pixel on the surface.
 <h1 class="heading">Monday, July 13</h1>
 ```
 
-(The daily-plan sample names this element `.date` — the class is the
-artifact's to pick; the treatment is the shared one above. The shell's `*`
+(The daily-plan sample names this element `.date`; the class is the
+artifact's to pick, and the treatment is the shared one above. The shell's `*`
 reset zeroes the browser's default `<h1>` margin, so no reset is needed.)
 
 ### Section
 
 A 12px mono label, an optional count, and a hairline rule filling the
-width. Drop the label entirely when the section is self-evident — never
+width. Drop the label entirely when the section is self-evident; never
 substitute a smaller/fainter one.
 
 ```css
@@ -236,7 +237,7 @@ h2::after {
 <h2>Top priorities <span class="count">3</span></h2>
 ```
 
-**Rhythm — sections breathe more than rows.** The space _between_ sections
+**Rhythm: sections get more space than rows.** The space _between_ sections
 must clearly beat the space _between rows_ inside one, or the artifact reads
 as a single undifferentiated list instead of a page with parts. Keep rows
 tight (4–6px) and separate sections generously, and grow the separation with
@@ -250,7 +251,7 @@ where there's room for it. When the whole artifact is one shared subgrid (so
 
 The workhorse. One grid per list, rows as subgrid items, so key columns
 (time, rank, repo, status dot) align down the whole list and wrapped text
-keeps a hanging indent — text never wraps under its bullet.
+keeps a hanging indent, so text never wraps under its bullet.
 
 ```css
 ol,
@@ -282,15 +283,15 @@ li {
 ```
 
 Add trailing columns by widening the template
-(`max-content 1fr max-content`) — right column for the value that answers
-the glance (a count, an age, "9 need you"). Key colors are semantic:
+(`max-content 1fr max-content`): the right column takes the value that
+answers the glance (a count, an age, "9 need you"). Key colors are semantic:
 orange for ranks/priority, aqua for times, yellow for carry-overs.
 
-**Lead + detail.** A row body is never one undifferentiated sentence — a
+**Lead + detail.** A row body is never one undifferentiated sentence. A
 list whose every row is a uniform 14px line reads as a wall, however good
 the data. The body opens with a short **lead** (the item's name, the thing
-to do — keep it under ~6 words) at weight 500 full ink, and everything
-else — evidence, ages, provenance, parentheticals — follows as **detail**
+to do, under ~6 words) at weight 500 full ink, and everything
+else (evidence, ages, provenance, parentheticals) follows as **detail**
 in ink-dim regular. Identifiers inside the body (ticket keys, PR numbers,
 file paths) go 12px mono: they read as data riding in prose, not prose.
 The emphasis is what makes a dense list scannable; more whitespace is not.
@@ -335,20 +336,19 @@ li + li {
 the frame's right while its label sits at the left forces an eye-trek
 across dead space, and the wider the surface the worse it reads. The `1fr`
 body column is the culprit: it swallows every pixel of slack and flings the
-value off to the right. Two tools close the gap — a ledger with a trailing
+value off to the right. Two tools close the gap, and a ledger with a trailing
 value uses both.
 
-**Cap the measure.** A trailing-value ledger is _not_ a thing that wants to
-breathe edge to edge; cap it (`max-inline-size` around `56rem`,
-left-aligned, slack falling to the right — the daily-plan page idiom) so the
-value never sits more than a saccade from its label. Only a genuinely wide
-multi-column table earns more width, and it still caps — filling the frame
-means "up to the cap", never the raw 1400px. This refines the shell's
-fill-the-frame note.
+**Cap the measure.** A trailing-value ledger should _not_ run edge to edge;
+cap it (`max-inline-size` around `56rem`, left-aligned, slack falling to the
+right, which is the daily-plan page idiom) so the value never sits more than
+a saccade from its label. Only a genuinely wide multi-column table earns more
+width, and it still caps: filling the frame means "up to the cap", never the
+raw 1400px. This refines the shell's fill-the-frame note.
 
 **Dot-leaders.** For a single-line row with one trailing value, end the body
-in a quiet dotted rule that runs to the value — the eye rides the dots, a
-ledger's oldest idiom. The body becomes a baseline flex row: the words, then
+in a quiet dotted rule that runs to the value, so the reader can track from
+label to value along one line. The body becomes a baseline flex row: the words, then
 a `.lead` that grows to fill the column up to the value. Leaders are for
 single-line rows only; where bodies wrap (the page tier of a prose-ish
 ledger), drop the leader and lean on the measure cap and the row hairlines.
@@ -388,16 +388,16 @@ ledger), drop the leader and lean on the measure cap and the row hairlines.
 
 #### Magnitude bar (the drift-list archetype)
 
-When the trailing value is a **count meant to be compared across rows** — N
-drifts per Figma file, N failing checks per repo, N open per label — a bare
-number flung right reads one row at a time: the eye has to fetch each figure
-and hold it to rank them. Render the count as an inline bar whose **length**
-encodes it against the section's max, the figure kept at the bar's end. Now
-the rows sort themselves by length at a glance and the exact number is still
-there to read. Bars share one origin and one scale — the section sets
-`--max`, each row sets `--n` — so lengths compare honestly. It's a bar, not
-a meter: no track behind it, because a count of drifts has no denominator to
-fill.
+When the trailing value is a **count meant to be compared across rows** (N
+drifts per Figma file, N failing checks per repo, N open per label), a bare
+number flung right reads one row at a time, forcing the reader to fetch each
+figure and hold it to rank them. Render the count as an inline bar whose
+**length** encodes it against the section's max, the figure kept at the bar's
+end. Now the rows sort themselves by length at a glance and the exact number
+is still there to read. Bars share one origin and one scale, with the section
+setting `--max` and each row setting `--n`, so lengths compare honestly. It's
+a bar, not a meter: no track behind it, because a count of drifts has no
+denominator to fill.
 
 ```css
 ul.mag {
@@ -446,24 +446,24 @@ ul.mag {
 </ul>
 ```
 
-Colour the bar only when the count carries state — for a drift list orange
+Colour the bar only when the count carries state. For a drift list orange
 is right, since drifts want attention; an inert magnitude stays a quiet
 neutral (`var(--color-ink-faint)`). The one-accent-per-tier rule still
-holds — on a drift list the bars _are_ that accent, so nothing else on the
+holds: on a drift list the bars _are_ that accent, so nothing else on the
 tile competes.
 
 #### Queue table (the PR-queue archetype)
 
 For rows of tracked items that each carry an identity plus several
-independent states — a PR queue (review state, CI, who's waited on), an
+independent states: a PR queue (review state, CI, who's waited on), an
 issue triage, a job board. Two rules make or break it:
 
 **Every state gets its own column.** A cell holding two states ("approved"
 _and_ a CI cross _and_ a needs-you marker) can never align with its
-neighbours — the misaligned-state smell. The row template reserves one
-fixed column per state, aligned down the whole artifact by the one-grid
+neighbours, which is the misaligned-state smell. The row template reserves
+one fixed column per state, aligned down the whole artifact by the one-grid
 subgrid rule, and a row without that state leaves the cell **empty** (no
-dash, no filler dot — absence reads cleaner than punctuation):
+dash, no filler dot, since absence reads cleaner than punctuation):
 
 ```css
 ul.queue {
@@ -508,9 +508,9 @@ ul.queue {
 
 **States compress to icons on tiles, words on the page.** At tile widths
 the state cell is the icon vocabulary alone (with the word one hover away
-via `title` and present for the a11y tree — the sr-only span above); from
+via `title` and present for the a11y tree, via the sr-only span above); from
 the wide tier (`≥700px`) and on the page the 12px mono word returns beside
-the icon. Never a worded pill per row in a queue — twelve "changes
+the icon. Never a worded pill per row in a queue: twelve "changes
 requested" pills out-shout the twelve titles they annotate.
 
 ```html
@@ -534,13 +534,13 @@ requested" pills out-shout the twelve titles they annotate.
 
 The queue's glance answer is the **marker column** (needs you / blocked),
 not a rainbow of state pills: keep review-state icons in their semantic
-tone at low volume (a passing CI check is `ink-faint` — healthy states
-whisper), and let the one orange marker carry the "act here" signal.
+tone at low volume (a passing CI check is `ink-faint`, since healthy states
+stay quiet), and let the one orange marker carry the "act here" signal.
 
 ### Link
 
-Anything that names an object living elsewhere — a PR, an issue, an
-event — is an anchor to it, always with `target="_blank" rel="noopener"`
+Anything that names an object living elsewhere, such as a PR, an issue, or
+an event, is an anchor to it, always with `target="_blank" rel="noopener"`
 (widget-standard §7: in-frame navigation is blocked, so a bare href is a
 dead link). Links keep the ink register: no browser blue, a hairline
 underline that inks up on hover.
@@ -560,7 +560,7 @@ a:hover {
 ### Stat (the 1×1 tier)
 
 The one number that answers the glance, plus what it counts, plus at most
-one supporting line. Not a hero metric — it replaces the sections at 1×1
+one supporting line. Not a hero metric; it replaces the sections at 1×1
 only (`@media (max-width: 340px) and (max-height: 160px)`).
 
 ```css
@@ -583,12 +583,12 @@ failing); default ink.
 
 The chrome's tag vocabulary, mirrored: mono 12px, tone/10 fill, tone/40
 border. Tones: `ok` green, `bad` red, `attn` orange, neutral ink-faint.
-Color only when it means something — a healthy state usually needs no
+Color only when it means something; a healthy state usually needs no
 pill at all. A pill may lead with its state's icon (the Icon vocabulary,
-12px, `currentColor`) — icon + word in one capsule reads faster than the
-word alone and costs 16px. When pills sit in a ledger column, the column
+12px, `currentColor`), since icon + word in one capsule reads faster than
+the word alone and costs 16px. When pills sit in a ledger column, the column
 is fixed-width and the pill **centers vertically on its row**
-(`align-self: center`, never baseline — a capsule on a text baseline
+(`align-self: center`, never baseline, because a capsule on a text baseline
 floats high) and aligns with its neighbours down the list.
 
 ```css
@@ -625,7 +625,7 @@ floats high) and aligns with its neighbours down the list.
 ### Status dot
 
 A 7px dot as a ledger key when a row has a binary/ternary state (CI up,
-unreachable). Never encode state by the dot alone — pair it with text
+unreachable). Never encode state by the dot alone; pair it with text
 somewhere on the row (`CI ✓`, `unreachable`).
 
 ```css
@@ -643,11 +643,11 @@ somewhere on the row (`CI ✓`, `unreachable`).
 
 ### Icon
 
-Pictograms are inline lucide SVGs — the app chrome's icon set (paste the
+Pictograms are inline lucide SVGs from the app chrome's icon set (paste the
 paths from lucide.dev): 12px in ledger keys, `stroke="currentColor"` so
 the key's semantic color carries through, stroke-width 2, round caps,
-`aria-hidden="true"`. An icon never replaces visible text — the section
-label or row body carries the meaning — with **one exception**: a fixed
+`aria-hidden="true"`. An icon never replaces visible text, since the section
+label or row body carries the meaning. There is **one exception**: a fixed
 state column at tile widths (the queue table), where the word lives
 sr-only + in the cell's `title` and returns visibly from the wide tier up.
 No dingbat glyphs (↻ ⟳ ⚠ ➜): they render soft and font-dependent, never
@@ -656,16 +656,16 @@ sharp.
 **One vocabulary, board-wide.** The same state always wears the same lucide
 glyph, so a reader who learned one widget has learned them all:
 
-| state                       | lucide               | tone                                        |
-| --------------------------- | -------------------- | ------------------------------------------- |
-| approved / passing / done   | `check`              | green — or ink-faint when healthy-is-boring |
-| changes requested / failing | `circle-x`           | red                                         |
-| draft / in progress         | `pencil`             | ink-faint                                   |
-| pending / waiting           | `clock`              | ink-dim                                     |
-| drift (built ≠ spec)        | `git-compare-arrows` | yellow                                      |
-| gap (spec'd, not built)     | `circle-dashed`      | orange                                      |
-| carried over                | `redo-2`             | yellow                                      |
-| blocked                     | `octagon-x`          | red                                         |
+| state                       | lucide               | tone                                       |
+| --------------------------- | -------------------- | ------------------------------------------ |
+| approved / passing / done   | `check`              | green, or ink-faint when healthy-is-boring |
+| changes requested / failing | `circle-x`           | red                                        |
+| draft / in progress         | `pencil`             | ink-faint                                  |
+| pending / waiting           | `clock`              | ink-dim                                    |
+| drift (built ≠ spec)        | `git-compare-arrows` | yellow                                     |
+| gap (spec'd, not built)     | `circle-dashed`      | orange                                     |
+| carried over                | `redo-2`             | yellow                                     |
+| blocked                     | `octagon-x`          | red                                        |
 
 Don't mint a new glyph when a listed state fits; when a genuinely new
 state needs one, pick the plainest lucide match and use it everywhere.
@@ -694,19 +694,19 @@ state needs one, pick the plainest lucide match and use it everywhere.
 }
 ```
 
-(That path set is lucide `redo-2` — the daily-plan sample's carried-over
+(That path set is lucide `redo-2`, the daily-plan sample's carried-over
 key.)
 
 ### Avatar
 
 A person as a ledger key: an 18px round image inlined as a data URI
-(fetched at generation time, ≤48px source — widget-standard rule 1
+(fetched at generation time, ≤48px source, since widget-standard rule 1
 forbids images by URL), wrapped in a link to the person's profile so
 the picture is the click-through to _who_. The link's `title` and the
 img's `alt` carry the person's **display name** (`Daniel Moraes`, not
 the handle `danielmoraes`), so hover answers _who_; identity never
 rides on the picture alone. When no image could be inlined, fall back
-to the initial form — same footprint, one mono capital, still linked.
+to the initial form: same footprint, one mono capital, still linked.
 Avatars are the one raster exception in an otherwise vector language:
 earn them (a row genuinely about a person), never decorate with them.
 
@@ -762,7 +762,7 @@ span.avatar {
 
 ### Meter (and the one-progress rule)
 
-Progress as a segmented bar (done/total), 4px tall — one shape plus its
+Progress as a segmented bar (done/total), 4px tall: one shape plus its
 exact value, the way the sparkline pairs a line with its endpoint label.
 Use for genuinely bounded progress only.
 
@@ -783,24 +783,24 @@ Use for genuinely bounded progress only.
 ```
 
 **One progress representation per widget.** Progress is a single
-question — _how far along?_ — so it gets a single answer. A bar, a percent
+question (_how far along?_), so it gets a single answer. A bar, a percent
 ring, and a numbered stepper stacked together are the same number drawn
-three times: the eye has to reconcile three things that must always agree,
-and none of them carries what the others left out. Pick the _one_ encoding
-that fits the glance, then demote the rest:
+three times: the reader has to reconcile three things that must always
+agree, and none of them carries what the others left out. Pick the _one_
+encoding that fits the glance, then demote the rest:
 
 - **Meter** when the whole is small and countable and the _shape_ of
   done-against-todo means something.
-- **A single mono caption** (`8/13`, or `62%` — never both) when only the
+- **A single mono caption** (`8/13`, or `62%`, never both) when only the
   magnitude matters and there's no room for a bar. It rides in the section
   count (`h2 .count`) or beside the bar as 12px mono ink-dim, and it _is_
-  the meter's text label either way — the bar never stands on color and
+  the meter's text label either way, so the bar never stands on color and
   length alone (a screen reader needs the number, so `role="img"` +
   `aria-label` carries it). One shape and one number are still one
   representation, the way the stat is a num plus its label; two textual
   encodings of the same total (a percent _and_ a fraction) are not.
 - **The ledger's own order** when "progress" really means _which items are
-  done_ — the list already shows that, and a bar on top of it is the
+  done_. The list already shows that, and a bar on top of it is the
   redundant copy. Let done rows recede (ink-faint) and the live ones sit
   full ink.
 
@@ -817,12 +817,12 @@ The structures a progress widget reaches for all collapse into that one:
 - **Sub-rows** splitting each item into parts → progressive disclosure:
   hidden on tiles, shown on the raw/full page
   (`:root:not([data-steward-tile])`). If the per-item breakdown _is_ the
-  widget's one representation — each row carrying its own meter — then the
+  widget's one representation, with each row carrying its own meter, then the
   board-level total is what demotes: it drops to a mono count in the
   section label, not a second aggregate bar.
 
 Same discipline as the day strip (Time blocks): one underlying quantity,
-one rendering per tier — never three at once on the same surface. The
+one rendering per tier, never three at once on the same surface. The
 collapse:
 
 ```html
@@ -868,10 +868,10 @@ grid at tile sizes; label the endpoint value in 12px mono instead.
 ### Time blocks (the Newport day)
 
 The plan archetype plans the whole day, not just meetings: every
-30-minute slot has a job. A block's **label is concise** — the type, the
-project, a few words (`Deep — Corza: review queue`), never an enumeration
-of tickets; work blocks name their project (`Type — Project: task`) so
-time can be summed per project. Details live beside the block, not inside
+30-minute slot has a job. A block's **label is concise**, carrying the type,
+the project, and a few words (`Deep — Corza: review queue`), never an
+enumeration of tickets; work blocks name their project (`Type — Project: task`)
+so time can be summed per project. Details live beside the block, not inside
 it (see the details column below). Blocks are typed classes carrying a
 `--tone`; `--s` is the span in 30-minute slots:
 
@@ -895,17 +895,17 @@ it (see the details column below). Blocks are typed classes carrying a
 
 One block list, three renderings (see `docs/samples/daily-plan.html`):
 
-- **Tile ledger** — the rows component with a trailing duration column
+- **Tile ledger**: the rows component with a trailing duration column
   (`14:00 · Deep — … · 1h30`). Hierarchy by ink, not fills: deep bodies
   full ink at weight 500, free bodies ink-faint, the rest ink-dim.
-- **Day strip** — a 6px proportional bar under the section rule, one
+- **Day strip**: a 6px proportional bar under the section rule, one
   segment per block at `color-mix(tone 65%)` (free stays `bg3`, the
   unfilled track), a 2px orange tick at now. Script-built from the list;
-  the shape of the day at glance size, kept on every tier — above the
+  the shape of the day at glance size, kept on every tier. Above the
   time grid it's the day's summary line.
-- **Time grid (any wide surface tall enough for the day)** — the paper
+- **Time grid (any wide surface tall enough for the day)**: the paper
   planner, gated on size, not the tile stamp:
-  `@media (min-width: 900px) and (min-height: 600px)` — the raw page,
+  `@media (min-width: 900px) and (min-height: 600px)`. The raw page,
   the full view, and board tiles from ~4 rows up all render it; shorter
   tiers keep the ledger. Pages get 26px per 30-minute slot; tiles never
   scroll, so there the day flexes to spend exactly the section's height
@@ -914,24 +914,24 @@ One block list, three renderings (see `docs/samples/daily-plan.html`):
   `--slots` script-set from the block list). A script-built 12px mono
   ruler labels every slot from day start to day end (hours `08:00`
   ink-dim, half-hours a quiet `:30` ink-faint); the ruler's hairline
-  right edge is the grid's only ruled line — no hour or half-hour
-  rules across the day, the boxes and the now line alone cross it. A
-  block is a drawn box spanning `--s` grid rows — 1px
-  `color-mix(tone 45%)` border over a `color-mix(tone 12%)` wash, no
-  time key inside the box (the ruler carries the times) — free slots
-  stay unboxed: blank space against the ruler is honest slack. The box
-  carries **only the concise label** — Newport's own planner pushes
-  everything else off the block: a **details column** to the grid's
+  right edge is the grid's only ruled line, with no hour or half-hour
+  rules across the day, so the boxes and the now line alone cross it. A
+  block is a drawn box spanning `--s` grid rows: 1px
+  `color-mix(tone 45%)` border over a `color-mix(tone 12%)` wash, with no
+  time key inside the box (the ruler carries the times). Free slots
+  stay unboxed, so blank space against the ruler reads as unplanned time.
+  The box carries **only the concise label**, and everything else moves
+  off the block into a **details column** to the grid's
   right (a third grid column, `minmax(180px, 280px)`) carries each
   block's `goal:` note as 12px ink-dim text spanning the same grid rows
-  as its block — top-aligned to the block's start, a hairline's gap from
+  as its block, top-aligned to the block's start, a hairline's gap from
   the box it annotates, and clamped to the block's height **in whole
   line boxes**: round the available height down to a multiple of the
   line box (`max-height: max(1lh, round(down, calc(100% - 2px), 1lh))`
   over an `overflow: hidden`, with the raw `calc(100% - 2px)` clamp
   declared first as the fallback), so an overflowing note truncates at
   a line edge. A mid-line crop of half-height letters is the one way
-  this column must never degrade — the widget standard's no-ambiguous-
+  this column must never degrade: the widget standard's no-ambiguous-
   crop rule applies inside the artifact too, not just at the tile edge.
   The note sits _beside_ the time it belongs to and the grid stops
   wasting its right half. Every block still carries a `title` tooltip
@@ -940,13 +940,13 @@ One block list, three renderings (see `docs/samples/daily-plan.html`):
   calendar-style; the script measures a ruler row for its position (the
   tile tier's `--slot` is a container expression, not a length). The chip
   masks the line where the text crosses it, so its background matches the
-  page surface — the authored `--color-bg1` on the raw page and full view,
+  page surface: the authored `--color-bg1` on the raw page and full view,
   but `--color-bg` on a tile (`html[data-steward-tile] .nowline span`),
   which the frame flushes the page to; the gutter is bare page, not an
   elevated `bg1` panel, so a fixed `bg1` chip reads as a pale block there.
 
 Two `.totals` lines (12px mono) state the process metrics on wide tiers
-and the page — where the time goes **by type** (tone dots:
+and the page, showing where the time goes **by type** (tone dots:
 `4.5h deep · 1h meetings · 3h shallow · 30m free`) and **by project**
 (no dots, ink-dim: `corza 4h · steward 1h30`), summed from the work
 blocks' `Type — Project: task` labels. Personal and free blocks carry no
@@ -960,9 +960,9 @@ grid boxes) and insert a thin accent rule with a mono `HH:MM now` label
 between past and future. Gate on the generated-at date still being
 today. Keep it live: re-render the whole now state (dimming, marker,
 grid now line, strip tick) on a 30-second timer plus `visibilitychange`
-and `resize`, so an open page tracks the day without a refresh — and
+and `resize`, so an open page tracks the day without a refresh, and
 clear it once the date rolls past the plan's. Past rows are never
-hidden, on any tier — the plan is a record of the day, not a queue;
+hidden, on any tier: the plan is a record of the day, not a queue;
 passed time recedes, it doesn't disappear. Never collapse past rows
 into an `N earlier` line: late in the day that empties the whole
 section. When a tile runs out of height the fit-list trims for space,
@@ -987,20 +987,20 @@ honestly (`+N more`), never by pastness. See the script in
 
 ### Stage strip (the act timeline)
 
-A project's named acts as one horizontal row — a **real sequence with one
+A project's named acts as one horizontal row: a **real sequence with one
 current act**, the altitude read ("which act are we in"). It is not a
-progress bar and never duplicates one: the meter answers _how far_, the
-strip answers _where_ — a widget may carry one of each, no more.
+progress bar and never duplicates one. The meter answers _how far_, the
+strip answers _where_, and a widget may carry one of each, no more.
 
 Anatomy is **dot → label → connector**, per item: the connector joins an
 item to the _next_ one, so a label can never collide with the following
 act's dot (connector-before-label is the collision bug). Done acts read
 ink-dim with a filled dot; the current act full ink at weight 500 with an
-**orange now-dot** (the sanctioned now marker — it spends the tile's
+**orange now-dot** (the sanctioned now marker, which spends the tile's
 accent budget); upcoming acts ink-faint with a hollow ring. The strip is
 a whole row of chrome, so gate it on **height** (roughly
-`min-height: 560px` — page-tall surfaces), never width: a short-wide tile
-spends its rows on content.
+`min-height: 560px`, meaning page-tall surfaces), never width: a
+short-wide tile spends its rows on content.
 
 ```css
 .stage ol {
@@ -1071,13 +1071,13 @@ spends its rows on content.
 ```
 
 (The Meter's anti-stepper rule stands: numbered circles duplicating a
-bar are still banned. The strip earns its row only when the acts are
-genuinely named stages and the current one is a fact, not a percent.)
+bar are still banned. Use the strip only when the acts are genuinely
+named stages and the current one is a fact, not a percent.)
 
 ### Provenance line
 
-The run's method facts — what was audited, how much, what was held back,
-which knobs applied — belong to the reader who asks "can I trust this?",
+The run's method facts (what was audited, how much, what was held back,
+which knobs applied) belong to the reader who asks "can I trust this?",
 not to the glance. They render as **one quiet mono line directly above the
 footer**, dot-separated facts, never a paragraph:
 
@@ -1109,16 +1109,16 @@ footer**, dot-separated facts, never a paragraph:
 }
 ```
 
-Three rules. **Never prose** — a sentence about the method sitting among
-the sections reads as misplaced body copy (the blob smell); decompose it
-into countable facts. **Never content** — anything the reader should _act_
-on (a ticket already unblocked, a finding) is a section or a row, however
-provenance-flavored it sounds. **Glance tiers drop it** — it appears from
+**Never prose.** A sentence about the method sitting among the sections
+reads as misplaced body copy (the blob smell); decompose it into countable
+facts. **Never content.** Anything the reader should _act_ on (a ticket
+already unblocked, a finding) is a section or a row, however
+provenance-flavored it sounds. **Glance tiers drop it.** It appears from
 the wide tier up and on the page, where the trust question gets asked.
 
 ### Empty state
 
-A designed fact, not an apology and not italics: what's missing in ink-dim,
+A designed fact, not an apology: what's missing in ink-dim,
 the next action in one line, vertically centered by the shell. A neutral
 pill can carry the state word (`unreachable`, `no data`).
 
@@ -1143,24 +1143,24 @@ pill can carry the state word (`unreachable`, `no data`).
 
 ## The tier playbook
 
-Design each tier deliberately — a tier is a viewport, not a crop:
+Design each tier deliberately; a tier is a viewport, not a crop:
 
-- **1×1** — the stat, nothing else. One number, its label, one optional
+- **1×1**: the stat, nothing else. One number, its label, one optional
   support line.
-- **2×1 / 1×2** — one ledger, single-line rows, no detail nests.
-- **2×2** — the full ledger set or detail nests; fit-lists trim from the
+- **2×1 / 1×2**: one ledger, single-line rows, no detail nests.
+- **2×2**: the full ledger set or detail nests; fit-lists trim from the
   bottom.
-- **Wide tile (3–4 cols)** — spend width on columns (two sections side by
+- **Wide tile (3–4 cols)**: spend width on columns (two sections side by
   side, or trailing-value columns), not on longer lines; the page heading
   earns its row here.
-- **Full view / raw page** — a page: capped column, top-anchored,
+- **Full view / raw page**: a page, with a capped column, top-anchored,
   hairline-separated rows, every item shown, the page heading and page-only
   generosity (outer padding, scroll) allowed.
 
 Bans, on top of the board's own: no invented colors or fonts; no boxes
-inside the tile (the card is the box — sections separate with rules and
+inside the tile (the card is the box, so sections separate with rules and
 space, never nested cards); no side-stripe accents; no more than one
 accent-colored element per tile tier; no more than one progress
 representation per widget (a bar, a percent, and a stepper are the same
-number three times — see Meter); body text never below 14px, nothing below
+number three times; see Meter); body text never below 14px, nothing below
 12px.
