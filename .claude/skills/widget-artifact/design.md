@@ -64,15 +64,32 @@ body {
   font-variant-numeric: tabular-nums;
   overflow: hidden;
 }
-main {
+/* Sections breathe more than rows (rows run 4–6px, sections 14px), and the
+   separation is a `gap` on every element that stacks sections — `main` and
+   each column wrapper, which is what `.stack` marks. Two properties make the
+   gap the right tool and a sibling margin the wrong one: a gap skips a
+   section hidden by a tier query, and it skips a visually-hidden heading,
+   where `+` would count both and open the tile on dead space. Its one cost is
+   that it reaches only direct children — so a wrapper that stacks sections
+   and forgets `.stack` drops its rhythm to zero. That is the bug this rule
+   exists to prevent; the validator checks for it. */
+main,
+.stack {
   display: grid;
-  gap: 12px;
+  align-content: start;
+  gap: 14px;
   min-height: 0;
+}
+main {
   /* Never let the flex body squeeze main: a compressed main hides its
      overflow inside the body box, where the fit script can't measure it
      (scrollHeight stays clean) and content paints over the footer. Unshrunk,
      overflow pushes past the body edge and the fit pass sees it. */
   flex-shrink: 0;
+}
+/* A second label inside one section is the case no gap can reach. */
+:is(section, .section) > * + h2 {
+  margin-top: 14px;
 }
 /* One-row glance tiles are inherently sparse — center the lone KPI so it
    isn't adrift. Taller tiles (and raw/full pages) read top-down. */
@@ -109,6 +126,16 @@ media block:
     width: 100%;
     max-width: 56rem;
     margin-inline: 0 auto;
+  }
+  /* The page opens the rhythm up: parts of a page, not rows of a tile. This
+     one keys on the stamp rather than the width, unlike the layout rules
+     around it — a 4-column tile is also ≥900px, and there the extra air is
+     paid for in data rows the tile can't spare. */
+  :root:not([data-steward-tile]) :is(main, .stack) {
+    gap: 28px;
+  }
+  :root:not([data-steward-tile]) :is(section, .section) > * + h2 {
+    margin-top: 28px;
   }
   :root:not([data-steward-tile]) body {
     padding: 40px 32px;
@@ -239,12 +266,29 @@ h2::after {
 **Rhythm — sections breathe more than rows.** The space _between_ sections
 must clearly beat the space _between rows_ inside one, or the artifact reads
 as a single undifferentiated list instead of a page with parts. Keep rows
-tight (4–6px) and separate sections generously, and grow the separation with
-the surface: `main`'s inter-section gap runs ~12px on a tile and opens to
-~24–32px on the page, so the "sections of a page" read strengthens exactly
-where there's room for it. When the whole artifact is one shared subgrid (so
-`row-gap` would space rows and sections alike), add the separation as
-`margin-top` on each section after the first, never as a bigger `row-gap`.
+tight (4–6px); the shell separates sections at 14px on a tile, opening to 28px
+on the page, so the "sections of a page" read strengthens exactly where
+there's room for it.
+
+**Every element that stacks sections carries `.stack`.** The separation is a
+`gap`, and a `gap` reaches only its direct children — so the moment a section
+sits inside a column wrapper that forgot the class, its label lands flush
+against the row above, at zero. When a tier query reveals such a wrapper,
+reveal it as `display: grid` — a `display: block` override silently drops the
+gap and reintroduces the same flush labels. A healthy-looking `main { gap }` is no
+evidence the rhythm survived; it is the usual companion to this bug, because
+`main`'s own gap stops at `main`'s own children. Mark the wrapper and the
+rhythm is right at any depth.
+
+The tempting alternative — a sibling margin (`section + section`), which
+reaches any depth without marking anything — is wrong here, and worth knowing
+why. `+` matches siblings that are `display: none` and siblings that are
+visually hidden. Tier queries hide sections constantly (the 1×1 stat, a
+column that only appears on the page) and every artifact opens with an
+`.sr-only` heading, so a margin-based rhythm silently prepends dead space to
+whatever leads each tier — worst exactly at the glance sizes with the least
+room to spare. A `gap` skips both, because a hidden element is not a grid
+item at all.
 
 ### Ledger rows
 
