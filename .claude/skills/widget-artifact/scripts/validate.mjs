@@ -100,6 +100,27 @@ for (const file of files) {
       errors.push(`font-size below the 12px floor: ${m.trim()}`)
   }
 
+  // — Media query grammar —
+  // `not (…)` must negate the whole prelude: `not (…) and (…)` is not
+  // parseable, the browser reads it as not-all, and every rule gated on it
+  // silently never applies (content that "displays almost nothing").
+  for (const [, prelude] of html.matchAll(/@media([^{]+)\{/g)) {
+    const p = prelude.trim()
+    if (!/^not\s*\(/.test(p)) continue
+    let depth = 0
+    let i = p.indexOf("(")
+    for (; i < p.length; i++) {
+      if (p[i] === "(") depth++
+      else if (p[i] === ")" && --depth === 0) break
+    }
+    if (p.slice(i + 1).trim())
+      errors.push(
+        `invalid media query "${p.slice(0, 70)}" — \`not (…)\` must negate ` +
+          "the whole query (wrap the full condition in one group); as " +
+          "written it parses as not-all and the rule never applies",
+      )
+  }
+
   // — Links (widget-standard §7) —
   for (const [tag] of html.matchAll(/<a\s(?:[^>"]|"[^"]*")*>/g)) {
     const href = tag.match(/\bhref\s*=\s*"([^"]*)"/)?.[1]

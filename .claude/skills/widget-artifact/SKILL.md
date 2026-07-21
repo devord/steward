@@ -242,7 +242,8 @@ its structure (never a previous run's markup — `run-routine` §4):
 
 Run the bundled validator on the finished file — it checks the
 deterministic half of the contract (self-containment, token drift,
-meta/footer, fit-list wiring, type floors, anchor targets):
+meta/footer, fit-list wiring, type floors, anchor targets, media-query
+grammar):
 
 ```bash
 node <steward checkout>/.claude/skills/widget-artifact/scripts/validate.mjs <artifact.html>
