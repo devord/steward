@@ -165,6 +165,10 @@ It hides trailing items until the page fits and says how many it hid:
           list: list,
           more: more,
           items: items,
+          // Trimming is resumable across sweeps, so the running count and
+          // the exhausted flag live here rather than in the loop below.
+          hidden: 0,
+          done: false,
           // A pinned row is itself a reason for the section to stay —
           // collapsing would discard the row that was marked load-bearing.
           pinned: list.querySelectorAll("[data-fit-keep], .now").length,
@@ -178,33 +182,55 @@ It hides trailing items until the page fits and says how many it hid:
       function over() {
         return height() > doc.clientHeight
       }
-      state.forEach(function (s) {
-        var hidden = 0
-        while (over() && hidden < s.items.length) {
+      // Trim one list as far as it will go right now; report whether it
+      // moved. Resumable — a list that yields early resumes from its own
+      // `hidden` count on a later sweep rather than starting over.
+      function trim(s) {
+        if (s.done) return false
+        var moved = false
+        while (over() && s.hidden < s.items.length) {
           // The next hide would empty this list: drop the whole section
           // instead. A tier is a viewport, not a crop — a section that does
           // not fit this tier is not part of it. A pinned row overrides that:
           // the section stays, carrying the row that had to survive.
-          if (hidden + 1 === s.items.length && s.pinned === 0) {
+          if (s.hidden + 1 === s.items.length && s.pinned === 0) {
             var box = owner(s.list)
             box.setAttribute("data-fit-collapsed", "")
             box.hidden = true
-            return
+            s.done = true
+            return true
           }
           var before = height()
-          var el = s.items[s.items.length - ++hidden]
+          var el = s.items[s.items.length - ++s.hidden]
           el.hidden = true
-          // In multi-column tiers hiding a short-column item frees no
-          // height — revert and leave this list whole.
+          // Hiding this row freed no height: in a multi-column tier some
+          // other column is the constraint right now. Put it back and
+          // yield — a later sweep retries once that column has given way.
           if (height() >= before) {
             el.hidden = false
-            hidden--
-            break
+            s.hidden--
+            return moved
           }
+          moved = true
           s.more.hidden = false
-          s.more.textContent = "+" + hidden + " more"
+          s.more.textContent = "+" + s.hidden + " more"
         }
-      })
+        if (s.hidden >= s.items.length) s.done = true
+        return moved
+      }
+      // Sweep until nothing moves. One ordered pass is not enough in a
+      // multi-column tier: the ledger in the right column frees no height
+      // while the left column is the taller one, so it yields — and a
+      // single-pass fit never returns to it, leaving the tile overflowing
+      // with rows still available to trim. Each sweep either hides at least
+      // one row or ends the loop, and rows are finite, so this terminates.
+      var progress = true
+      while (over() && progress) {
+        progress = false
+        state.forEach(function (s) {
+          if (trim(s)) progress = true
+        })
+      }
     }
     addEventListener("DOMContentLoaded", fit)
     addEventListener("resize", fit)
@@ -216,6 +242,16 @@ Style `[data-fit-more]` as a 12px mono `--color-ink-dim` line; it is a
 count, not content. Non-list layouts follow the same rule by other means
 (shorter text via `min-height` queries, clamped paragraphs); what matters
 is that nothing overflows a tile silently.
+
+**In a multi-column tier, every column needs a trimmable list.** The sweep
+can only free height from lists that carry `data-fit-list`, so a column
+holding none of them is a floor the pass cannot get under — it will trim the
+other column to nothing and still overflow. This is the case that hides: the
+short list nobody thought to mark (three moves, four stats) is the one that
+sets the tall column's height, while the long ledger opposite it is already
+marked and yields uselessly. Mark **every** unbounded list, short ones
+included, and drop whole sections by tier query where a tier was never meant
+to carry them.
 
 **Rows that carry bad news survive the trim.** Mark them `data-fit-keep`
 (the now marker's `.now` class does the same job). Fit-trimming is
