@@ -100,7 +100,14 @@ that skill's current design language on every run**. A previous artifact a
 template gathers is a data source (carry-overs, the last generated-at),
 never an authoring base: reusing its markup or CSS freezes the widget at
 whatever design the first run shipped, and design fixes never reach the
-board. Then publish it with the `publish-widget` skill to
+board. Before publishing, run the skill's validator on the finished file —
+
+```bash
+node <steward checkout>/.claude/skills/widget-artifact/scripts/validate.mjs <artifact.html>
+```
+
+— and fix every error it reports; a run never publishes an artifact that
+fails validation. Then publish it with the `publish-widget` skill to
 `w/<slug>/index.html` on the `artifacts` branch.
 
 ## Dry runs (ADR-0017)

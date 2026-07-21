@@ -224,14 +224,38 @@ final DOM.
 
 ## Reference
 
-Two canonical samples in the app repo's `docs/samples/` show the design
+The canonical samples in the app repo's `docs/samples/` show the design
 language end-to-end — structure, breakpoint technique, and footer
-included: `daily-plan.html` (the plan/ledger archetype: sections, ledger
-rows, the now marker) and `repo-pulse.html` (the stats/pulse archetype:
-the stat tier, status dots, pills, trailing values, detail nests).
+included. Open the one matching your archetype before authoring; imitate
+its structure (never a previous run's markup — `run-routine` §4):
+
+- `daily-plan.html` — the plan/ledger archetype: sections, ledger rows,
+  lead + detail bodies, the Newport time grid with its details column,
+  the by-type and by-project totals, the now marker.
+- `repo-pulse.html` — the stats/pulse + queue archetype: the stat tier,
+  the queue table with per-state icon columns, avatars, dots, trailing
+  values.
+- `ticket-gaps.html` — the recommendations archetype: icon pills in an
+  aligned state column, copy actions, the provenance line.
+
+## Validate before publishing
+
+Run the bundled validator on the finished file — it checks the
+deterministic half of the contract (self-containment, token drift,
+meta/footer, fit-list wiring, type floors, anchor targets):
+
+```bash
+node <steward checkout>/.claude/skills/widget-artifact/scripts/validate.mjs <artifact.html>
+```
+
+Fix every **error** and re-run until clean — never publish with errors.
+**Warnings** are judgment calls: resolve or consciously accept each one.
+The validator cannot see composition (hierarchy, density, alignment);
+that half stays on you and `design.md`.
 
 ## Checklist before publishing
 
+- [ ] `validate.mjs` passes with zero errors
 - [ ] No external request of any kind (grep for `http`, `//`, `url(`)
 - [ ] Renders sensibly at 340×160 (1×1) — the KPI essence, no overflow
 - [ ] Reveals more at 700×310 and full size

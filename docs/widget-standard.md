@@ -101,8 +101,9 @@ An artifact MUST:
    calm ink, never browser blue.
 8. **Compose from the shared design language** (ADR-0027). The
    `widget-artifact` skill's `design.md` defines the component set —
-   shell, section rules, ledger rows, the stat tier, pills, dots, meters,
-   sparklines, empty states — and the per-tier playbook. Artifacts pick
+   shell, section rules, ledger rows, the queue table, magnitude bars,
+   the stat tier, pills, dots, icons, meters, sparklines, the provenance
+   line, empty states — and the per-tier playbook. Artifacts pick
    from it rather than inventing per-routine visuals, so a board of
    widgets from different routines reads as one product; the canonical
    samples live in `docs/samples/`. These double as the built-in templates'

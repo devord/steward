@@ -25,11 +25,12 @@ Stretch the tiers so each artifact has **one datum that is clearly the most
 important pixel** — the heading where there is one, the stat number at 1×1,
 otherwise the datum that answers the glance. The three type tiers (heading →
 section label → body) must read as three, not one narrow band: the heading is
-the heaviest and darkest (18px semibold, full ink); the section label is the
-_quiet_ organizer (12px, ink-dim, uppercase, tracked — small and dim, never a
-second heading); body is the content between them. Cards carry no border by
-design, so this hierarchy plus the whitespace rhythm between blocks _is_ the
-separation. Never let a section label out-weigh the heading it sits under.
+the heaviest and darkest (16px medium on tiles, 18px semibold on the page —
+see Heading); the section label is the _quiet_ organizer (12px, ink-dim,
+uppercase, tracked — small and dim, never a second heading); body is the
+content between them. Cards carry no border by design, so this hierarchy plus
+the whitespace rhythm between blocks _is_ the separation. Never let a section
+label out-weigh the heading it sits under.
 
 ## The shell
 
@@ -67,6 +68,11 @@ main {
   display: grid;
   gap: 12px;
   min-height: 0;
+  /* Never let the flex body squeeze main: a compressed main hides its
+     overflow inside the body box, where the fit script can't measure it
+     (scrollHeight stays clean) and content paints over the footer. Unshrunk,
+     overflow pushes past the body edge and the fit pass sees it. */
+  flex-shrink: 0;
 }
 /* One-row glance tiles are inherently sparse — center the lone KPI so it
    isn't adrift. Taller tiles (and raw/full pages) read top-down. */
@@ -123,10 +129,16 @@ wide grid up instead).
 
 ### Heading
 
-The artifact's own page title — the document's `<h1>`, matching the app's
-page headings so a wide tile, raw page, or full view reads like the rest of
-the product: mono, 18px, semibold, full ink — with an optional ink-dim
-subtitle (14px sans) for a caption. The iframe is its own outline, so this
+The artifact's own page title — the document's `<h1>`, in **two registers**.
+On a tile the chrome's own title bar (widget name, 16px mono semibold) sits
+directly above the artifact, and the artifact's heading must never out-size
+or out-weigh it — an inner heading larger than the widget's name reads as
+two products stacked. So on tiles the visible heading is mono, **16px,
+weight 500**, full ink: within the chrome's scale, a step _below_ the
+chrome's 600 weight. Off the board (raw page, full-view lightbox — no
+`data-steward-tile` stamp) there is no chrome bar competing, and the heading
+steps up to **18px semibold** as the page's own title. Either register takes
+an optional ink-dim subtitle (14px sans) for a caption. The iframe is its own outline, so this
 `<h1>` roots the section `<h2>`s below (never a `<p>` sitting above orphaned
 headings). The glance tiers lean on the chrome's title bar (name +
 freshness) and drop the _visible_ title — but hide it visually (the
@@ -142,18 +154,25 @@ chrome bar — e.g. repo-pulse) still roots its sections with a visually-hidden
 with no parent.
 
 The heading is the artifact's anchor — the most important pixel on any tier
-that shows it. It carries a full **semibold** and full ink so it commands the
-top of the section a clear step above the 12px section labels below it (which
+that shows it, a clear step above the 12px section labels below it (which
 stay ink-dim and quiet); a hair of negative tracking keeps the mono from
-reading as a data string.
+reading as a data string. **No word in the heading takes an accent color** —
+not the owner's name, not the date: the accent budget belongs to the data
+(one accent element per tile tier), and a colored name pulls the eye to the
+least actionable pixel on the surface.
 
 ```css
 .heading {
   font-family: var(--font-mono);
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--color-ink);
+}
+/* Page register: no chrome title bar to defer to. */
+:root:not([data-steward-tile]) .heading {
+  font-size: 18px;
+  font-weight: 600;
 }
 .heading .sub {
   margin-top: 2px;
@@ -266,6 +285,38 @@ Add trailing columns by widening the template
 (`max-content 1fr max-content`) — right column for the value that answers
 the glance (a count, an age, "9 need you"). Key colors are semantic:
 orange for ranks/priority, aqua for times, yellow for carry-overs.
+
+**Lead + detail.** A row body is never one undifferentiated sentence — a
+list whose every row is a uniform 14px line reads as a wall, however good
+the data. The body opens with a short **lead** (the item's name, the thing
+to do — keep it under ~6 words) at weight 500 full ink, and everything
+else — evidence, ages, provenance, parentheticals — follows as **detail**
+in ink-dim regular. Identifiers inside the body (ticket keys, PR numbers,
+file paths) go 12px mono: they read as data riding in prose, not prose.
+The emphasis is what makes a dense list scannable; more whitespace is not.
+
+```css
+.body .lead-txt {
+  font-weight: 500;
+}
+.body .detail {
+  color: var(--color-ink-dim);
+}
+.body .id {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+```
+
+```html
+<span class="body"
+  ><span class="lead-txt">Sign the Salesforce access PDF</span>
+  <span class="detail"
+    ><span class="id">DM-126</span> · Highest, open 5+ days</span
+  ></span
+>
+```
+
 On single-row tiles clamp bodies to one line
 (`white-space: nowrap; overflow: hidden; text-overflow: ellipsis`); let
 them wrap on taller tiers. At ≥900px give rows breathing room and
@@ -401,6 +452,91 @@ neutral (`var(--color-ink-faint)`). The one-accent-per-tier rule still
 holds — on a drift list the bars _are_ that accent, so nothing else on the
 tile competes.
 
+#### Queue table (the PR-queue archetype)
+
+For rows of tracked items that each carry an identity plus several
+independent states — a PR queue (review state, CI, who's waited on), an
+issue triage, a job board. Two rules make or break it:
+
+**Every state gets its own column.** A cell holding two states ("approved"
+_and_ a CI cross _and_ a needs-you marker) can never align with its
+neighbours — the misaligned-state smell. The row template reserves one
+fixed column per state, aligned down the whole artifact by the one-grid
+subgrid rule, and a row without that state leaves the cell **empty** (no
+dash, no filler dot — absence reads cleaner than punctuation):
+
+```css
+ul.queue {
+  /* key · title · review · ci · marker · age
+     (+ ticket/size columns from the wide tier up) */
+  grid-template-columns: max-content 1fr max-content max-content max-content max-content;
+}
+.st {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.st.ok {
+  color: var(--color-green);
+}
+.st.bad {
+  color: var(--color-red);
+}
+.st.dim {
+  color: var(--color-ink-faint);
+}
+.st .word {
+  /* tile tiers: the word lives in the a11y tree and the title attr */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+@media (min-width: 700px) {
+  .st .word {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
+  }
+}
+```
+
+**States compress to icons on tiles, words on the page.** At tile widths
+the state cell is the icon vocabulary alone (with the word one hover away
+via `title` and present for the a11y tree — the sr-only span above); from
+the wide tier (`≥700px`) and on the page the 12px mono word returns beside
+the icon. Never a worded pill per row in a queue — twelve "changes
+requested" pills out-shout the twelve titles they annotate.
+
+```html
+<li>
+  <a class="avatar-link" href="…" target="_blank" rel="noopener" title="…">…</a>
+  <span class="body"
+    ><a href="…" target="_blank" rel="noopener"
+      >#341 seed Admin registration mutations</a
+    ></span
+  >
+  <span class="st bad" title="changes requested"
+    ><svg><!-- lucide circle-x --></svg><span class="word">changes</span></span
+  >
+  <span class="st ok" title="CI passing"
+    ><svg><!-- lucide check --></svg><span class="word">ci</span></span
+  >
+  <span class="st"><!-- needs-you marker: enhancer-added --></span>
+  <span class="key">3d</span>
+</li>
+```
+
+The queue's glance answer is the **marker column** (needs you / blocked),
+not a rainbow of state pills: keep review-state icons in their semantic
+tone at low volume (a passing CI check is `ink-faint` — healthy states
+whisper), and let the one orange marker carry the "act here" signal.
+
 ### Link
 
 Anything that names an object living elsewhere — a PR, an issue, an
@@ -448,7 +584,12 @@ failing); default ink.
 The chrome's tag vocabulary, mirrored: mono 12px, tone/10 fill, tone/40
 border. Tones: `ok` green, `bad` red, `attn` orange, neutral ink-faint.
 Color only when it means something — a healthy state usually needs no
-pill at all.
+pill at all. A pill may lead with its state's icon (the Icon vocabulary,
+12px, `currentColor`) — icon + word in one capsule reads faster than the
+word alone and costs 16px. When pills sit in a ledger column, the column
+is fixed-width and the pill **centers vertically on its row**
+(`align-self: center`, never baseline — a capsule on a text baseline
+floats high) and aligns with its neighbours down the list.
 
 ```css
 .pill {
@@ -464,6 +605,10 @@ pill at all.
   color: var(--color-ink-dim);
   border: 1px solid color-mix(in srgb, var(--color-ink-faint) 40%, transparent);
   background: color-mix(in srgb, var(--color-ink-faint) 10%, transparent);
+}
+.pill svg {
+  width: 12px;
+  height: 12px;
 }
 .pill.ok {
   color: var(--color-green);
@@ -501,9 +646,29 @@ somewhere on the row (`CI ✓`, `unreachable`).
 Pictograms are inline lucide SVGs — the app chrome's icon set (paste the
 paths from lucide.dev): 12px in ledger keys, `stroke="currentColor"` so
 the key's semantic color carries through, stroke-width 2, round caps,
-`aria-hidden="true"`. An icon never replaces text — the section label or
-row body carries the meaning. No dingbat glyphs (↻ ⟳ ⚠ ➜): they render
-soft and font-dependent, never sharp.
+`aria-hidden="true"`. An icon never replaces visible text — the section
+label or row body carries the meaning — with **one exception**: a fixed
+state column at tile widths (the queue table), where the word lives
+sr-only + in the cell's `title` and returns visibly from the wide tier up.
+No dingbat glyphs (↻ ⟳ ⚠ ➜): they render soft and font-dependent, never
+sharp.
+
+**One vocabulary, board-wide.** The same state always wears the same lucide
+glyph, so a reader who learned one widget has learned them all:
+
+| state                       | lucide               | tone                                        |
+| --------------------------- | -------------------- | ------------------------------------------- |
+| approved / passing / done   | `check`              | green — or ink-faint when healthy-is-boring |
+| changes requested / failing | `circle-x`           | red                                         |
+| draft / in progress         | `pencil`             | ink-faint                                   |
+| pending / waiting           | `clock`              | ink-dim                                     |
+| drift (built ≠ spec)        | `git-compare-arrows` | yellow                                      |
+| gap (spec'd, not built)     | `circle-dashed`      | orange                                      |
+| carried over                | `redo-2`             | yellow                                      |
+| blocked                     | `octagon-x`          | red                                         |
+
+Don't mint a new glyph when a listed state fits; when a genuinely new
+state needs one, pick the plainest lucide match and use it everywhere.
 
 ```html
 <span class="key"
@@ -703,8 +868,12 @@ grid at tile sizes; label the endpoint value in 12px mono instead.
 ### Time blocks (the Newport day)
 
 The plan archetype plans the whole day, not just meetings: every
-30-minute slot has a job. Blocks are typed classes carrying a `--tone`;
-`--s` is the span in 30-minute slots:
+30-minute slot has a job. A block's **label is concise** — the type, the
+project, a few words (`Deep — Corza: review queue`), never an enumeration
+of tickets; work blocks name their project (`Type — Project: task`) so
+time can be summed per project. Details live beside the block, not inside
+it (see the details column below). Blocks are typed classes carrying a
+`--tone`; `--s` is the span in 30-minute slots:
 
 ```css
 .t-deep {
@@ -750,10 +919,17 @@ One block list, three renderings (see `docs/samples/daily-plan.html`):
   block is a drawn box spanning `--s` grid rows — 1px
   `color-mix(tone 45%)` border over a `color-mix(tone 12%)` wash, no
   time key inside the box (the ruler carries the times) — free slots
-  stay unboxed: blank space against the ruler is honest slack. `goal:`
-  notes render inline on ≥1h blocks; every block carries a `title`
+  stay unboxed: blank space against the ruler is honest slack. The box
+  carries **only the concise label** — Newport's own planner pushes
+  everything else off the block: a **details column** to the grid's
+  right (a third grid column, `minmax(180px, 280px)`) carries each
+  block's `goal:` note as 12px ink-dim text spanning the same grid rows
+  as its block — top-aligned to the block's start, clamped to the
+  block's height (`overflow: hidden`), a hairline's gap from the box it
+  annotates. The note sits _beside_ the time it belongs to and the grid
+  stops wasting its right half. Every block still carries a `title`
   tooltip with its full range, label, and note, so
-  nothing truncated is lost. The now line crosses the grid at the
+  nothing clamped is lost. The now line crosses the grid at the
   current time, its mono chip sitting in the ruler gutter,
   calendar-style; the script measures a ruler row for its position (the
   tile tier's `--slot` is a container expression, not a length). The chip
@@ -763,8 +939,12 @@ One block list, three renderings (see `docs/samples/daily-plan.html`):
   which the frame flushes the page to; the gutter is bare page, not an
   elevated `bg1` panel, so a fixed `bg1` chip reads as a pale block there.
 
-A `.totals` line (12px mono, tone dots) states the process metric on
-wide tiers: `4.5h deep · 1h meetings · 3h shallow · 30m free`.
+Two `.totals` lines (12px mono) state the process metrics on wide tiers
+and the page — where the time goes **by type** (tone dots:
+`4.5h deep · 1h meetings · 3h shallow · 30m free`) and **by project**
+(no dots, ink-dim: `corza 4h · steward 1h30`), summed from the work
+blocks' `Type — Project: task` labels. Personal and free blocks carry no
+project and stay out of the second line.
 
 ### Now marker (timelines)
 
@@ -798,6 +978,48 @@ honestly (`+N more`), never by pastness. See the script in
   background: var(--color-orange-deep);
 }
 ```
+
+### Provenance line
+
+The run's method facts — what was audited, how much, what was held back,
+which knobs applied — belong to the reader who asks "can I trust this?",
+not to the glance. They render as **one quiet mono line directly above the
+footer**, dot-separated facts, never a paragraph:
+
+```html
+<p class="provenance">
+  38 kb pages audited · 9 features · 8 data · 9 integrations · 11 nfrs · 12 held
+  back as duplicates
+</p>
+```
+
+```css
+.provenance {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-ink-faint);
+}
+@media (min-width: 700px) {
+  .provenance {
+    display: block;
+    margin-top: auto;
+    padding-top: 10px;
+  }
+  /* The provenance line takes over the footer's auto margin — two autos
+     would split the slack and strand the line mid-page. */
+  .provenance + footer {
+    margin-top: 0;
+  }
+}
+```
+
+Three rules. **Never prose** — a sentence about the method sitting among
+the sections reads as misplaced body copy (the blob smell); decompose it
+into countable facts. **Never content** — anything the reader should _act_
+on (a ticket already unblocked, a finding) is a section or a row, however
+provenance-flavored it sounds. **Glance tiers drop it** — it appears from
+the wide tier up and on the page, where the trust question gets asked.
 
 ### Empty state
 

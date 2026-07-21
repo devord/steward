@@ -3,9 +3,10 @@
      prove the render path in M2: push to the data repo's artifacts branch
      as w/daily-plan/index.html. Also the reference the widget-artifact
      skill's output should look like — it demonstrates the design language
-     in .claude/skills/widget-artifact/design.md (ledger rows, section
-     rules, the stat tier, the day strip, the Newport time grid with its
-     live now line, inline lucide icons). -->
+     in .claude/skills/widget-artifact/design.md (ledger rows with lead +
+     detail bodies, section rules, the stat tier, the day strip, the
+     Newport time grid with its live now line and right-side details
+     column, by-type and by-project totals, inline lucide icons). -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -68,6 +69,10 @@
         display: grid;
         gap: 12px;
         min-height: 0;
+        /* Unshrunk, so overflow pushes past the body edge where the fit
+           script can measure it — a squeezed main paints over the footer
+           while scrollHeight stays clean. */
+        flex-shrink: 0;
       }
       @media (max-height: 160px) {
         [data-steward-tile] main {
@@ -128,6 +133,19 @@
       }
       .prio .key {
         color: var(--color-orange);
+      }
+      /* Lead + detail (design.md · Ledger rows): the row opens with a
+         short emphasized lead; evidence and ages follow in the detail
+         register. Identifiers ride as 12px mono. */
+      .body .lead-txt {
+        font-weight: 500;
+      }
+      .body .detail {
+        color: var(--color-ink-dim);
+      }
+      .body .id {
+        font-family: var(--font-mono);
+        font-size: 12px;
       }
       .blocks .key {
         color: var(--color-aqua);
@@ -195,8 +213,10 @@
         min-width: 16px;
         border-bottom: 1px dotted var(--color-border-dim);
       }
-      /* Block notes (the "what done looks like" elaboration) are a page
-         luxury — hidden on tiles, shown inside the time grid. */
+      /* Block notes (the "what done looks like" elaboration) are hidden
+         on ledger tiers and rendered in the time grid's right-side
+         details column (the Newport planner's page shape) — never inside
+         the block box. */
       .note {
         display: none;
       }
@@ -225,12 +245,14 @@
         width: 2px;
         background: var(--color-orange);
       }
-      /* Day totals — the process metric (deep vs meetings vs shallow vs
-         free). Wide tiers only. */
+      /* Day totals — the process metrics, wide tiers only: where the time
+         goes by type (tone dots), then by project (summed from the work
+         blocks' "Type — Project: task" labels; personal/free carry no
+         project). */
       .totals {
         display: none;
         gap: 14px;
-        margin-bottom: 8px;
+        margin-bottom: 2px;
         font-family: var(--font-mono);
         font-size: 12px;
         color: var(--color-ink-dim);
@@ -243,6 +265,13 @@
         border-radius: 999px;
         margin-right: 5px;
         background: color-mix(in srgb, var(--tone) 80%, transparent);
+      }
+      .totals-proj {
+        margin-bottom: 8px;
+        color: var(--color-ink-faint);
+      }
+      .totals-proj span::before {
+        content: none;
       }
       /* The time-grid ruler exists only where the grid renders. */
       .ruler {
@@ -314,12 +343,16 @@
         font-size: 12px;
         color: var(--color-ink-faint);
       }
-      /* Page heading — the artifact's title line, matching the app's own
-         page headings (font-mono, 18px, semibold): the date this plan is for
-         (distinct from the chrome's "ran Xm ago"). Visually hidden at the
-         glance tiers — never display:none, so the <h1> stays in the a11y tree
-         and keeps rooting the section <h2>s where the visible title is
-         omitted. The visible title returns from the wide grid up (below). */
+      /* Page heading — the artifact's title line: the date this plan is
+         for (distinct from the chrome's "ran Xm ago"). Two registers
+         (design.md · Heading): on a tile it sits within the chrome's
+         scale (16px medium — the widget's own 16px semibold name is
+         directly above, and the artifact must not out-shout it); on the
+         raw page and full view, where no chrome bar competes, it steps up
+         to 18px semibold. Visually hidden at the glance tiers — never
+         display:none, so the <h1> stays in the a11y tree and keeps
+         rooting the section <h2>s where the visible title is omitted.
+         The visible title returns from the wide grid up (below). */
       .date {
         position: absolute;
         width: 1px;
@@ -328,10 +361,14 @@
         clip: rect(0, 0, 0, 0);
         white-space: nowrap;
         font-family: var(--font-mono);
-        font-size: 18px;
-        font-weight: 600;
+        font-size: 16px;
+        font-weight: 500;
         letter-spacing: -0.01em;
         color: var(--color-ink);
+      }
+      :root:not([data-steward-tile]) .date {
+        font-size: 18px;
+        font-weight: 600;
       }
       /* Progressive disclosure per grid size (widget standard §2):
          1×1 shows the stat essence; wider/taller adds detail. */
@@ -458,8 +495,18 @@
         .blocks .day li.now {
           display: none;
         }
+        /* The day earns a wider page than the ledger cap: ruler + boxes +
+           the details column are a genuine multi-column surface. */
+        main,
+        footer {
+          max-width: 1140px;
+        }
+        main {
+          grid-template-columns: 0.8fr 1.2fr;
+        }
         .blocks .day {
           --slot: 26px;
+          --notes: 200px;
           position: relative;
           display: grid;
           grid-template-columns: max-content 1fr;
@@ -488,9 +535,12 @@
         }
         .blocks .day ul {
           display: grid;
-          grid-template-columns: 1fr;
+          /* Boxes left, the Newport details column right: notes sit
+             beside the time they belong to, never inside the box. */
+          grid-template-columns: 1fr var(--notes);
+          column-gap: 14px;
           grid-auto-rows: var(--slot);
-          gap: 0;
+          gap: 0 14px;
         }
         /* A block is a drawn box: tone border + wash, spanning its slots.
            Free slots stay unboxed — blank space against the ruler is
@@ -498,6 +548,7 @@
         .blocks .day li {
           grid-column: 1;
           grid-row: span var(--s, 1);
+          position: relative;
           display: grid;
           grid-template-columns: 1fr max-content;
           column-gap: 8px;
@@ -508,7 +559,6 @@
           border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
           border-radius: 3px;
           line-height: 1.4;
-          overflow: hidden;
           background: color-mix(in srgb, var(--tone) 12%, transparent);
         }
         .blocks .day li.t-free {
@@ -516,12 +566,9 @@
           background: transparent;
         }
         /* The ruler carries the times on this tier — a box holds only
-           its task, like the paper. */
+           its concise label, like the paper. */
         .blocks .day li .key {
           display: none;
-        }
-        .blocks .day .note {
-          grid-column: 1;
         }
         .blocks .day .body {
           display: block;
@@ -533,22 +580,32 @@
         .blocks .day .body::after {
           content: none;
         }
+        /* The details column: the block's goal note, beside its box —
+           top-aligned to the block's start, clamped to its height (the
+           tooltip keeps the full text). Dims with the box when past. */
         .blocks .day .note {
           display: block;
-          font-family: var(--font-mono);
+          position: absolute;
+          left: calc(100% + 16px);
+          top: 1px;
+          width: calc(var(--notes) - 2px);
+          max-height: calc(100% - 2px);
+          overflow: hidden;
           font-size: 12px;
-          color: var(--color-ink-faint);
+          line-height: 1.35;
+          color: var(--color-ink-dim);
         }
         .blocks .day li[data-past] {
           opacity: 0.55;
         }
-        /* The now line crosses the whole grid at the current time; the
+        /* The now line crosses ruler + boxes at the current time (it
+           stops before the details column — notes aren't scheduled); the
            script re-places it each minute, no refresh needed. */
         .nowline {
           display: block;
           position: absolute;
           left: 0;
-          right: 0;
+          right: calc(var(--notes) + 14px);
           border-top: 1px solid var(--color-orange-deep);
         }
         /* The time chip sits in the ruler gutter, calendar-style, so it
@@ -600,7 +657,7 @@
   </head>
   <body>
     <main>
-      <h1 class="date"><b>Daniel</b> · Monday, July 13</h1>
+      <h1 class="date">Daniel · Monday, July 13</h1>
       <section class="stat">
         <div class="num">3</div>
         <div class="label">priorities today</div>
@@ -611,15 +668,27 @@
         <ol>
           <li>
             <span class="key">1</span
-            ><span class="body">Ship the M2 dashboard render path</span>
+            ><span class="body"
+              ><span class="lead-txt">Ship the M2 render path</span>
+              <span class="detail">PR up by lunch, demo Friday</span></span
+            >
           </li>
           <li>
             <span class="key">2</span
-            ><span class="body">Review the schema PR</span>
+            ><span class="body"
+              ><span class="lead-txt">Review the schema PR</span>
+              <span class="detail"
+                ><span class="id">#87</span> · blocking Natan since
+                Jul&nbsp;10</span
+              ></span
+            >
           </li>
           <li>
             <span class="key">3</span
-            ><span class="body">Write the routines-sync plan</span>
+            ><span class="body"
+              ><span class="lead-txt">Write the routines-sync plan</span>
+              <span class="detail">outline for ADR review</span></span
+            >
           </li>
         </ol>
       </section>
@@ -632,17 +701,21 @@
           <span class="t-shal">3h shallow</span>
           <span class="t-free">30m free</span>
         </p>
+        <p class="totals totals-proj">
+          <span>steward 4h30</span>
+          <span>corza 1h</span>
+        </p>
         <div class="day">
           <div class="ruler" aria-hidden="true"></div>
           <ul data-fit-list>
             <li class="t-shal" style="--s: 1">
               <time class="key">08:00</time
-              ><span class="body">Inbox sweep + plan review</span
+              ><span class="body">Shallow — inbox + plan review</span
               ><span class="dur">30m</span>
             </li>
             <li class="t-deep" style="--s: 3">
               <time class="key">08:30</time
-              ><span class="body">Deep — M2 dashboard render path</span
+              ><span class="body">Deep — Steward: M2 render path</span
               ><span class="dur">1h30</span>
               <span class="note">goal: render path PR up by lunch</span>
             </li>
@@ -653,8 +726,9 @@
             </li>
             <li class="t-deep" style="--s: 3">
               <time class="key">10:30</time
-              ><span class="body">Deep — M2 render path, continued</span
+              ><span class="body">Deep — Steward: render path, cont.</span
               ><span class="dur">1h30</span>
+              <span class="note">goal: srcdoc iframe wired to the grid</span>
             </li>
             <li class="t-per" style="--s: 2">
               <time class="key">12:00</time><span class="body">Lunch</span
@@ -662,12 +736,13 @@
             </li>
             <li class="t-shal" style="--s: 2">
               <time class="key">13:00</time
-              ><span class="body">Review the schema PR</span
+              ><span class="body">Shallow — Corza: schema PR review</span
               ><span class="dur">1h</span>
+              <span class="note">goal: verdict + comments to Natan</span>
             </li>
             <li class="t-deep" style="--s: 3">
               <time class="key">14:00</time
-              ><span class="body">Deep — routines-sync plan draft</span
+              ><span class="body">Deep — Steward: routines-sync plan</span
               ><span class="dur">1h30</span>
               <span class="note">goal: outline ready for ADR review</span>
             </li>
@@ -683,8 +758,9 @@
             </li>
             <li class="t-shal" style="--s: 2">
               <time class="key">16:30</time
-              ><span class="body">Replies — ADR-0005 thread, review queue</span
+              ><span class="body">Shallow — replies + review queue</span
               ><span class="dur">1h</span>
+              <span class="note">ADR-0005 thread · Ygor's PR #2635</span>
             </li>
             <li class="t-shal" style="--s: 1">
               <time class="key">17:30</time
@@ -713,7 +789,10 @@
                 <path
                   d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"
                 /></svg></span
-            ><span class="body">Reply to the ADR-0005 thread</span>
+            ><span class="body"
+              ><span class="lead-txt">Reply to the ADR-0005 thread</span>
+              <span class="detail">unanswered since Jul 8 (5 days)</span></span
+            >
           </li>
         </ul>
       </section>
@@ -774,8 +853,8 @@
             ruler.appendChild(span)
           }
         // Tooltips: every block row carries its full story (range, label,
-        // goal note). Notes stay inline only on blocks with room (≥ 1h);
-        // on 30-minute blocks the tooltip is the note's home.
+        // goal note) — the details column clamps a note to its block's
+        // height, so the tooltip is where nothing is ever lost.
         blocks.forEach(function (b) {
           var body = b.li.querySelector(".body")
           var note = b.li.querySelector(".note")
@@ -785,10 +864,7 @@
             hhmm(b.start + b.mins) +
             " · " +
             (body ? body.textContent : "")
-          if (note) {
-            tip += "\n" + note.textContent
-            if (b.mins < 60) note.hidden = true
-          }
+          if (note) tip += "\n" + note.textContent
           b.li.title = tip
         })
         // Live now state, re-rendered on a timer. Everything below is
