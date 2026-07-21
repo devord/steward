@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { routineCategorySchema } from "./category.ts"
+
 /** Kebab-case identifier; doubles as the artifact path `w/<slug>/index.html`. */
 export const slugSchema = z
   .string()
@@ -34,6 +36,22 @@ export const routineSchema = z.object({
    * whole procedure is "follow `instructions`" (ADR-0022).
    */
   template: z.string().min(1),
+  /**
+   * Band this routine's widget sits in, on every board that hosts it
+   * (ADR-0044). A category describes what the widget *is*, so it lives
+   * with the routine rather than on each placement — one routine, one
+   * identity, however many boards render it (ADR-0042).
+   *
+   * Tri-state: a name overrides the template, `null` opts out of banding
+   * deliberately, absent inherits the template's `widget.category`.
+   *
+   * Materialized on write — the wizard and the edit dialog persist the
+   * resolved value — so a board can band from `routines.yaml` alone, which
+   * the loader awaits, instead of waiting on the streamed template read
+   * (ADR-0030). Inheritance is the fallback that makes routines predating
+   * this field band anyway, with no migration.
+   */
+  category: routineCategorySchema.optional(),
   /**
    * Cron expression (5-field). Absent → manual-only: updated via the
    * app's Update button (cloud API trigger) or an interactive CLI run

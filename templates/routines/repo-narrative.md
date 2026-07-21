@@ -13,6 +13,9 @@ widget:
   # Instances slug themselves <first-repo>-narrative (ADR-0040); `kind`
   # defaults to `narrative` from the template id.
   subjectParam: repos
+  # Default band on every board (ADR-0044). Shipped-and-landing is a status
+  # narrative, read by whoever tracks the window rather than the diff.
+  category: Project Management
   params:
     - key: repos
       label: Repositories to narrate

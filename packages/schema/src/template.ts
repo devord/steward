@@ -1,6 +1,7 @@
 import { parse } from "yaml"
 import { z } from "zod"
 
+import { categoryNameSchema } from "./category.ts"
 import { widgetSizeSchema } from "./dashboard.ts"
 import { slugSchema } from "./routine.ts"
 
@@ -80,6 +81,18 @@ export const widgetMetaSchema = z.object({
    * not set it; resolve via `templateKind`.
    */
   kind: slugSchema.optional(),
+  /**
+   * Default band for routines built from this template — "Project
+   * Management", "Engineering" (ADR-0044). Classified once here, inherited
+   * by every instance on every board, so grouping costs no per-board
+   * curation. A routine's own `category` overrides it; `null` there opts
+   * out entirely.
+   *
+   * Absent means the template has no natural band (the `custom` built-in,
+   * whose instances say what they are individually) and its routines lead
+   * in the unlabeled band until given one.
+   */
+  category: categoryNameSchema.optional(),
 })
 
 /** One routine template as the picker consumes it — parsed from

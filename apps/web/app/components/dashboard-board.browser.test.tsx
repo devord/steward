@@ -40,6 +40,56 @@ function view(): DashboardBase {
     dashboards: ["main"],
     baseShas: { routines: "r1", dashboard: "d1" },
     baseFiles: { routines: "routines: []\n", dashboard: "widgets: []\n" },
+    categoryOrder: [],
+    templateCategories: {},
+  }
+}
+
+/**
+ * A board whose routines resolve to two bands (ADR-0044): one carrying its
+ * own `category`, one inheriting from its template, one with none — enough to
+ * exercise the order list, the unlabeled lead band, and the floor.
+ */
+function bandedView(): DashboardBase {
+  const base = view()
+  return {
+    ...base,
+    categoryOrder: ["Project Mgmt", "Engineering"],
+    templateCategories: { "repo-pulse": "Engineering" },
+    routines: {
+      routines: [
+        ...base.routines.routines,
+        {
+          slug: "pulse",
+          name: "Pulse",
+          template: "repo-pulse",
+          enabled: true,
+        },
+        {
+          slug: "brief",
+          name: "Brief",
+          template: "custom",
+          category: "Project Mgmt",
+          enabled: true,
+        },
+      ],
+    },
+    dashboard: {
+      ...base.dashboard,
+      widgets: [
+        ...base.dashboard.widgets,
+        {
+          routine: "pulse",
+          position: { col: 1, row: 2 },
+          size: { cols: 2, rows: 1 },
+        },
+        {
+          routine: "brief",
+          position: { col: 3, row: 1 },
+          size: { cols: 2, rows: 1 },
+        },
+      ],
+    },
   }
 }
 
@@ -49,11 +99,14 @@ async function renderBoard(
     viewerCanPush = true,
     base = view(),
     placements = {},
+    collapsedBands = [],
   }: {
     viewerCanPush?: boolean | null
     base?: DashboardBase
     /** Repo-wide placement map (ADR-0042); null = unknown. */
     placements?: Placements | null
+    /** Bands folded on this device (ADR-0044). */
+    collapsedBands?: string[]
   } = {},
 ) {
   const router = createMemoryRouter([
@@ -68,6 +121,7 @@ async function renderBoard(
           login="alice"
           displayName="Alice"
           now={Date.now()}
+          collapsedBands={collapsedBands}
           sidebar={{
             repos: [
               {
@@ -386,6 +440,74 @@ describe("DashboardBoard", () => {
               .elements().length,
         )
         .toBe(1)
+    })
+  })
+
+  describe("category bands (ADR-0044)", () => {
+    it("groups widgets under headings, in the repo's authored order", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), { base: bandedView() })
+      await expect.poll(() => document.body.textContent).toContain("Pulse")
+
+      const headings = () =>
+        [...document.querySelectorAll("[data-band-heading]")].map((el) =>
+          el.getAttribute("data-band-heading"),
+        )
+      // repo.yaml lists Project Mgmt first; alphabetical would invert it, so
+      // this also pins that the order list is what's being honored.
+      await expect.poll(headings).toEqual(["Project Mgmt", "Engineering"])
+    })
+
+    // One grid per band is the whole point (compaction can't cross a band).
+    it("renders a separate grid instance per band", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), { base: bandedView() })
+      await expect
+        .poll(() => document.querySelectorAll(".dash-grid").length)
+        // Project Mgmt, Engineering, and the unlabeled band holding Daily.
+        .toBe(3)
+    })
+
+    it("stays flat below the floor rather than showing one lone heading", async () => {
+      await page.viewport(1280, 900)
+      // The default view has a single uncategorized routine — one category
+      // would be worse than none, so nothing bands.
+      await renderBoard()
+      await expect.poll(() => document.body.textContent).toContain("Daily")
+      expect(document.querySelectorAll("[data-band-heading]")).toHaveLength(0)
+      expect(document.querySelectorAll(".dash-grid")).toHaveLength(1)
+    })
+
+    it("unmounts a collapsed band's widgets, so they cost no iframe", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), {
+        base: bandedView(),
+        collapsedBands: ["Engineering"],
+      })
+      await expect.poll(() => document.body.textContent).toContain("Brief")
+      // The heading survives (it's how you get the band back); its cells don't.
+      expect(document.body.textContent).toContain("Engineering")
+      expect(document.body.textContent).not.toContain("Pulse")
+    })
+
+    it("collapses a band from its heading, and expands it again", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), { base: bandedView() })
+      await expect.poll(() => document.body.textContent).toContain("Pulse")
+
+      const heading = () => {
+        const el = document.querySelector<HTMLElement>(
+          '[data-band-heading="Engineering"]',
+        )
+        if (!el) throw new Error("Engineering band heading not rendered")
+        return el
+      }
+      await userEvent.click(heading())
+      await expect.poll(() => document.body.textContent).not.toContain("Pulse")
+      expect(heading().getAttribute("aria-expanded")).toBe("false")
+
+      await userEvent.click(heading())
+      await expect.poll(() => document.body.textContent).toContain("Pulse")
     })
   })
 })

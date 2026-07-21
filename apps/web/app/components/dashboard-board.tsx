@@ -16,8 +16,14 @@ import {
 } from "react-router"
 
 import type { DashboardFile, Routine, WidgetSize } from "@steward/schema"
-import { dashboardPath, GRID_MAX_COLS, SECTION_NAME_MAX } from "@steward/schema"
-import { Pencil, Plus, Trash2 } from "lucide-react"
+import {
+  dashboardPath,
+  GRID_MAX_COLS,
+  orderCategories,
+  resolveCategory,
+  SECTION_NAME_MAX,
+} from "@steward/schema"
+import { ChevronRight, Pencil, Plus, Trash2 } from "lucide-react"
 
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
 import { DashboardShell } from "./dashboard-shell.tsx"
@@ -52,6 +58,12 @@ import {
 import "react-grid-layout/css/styles.css"
 
 import { cn } from "~/lib/utils"
+import { writeCollapsedBands } from "../lib/band-collapse.ts"
+import {
+  buildBands,
+  mergeTemplateCategories,
+  type PlacedCell,
+} from "../lib/bands.ts"
 import type {
   ArtifactInfo,
   DashboardBase,
@@ -96,6 +108,138 @@ const RGL_BREAKPOINTS = { lg: 1100, md: 700, sm: 0 } as const
 const GRID_MARGIN: readonly [number, number] = [12, 12]
 
 /**
+ * One band's grid (ADR-0044) — its own RGL instance, not a slice of a shared
+ * one. Compaction floats items up until they collide and knows nothing about
+ * headings, so a single grid would let a widget drift out of its band the
+ * moment a neighbour above it was removed. A separate instance gives each
+ * band its own row space, and compaction stays correct *inside* it.
+ *
+ * Stored rows are absolute and shared across bands, so a band whose widgets
+ * start at row 4 renders them compacted to its own top — the first-render
+ * compaction ADR-0041 already accepts. Nothing is written until a drag, at
+ * which point the settled band-relative rows persist.
+ */
+function BandGrid({
+  cells,
+  columns,
+  rowHeight,
+  width,
+  breakpoint,
+  editing,
+  onCommit,
+  renderCell,
+}: {
+  cells: PlacedCell[]
+  columns: number
+  rowHeight: number
+  width: number
+  breakpoint: "lg" | "md" | "sm"
+  editing: boolean
+  onCommit: (layout: readonly LayoutItem[]) => void
+  renderCell: (cell: PlacedCell) => ReactNode
+}) {
+  // Memoized on a value signature (not the array identity, which is fresh
+  // every render) so a background poll can't hand RGL a new `layouts` object
+  // mid-drag and snap the lifted card.
+  const layoutSignature = cells
+    .map(
+      ({ widget: w }) =>
+        `${w.routine}:${w.position.col},${w.position.row},${w.size.cols},${w.size.rows}`,
+    )
+    .join("|")
+  const layouts = useMemo(
+    () => ({
+      lg: widgetsToLayout(
+        cells.map((c) => c.widget),
+        columns,
+      ),
+    }),
+    // cells is rebuilt each render; layoutSignature captures its value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [layoutSignature, columns],
+  )
+  return (
+    <ResponsiveGridLayout
+      className={cn("dash-grid", editing && "is-editing")}
+      width={width}
+      breakpoint={breakpoint}
+      breakpoints={RGL_BREAKPOINTS}
+      cols={{ lg: columns, md: 2, sm: 1 }}
+      layouts={layouts}
+      rowHeight={rowHeight}
+      margin={GRID_MARGIN}
+      containerPadding={[0, 0]}
+      compactor={COMPACTOR}
+      dragConfig={{
+        enabled: editing,
+        handle: ".widget-drag-handle",
+        cancel: "button, a, [data-no-drag]",
+        threshold: 4,
+      }}
+      resizeConfig={{ enabled: editing, handles: ["se"] }}
+      onDragStop={(layout) => onCommit(layout)}
+      onResizeStop={(layout) => onCommit(layout)}
+    >
+      {cells.map((cell) => (
+        <div key={cell.widget.routine} className="widget-cell">
+          {renderCell(cell)}
+        </div>
+      ))}
+    </ResponsiveGridLayout>
+  )
+}
+
+/**
+ * A band's heading — the click target that collapses it (ADR-0044). One tier
+ * below the board itself and set off by weight, not color, matching how the
+ * rail sets a section apart from its repo (ADR-0034).
+ *
+ * Rendered only for a labeled band: the unlabeled band that leads a board has
+ * no name to show and nothing to collapse into.
+ */
+function BandHeading({
+  category,
+  count,
+  collapsed,
+  onToggle,
+}: {
+  category: string
+  count: number
+  collapsed: boolean
+  onToggle: () => void
+}) {
+  const t = useT()
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={!collapsed}
+      // Distinguishes a band heading from every other aria-expanded control
+      // on the board (menus, popovers) for tests and styling alike.
+      data-band-heading={category}
+      className="group mb-2 flex w-full items-center gap-2 text-left"
+    >
+      <ChevronRight
+        aria-hidden
+        className={cn(
+          "size-3 shrink-0 text-ink-faint transition-transform",
+          !collapsed && "rotate-90",
+        )}
+      />
+      <span className="font-mono text-xs tracking-wide text-ink-dim uppercase">
+        {category}
+      </span>
+      {collapsed && (
+        <span className="font-mono text-xs text-ink-faint">
+          {t("band.count", { count: String(count) })}
+        </span>
+      )}
+      <span className="ml-1 h-px flex-1 bg-border" />
+    </button>
+  )
+}
+
+/**
  * One board — in any discovered data repo (ADR-0023) — extracted from the
  * home route so every board route renders the identical grid, draft, and
  * sync flow. Which repo and layout file it edits is entirely decided by
@@ -110,6 +254,7 @@ export function DashboardBoard({
   displayName,
   now,
   sidebar,
+  collapsedBands = [],
 }: {
   view: DashboardBase
   /** Streams in after the structure (ADR-0002): each cell shows a skeleton
@@ -129,6 +274,9 @@ export function DashboardBoard({
   /** Every discovered repo with its boards — the rail's groups. Streamed
       (ADR-0030): the rail renders its skeleton until the first resolve. */
   sidebar: SidebarData | Promise<SidebarData>
+  /** Bands collapsed on this device, read from the cookie server-side so the
+      board paints already-collapsed rather than settling into it (ADR-0044). */
+  collapsedBands?: string[]
 }) {
   const t = useT()
   // Chrome data resolves out of band, holding the last value across board
@@ -309,27 +457,60 @@ export function DashboardBoard({
     const routine = routinesBySlug.get(widget.routine)
     return routine ? [{ widget, routine }] : []
   })
-  // The `lg` layout, memoized on a value signature (not the array identity,
-  // which is fresh every render) so a background poll's re-render can't hand
-  // RGL a new `layouts` object mid-drag and snap the lifted card. Narrow
-  // breakpoints are derived by RGL from this one and never persisted (ADR-0041).
-  const layoutSignature = placedCells
-    .map(
-      ({ widget: w }) =>
-        `${w.routine}:${w.position.col},${w.position.row},${w.size.cols},${w.size.rows}`,
-    )
-    .join("|")
-  const layouts = useMemo(
-    () => ({
-      lg: widgetsToLayout(
-        placedCells.map((c) => c.widget),
-        columns,
-      ),
-    }),
-    // placedCells is rebuilt each render; layoutSignature captures its value.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [layoutSignature, columns],
+  // Band defaults by template id (ADR-0044): the bundled built-ins arrive with
+  // the awaited loader payload, so bands are known at first paint; repo
+  // templates fold in when the discovery stream lands (ADR-0030). A routine
+  // carrying a materialized `category` never depends on either.
+  const templateCategories = useMemo(
+    () => mergeTemplateCategories(view.templateCategories, templatesData),
+    [view.templateCategories, templatesData],
   )
+  // One band per category, uncategorized leading unlabeled — or a single
+  // unlabeled band below the floor, which renders exactly as a flat board.
+  const bandSignature = placedCells
+    .map(({ widget: w, routine: r }) => `${w.routine}:${r.category ?? ""}`)
+    .join("|")
+  const bands = useMemo(
+    () => buildBands(placedCells, templateCategories, view.categoryOrder),
+    // placedCells is rebuilt each render; bandSignature captures its value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bandSignature, templateCategories, view.categoryOrder],
+  )
+
+  // Bands already in use anywhere in this repo's pool — the category field's
+  // datalist, so a repo converges on one vocabulary rather than sprouting
+  // "Eng" beside "Engineering". Drawn from the whole pool, not this board, for
+  // the same reason routines are repo-scoped (ADR-0042).
+  const repoCategories = useMemo(
+    () =>
+      orderCategories(
+        new Set(
+          routines.routines.flatMap((routine) => {
+            const resolved = resolveCategory(
+              routine,
+              templateCategories[routine.template],
+            )
+            return resolved ? [resolved] : []
+          }),
+        ),
+        view.categoryOrder,
+      ),
+    [routines, templateCategories, view.categoryOrder],
+  )
+
+  // Collapse is global by category and persists in a cookie (ADR-0009's
+  // device-preference lane): folding "Engineering" folds it on every board,
+  // which is what turns it into a viewing mode rather than a per-board tweak.
+  const [collapsed, setCollapsed] = useState<string[]>(collapsedBands)
+  const toggleBand = useCallback((category: string) => {
+    setCollapsed((current) => {
+      const next = current.includes(category)
+        ? current.filter((name) => name !== category)
+        : [...current, category]
+      writeCollapsedBands(next)
+      return next
+    })
+  }, [])
 
   const addRoutine = useCallback(
     (routine: Routine, size: WidgetSize) => {
@@ -668,74 +849,84 @@ export function DashboardBoard({
               </Suspense>
             </p>
             <main ref={containerRef}>
-              {/* One grid instance for the board's life: RGL positions each
-                cell by transform, and the body swaps skeleton → card in place
-                as the artifact stream resolves (a poll's revalidation never
-                re-suspends the whole grid). Rendered only once the container
-                is measured so the first paint lands at the right width. */}
-              {mounted && (
-                <ResponsiveGridLayout
-                  className={cn("dash-grid", gridEditing && "is-editing")}
-                  width={width}
-                  breakpoint={breakpoint}
-                  breakpoints={RGL_BREAKPOINTS}
-                  cols={{ lg: columns, md: 2, sm: 1 }}
-                  layouts={layouts}
-                  rowHeight={dashboard.grid.rowHeight}
-                  margin={GRID_MARGIN}
-                  containerPadding={[0, 0]}
-                  compactor={COMPACTOR}
-                  dragConfig={{
-                    enabled: gridEditing,
-                    handle: ".widget-drag-handle",
-                    cancel: "button, a, [data-no-drag]",
-                    threshold: 4,
-                  }}
-                  resizeConfig={{ enabled: gridEditing, handles: ["se"] }}
-                  onDragStop={(layout) => commitLayout(layout)}
-                  onResizeStop={(layout) => commitLayout(layout)}
-                >
-                  {placedCells.map(({ widget, routine }) => {
-                    return (
-                      <div key={widget.routine} className="widget-cell">
-                        {gridData ? (
-                          <WidgetCard
-                            widget={widget}
-                            routine={routine}
-                            artifact={gridData[widget.routine]}
-                            now={now}
-                            shared={view.isShared}
-                            dataRepo={view.dataRepo}
-                            login={login}
-                            committed={committedSlugs.has(widget.routine)}
-                            pendingFiredAt={
-                              pending[widget.routine]?.firedAt ?? null
-                            }
-                            onFired={() =>
-                              markFired(
-                                widget.routine,
-                                gridData[widget.routine]?.sha ?? null,
-                              )
-                            }
-                            onSync={() => setSyncing(true)}
-                            editing={editing}
-                            onEdit={() => setEditingRoutine(routine)}
-                            onToggleEnabled={() =>
-                              updateRoutine({
-                                ...routine,
-                                enabled: !routine.enabled,
-                              })
-                            }
-                            onRemove={() => removeWidget(widget.routine)}
-                          />
-                        ) : (
-                          <WidgetSkeleton widget={widget} />
-                        )}
-                      </div>
-                    )
-                  })}
-                </ResponsiveGridLayout>
-              )}
+              {/* One grid instance per band (ADR-0044) — never one grid with
+                headings between rows, because compaction would float a widget
+                out of its band. Within a band RGL positions each cell by
+                transform, and the body swaps skeleton → card in place as the
+                artifact stream resolves (a poll's revalidation never
+                re-suspends the grid). Rendered only once the container is
+                measured so the first paint lands at the right width. */}
+              {mounted &&
+                bands.map((band) => {
+                  // Bound once so the collapse handler closes over a narrowed
+                  // string rather than re-testing the nullable field.
+                  const label = band.category
+                  const isCollapsed = label != null && collapsed.includes(label)
+                  return (
+                    <section
+                      key={label ?? ""}
+                      className={cn(label != null && "mb-4")}
+                    >
+                      {label != null && (
+                        <BandHeading
+                          category={label}
+                          count={band.cells.length}
+                          collapsed={isCollapsed}
+                          onToggle={() => toggleBand(label)}
+                        />
+                      )}
+                      {/* A collapsed band unmounts its cells rather than
+                        hiding them, so its artifacts cost no iframe and no
+                        fetch — the point of folding a band you aren't reading. */}
+                      {!isCollapsed && (
+                        <BandGrid
+                          cells={band.cells}
+                          columns={columns}
+                          rowHeight={dashboard.grid.rowHeight}
+                          width={width}
+                          breakpoint={breakpoint}
+                          editing={gridEditing}
+                          onCommit={commitLayout}
+                          renderCell={({ widget, routine }) =>
+                            gridData ? (
+                              <WidgetCard
+                                widget={widget}
+                                routine={routine}
+                                artifact={gridData[widget.routine]}
+                                now={now}
+                                shared={view.isShared}
+                                dataRepo={view.dataRepo}
+                                login={login}
+                                committed={committedSlugs.has(widget.routine)}
+                                pendingFiredAt={
+                                  pending[widget.routine]?.firedAt ?? null
+                                }
+                                onFired={() =>
+                                  markFired(
+                                    widget.routine,
+                                    gridData[widget.routine]?.sha ?? null,
+                                  )
+                                }
+                                onSync={() => setSyncing(true)}
+                                editing={editing}
+                                onEdit={() => setEditingRoutine(routine)}
+                                onToggleEnabled={() =>
+                                  updateRoutine({
+                                    ...routine,
+                                    enabled: !routine.enabled,
+                                  })
+                                }
+                                onRemove={() => removeWidget(widget.routine)}
+                              />
+                            ) : (
+                              <WidgetSkeleton widget={widget} />
+                            )
+                          }
+                        />
+                      )}
+                    </section>
+                  )
+                })}
             </main>
           </>
         )}
@@ -827,6 +1018,7 @@ export function DashboardBoard({
         templates={templatesData ?? []}
         columns={columns}
         existingSlugs={routines.routines.map((r) => r.slug)}
+        existingCategories={repoCategories}
         onAdd={addRoutine}
         editRoutine={editingRoutine}
         onEdit={updateRoutine}

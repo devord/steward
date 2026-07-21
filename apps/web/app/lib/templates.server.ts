@@ -58,6 +58,20 @@ const builtins: DiscoveredTemplate[] = Object.entries(builtinFiles).flatMap(
   },
 )
 
+/**
+ * Band defaults from the bundled built-ins, keyed by template id (ADR-0044).
+ *
+ * Synchronous and free — the built-ins are inlined at build time — which is
+ * what lets the board's *awaited* loader resolve bands from `routines.yaml`
+ * plus this map alone. Repo templates can only arrive on the streamed read
+ * (ADR-0030), so they refine the map client-side rather than gating paint.
+ */
+export const builtinCategories: Record<string, string> = Object.fromEntries(
+  builtins.flatMap((template) =>
+    template.widget.category ? [[template.id, template.widget.category]] : [],
+  ),
+)
+
 async function discoverFrom(
   token: string,
   repo: string,

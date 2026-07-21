@@ -58,6 +58,19 @@ routine's artifact. Any dashboard may arrange any routine from its repo's
 pool.
 _Avoid_: card, tile, panel
 
+**Category** (and its **band**):
+What a widget _is_, grouped: "Project Management", "Engineering". The third
+axis, orthogonal to the board's subject and the routine's kind (ADR-0040/0044).
+Declared by a routine template (`widget.category`), overridden or opted out of
+(`null`) on the routine itself, and materialized there on write so a board
+knows its groups without waiting on templates. The **band** is how a category
+renders: a labeled strip on the board with its own grid instance, ordered by
+`data/repo.yaml` `categories:`, led by the unlabeled band of uncategorized
+widgets. A board with fewer than two categories renders flat. Collapsing a band
+folds it on every board — a device preference, not data.
+_Avoid_: tag, group (a repo's boards group into **sections**, one tier up),
+lane, swimlane
+
 **Artifact**:
 The single self-contained, responsive HTML file a routine publishes, the
 thing a widget renders. Addressed by convention, never by URL:

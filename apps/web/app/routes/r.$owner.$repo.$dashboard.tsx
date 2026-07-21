@@ -4,6 +4,7 @@ import { slugSchema } from "@steward/schema"
 
 import type { Route } from "./+types/r.$owner.$repo.$dashboard"
 import { DashboardBoard } from "../components/dashboard-board.tsx"
+import { parseCollapsedBands } from "../lib/band-collapse.ts"
 import { DEFAULT_DASHBOARD } from "../lib/repos.ts"
 import {
   loadArtifacts,
@@ -71,6 +72,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     templates,
     placements,
     sidebar,
+    collapsedBands: parseCollapsedBands(request.headers.get("Cookie")),
   }
 }
 
@@ -89,6 +91,7 @@ export default function RepoDashboard({ loaderData }: Route.ComponentProps) {
       displayName={loaderData.displayName}
       now={loaderData.now}
       sidebar={loaderData.sidebar}
+      collapsedBands={loaderData.collapsedBands}
     />
   )
 }

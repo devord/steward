@@ -2,6 +2,7 @@ import { redirect } from "react-router"
 
 import type { Route } from "./+types/home"
 import { DashboardBoard } from "../components/dashboard-board.tsx"
+import { parseCollapsedBands } from "../lib/band-collapse.ts"
 import { Landing } from "../components/landing.tsx"
 import { DEFAULT_DASHBOARD } from "../lib/repos.ts"
 import {
@@ -77,6 +78,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     templates,
     placements,
     sidebar,
+    collapsedBands: parseCollapsedBands(request.headers.get("Cookie")),
   }
 }
 
@@ -95,6 +97,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       displayName={loaderData.displayName}
       now={loaderData.now}
       sidebar={loaderData.sidebar}
+      collapsedBands={loaderData.collapsedBands}
     />
   )
 }
