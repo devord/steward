@@ -494,6 +494,11 @@
          one quiet mono line above the footer — never a paragraph among the
          sections. Wide tiers and the page only. */
       .provenance {
+        /* Inert here (the line is a sibling of `main`, a flex item), carried
+           so the component stays safe if it is ever moved inside a grid
+           shell, where an unplaced item would size track 1 to this whole
+           sentence (design.md · Everything that is not a cell must span). */
+        grid-column: 1 / -1;
         display: none;
         font-family: var(--font-mono);
         font-size: 12px;
