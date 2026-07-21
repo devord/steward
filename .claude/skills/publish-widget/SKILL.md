@@ -44,6 +44,22 @@ path (kebab-case only; anything else could escape `w/`):
 printf '%s' "$SLUG" | LC_ALL=C grep -Eqx '[a-z0-9]+(-[a-z0-9]+)*' || { echo "bad slug: $SLUG" >&2; exit 1; }
 ```
 
+The artifact is checked here too, not only by the caller. This is the one
+step that reaches the live widget, and whatever gets past it is what the
+board shows until the next run, so the gate belongs here rather than in the
+instructions of whoever called:
+
+```bash
+[ -s "$ARTIFACT_FILE" ] || { echo "refusing to publish an empty artifact" >&2; exit 1; }
+LC_ALL=C grep -q '</html>' "$ARTIFACT_FILE" || { echo "artifact is truncated (no </html>)" >&2; exit 1; }
+node "$STEWARD/.claude/skills/widget-artifact/scripts/validate.mjs" "$ARTIFACT_FILE" || exit 1
+```
+
+`$STEWARD` is the steward checkout `run-routine` resolved. A run that can't
+produce a file the validator passes reports that and publishes nothing: a
+stale widget wearing its staleness badge is the honest failure, a published
+broken one is not.
+
 Work in a temporary worktree so the data repo checkout (on `main`) is
 untouched:
 
@@ -73,10 +89,13 @@ Clean up the worktree afterwards: `git worktree remove "$WT" --force`.
 
 ## The push race
 
-Concurrent publishes from different routines can only race on
+Concurrent publishes from **different** routines can only race on
 fast-forward, since paths are isolated per slug, so content never
-conflicts. If
-the push is rejected (non-fast-forward):
+conflicts. (Two runs of the _same_ routine are a different matter — they
+write the same path, and a rebase would replay one over the other. That is
+a scheduling problem; publishing cannot pick the right winner, so let the
+rebase conflict stand and report it.) If the push is rejected
+(non-fast-forward):
 
 ```bash
 git pull --rebase origin artifacts
@@ -90,6 +109,11 @@ Retry up to 3 times; then fail loudly with the git output.
 - Never commit artifacts to `main`; never touch `data/*.yaml` from here.
 - One artifact per publish. Don't batch multiple slugs into one commit;
   it corrupts every other widget's freshness footer.
+- **Publish once per run**, as the final step. Successive publishes of one
+  slug overwrite each other, so a draft shipped mid-run is live on the
+  board until the next one lands, and the run's _last_ word wins even when
+  an earlier draft was the better one. Author, validate, then publish once;
+  never publish to see how something looks — that's what a dry run is for.
 - The file must already satisfy the `widget-artifact` checklist; this skill
   moves bytes, it does not fix content.
 - Verify afterwards: `git log -1 --format='%H %cI' origin/artifacts -- "w/$SLUG/index.html"`

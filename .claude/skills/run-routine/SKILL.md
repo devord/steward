@@ -108,7 +108,9 @@ node <steward checkout>/.claude/skills/widget-artifact/scripts/validate.mjs <art
 
 Fix every error it reports; a run never publishes an artifact that
 fails validation. Then publish it with the `publish-widget` skill to
-`w/<slug>/index.html` on the `artifacts` branch.
+`w/<slug>/index.html` on the `artifacts` branch — once, at the end. That
+skill re-runs the validator before it pushes, so a publish is never the way
+to preview a draft; a dry run is.
 
 ## Dry runs (ADR-0017)
 

@@ -416,6 +416,38 @@ you thought you set. When a trailing value lives _inside_ a composed cell (a
 bar and its number in one `.mag-cell`), that cell is **one** child, so the
 parent declares two tracks, not three.
 
+**The one-grid rule.** When the columns must line up across the _whole_
+artifact rather than within one list — several sections under shared column
+headers, the queue table below — the grid moves up to `main` and every layer
+between it and the row relays it with `subgrid`. A grid per `<ul>` gives each
+section its own column widths, which is the misaligned-state smell.
+
+The relay is the part that gets dropped. `subgrid` inherits its tracks from
+the parent grid, so an element whose parent is _not_ a grid has nothing to
+inherit: the value computes to `none`, the row becomes a one-column grid, and
+every cell stacks onto its own line. A `<section>` carrying the label and the
+hairline is exactly the wrapper that gets left as a plain block. Every layer
+relays, or none does:
+
+```css
+main {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) max-content max-content;
+}
+section, /* the relay — a plain block here collapses every row below it */
+ul,
+li {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+}
+```
+
+A broken relay fails `validate.mjs`, because it does not read as a CSS
+mistake: the CSS looks right, and a header row that happens to sit directly
+under `main` still aligns perfectly while every list under a section
+collapses.
+
 **Lead + detail.** A row body is never one undifferentiated sentence. A
 list whose every row is a uniform 14px line reads as a wall, however good
 the data. The body opens with a short **lead** (the item's name, the thing
