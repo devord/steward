@@ -55,7 +55,10 @@ const MODE_HINT = {
 const TILE_BASE =
   "group flex cursor-pointer flex-col gap-1.5 rounded-lg border p-1.5 text-left transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 const TILE_ACTIVE = "border-primary"
-const TILE_IDLE = "border-border-dim hover:border-border hover:bg-bg2"
+// `border`, not `border-dim`: these are radio controls sitting unfilled on the
+// page, so the dim hairline left them floating — the swatch read as the only
+// object. The dim tier stays on the swatch frame inside, one step quieter.
+const TILE_IDLE = "border-border hover:border-border-strong hover:bg-bg2"
 
 /**
  * One track for every theme grid. Above `sm`, `auto-fit` (not `auto-fill`)

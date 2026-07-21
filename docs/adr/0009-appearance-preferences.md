@@ -33,6 +33,23 @@ Mechanics:
   `data-theme` and the `.dark` class before first paint — no flash; SSR
   markup carries the default and `suppressHydrationWarning` absorbs the
   re-stamp.
+- Borders are three graded tiers, each with its own floor: `border-dim`
+  splits the flat plane (≥ 1.2:1 on `bg` and `bg1`), `border` edges objects
+  that must read as distinct — popovers, board cells, table head rules
+  (≥ 1.5:1) — and `border-strong` bounds the fill-less controls. Inputs,
+  selects, checkboxes and outline buttons are `bg-transparent`, so that
+  hairline is the only thing identifying the control: WCAG 1.4.11 applies
+  and the floor is 3:1 on both surfaces. `--input` points at `border-strong`,
+  not `border`, which is the distinction the original mapping missed.
+  Light palettes ship shallow neutral ramps, so every light theme's `border`
+  had landed one step from its own canvas — kanagawa-lotus at 1.16:1, a line
+  you cannot see — and no test caught it because none existed. Each is
+  repointed one step down its own ramp, cascading the old `border` into
+  `border-dim`; all values stay transcribed. Lotus is the one theme whose
+  ramp is too compressed to grade cleanly, so its `border-dim` lands heavier
+  than its siblings' (1.95:1), and its border tiers take lotusGray3/2 rather
+  than the nearer lotusBlue3 — a blue hairline on that khaki canvas reads as
+  a different theme.
 - Per-theme AA: where an upstream palette's dim/faint ink misses WCAG on
   its own canvas, the role is repointed to the nearest AA-clearing tone
   from the same palette family. `theme.test.ts` enforces the ratios for

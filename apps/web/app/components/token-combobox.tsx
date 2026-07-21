@@ -106,7 +106,7 @@ export function TokenCombobox({
           one field in the form that sat 2px taller than its neighbors. */}
       <Combobox.Chips
         className={cn(
-          "flex min-h-8 w-full flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-1.5 py-1 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 pointer-coarse:min-h-10 dark:bg-input/30",
+          "flex min-h-8 w-full flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-1.5 py-1 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 pointer-coarse:min-h-10 dark:bg-border/30",
           invalid &&
             "border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40",
         )}
