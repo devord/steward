@@ -123,8 +123,13 @@ tokens only; a literal hex breaks every non-default theme.
   `whitespace-nowrap`. So the short fixed phrases never wrap (a state, a
   schedule, a host) and a long name ellipsises instead of widening the table.
   A cell holding a list of unknown length (boards, used-by) carries its own
-  `w-40`, since the flexible column starves every other column to min-content
-  and a wrapping list's min-content is one slug.
+  `w-40`, since the flexible column starves every other column to min-content.
+  Inside that width the list **shows its head and counts its tail** — the first
+  slug, truncating, then a `+n` chip whose popover lists every item unabridged.
+  Letting the list wrap instead cost a line per extra slug, and since a slug
+  never breaks mid-word, one long name (`turtle-beach-hydrogen-stats`) simply
+  overflowed the box onto the row actions beside it. Head-plus-count keeps the
+  identity a ledger is read for and the one-line row both.
 - Artifacts set their own type, one register bolder than chrome since they
   are the content that glows: body/data ≥14px, section labels ≥12px, nothing
   below 12px (the contract lives in `docs/widget-standard.md` §6 and the

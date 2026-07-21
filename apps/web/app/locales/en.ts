@@ -145,6 +145,9 @@ export const en = {
   "routines.stateNeedsSetup": "Needs setup",
   "routines.stateNever": "Never ran",
   "routines.orphan": "orphan",
+  // A row's board list is collapsed to its first board plus a `+n` count; this
+  // labels that count for anyone who can't see the row.
+  "routines.boardsMore": "Show all {n} boards",
   "routines.rowMenu": "Options for {name}",
   "routines.runNow": "Run {name} now",
   "routines.edit": "Edit",
@@ -213,6 +216,8 @@ export const en = {
   "templates.builtin": "built-in",
   "templates.shadows": "overrides built-in",
   "templates.unused": "unused",
+  // The used-by twin of routines.boardsMore.
+  "templates.usedByMore": "Show all {n} routines",
   "templates.use": "New routine from {name}",
 
   "grid.columnsLabel": "Columns",

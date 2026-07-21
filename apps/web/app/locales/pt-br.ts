@@ -137,6 +137,7 @@ export const ptBR: Messages = {
   "routines.stateNeedsSetup": "Requer setup",
   "routines.stateNever": "Nunca rodou",
   "routines.orphan": "órfã",
+  "routines.boardsMore": "Ver os {n} painéis",
   "routines.rowMenu": "Opções de {name}",
   "routines.runNow": "Rodar {name} agora",
   "routines.edit": "Editar",
@@ -201,6 +202,7 @@ export const ptBR: Messages = {
   "templates.builtin": "nativo",
   "templates.shadows": "sobrepõe o nativo",
   "templates.unused": "sem uso",
+  "templates.usedByMore": "Ver as {n} rotinas",
   "templates.use": "Nova rotina a partir de {name}",
 
   "grid.columnsLabel": "Colunas",

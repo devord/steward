@@ -51,6 +51,12 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { Link } from "~/components/ui/link"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTitle,
+  PopoverTrigger,
+} from "~/components/ui/popover"
 import { cn } from "~/lib/utils"
 import type { ArtifactInfo, SidebarData } from "../lib/dashboard.server.ts"
 import {
@@ -635,8 +641,9 @@ const rowActionCls =
 
 /** The dotted-underline cross-reference the ledgers and the routine detail
     view (ADR-0033) share (boards, used-by, receipts). Every one of these is an
-    identifier — a slug, a login, a SHA — so it never breaks across lines; a
-    list of them wraps between its items, never inside `turtle-beach`. */
+    identifier — a slug, a login, a SHA — so it never breaks across lines, which
+    is why a cell holding a list of them collapses rather than wraps
+    (`CrossRefCell`). */
 export const rowLinkCls =
   "font-mono text-xs whitespace-nowrap text-ink-dim underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
 
@@ -946,6 +953,106 @@ function ranLabel(lastRunAt: string | null, now: number, t: Translate): string {
     : t("widget.ran", { ago: t(`time.${ago.unit}`, { n: ago.n }) })
 }
 
+/** Faint bordered tag, shared by both ledgers — informational markers
+    (built-in, unused, orphan, overrides) and the `+n` collapse chip, never
+    state. Class string, not a component, since the chip wears it on a
+    `<button>`. */
+const ledgerTagCls =
+  "rounded border border-border-dim px-1 font-mono text-xs text-ink-faint"
+
+/**
+ * The ledgers' list cell (boards, used-by): a column holding an unbounded list
+ * of identifiers inside rows that are one line of machine output. It shows the
+ * head of the list, truncating, and counts the tail into a `+n` chip whose
+ * popover holds every item — see DESIGN.md ("Type"), which owns the rule and
+ * the reasoning.
+ *
+ * The width sits here rather than on the column: once the flexible column
+ * claims the slack with `w-full`, the table hands every other column its
+ * min-content and ignores a `<th>` width.
+ */
+function CrossRefCell({
+  items,
+  render,
+  moreLabel,
+  heading,
+}: {
+  items: string[]
+  /** The item as its cross-reference link — the cell truncates the head, the
+      popover lists them all. */
+  render: (item: string) => ReactNode
+  /** Names the collapsed tail for screen readers ("Show all 3 boards"). */
+  moreLabel: string
+  /** The popover's heading — the column's own label. */
+  heading: string
+}) {
+  const [head, ...tail] = items
+  if (head == null) return null
+  return (
+    <span className="flex w-40 items-center gap-1.5">
+      {/* The truncated head carries the full slug as its native tooltip, the
+          bargain every truncating cell in these tables makes (the name cell,
+          the owner cell). Without it a lone long slug would be unreadable:
+          nothing collapses, so there's no popover to recover it from. */}
+      <span
+        data-slot="cross-ref-head"
+        title={head}
+        className="min-w-0 truncate"
+      >
+        {render(head)}
+      </span>
+      {tail.length > 0 && (
+        <Popover>
+          <PopoverTrigger
+            render={
+              <button
+                type="button"
+                aria-label={moreLabel}
+                // Caps its visible box and extends the hit area with an `after`
+                // inset rather than growing — the chip rule in DESIGN.md
+                // ("Layout → Touch"), since this one shows a border.
+                className={cn(
+                  ledgerTagCls,
+                  "relative shrink-0 cursor-pointer transition-colors outline-none after:absolute after:-inset-2",
+                  "hover:border-border hover:text-foreground focus-visible:text-foreground aria-expanded:border-border aria-expanded:text-foreground",
+                )}
+              />
+            }
+          >
+            +{tail.length}
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-auto max-w-72 gap-1.5 p-3">
+            <PopoverTitle className="font-mono text-xs text-ink-faint">
+              {heading}
+            </PopoverTitle>
+            {/* The head repeats here: the popover is the list, not the
+                remainder — reading it shouldn't mean stitching two places
+                together. Out of the table a slug may wrap at its own hyphens
+                rather than paint past the popup, the one place the never-break
+                rule on `rowLinkCls` has to give. */}
+            <ul className="flex flex-col gap-1 [&_a]:whitespace-normal [&_a]:[overflow-wrap:anywhere]">
+              {items.map((item) => (
+                <li key={item}>{render(item)}</li>
+              ))}
+            </ul>
+          </PopoverContent>
+        </Popover>
+      )}
+    </span>
+  )
+}
+
+/** The empty twin of a list cell: the signal the list itself can't give — a
+    routine that renders nowhere, a template no routine instantiates. */
+function CrossRefEmpty({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink-faint">
+      <span aria-hidden>—</span>
+      <span className={ledgerTagCls}>{children}</span>
+    </span>
+  )
+}
+
 function BoardsCell({
   boards,
   repo,
@@ -960,34 +1067,19 @@ function BoardsCell({
   if (boards.length === 0) {
     // The orphan catcher — the one signal the boards can't give: a routine in
     // the pool that renders nowhere.
-    return (
-      <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink-faint">
-        <span aria-hidden>—</span>
-        <span className="rounded border border-border-dim px-1 text-ink-faint">
-          {t("routines.orphan")}
-        </span>
-      </span>
-    )
+    return <CrossRefEmpty>{t("routines.orphan")}</CrossRefEmpty>
   }
-  // The declared width sits on the list, not the column: once the name column
-  // claims the slack with `w-full`, the table hands every other column its
-  // min-content and ignores a `<th>` width — and a wrapping list's min-content
-  // is one slug, which stacks a multi-board routine one line per board. A width
-  // here is the cell's min-content, so the column can't be starved below it.
-  // Roughly two typical slugs; past that the list wraps in place instead of widening
-  // the table.
   return (
-    <span className="flex w-40 flex-wrap gap-x-2 gap-y-0.5">
-      {boards.map((slug) => (
-        <Link
-          key={slug}
-          to={boardHref(repo.full, slug, homeRepo)}
-          className={rowLinkCls}
-        >
+    <CrossRefCell
+      items={boards}
+      moreLabel={t("routines.boardsMore", { n: boards.length })}
+      heading={t("routines.colBoards")}
+      render={(slug) => (
+        <Link to={boardHref(repo.full, slug, homeRepo)} className={rowLinkCls}>
           {slug}
         </Link>
-      ))}
-    </span>
+      )}
+    />
   )
 }
 
@@ -1132,14 +1224,11 @@ function templateFileUrl(repoFull: string, id: string): string {
   return `https://github.com/${repoFull}/blob/HEAD/templates/routines/${id}.md`
 }
 
-/** Faint bordered tag, the `orphan` chip's vocabulary — informational
-    markers (built-in, unused, overrides), never state. */
+/** The templates ledger's markers (built-in, overrides) in the shared tag
+    vocabulary — `ledgerTagCls`, the same faint bordered chip the cross-ref
+    cells wear for `orphan`, `unused`, and `+n`. */
 function TemplateTag({ children }: { children: ReactNode }) {
-  return (
-    <span className="rounded border border-border-dim px-1 font-mono text-xs text-ink-faint">
-      {children}
-    </span>
-  )
+  return <span className={ledgerTagCls}>{children}</span>
 }
 
 function TemplateRow({
@@ -1229,21 +1318,21 @@ function TemplateRow({
         {usedBy.length === 0 ? (
           // The picker can't say this: a template no routine instantiates —
           // the ledger's twin of the pool's orphan.
-          <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink-faint">
-            <span aria-hidden>—</span>
-            <TemplateTag>{t("templates.unused")}</TemplateTag>
-          </span>
+          <CrossRefEmpty>{t("templates.unused")}</CrossRefEmpty>
         ) : (
           // Anchors to the pool rows above — the same dotted cross-reference
-          // idiom as the boards cell — including its declared width, for the
-          // same min-content reason — not inert text (one page, one graph).
-          <span className="flex w-40 flex-wrap gap-x-2 gap-y-0.5">
-            {usedBy.map((slug) => (
-              <a key={slug} href={`#routine-${slug}`} className={rowLinkCls}>
+          // idiom, and the same head-plus-count collapse, as the boards cell —
+          // not inert text (one page, one graph).
+          <CrossRefCell
+            items={usedBy}
+            moreLabel={t("templates.usedByMore", { n: usedBy.length })}
+            heading={t("templates.colUsedBy")}
+            render={(slug) => (
+              <a href={`#routine-${slug}`} className={rowLinkCls}>
                 {slug}
               </a>
-            ))}
-          </span>
+            )}
+          />
         )}
       </td>
 
