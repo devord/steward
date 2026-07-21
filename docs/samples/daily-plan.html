@@ -581,8 +581,13 @@
           content: none;
         }
         /* The details column: the block's goal note, beside its box —
-           top-aligned to the block's start, clamped to its height (the
-           tooltip keeps the full text). Dims with the box when past. */
+           top-aligned to the block's start, clamped to its height in
+           WHOLE line boxes (the tooltip keeps the full text): the
+           available height rounds down to a multiple of the line box, so
+           a note that doesn't fit truncates at a line edge — never a
+           mid-line crop of half-height letters. The floor keeps one full
+           line visible on the shortest blocks; engines without round()/lh
+           keep the raw clamp. Dims with the box when past. */
         .blocks .day .note {
           display: block;
           position: absolute;
@@ -590,6 +595,7 @@
           top: 1px;
           width: calc(var(--notes) - 2px);
           max-height: calc(100% - 2px);
+          max-height: max(1lh, round(down, calc(100% - 2px), 1lh));
           overflow: hidden;
           font-size: 12px;
           line-height: 1.35;
@@ -766,6 +772,10 @@
               <time class="key">17:30</time
               ><span class="body">Shutdown — clear queues, plan tomorrow</span
               ><span class="dur">30m</span>
+              <span class="note"
+                >goal: queues at zero, tomorrow's plan drafted and
+                committed</span
+              >
             </li>
           </ul>
           <div class="nowline" hidden><span></span></div>
