@@ -363,7 +363,21 @@ export function familyForPair(
   return themeFamilies.find((f) => f.light === light && f.dark === dark)
 }
 
-/** Theme entries of one mode, in registry order. */
+/**
+ * The family a single theme belongs to. Only complete families ship
+ * (ADR-0009), so every registry theme has exactly one — `theme.test.ts`
+ * holds the registry to it.
+ */
+export function familyForTheme(name: ThemeName): ThemeFamily | undefined {
+  return themeFamilies.find((f) => f.light === name || f.dark === name)
+}
+
+/**
+ * Theme entries of one mode, in registry order. `themeNames` lists each
+ * family's members together and in `themeFamilies` order, so the light and
+ * dark slices come back family-aligned: index n is the same family in both,
+ * which is what lets the split picker's two rows line up column for column.
+ */
 export function themesByMode(mode: ThemeMode): [ThemeName, Theme][] {
   return themeEntries.filter(([, theme]) => theme.mode === mode)
 }

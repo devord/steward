@@ -550,12 +550,9 @@ export const en = {
   "settings.modeHintLight": "Always the light theme",
   "settings.modeHintDark": "Always the dark theme",
   "settings.theme": "Theme",
-  "settings.themeHint": "One pick fills both the light and the dark slot",
-  "settings.mix": "Mix light & dark separately",
-  "settings.mixLight": "Light",
-  "settings.mixDark": "Dark",
-  "settings.notApplied":
-    "Not what's showing right now — the mode is pinned to the other slot",
+  "settings.themePaired": "Use one theme for light and dark",
+  "settings.slotLight": "Light",
+  "settings.slotDark": "Dark",
   "settings.language": "Language",
   "settings.languageHint":
     "Chrome only — widgets speak whatever their routine writes",

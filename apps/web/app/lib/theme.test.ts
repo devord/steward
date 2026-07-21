@@ -4,11 +4,13 @@ import {
   coercePrefs,
   DEFAULT_APPEARANCE,
   DEFAULT_THEME,
+  familyForTheme,
   resolveTheme,
   frameArtifactHtml,
   themeEntries,
   themeFamilies,
   themes,
+  themesByMode,
   themeStylesheet,
 } from "./theme.ts"
 
@@ -74,6 +76,30 @@ describe("registry integrity", () => {
       expect(themes[family.light].mode).toBe("light")
       expect(themes[family.dark].mode).toBe("dark")
     }
+  })
+
+  // Only complete families ship (ADR-0009). The settings picker leans on it:
+  // collapsing a split pair back to one theme resolves the shown slot's
+  // family, and a theme belonging to none would leave the checkbox inert.
+  it("every theme belongs to exactly one family", () => {
+    for (const [name] of themeEntries) {
+      const owners = themeFamilies.filter(
+        (f) => f.light === name || f.dark === name,
+      )
+      expect(owners.map((f) => f.id)).toHaveLength(1)
+      expect(familyForTheme(name)).toBe(owners[0])
+    }
+  })
+
+  // The split picker renders a light row above a dark row and relies on
+  // column n being the same family in both.
+  it("themesByMode returns both slices in themeFamilies order", () => {
+    expect(themesByMode("light").map(([name]) => name)).toEqual(
+      themeFamilies.map((f) => f.light),
+    )
+    expect(themesByMode("dark").map(([name]) => name)).toEqual(
+      themeFamilies.map((f) => f.dark),
+    )
   })
 
   it("the stylesheet has the default on :root plus one block per theme", () => {

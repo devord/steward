@@ -1,11 +1,21 @@
 /**
- * Settings · appearance — the mode control plus the theme pickers
- * (ADR-0009; the interaction model follows Flow's appearance settings).
+ * Settings · appearance — the mode control plus the theme picker (ADR-0009).
  *
- * Layout is family-first: a segmented mode control (auto / light / dark),
- * then the family tiles — each previews its light|dark halves and one
- * click fills both slots — and a "mix light & dark separately" disclosure
- * for pairing, say, Tokyo Night at night with Rosé Pine Dawn by day.
+ * Two controls, deliberately not three. **Mode** (auto / light / dark) is
+ * what you see. **Theme** is which palette fills it, and it takes one shape
+ * at a time: paired, the four family tiles where one click fills both slots;
+ * or split, a Light row above a Dark row, both live. A checkbox under the
+ * grid swaps between the two shapes.
+ *
+ * That swap is the point. The earlier version made splitting *modal* — a
+ * Light|Dark pair that chose which slot you were editing, revealed under a
+ * family grid it didn't replace. Three costs, all of which readers hit: a
+ * second sun/moon control that looked like the mode switch but wasn't, two
+ * theme radiogroups live at once (picking below silently deselected above),
+ * and an invisible edit cursor that needed a "not what's showing right now"
+ * line to apologise for itself. Splitting the grid *in place* removes all
+ * three at once — nothing is ever edited out of view, so nothing has to be
+ * narrated, and the page keeps exactly one sun/moon control.
  *
  * Single-choice semantics are real `radiogroup`s of `role="radio"` buttons
  * (one tab stop, arrow keys move and select) because the tiles carry a
@@ -21,14 +31,18 @@ import { APPEARANCE_MODES } from "../lib/appearance-modes.ts"
 import { useT } from "../lib/i18n.tsx"
 import {
   familyForPair,
+  familyForTheme,
   type Theme,
   type ThemeFamily,
   themeFamilies,
+  type ThemeMode,
   type ThemeName,
   themes,
   themesByMode,
 } from "../lib/theme.ts"
 import { useAppearance } from "../lib/use-appearance.ts"
+import { Checkbox } from "~/components/ui/checkbox"
+import { Label } from "~/components/ui/label"
 import { cn } from "~/lib/utils"
 
 const MODE_HINT = {
@@ -42,6 +56,22 @@ const TILE_BASE =
   "group flex cursor-pointer flex-col gap-1.5 rounded-lg border p-1.5 text-left transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 const TILE_ACTIVE = "border-primary"
 const TILE_IDLE = "border-border-dim hover:border-border hover:bg-bg2"
+
+/**
+ * One track for every theme grid. Above `sm`, `auto-fit` (not `auto-fill`)
+ * so the tiles share the full width instead of huddling in narrow tracks
+ * with a gap on the right. Below it, a flat two columns: the registry ships
+ * an even number of themes per mode, so 2×n always squares off, where
+ * auto-fit's track math lands on three-plus-an-orphan through the phone and
+ * split-window range.
+ *
+ * Shared by the paired row and both split rows, so the shapes swap without
+ * the tiles resizing, and — since `themesByMode` returns family-aligned
+ * slices — the Light and Dark rows line up column for column: Gruvbox over
+ * Gruvbox, Catppuccin over Catppuccin.
+ */
+const TILE_GRID =
+  "grid grid-cols-2 gap-2 sm:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]"
 
 /**
  * WAI-ARIA radiogroup roving for non-native radios: arrows move focus (with
@@ -150,7 +180,7 @@ function FamilyTile({
   )
 }
 
-/** A single-theme tile for the mix pickers. */
+/** A single-theme tile for the split rows. */
 function ThemeTile({
   name,
   active,
@@ -192,20 +222,89 @@ function ThemeTile({
   )
 }
 
+/**
+ * One slot of the split picker: a caption naming the slot, then that mode's
+ * themes. The caption is static text in the page's label voice, never a
+ * control — the only sun/moon *buttons* on this page belong to the mode
+ * switch, which is what keeps the two readable apart.
+ *
+ * A pinned mode leaves one slot idle, and the caption carries that: full ink
+ * for the slot in play, quiet ink for the one waiting (both are in play under
+ * auto). Deliberately not the family tiles' half-dimming — a whole row of
+ * dark swatches at 40% over a light canvas turns into four identical muddy
+ * blocks, destroying the one thing the swatch is there to show. And
+ * deliberately not hiding the idle row: the theme still applies the moment
+ * the mode flips back, so hiding it would mean changing your mode to change
+ * your dark theme, which is the modal editing this redesign removed.
+ */
+function SlotRow({
+  slot,
+  selected,
+  live,
+  onSelect,
+}: {
+  slot: ThemeMode
+  selected: ThemeName
+  /** Whether the current mode actually shows this slot. */
+  live: boolean
+  onSelect: (name: ThemeName) => void
+}) {
+  const t = useT()
+  const Icon = slot === "light" ? Sun : Moon
+  const label = t(slot === "light" ? "settings.slotLight" : "settings.slotDark")
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span
+        className={cn(
+          "flex items-center gap-1.5 font-mono text-xs transition-colors",
+          live ? "text-foreground" : "text-ink-dim",
+        )}
+      >
+        <Icon aria-hidden className="size-3.5" />
+        {label}
+      </span>
+      <div role="radiogroup" aria-label={label} className={TILE_GRID}>
+        {themesByMode(slot).map(([name]) => (
+          <ThemeTile
+            key={name}
+            name={name}
+            active={name === selected}
+            tabIndex={name === selected ? 0 : -1}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function AppearanceSettings() {
   const t = useT()
   const [prefs, update] = useAppearance()
-  // Open the mixer when the current pair isn't a family, so a custom mix
-  // shows its selections instead of an unselected family row.
-  const [mixOpen, setMixOpen] = useState(
-    () => !familyForPair(prefs.lightTheme, prefs.darkTheme),
-  )
-  const [editSlot, setEditSlot] = useState<"light" | "dark">(
-    prefs.mode === "light" ? "light" : "dark",
-  )
-
   const activeFamily = familyForPair(prefs.lightTheme, prefs.darkTheme)
+  // Open split when the stored pair isn't a family, so a custom mix shows
+  // its two selections instead of a family row with nothing checked. The
+  // user owns it after that: deriving it every render would snap the grid
+  // shut the moment a hand-picked mix happened to land on a family's pair.
+  const [split, setSplit] = useState(() => !activeFamily)
+
+  /** The slot the mode actually shows (null under auto) — dims the other. */
   const shownMode = prefs.mode === "system" ? null : prefs.mode
+
+  /**
+   * Collapsing two themes into one has to pick a winner, so take the family
+   * of the slot the mode is showing (the dark one under auto, which is both
+   * the default mode and where the canonical theme lives). The palette on
+   * screen is then the one that survives, and checking the box never
+   * repaints the page out from under the click.
+   */
+  function pair() {
+    setSplit(false)
+    const family = familyForTheme(
+      prefs.mode === "light" ? prefs.lightTheme : prefs.darkTheme,
+    )
+    if (family) update({ lightTheme: family.light, darkTheme: family.dark })
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -225,10 +324,7 @@ export function AppearanceSettings() {
                 role="radio"
                 aria-checked={active}
                 tabIndex={active ? 0 : -1}
-                onClick={() => {
-                  update({ mode })
-                  if (mode !== "system") setEditSlot(mode)
-                }}
+                onClick={() => update({ mode })}
                 onKeyDown={handleRadioKeydown}
                 className={cn(
                   "flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 font-mono text-xs transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
@@ -248,138 +344,73 @@ export function AppearanceSettings() {
         <p className="text-xs text-ink-dim">{t(MODE_HINT[prefs.mode])}</p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <span className="text-sm text-ink-dim">{t("settings.theme")}</span>
-        <div
-          role="radiogroup"
-          aria-label={t("settings.theme")}
-          className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2"
-        >
-          {themeFamilies.map((family, i) => (
-            <FamilyTile
-              key={family.id}
-              family={family}
-              active={activeFamily?.id === family.id}
-              tabIndex={
-                activeFamily
-                  ? activeFamily.id === family.id
-                    ? 0
-                    : -1
-                  : i === 0
-                    ? 0
-                    : -1
-              }
-              shownMode={shownMode}
-              onSelect={(f) =>
-                update({ lightTheme: f.light, darkTheme: f.dark })
-              }
-            />
-          ))}
-        </div>
-        <p className="text-xs text-ink-dim">{t("settings.themeHint")}</p>
-      </div>
-
       <div className="flex flex-col gap-3">
-        <button
-          type="button"
-          aria-expanded={mixOpen}
-          onClick={() => setMixOpen((v) => !v)}
-          className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-md font-mono text-xs text-ink-dim transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          <span
-            aria-hidden
-            className={cn(
-              "inline-block transition-transform motion-reduce:transition-none",
-              mixOpen && "rotate-90",
-            )}
-          >
-            ›
-          </span>
-          {t("settings.mix")}
-        </button>
+        <span className="text-sm text-ink-dim">{t("settings.theme")}</span>
 
-        {mixOpen && (
-          <div className="flex flex-col gap-3 border-t border-border-dim pt-3">
-            <div
-              role="radiogroup"
-              aria-label={t("settings.mix")}
-              className="flex gap-2"
-            >
-              {(["light", "dark"] as const).map((slot) => {
-                const Icon = slot === "light" ? Sun : Moon
-                const active = editSlot === slot
-                const slotTheme =
-                  slot === "light" ? prefs.lightTheme : prefs.darkTheme
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    tabIndex={active ? 0 : -1}
-                    onClick={() => setEditSlot(slot)}
-                    onKeyDown={handleRadioKeydown}
-                    className={cn(
-                      "flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                      active ? "border-primary bg-bg1" : TILE_IDLE,
-                    )}
-                  >
-                    <Icon
-                      aria-hidden
-                      className={cn(
-                        "size-4 shrink-0",
-                        active ? "text-primary" : "text-ink-faint",
-                      )}
-                    />
-                    <span className="flex min-w-0 flex-col">
-                      <span className="font-mono text-xs text-ink-dim">
-                        {t(
-                          slot === "light"
-                            ? "settings.mixLight"
-                            : "settings.mixDark",
-                        )}
-                      </span>
-                      <span className="truncate text-xs text-foreground">
-                        {themes[slotTheme].label}
-                      </span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-            {shownMode && editSlot !== shownMode && (
-              <p className="text-xs text-ink-dim">{t("settings.notApplied")}</p>
-            )}
-            <div
-              role="radiogroup"
-              aria-label={t(
-                editSlot === "light" ? "settings.mixLight" : "settings.mixDark",
-              )}
-              className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2"
-            >
-              {themesByMode(editSlot).map(([name]) => {
-                const selected =
-                  name ===
-                  (editSlot === "light" ? prefs.lightTheme : prefs.darkTheme)
-                return (
-                  <ThemeTile
-                    key={name}
-                    name={name}
-                    active={selected}
-                    tabIndex={selected ? 0 : -1}
-                    onSelect={(n) =>
-                      update(
-                        editSlot === "light"
-                          ? { lightTheme: n }
-                          : { darkTheme: n },
-                      )
-                    }
-                  />
-                )
-              })}
-            </div>
+        {split ? (
+          // Wider than the gap inside a row, so each caption groups with the
+          // tiles it names instead of floating between two sets.
+          <div className="flex flex-col gap-4">
+            <SlotRow
+              slot="light"
+              selected={prefs.lightTheme}
+              live={shownMode !== "dark"}
+              onSelect={(name) => update({ lightTheme: name })}
+            />
+            <SlotRow
+              slot="dark"
+              selected={prefs.darkTheme}
+              live={shownMode !== "light"}
+              onSelect={(name) => update({ darkTheme: name })}
+            />
+          </div>
+        ) : (
+          <div
+            role="radiogroup"
+            aria-label={t("settings.theme")}
+            className={TILE_GRID}
+          >
+            {themeFamilies.map((family, i) => (
+              <FamilyTile
+                key={family.id}
+                family={family}
+                active={activeFamily?.id === family.id}
+                tabIndex={
+                  activeFamily
+                    ? activeFamily.id === family.id
+                      ? 0
+                      : -1
+                    : i === 0
+                      ? 0
+                      : -1
+                }
+                shownMode={shownMode}
+                onSelect={(f) =>
+                  update({ lightTheme: f.light, darkTheme: f.dark })
+                }
+              />
+            ))}
           </div>
         )}
+
+        {/* Sits below the grid in both shapes, where the old hint used to
+            explain what it now simply does. */}
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="theme-paired"
+            checked={!split}
+            onCheckedChange={(checked) => {
+              if (checked) pair()
+              else setSplit(true)
+            }}
+          />
+          <Label
+            htmlFor="theme-paired"
+            className="cursor-pointer text-xs font-normal text-ink-dim"
+          >
+            {t("settings.themePaired")}
+          </Label>
+        </div>
       </div>
     </div>
   )

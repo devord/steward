@@ -531,12 +531,9 @@ export const ptBR: Messages = {
   "settings.modeHintLight": "Sempre o tema claro",
   "settings.modeHintDark": "Sempre o tema escuro",
   "settings.theme": "Tema",
-  "settings.themeHint": "Uma escolha preenche o claro e o escuro de uma vez",
-  "settings.mix": "Misturar claro & escuro separadamente",
-  "settings.mixLight": "Claro",
-  "settings.mixDark": "Escuro",
-  "settings.notApplied":
-    "Não é o que está na tela agora — o modo está fixado no outro slot",
+  "settings.themePaired": "Usar um só tema para claro e escuro",
+  "settings.slotLight": "Claro",
+  "settings.slotDark": "Escuro",
   "settings.language": "Idioma",
   "settings.languageHint":
     "Só o chrome — widgets falam o que a rotina deles escrever",
