@@ -6,6 +6,7 @@ import {
   DocsDescription,
   DocsPage,
   DocsTitle,
+  PageBreadcrumb,
 } from "fumadocs-ui/layouts/docs/page"
 import { RootProvider } from "fumadocs-ui/provider/react-router"
 
@@ -49,7 +50,23 @@ export async function loader({ params }: Route.LoaderArgs) {
 const clientLoader = browserCollections.docs.createClientLoader({
   component({ toc, frontmatter, default: Mdx }, props?: { mdUrl: string }) {
     return (
-      <DocsPage toc={toc}>
+      // The page's utility row: wayfinding left, page actions right — the
+      // app header's own grammar. The copy control rides here rather than in
+      // the content column, where its margins stacked with the container gap
+      // and the description's, and it read as a block of content.
+      <DocsPage
+        toc={toc}
+        breadcrumb={{
+          component: (
+            <div className="flex items-center gap-4">
+              {/* Null on the docs index (no ancestors); the action's
+                  `ml-auto` keeps it right-aligned either way. */}
+              <PageBreadcrumb className="min-w-0" />
+              {props != null && <CopyPageButton mdUrl={props.mdUrl} />}
+            </div>
+          ),
+        }}
+      >
         <title>{`${frontmatter.title} — Steward docs`}</title>
         <meta name="description" content={frontmatter.description} />
         {props != null && (
@@ -57,7 +74,6 @@ const clientLoader = browserCollections.docs.createClientLoader({
         )}
         <DocsTitle>{frontmatter.title}</DocsTitle>
         <DocsDescription>{frontmatter.description}</DocsDescription>
-        {props != null && <CopyPageButton mdUrl={props.mdUrl} />}
         <DocsBody>
           <Mdx components={getMDXComponents()} />
         </DocsBody>
