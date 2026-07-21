@@ -8,12 +8,17 @@ state; this is chrome).
 ## Theme
 
 The palette stops being a single hard-coded gruvbox block. The registry in
-`apps/web/app/lib/theme.ts` is now the single source of truth: four curated
-light/dark families — Gruvbox, Catppuccin, Rosé Pine, Tokyo Night — each
-member filling the same token roles DESIGN.md defines. Only complete
-families ship: every theme has a twin, so the family tiles cover the whole
-registry. **Gruvbox dark hard remains canonical**: the server renders it,
-artifacts are authored in it, and it is the fresh-install dark default.
+`apps/web/app/lib/theme.ts` is now the single source of truth: a curated set
+of light/dark families — Gruvbox, Catppuccin, Rosé Pine, Tokyo Night,
+GitHub, Flexoki, Kanagawa — each member filling the same token roles
+DESIGN.md defines. Only complete families ship: every theme has a twin, so
+the family tiles cover the whole registry. A candidate qualifies only if
+its light variant is official upstream _and_ both members clear the
+contrast floors below from transcribed values — Solarized and Ayu were
+evaluated and rejected on that second test.
+
+**Gruvbox dark hard remains canonical**: the server renders it, artifacts
+are authored in it, and it is the fresh-install dark default.
 
 Mechanics:
 

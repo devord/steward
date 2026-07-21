@@ -75,10 +75,12 @@ export interface Theme {
 }
 
 /**
- * The curated set: four families, each shipping a light and a dark member.
+ * The curated set: seven families, each shipping a light and a dark member.
  * Values are transcribed from each palette's upstream definition (gruvbox
  * hard variants, Catppuccin mocha/latte, Rosé Pine main/dawn,
- * tokyonight.nvim night style + the Tokyo Night Light VS Code palette).
+ * tokyonight.nvim night style + the Tokyo Night Light VS Code palette,
+ * @primer/primitives light/dark, Flexoki's base + 400/600 ramps,
+ * kanagawa.nvim wave/lotus).
  * Light themes spread their surface roles deliberately (still transcribed
  * values, roles repointed within the palette's own ramp): the canvas takes
  * a mid neutral one step deeper and the cards keep the palette's lightest
@@ -93,7 +95,12 @@ export interface Theme {
  *  - Tokyo Night Light ships no AA-clearing mid gray at all, and Rosé Pine
  *    Dawn's muted inks miss AA on its overlay canvas, so their ink-dim
  *    collapses to the body ink and hierarchy is carried by weight and
- *    size — theme.test.ts enforces the ratios for every theme.
+ *    size — theme.test.ts enforces the ratios for every theme;
+ *  - GitHub Light's ink-dim takes `scale.gray[6]`: Primer tunes `fg.muted`
+ *    against white, and it dips to 4.49:1 on the deeper board surface;
+ *  - Kanagawa Lotus's signature lotusOrange misses AA as an accent (2.66:1
+ *    on its own canvas, 3.04:1 for button text), so `accent` is repointed
+ *    to lotusBlue4 — the nearest AA-clearing tone in the same palette.
  */
 export const themes = {
   "gruvbox-dark": {
@@ -287,6 +294,161 @@ export const themes = {
       red: "#8c4351",
     },
   },
+  "github-dark": {
+    label: "GitHub Dark",
+    mode: "dark",
+    tokens: {
+      // Primer semantic tokens: canvas.inset/default/subtle for the surface
+      // ramp, border.default/muted, fg.default/muted/subtle for the inks.
+      // Primer ships no teal in `scale`, but its terminal palette does —
+      // `aqua` takes ansi.cyan, still an upstream Primer value.
+      bg: "#010409",
+      bg1: "#0d1117",
+      bg2: "#161b22",
+      bg3: "#21262d",
+      border: "#30363d",
+      borderDim: "#21262d",
+      ink: "#e6edf3",
+      inkDim: "#7d8590",
+      inkFaint: "#6e7681",
+      accent: "#2f81f7",
+      accentDeep: "#1f6feb",
+      yellow: "#d29922",
+      green: "#3fb950",
+      aqua: "#39c5cf",
+      blue: "#58a6ff",
+      purple: "#a371f7",
+      red: "#f85149",
+    },
+  },
+  "github-light": {
+    label: "GitHub Light",
+    mode: "light",
+    tokens: {
+      // Canvas gray[1] for the board, canvas.default for the cards, so the
+      // widgets keep the white instead of the page collapsing into one
+      // near-white plane. On that deeper board Primer's own fg.muted (tuned
+      // against white) lands at 4.49:1, so ink-dim takes gray[6] — the
+      // nearest AA-clearing tone in the same scale.
+      bg: "#eaeef2",
+      bg1: "#ffffff",
+      bg2: "#f6f8fa",
+      bg3: "#d0d7de",
+      border: "#d0d7de",
+      borderDim: "#d8dee4",
+      ink: "#1f2328",
+      inkDim: "#57606a",
+      inkFaint: "#6e7781",
+      accent: "#0969da",
+      accentDeep: "#0550ae",
+      yellow: "#9a6700",
+      green: "#1a7f37",
+      aqua: "#1b7c83",
+      blue: "#0969da",
+      purple: "#8250df",
+      red: "#d1242f",
+    },
+  },
+  "flexoki-dark": {
+    label: "Flexoki Dark",
+    mode: "dark",
+    tokens: {
+      // Flexoki's base ramp: black + base-950/900/850 for surfaces, base-800
+      // for the border, base-200/300/500 for the inks, 400-weight accents.
+      bg: "#100f0f",
+      bg1: "#1c1b1a",
+      bg2: "#282726",
+      bg3: "#343331",
+      border: "#403e3c",
+      borderDim: "#282726",
+      ink: "#cecdc3",
+      inkDim: "#b7b5ac",
+      inkFaint: "#878580",
+      accent: "#da702c",
+      accentDeep: "#bc5215",
+      yellow: "#d0a215",
+      green: "#879a39",
+      aqua: "#3aa99f",
+      blue: "#4385be",
+      purple: "#8b7ec8",
+      red: "#d14d41",
+    },
+  },
+  "flexoki-light": {
+    label: "Flexoki Light",
+    mode: "light",
+    tokens: {
+      // Canvas base-50, cards paper: the widgets keep Flexoki's actual paper
+      // tone and the board sits a step under it. 600-weight accents.
+      bg: "#f2f0e5",
+      bg1: "#fffcf0",
+      bg2: "#e6e4d9",
+      bg3: "#dad8ce",
+      border: "#cecdc3",
+      borderDim: "#e6e4d9",
+      ink: "#100f0f",
+      inkDim: "#575653",
+      inkFaint: "#6f6e69",
+      accent: "#bc5215",
+      accentDeep: "#9d4310",
+      yellow: "#ad8301",
+      green: "#66800b",
+      aqua: "#24837b",
+      blue: "#205ea6",
+      purple: "#5e409d",
+      red: "#af3029",
+    },
+  },
+  "kanagawa-wave": {
+    label: "Kanagawa Wave",
+    mode: "dark",
+    tokens: {
+      // sumiInk0 for the board, sumiInk3 (wave's own bg) for the cards, then
+      // sumiInk4/5 for wells and hovers; fujiWhite/oldWhite/fujiGray inks.
+      bg: "#16161d",
+      bg1: "#1f1f28",
+      bg2: "#2a2a37",
+      bg3: "#363646",
+      border: "#54546d",
+      borderDim: "#2a2a37",
+      ink: "#dcd7ba",
+      inkDim: "#c8c093",
+      inkFaint: "#727169",
+      accent: "#7e9cd8",
+      accentDeep: "#957fb8",
+      yellow: "#e6c384",
+      green: "#98bb6c",
+      aqua: "#7aa89f",
+      blue: "#7e9cd8",
+      purple: "#957fb8",
+      red: "#e46876",
+    },
+  },
+  "kanagawa-lotus": {
+    label: "Kanagawa Lotus",
+    mode: "light",
+    tokens: {
+      // Canvas lotusWhite2, cards lotusWhite3 (lotus's own bg). Lotus inks
+      // run darker on ink2 than ink1, so ink2 carries the body copy.
+      bg: "#e5ddb0",
+      bg1: "#f2ecbc",
+      bg2: "#e7dba0",
+      bg3: "#d5cea3",
+      border: "#d5cea3",
+      borderDim: "#dcd5ac",
+      ink: "#43436c",
+      inkDim: "#545464",
+      inkFaint: "#766b90",
+      accent: "#4d699b",
+      accentDeep: "#624c83",
+      yellow: "#77713f",
+      green: "#6f894e",
+      aqua: "#597b75",
+      blue: "#4d699b",
+      purple: "#624c83",
+      red: "#c84053",
+    },
+  },
 } satisfies Record<string, Theme>
 
 export type ThemeName = keyof typeof themes
@@ -301,6 +463,12 @@ export const themeNames: readonly ThemeName[] = [
   "rose-pine-dawn",
   "tokyo-night",
   "tokyo-night-light",
+  "github-dark",
+  "github-light",
+  "flexoki-dark",
+  "flexoki-light",
+  "kanagawa-wave",
+  "kanagawa-lotus",
 ]
 
 /** Ordered `[name, theme]` pairs — the pickers iterate this. */
@@ -345,6 +513,24 @@ export const themeFamilies = [
     label: "Tokyo Night",
     light: "tokyo-night-light",
     dark: "tokyo-night",
+  },
+  {
+    id: "github",
+    label: "GitHub",
+    light: "github-light",
+    dark: "github-dark",
+  },
+  {
+    id: "flexoki",
+    label: "Flexoki",
+    light: "flexoki-light",
+    dark: "flexoki-dark",
+  },
+  {
+    id: "kanagawa",
+    label: "Kanagawa",
+    light: "kanagawa-lotus",
+    dark: "kanagawa-wave",
   },
 ] as const satisfies readonly ThemeFamily[]
 
