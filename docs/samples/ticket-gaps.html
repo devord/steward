@@ -835,5 +835,62 @@
         addEventListener("resize", fit)
       })()
     </script>
+
+    <!-- The briefing (ADR-0043). Inert: an unknown script type is neither
+         executed nor rendered, so it costs no layout and no request. Written
+         richer than the tile — the two held-back findings never reach the
+         render, and neither does the reasoning behind any row. -->
+    <script type="text/markdown" id="steward-context">
+      ## Where it stands
+
+      21 spec pages audited (12 kb), 5 findings recommended, 2 held back as
+      duplicates. The split: 3 gaps (spec says it, no code does it) and 2 drifts
+      (code does it differently than the spec says).
+
+      ## The findings
+
+      1. **Staleness badge missing** (gap) — `docs/widget-standard.md` §Addressing
+         & freshness requires a badge when a run is overdue against its schedule.
+         `apps/web/app/components/widget-card.tsx` renders freshness but has no
+         overdue branch.
+      2. **Full view doesn't close on Escape** (gap) —
+         `knowledge-base/accessibility.md` §Overlays requires Esc to dismiss any
+         full-screen overlay; the lightbox registers no keydown handler.
+      3. **Person-relative render leaks the runner login** (drift) — ADR-0039
+         requires viewer-neutral markup, but the repo-pulse enhancer bakes a
+         "Yours" label into the published file instead of resolving against
+         `__STEWARD_VIEWER__` at render time. Possibly related: STEW-214, marked
+         Done — worth verifying, since a Done ticket claiming this fix and a live
+         drift can't both be true.
+      4. **Dry-run clause missing from the receipt** (gap) — ADR-0017 defines a dry
+         run as pointer prompt plus dry clause; the receipt view omits the clause,
+         so a dry run is indistinguishable from a real one.
+      5. **Grid row height ignores board density** (drift) — the spec makes the row
+         unit adjustable via `grid.rowHeight`; the schema and grid renderer
+         hard-code ~150px, so the density control does nothing. Possibly related:
+         STEW-190.
+
+      ## Held back
+
+      Two findings matched open Jira issues and were suppressed rather than filed
+      twice. Held back is a dedupe decision, not a confidence one — if the matching
+      ticket is stale or scoped differently, the finding is still live.
+
+      ## Caveats
+
+      The audit compares specs to code, so it only sees gaps a written spec can
+      name — an unwritten expectation produces no finding. "Drift" means code and
+      spec disagree; which one is wrong is a judgment this run does not make.
+
+      ## Ask me about
+
+      - Where these gaps came from — which of them are process failures (spec
+        written after the code, ticket closed without the work) versus honest
+        drift, and what would have caught them earlier.
+      - Whether STEW-214 being Done while finding 3 is live means the ticket was
+        closed prematurely, and what to do about it.
+      - Which of the 5 to file now versus fold into existing work, and the triage
+        order if only two get picked up this week.
+    </script>
   </body>
 </html>

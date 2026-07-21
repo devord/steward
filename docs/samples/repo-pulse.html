@@ -1489,5 +1489,50 @@
         addEventListener("resize", fit)
       })()
     </script>
+
+    <!-- The briefing (ADR-0043). Viewer-neutral like the render (ADR-0039):
+         this file is published once for everyone, and the run has no idea who
+         will copy it — so no "yours", no "needs your review". -->
+    <script type="text/markdown" id="steward-context">
+      ## Where it stands
+
+      17 open PRs across the watched repos: 2 blocked, 9 in review, 6 open. CI is
+      failing on `corza`.
+
+      ## Blocked, and why
+
+      - **#192 morning briefing** — CI failing. Opened 2026-06-17, so it has been
+        sitting for roughly three weeks; the age is the story more than the failure.
+      - **#287 link Qase test cases (abandoned-cart-recovery)** — CI failing,
+        opened 2026-07-10.
+
+      Both are blocked on checks rather than on review, so they need someone to
+      look at the failure, not someone to approve them.
+
+      ## In review (9)
+
+      Includes #252 and #261 (both CORZA-130 — Request Access, split front and
+      back, so they likely want reviewing and landing together), #285 (CORZA-139),
+      #291 (CORZA-147), #256, #280, #284, #194, #207.
+
+      ## Open (6)
+
+      #221, #226, #227, #234, #249, #286 (CORZA-198).
+
+      ## Caveats
+
+      Grouping is by PR state only — it does not know which of these are urgent,
+      nor whether a "blocked" CI failure is flaky or real. Any tile narrower or
+      shorter than the full view trims each group to `+N more`, so the render is
+      usually a subset of the above; this list is not.
+
+      ## Ask me about
+
+      - What to review first, given two CORZA-130 PRs that probably need to land
+        as a pair.
+      - Whether #192 at three weeks with failing CI is still worth finishing or
+        should be closed.
+      - Whether the `corza` CI failures across #192 and #287 share a cause.
+    </script>
   </body>
 </html>

@@ -1061,5 +1061,48 @@
         addEventListener("resize", fit)
       })()
     </script>
+
+    <!-- The briefing (ADR-0043): the shape of the day in words, including
+         what the grid can only express as geometry. -->
+    <script type="text/markdown" id="steward-context">
+      ## The day
+
+      Daniel's plan for Monday, July 13, 08:00–18:00. Theme: ship the M2 dashboard
+      render path. Budget: 4.5h deep · 1h meetings · 3h shallow · 30m free.
+      By project: steward 4h30.
+
+      ## Priorities
+
+      1. **Ship the M2 render path** — PR up by lunch, demo Friday. Two deep blocks
+         carry it (08:30 and 10:30), split by a shallow slot rather than run as one
+         long stretch.
+      2. **Review the schema PR** (Corza) — one shallow block at 13:00.
+      3. **Write the routines-sync plan** — deep block at 14:00, goal: outline
+         ready for ADR review.
+
+      ## Shape of the day, and where it's tight
+
+      The render path gets 3h of deep time but it is not contiguous — the 10:00
+      shallow block splits it, so the second half pays a restart cost the grid
+      can't show. The 15:30 free block is the only slack before the Mateus/Daniel
+      1:1; anything that overruns eats it, and after that the day has no give.
+      Lunch-by-PR means the morning is the whole margin for priority 1.
+
+      ## Carried over
+
+      - **Reply to the ADR-0005 thread** — unanswered since Jul 8, five days. It
+        has now survived enough replans that scheduling it again is unlikely to be
+        what fixes it; it sits in today's 15:30 shallow block alongside Ygor's
+        PR #2635.
+
+      ## Ask me about
+
+      - Whether priority 1 is realistically a by-lunch PR given the split deep
+        blocks, and what to move if it isn't.
+      - What to drop when the 1:1 runs long — the plan has one buffer and three
+        priorities.
+      - Why the ADR-0005 reply keeps carrying over, and whether it should be
+        delegated, answered in two lines, or dropped outright.
+    </script>
   </body>
 </html>

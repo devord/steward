@@ -66,6 +66,12 @@ An artifact MUST:
    skill's component set (shell, section rules, ledger rows, the stat
    tier, pills, dots, meters, sparklines, empty states) and its per-tier
    playbook, rather than per-routine visuals.
+9. **Carry a briefing for Claude** — a SHOULD. Embed the fuller story as
+   markdown in an inert `<script type="text/markdown" id="steward-context">`
+   and the board grows a Chat-with-Claude button that copies it. Write it
+   richer than the render: what the tile cropped, the caveats the run hit,
+   and a closing `## Ask me about`. Escape any literal `</script>` as
+   `<\/script>`. Artifacts without a block just show no button.
 
 ## Person-relative content
 

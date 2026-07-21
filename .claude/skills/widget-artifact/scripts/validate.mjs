@@ -133,6 +133,19 @@ function selectorMatches(parts, chain) {
   return ancestry(parts.length - 2, subject)
 }
 
+// Strip a block's common leading indentation — the same pass the board runs
+// on the context block (apps/web/app/lib/artifact-context.ts).
+function dedent(text) {
+  const lines = text.split("\n")
+  let min = Infinity
+  for (const line of lines) {
+    if (line.trim() === "") continue
+    min = Math.min(min, line.length - line.trimStart().length)
+  }
+  if (!Number.isFinite(min) || min === 0) return text
+  return lines.map((l) => (l.trim() === "" ? l : l.slice(min))).join("\n")
+}
+
 function describe(el) {
   return `<${el.tag}${el.id ? "#" + el.id : ""}${
     el.classes.length ? "." + el.classes[0] : ""
@@ -148,9 +161,50 @@ if (files.length === 0) {
 let failed = false
 
 for (const file of files) {
-  const html = readFileSync(file, "utf8")
+  const raw = readFileSync(file, "utf8")
   const errors = []
   const warnings = []
+
+  // — Context block (ADR-0043) —
+  // Excised before anything else, and every check below reads `html`, not
+  // `raw`: the briefing is prose *about* the subject, so it says things like
+  // "add a fetch( call" or quotes a hex. Scanned as markup it would trip
+  // self-containment and palette checks it has nothing to do with.
+  const ctx = /<script[^>]*\bid="steward-context"[^>]*>([\s\S]*?)<\/script>/i
+  const ctxMatch = ctx.exec(raw)
+  const html = ctxMatch ? raw.replace(ctxMatch[0], "") : raw
+
+  if (!ctxMatch) {
+    warnings.push(
+      'no <script type="text/markdown" id="steward-context"> — the widget ' +
+        "gets no Chat-with-Claude button (widget-standard §9)",
+    )
+  } else {
+    // Dedented the way the board dedents it: a formatter indents script
+    // content to its depth in the document, and four leading spaces would
+    // make every line of the briefing a markdown code block.
+    const body = dedent(ctxMatch[1].replace(/<\\\//g, "</")).trim()
+    // A literal `</script>` inside the briefing can't be caught by looking
+    // at the body: it *is* what closed the block, so the body ends before
+    // it. What it leaves behind is the tell — the rest of the briefing spills
+    // into the document as stray text ahead of the next tag.
+    const after = raw.slice(ctxMatch.index + ctxMatch[0].length)
+    const nextTag = after.indexOf("<")
+    const spilled = (nextTag === -1 ? after : after.slice(0, nextTag)).trim()
+    if (spilled !== "")
+      errors.push(
+        "text after the steward-context block: " +
+          `"${spilled.slice(0, 40)}${spilled.length > 40 ? "…" : ""}" — a ` +
+          "literal `</script>` inside the briefing closed it early; escape " +
+          "it as `<\\/script>` (everything past it is missing)",
+      )
+    else if (body === "") errors.push("steward-context block is empty")
+    else if (!/^#{1,3}\s/m.test(body))
+      warnings.push(
+        "steward-context has no markdown heading — give it sections so the " +
+          "paste reads as a briefing, not a wall",
+      )
+  }
 
   // — Self-containment (hard requirement 1) —
   // Resource loads are banned; <a href> links out are the one sanctioned

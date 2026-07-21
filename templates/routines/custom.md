@@ -26,3 +26,8 @@ Degrade gracefully: when the instructions name data sources this
 environment can't reach, publish what you can with an explicit note of
 what was skipped. With no instructions at all, publish an explicit
 empty state asking the user to describe the widget.
+
+Carry a context block (`widget-artifact` § The context block): whatever the
+tile had to leave out to fit, plus what you couldn't reach this run. Close
+with `## Ask me about`, drawn from what the instructions say this widget is
+for — the questions its reader would naturally ask next.

@@ -280,6 +280,67 @@ Run `personalize` before `fit` (register it first, or re-fit at its end):
 re-grouping changes what overflows, so the fit-to-height pass must see the
 final DOM.
 
+## The context block (ADR-0043)
+
+A tile is a compressed view — 15 of 61 rows, a bar standing in for 200
+tickets. Carry the fuller story as markdown so the reader can hand it to
+Claude and act on it. The board reads this block out of the published file
+and offers a Chat-with-Claude button that copies it; it never reaches into
+the sandbox to get it. Recommended, not required: no block, no button.
+
+```html
+<script type="text/markdown" id="steward-context">
+  ## Where it stands
+
+  Closing on Storefront Complete (Aug 6): 40% ready vs 69% expected, 15d behind.
+  10 landed, 2 in review (CORZA-147, CORZA-209).
+
+  ## What's blocking
+
+  - Advanced Shopping Flows: 45%, 13 open (6 in progress) — gates Aug 6.
+  - Augment/GoldTalk connector date unconfirmed with Curtis Gray; a Sept slip
+    would compress the Sep 1 dev-complete window.
+
+  ## Caveats
+
+  GitHub PR cross-check unavailable this run — Jira-only, so "landed" counts
+  transitions, not merges.
+
+  ## Ask me about
+
+  - Why we're behind, and what it would take to close the gap by Aug 6.
+  - What to cut or rescope, and how to reflect that in Jira.
+</script>
+```
+
+Rules:
+
+- **Inert by construction.** Browsers neither execute nor render an unknown
+  script type, so it costs no layout and no request. Only `</script>`
+  terminates it: escape any literal one as `<\/script>` or the briefing
+  silently truncates there.
+- **Richer than the render, never thinner.** This is the block's whole
+  reason to exist. Spend it on what the tile cropped (every held-back item,
+  the full question list), the reasoning behind a headline number, and the
+  caveats and gaps in the run's own sourcing. A markdown transcription of
+  the visible tile is a wasted block.
+- **Sections, not a wall.** Lead with where things stand, then the detail,
+  then what the run couldn't verify.
+- **Close with `## Ask me about`** — two to four questions this widget
+  actually invites, in the reader's terms. A gaps widget invites "where did
+  these come from and how do we stop generating them"; an intelligence
+  widget invites questions about the ecosystem it watched; a progress report
+  invites "why are we behind and what do we cut". Name the ticket keys,
+  repos, and people involved so Claude can act without a second round trip.
+- **No secrets.** It travels to a Claude conversation by the viewer's own
+  paste, but it is still published to the artifacts branch — same disclosure
+  rules as the visible render.
+- **The host writes the header.** It prepends the routine name and freshness
+  from what the card shows, so don't restate them.
+- **Indentation is not your problem.** A formatter will indent the block to
+  its depth in the document; the board strips the common indent before
+  copying, so format the file normally and write the markdown flush.
+
 ## Reference
 
 The canonical samples in the app repo's `docs/samples/` show the design
@@ -329,3 +390,5 @@ that half stays on you and `design.md`.
 - [ ] No "you"/"your" baked into the static render; person-owned artifacts
       name the owner (third person); shared ones publish viewer-neutral and
       enhance from `window.__STEWARD_VIEWER__`, degrading to neutral (ADR-0039)
+- [ ] Context block present, richer than the render, closing with
+      `## Ask me about` — and any literal `</script>` escaped (ADR-0043)

@@ -7,6 +7,7 @@ import { DialogOverlay } from "~/components/ui/dialog"
 import { cn } from "~/lib/utils"
 import { useT } from "../lib/i18n.tsx"
 import { SandboxedArtifact, useArtifactEscape } from "./artifact-frame.tsx"
+import { ChatAction } from "./chat-action.tsx"
 
 export interface WidgetLightboxProps {
   open: boolean
@@ -20,6 +21,9 @@ export interface WidgetLightboxProps {
   /** "ran 2h ago" / "never ran" — the same freshness readout as the card. */
   ranLabel: string
   stale: boolean
+  /** The artifact's briefing (ADR-0043), already extracted by the card.
+      Absent when the artifact carries none. */
+  context?: string | null
 }
 
 /**
@@ -43,6 +47,7 @@ export function WidgetLightbox({
   html,
   ranLabel,
   stale,
+  context,
 }: WidgetLightboxProps) {
   const t = useT()
   // The artifact can't call onOpenChange directly; it posts CLOSE_MESSAGE and
@@ -86,6 +91,17 @@ export function WidgetLightbox({
                 </Badge>
               )}
               <span className="tabular-nums">{ranLabel}</span>
+              {/* Shown outright, not revealed on hover like the tile's: this
+                  is the surface where the reader has the whole artifact in
+                  front of them and is most likely to want to talk about it. */}
+              {context && (
+                <ChatAction
+                  name={name}
+                  ranLabel={ranLabel}
+                  context={context}
+                  className="size-7 text-ink-dim hover:bg-bg3 hover:text-foreground pointer-coarse:size-11"
+                />
+              )}
               <DialogPrimitive.Close
                 render={
                   <Button

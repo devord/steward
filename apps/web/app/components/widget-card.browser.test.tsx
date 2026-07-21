@@ -367,3 +367,70 @@ describe("WidgetCard empty states", () => {
     await expect.poll(() => toggled).toBe(true)
   })
 })
+
+describe("WidgetCard chat action", () => {
+  const withContext = (body: string) =>
+    `<h1>live</h1><script type="text/markdown" id="steward-context">${body}</script>`
+
+  it("stays hidden when the artifact carries no briefing", async () => {
+    // The convention is a SHOULD (ADR-0043) — a button that copies nothing
+    // would be worse than no button, so legacy artifacts show none.
+    await renderCard(
+      <WidgetCard
+        widget={widget}
+        routine={routine()}
+        artifact={artifact({ html: "<h1>live</h1>" })}
+        now={Date.now()}
+        committed
+      />,
+    )
+    await expect
+      .poll(() => document.querySelector('button[aria-label^="Copy R"]'))
+      .toBe(null)
+  })
+
+  it("copies the briefing, headed by the name and freshness", async () => {
+    let written: string | null = null
+    // The browser withholds clipboard access without a user-permission
+    // grant, so stub the write and assert on what we hand it.
+    const clipboard = navigator.clipboard
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: (text: string) => {
+          written = text
+          return Promise.resolve()
+        },
+      },
+    })
+    const now = Date.parse("2026-07-21T14:00:00Z")
+    try {
+      await renderCard(
+        <WidgetCard
+          widget={widget}
+          routine={routine({ name: "Ticket Gaps" })}
+          artifact={artifact({
+            html: withContext("## Gaps\n- CORZA-238 has no code"),
+            lastRunAt: "2026-07-21T09:00:00Z",
+          })}
+          now={now}
+          committed
+        />,
+      )
+      const btn = document.querySelector<HTMLButtonElement>(
+        'button[aria-label^="Copy Ticket Gaps"]',
+      )
+      await expect.poll(() => btn != null).toBe(true)
+      btn?.click()
+      await expect.poll(() => written).not.toBe(null)
+      expect(written).toContain("# Ticket Gaps")
+      expect(written).toContain("ran 5h ago")
+      expect(written).toContain("- CORZA-238 has no code")
+    } finally {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: clipboard,
+      })
+    }
+  })
+})
