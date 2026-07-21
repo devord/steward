@@ -436,17 +436,19 @@
         }
       }
 
-      /* Short tiles answer one question — "what's actionable" — so below the
-         height that fits a second group honestly, keep only the first
-         ledger (Blocked in the neutral render, Needs your review once a
-         viewer is injected) and drop the rest (a tier is a viewport, not a
-         crop). The raw page and full view carry no tile stamp and always
-         show every group. */
-      @media (max-height: 379px) {
-        [data-steward-tile] .rows ~ .rows {
-          display: none;
-        }
-      }
+      /* Short tiles lead with what's actionable (Blocked in the neutral
+         render, Needs your review once a viewer is injected), and the fit
+         pass is what enforces it: it trims bottom-up, so the leading group
+         is the last to give way, and it drops a whole section rather than
+         orphaning its heading. Deciding it here instead — a height query
+         that hid every group after the first — assumed the leading group
+         fills the tier. When it doesn't (two blocked PRs on a 2×2), the
+         tile spent two thirds of its height on nothing while nine PRs in
+         review stayed hidden, and the reader could not even tell they
+         existed. That is the opposite of the tier playbook, which asks a
+         2×2 for the full ledger set with fit-lists trimming from the
+         bottom. Left to the fit pass, the same tile now reads Blocked in
+         full, six of the nine in review, and "+3 more". */
 
       /* ≥700px (3-col tiles and up): reveal ticket + size, name the
          columns. The row's state/age shift to columns 5/6. Cap the table's

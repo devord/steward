@@ -1536,6 +1536,19 @@ Design each tier deliberately; a tier is a viewport, not a crop:
   hairline-separated rows, every item shown, the page heading and page-only
   generosity (outer padding, scroll) allowed.
 
+**Let the fit pass drop sections; don't hard-code the drop in a height
+query.** A rule like `@media (max-height: 379px) { .rows ~ .rows { display:
+none } }` reads as tier design ("a short tile answers one question"), but it
+is really a bet that the _leading_ section fills the tier. When it doesn't —
+two blocked PRs on a 2×2 — the tile spends most of its height on nothing,
+and the sections it hid are hidden so completely the reader cannot tell they
+exist. The fit pass already enforces the same intent adaptively: it trims
+bottom-up, so the leading section is the last to give way, and it collapses
+a whole section rather than orphaning its heading. A tier query is right for
+content that is _never_ part of a tier (the provenance line on a glance
+tile); it is wrong as a proxy for "there won't be room", which is a
+measurement, not a media feature.
+
 Bans, on top of the board's own: no invented colors or fonts; no boxes
 inside the tile (the card is the box, so sections separate with rules and
 space, never nested cards); no side-stripe accents; no more than one
