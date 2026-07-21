@@ -1,3 +1,4 @@
+export * from "./category.ts"
 export * from "./dashboard.ts"
 export * from "./repo.ts"
 export * from "./routine.ts"

@@ -29,6 +29,16 @@ export const repoFileSchema = z.object({
    * board's `section` are ignored — a harmless leftover, never an error.
    */
   sections: z.array(z.string().min(1)).optional(),
+  /**
+   * Order of the widget bands inside every board in this repo (ADR-0044) —
+   * `sections` one tier down, and for the same reason: membership is a fact
+   * about each routine, but the sequence ("Project Management" before
+   * "Engineering") is neither alphabetical nor creation order, so it can
+   * only be stated. Listed bands render in this order; a category a routine
+   * names but this list omits sorts after, alphabetically; names matching
+   * no routine are ignored rather than rendering an empty band.
+   */
+  categories: z.array(z.string().min(1)).optional(),
 })
 
 export type RepoFile = z.infer<typeof repoFileSchema>

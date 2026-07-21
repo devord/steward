@@ -129,6 +129,7 @@ export const ptBR: Messages = {
   "routines.colSchedule": "Agendamento",
   "routines.colHost": "Host",
   "routines.colOwner": "Dono",
+  "routines.colCategory": "Categoria",
   "routines.colBoards": "Nos painéis",
   "routines.colActions": "Ações",
   "routines.count": "{n} rotinas",
@@ -320,6 +321,9 @@ export const ptBR: Messages = {
   "board.widgetsUnreachable":
     "Os widgets não carregaram — tentando de novo em instantes",
 
+  "band.count": "{count} ocultos",
+  "band.toggle": "Recolher ou expandir {name} em todos os painéis",
+
   "section.menu": "Opções da seção",
   "section.rename": "Renomear seção",
   "section.delete": "Excluir seção",
@@ -431,6 +435,10 @@ export const ptBR: Messages = {
   "dialog.samplePreviewTitle": "Exemplo de renderização de {name}",
   "dialog.name": "Nome",
   "dialog.namePlaceholder": "Radar de PRs",
+  "dialog.category": "Categoria",
+  "dialog.categoryPlaceholder": "Engenharia",
+  "dialog.categoryHint":
+    "Agrupa este widget em todos os painéis onde ele aparece. Deixe em branco para nenhum grupo.",
   "dialog.slug": "Slug",
   "dialog.slugTaken": "Já usado por outra rotina",
   "dialog.slugInvalid": "Letras minúsculas, números e hífens",

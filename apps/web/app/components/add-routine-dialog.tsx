@@ -7,7 +7,13 @@ import type {
   WidgetParam,
   WidgetSize,
 } from "@steward/schema"
-import { repoRefSchema, slugSchema, templateKind } from "@steward/schema"
+import {
+  CATEGORY_NAME_MAX,
+  repoRefSchema,
+  resolveCategory,
+  slugSchema,
+  templateKind,
+} from "@steward/schema"
 import { CheckIcon, ChevronRightIcon, SearchIcon } from "lucide-react"
 
 import { cn } from "~/lib/utils"
@@ -188,6 +194,7 @@ export function AddRoutineDialog({
   templates,
   columns,
   existingSlugs,
+  existingCategories = [],
   onAdd,
   editRoutine,
   onEdit,
@@ -203,6 +210,10 @@ export function AddRoutineDialog({
       widget can't be authored wider than the board. */
   columns: number
   existingSlugs: string[]
+  /** Bands already in use across this repo's pool (ADR-0044) — offered on the
+      category field so a repo converges on its own vocabulary instead of
+      sprouting "Eng" beside "Engineering". */
+  existingCategories?: string[]
   onAdd: (routine: Routine, size: WidgetSize) => void
   /** When set, the form edits this routine in place instead of adding one. */
   editRoutine?: Routine | null
@@ -232,6 +243,12 @@ export function AddRoutineDialog({
   const [query, setQuery] = useState("")
   const [name, setName] = useState("")
   const [nameEdited, setNameEdited] = useState(false)
+  // The widget's band (ADR-0044). Seeded from the picked template and
+  // materialized on submit, so the board can band from routines.yaml alone
+  // (which its loader awaits) rather than the streamed template read.
+  // Blank is the deliberate "no band" — the tri-state's explicit null.
+  const [category, setCategory] = useState("")
+  const [categoryEdited, setCategoryEdited] = useState(false)
   // The slug is derived (see `derivedSlug`), not stored — `slugOverride` holds
   // the value only once the user takes it over (Customize) or in edit mode.
   const [slugEdited, setSlugEdited] = useState(false)
@@ -345,6 +362,15 @@ export function AddRoutineDialog({
     }
   }, [isEdit, nameEdited, template, subject])
 
+  // The band follows the picked template until the user takes it over — the
+  // same derive-don't-solicit shape as the slug and the name (ADR-0040). In
+  // edit mode the seeding effect below has already resolved it, so a template
+  // swap must not silently refile an existing widget.
+  useEffect(() => {
+    if (isEdit || categoryEdited) return
+    setCategory(template?.widget.category ?? "")
+  }, [isEdit, categoryEdited, template])
+
   // Typeahead pool for repo pickers: the viewer's own repos via /repos.
   // Failures resolve to [] — the pickers accept typed owner/repo anyway.
   const suggestRepos = useCallback(
@@ -413,9 +439,18 @@ export function AddRoutineDialog({
     setScheduleEdited(true)
     setHost(editRoutine.host ?? "cloud")
     setParams(editRoutine.params ?? {})
-    const declared =
-      templatesRef.current.find((entry) => entry.id === editRoutine.template)
-        ?.widget.params ?? []
+    const editTemplate = templatesRef.current.find(
+      (entry) => entry.id === editRoutine.template,
+    )
+    // Resolve the band the way the board does (ADR-0044): the routine's own
+    // value wins, an explicit null shows as blank, and only silence falls
+    // through to the template. Marked as taken over so the template effect
+    // can't overwrite what's already been decided for this routine.
+    setCategory(
+      resolveCategory(editRoutine, editTemplate?.widget.category) ?? "",
+    )
+    setCategoryEdited(true)
+    const declared = editTemplate?.widget.params ?? []
     const paramRepos = new Set(
       declared
         .filter((param) => param.type === "repos")
@@ -440,6 +475,8 @@ export function AddRoutineDialog({
     setQuery("")
     setName("")
     setNameEdited(false)
+    setCategory("")
+    setCategoryEdited(false)
     setSlugEdited(false)
     setSlugOverride("")
     setSchedule(DEFAULT_SCHEDULE)
@@ -644,12 +681,26 @@ export function AddRoutineDialog({
     // dropped schedule, and empty lists stay out of the YAML). In edit mode
     // the slug is carried through unchanged and fields the form doesn't own
     // (runner, enabled) are preserved from the original.
+    // Materialize the band (ADR-0044) so the board never waits on the streamed
+    // template read to know its bands. A chosen name is written outright; a
+    // cleared field writes an explicit null *only* when the template would
+    // otherwise supply one, since with nothing to inherit, absence already
+    // says "no band" and a `category: null` line would be noise.
+    const chosenCategory = category.trim() || null
+    const inheritedCategory = template?.widget.category ?? null
+    const categoryField = chosenCategory
+      ? { category: chosenCategory }
+      : inheritedCategory
+        ? { category: null }
+        : {}
+
     const routine: Routine = {
       slug: isEdit ? editRoutine.slug : slug,
       name: name.trim(),
       // Freeform routines name the custom built-in — every routine has a
       // template (ADR-0022).
       template: templateId ?? CUSTOM_TEMPLATE,
+      ...categoryField,
       ...(manual ? {} : { schedule: effectiveSchedule.trim() }),
       // Cloud is the default (ADR-0012) — leave it out of the YAML.
       ...(host === "local" ? { host } : {}),
@@ -1053,6 +1104,41 @@ export function AddRoutineDialog({
                       )}
                     </p>
                   )}
+                </div>
+
+                {/* The widget's band (ADR-0044). Free text with the repo's
+                    existing bands offered via a native datalist — the same
+                    shape the board's section field uses, so a repo converges
+                    on one vocabulary. Clearing it is the deliberate "no
+                    band"; the caption says so, and says that the choice
+                    follows the routine onto every board it sits on. */}
+                <div className="grid gap-2">
+                  <Label htmlFor="routine-category">
+                    {t("dialog.category")}
+                  </Label>
+                  <Input
+                    id="routine-category"
+                    list="routine-category-options"
+                    value={category}
+                    maxLength={CATEGORY_NAME_MAX}
+                    onChange={(event) => {
+                      setCategoryEdited(true)
+                      setCategory(event.target.value)
+                    }}
+                    placeholder={t("dialog.categoryPlaceholder")}
+                    aria-describedby="routine-category-hint"
+                  />
+                  <datalist id="routine-category-options">
+                    {existingCategories.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                  <p
+                    id="routine-category-hint"
+                    className="text-xs text-muted-foreground"
+                  >
+                    {t("dialog.categoryHint")}
+                  </p>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2 sm:items-start">

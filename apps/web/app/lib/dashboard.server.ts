@@ -34,7 +34,7 @@ import {
 import { listDataRepos } from "./repos.server.ts"
 import { isStale } from "./routine-status.ts"
 import { invalidateSwr, swr, tokenKey } from "./swr.server.ts"
-import { discoverTemplates } from "./templates.server.ts"
+import { builtinCategories, discoverTemplates } from "./templates.server.ts"
 
 export interface ArtifactInfo {
   /** null → never published: render the placeholder card (ADR-0002). */
@@ -97,6 +97,18 @@ export interface DashboardBase {
   baseShas: { routines: string | null; dashboard: string | null }
   /** Raw file bodies, so the Sync panel diffs against exactly what's on main. */
   baseFiles: { routines: string | null; dashboard: string | null }
+  /**
+   * Band order for this repo's boards (`data/repo.yaml` `categories`,
+   * ADR-0044). Empty = no order authored: bands fall back to alphabetical.
+   */
+  categoryOrder: string[]
+  /**
+   * Band defaults by template id, from the bundled built-ins only — free and
+   * synchronous, so a board knows its bands at first paint (ADR-0044). Repo
+   * templates contribute theirs when the template stream lands, and
+   * materialized `category` values on routines make even that unnecessary.
+   */
+  templateCategories: Record<string, string>
 }
 
 export interface DashboardView extends DashboardBase {
@@ -573,7 +585,7 @@ export async function loadDashboardStructure(
   token: string,
   ref: BoardRef,
 ): Promise<DashboardBase> {
-  const [routinesRaw, dashboardRaw, dashboards] = await Promise.all([
+  const [routinesRaw, dashboardRaw, dashboards, repoFile] = await Promise.all([
     // Pin the ref so the loader and /sync read the *same* ETag-cache entry:
     // reading with no ref keys a separate entry that can hold a different
     // SHA for the same file, which surfaced as a false "base moved"
@@ -581,6 +593,14 @@ export async function loadDashboardStructure(
     getFile(token, ref.repo, "data/routines.yaml", "main"),
     getFile(token, ref.repo, dashboardPath(ref.dashboard), "main"),
     listDashboards(token, ref.repo),
+    // Band order (ADR-0044). The rail reads this same file for the repo's
+    // display name and section order, so this is an ETag hit in practice —
+    // but it is awaited rather than streamed because a band order arriving
+    // late would reorder the grid after paint. A missing or malformed file
+    // degrades to "no order authored", never a failed board.
+    getFile(token, ref.repo, REPO_FILE_PATH, "main")
+      .then((raw) => (raw ? parseRepoFile(raw.text) : null))
+      .catch(() => null),
   ])
 
   const routines = routinesRaw
@@ -606,6 +626,8 @@ export async function loadDashboardStructure(
       routines: routinesRaw?.text ?? null,
       dashboard: dashboardRaw?.text ?? null,
     },
+    categoryOrder: repoFile?.categories ?? [],
+    templateCategories: builtinCategories,
   }
 }
 

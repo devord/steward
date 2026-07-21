@@ -142,6 +142,7 @@ export const en = {
   "routines.colSchedule": "Schedule",
   "routines.colHost": "Host",
   "routines.colOwner": "Owner",
+  "routines.colCategory": "Category",
   "routines.colBoards": "On boards",
   "routines.colActions": "Actions",
   "routines.count": "{n} routines",
@@ -339,6 +340,9 @@ export const en = {
   "board.widgetsLoaded": "Widgets loaded",
   "board.widgetsUnreachable": "Widgets couldn't load — retrying shortly",
 
+  "band.count": "{count} hidden",
+  "band.toggle": "Collapse or expand {name} on every board",
+
   "section.menu": "Section options",
   "section.rename": "Rename section",
   "section.delete": "Delete section",
@@ -448,6 +452,10 @@ export const en = {
   "dialog.samplePreviewTitle": "{name} sample render",
   "dialog.name": "Name",
   "dialog.namePlaceholder": "PR Radar",
+  "dialog.category": "Category",
+  "dialog.categoryPlaceholder": "Engineering",
+  "dialog.categoryHint":
+    "Groups this widget on every board it appears on. Leave blank for no group.",
   "dialog.slug": "Slug",
   "dialog.slugTaken": "Already used by another routine",
   "dialog.slugInvalid": "Lowercase letters, numbers, and dashes",

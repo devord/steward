@@ -21,6 +21,8 @@ import {
 import {
   dashboardFileSchema,
   isManual,
+  orderCategories,
+  resolveCategory,
   routineHost,
   type Routine,
 } from "@steward/schema"
@@ -144,6 +146,21 @@ export function RoutinesView({
   // flash back to loading.
   const sidebarData = useOptimisticSidebar(sidebar)
   const templatesData = useStreamed(templates, `templates:${repo.full}`)
+  // Band defaults by template id (ADR-0044). Unlike the board, this surface
+  // has no awaited copy of the built-ins and doesn't need one — a table that
+  // fills a column in when the stream lands costs nothing; a grid that
+  // regroups after paint is the thing worth avoiding.
+  const templateCategories = useMemo(
+    () =>
+      Object.fromEntries(
+        (templatesData ?? []).flatMap((template) =>
+          template.widget.category
+            ? [[template.id, template.widget.category]]
+            : [],
+        ),
+      ),
+    [templatesData],
+  )
   // Read-only access to this pool's repo (ADR-0023): the active repo's push
   // permission rides the streamed sidebar (SidebarRepo.viewerCanPush) — chrome
   // data, off the paint path (ADR-0030), the same source repo-group-header
@@ -242,6 +259,26 @@ export function RoutinesView({
   }, [resolvedArtifacts, resolveAgainst])
 
   const effective = draft?.routines ?? base.routines
+
+  // Every band in use across the pool, for the category field's datalist —
+  // read from the draft so a band named a moment ago is offered on the next
+  // routine, before any sync.
+  const poolCategories = useMemo(
+    () =>
+      orderCategories(
+        new Set(
+          effective.routines.flatMap((routine) => {
+            const resolved = resolveCategory(
+              routine,
+              templateCategories[routine.template],
+            )
+            return resolved ? [resolved] : []
+          }),
+        ),
+        undefined,
+      ),
+    [effective, templateCategories],
+  )
   const committedSlugs = useMemo(
     () => new Set(base.routines.routines.map((r) => r.slug)),
     [base.routines],
@@ -382,6 +419,8 @@ export function RoutinesView({
           </p>
         </header>
 
+        {/* Bands already in use across the pool — the category field's
+            datalist, so the repo converges on one vocabulary. */}
         {effective.routines.length === 0 ? (
           <EmptyState onAdd={() => setAdding(true)} readOnly={readOnly} />
         ) : (
@@ -389,6 +428,7 @@ export function RoutinesView({
             routines={effective.routines}
             artifacts={resolvedArtifacts}
             boardsByRoutine={pool.boardsByRoutine}
+            templateCategories={templateCategories}
             dashboards={pool.dashboards}
             committedSlugs={committedSlugs}
             pending={pending}
@@ -433,6 +473,7 @@ export function RoutinesView({
         // board. The dialog still asks; the answer is dropped until placement.
         columns={4}
         existingSlugs={effective.routines.map((r) => r.slug)}
+        existingCategories={poolCategories}
         onAdd={addRoutine}
         editRoutine={editingRoutine}
         onEdit={editRoutine}
@@ -497,6 +538,7 @@ export function RoutinesTable({
   routines,
   artifacts,
   boardsByRoutine,
+  templateCategories = {},
   dashboards,
   committedSlugs,
   pending,
@@ -514,6 +556,10 @@ export function RoutinesTable({
   /** null while the artifact stream is in flight → skeleton state. */
   artifacts: Record<string, ArtifactInfo> | null
   boardsByRoutine: Record<string, string[]>
+  /** Band defaults by template id (ADR-0044), for the routines that inherit
+      one rather than carrying their own. Empty until templates stream in,
+      which only leaves inheriting rows briefly blank. */
+  templateCategories?: Record<string, string>
   dashboards: string[]
   committedSlugs: Set<string>
   /** In-flight run marks, keyed by slug (pending-runs.ts) — a routine here
@@ -579,6 +625,12 @@ export function RoutinesTable({
             </th>
             <th
               scope="col"
+              className="hidden py-1.5 pr-3 font-normal lg:table-cell"
+            >
+              {t("routines.colCategory")}
+            </th>
+            <th
+              scope="col"
               className="hidden py-1.5 pr-3 font-normal sm:table-cell"
             >
               {t("routines.colBoards")}
@@ -609,6 +661,10 @@ export function RoutinesTable({
                 owner={owner}
                 account={artifact?.claudeAccount ?? null}
                 committed={committedSlugs.has(routine.slug)}
+                category={resolveCategory(
+                  routine,
+                  templateCategories[routine.template],
+                )}
                 boards={boardsByRoutine[routine.slug] ?? []}
                 dashboards={dashboards}
                 repo={repo}
@@ -673,6 +729,7 @@ function RoutineRow({
   owner,
   account,
   committed,
+  category,
   boards,
   dashboards,
   repo,
@@ -697,6 +754,9 @@ function RoutineRow({
   /** On the server (synced), not just in the local draft — placement needs it,
       since the board loader only sees committed routines.yaml. */
   committed: boolean
+  /** Resolved band (ADR-0044) — the routine's own, else its template's. null
+      renders as an em dash: no band, which is a legible answer, not a gap. */
+  category: string | null
   boards: string[]
   dashboards: string[]
   repo: RepoInfo
@@ -796,6 +856,13 @@ function RoutineRow({
           {owner}
           {account != null && <span className="sr-only"> — {account}</span>}
         </a>
+      </td>
+
+      {/* The band this routine's widget lands in on every board (ADR-0044).
+          Read-only here — recategorizing goes through Edit, so the write path
+          stays the routines draft + Sync flow like every other field. */}
+      <td className="hidden py-2 pr-3 align-top whitespace-nowrap text-ink-dim lg:table-cell">
+        {category ?? <span className="text-ink-faint">—</span>}
       </td>
 
       <td className="hidden py-2 pr-3 align-top sm:table-cell">

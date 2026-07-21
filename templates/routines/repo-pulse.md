@@ -13,6 +13,10 @@ widget:
   # Instances slug themselves <first-repo>-pulse (ADR-0040); `kind` defaults
   # to `pulse` from the template id.
   subjectParam: repos
+  # Default band on every board (ADR-0044). A review queue and CI state is
+  # engineering-facing whatever repo it watches. A routine overrides it with
+  # its own `category:`, or opts out with `category: null`.
+  category: Engineering
   params:
     - key: repos
       label: Repositories to watch
