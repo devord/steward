@@ -138,11 +138,29 @@ media block:
     margin-top: 28px;
   }
   :root:not([data-steward-tile]) body {
-    padding: 40px 32px;
+    /* No bottom padding here — the spacer below carries it. */
+    padding: 40px 32px 0;
     overflow: auto;
+  }
+  /* A scroll container's own `padding-bottom` is not part of its scrollable
+     overflow in Chromium and WebKit, and `body` is both the padded box and
+     the scroller. Declared as padding, the page's bottom space silently
+     disappears the moment the content overflows: scroll to the end of a raw
+     page or a full-view lightbox and the footer sits flush against the frame
+     edge. Carrying it as a flex item instead makes it a real box that scrolls
+     with the content. Measured, not assumed — the artifact's own inline
+     `<script>`s are `body`'s last children, so the tempting
+     `body > :last-child { padding-bottom }` puts the space on a
+     `display: none` element and changes nothing. */
+  :root:not([data-steward-tile]) body::after {
+    content: "";
+    flex: 0 0 40px;
   }
 }
 ```
+
+Tiles keep their `12px 14px` padding and never scroll, so the spacer is
+page-only: on a tile it would spend a row of content on empty space.
 
 **One capped column is the single-block case, not the default.** The cap
 above keeps one ledger's trailing values near their labels; it is not a
@@ -493,6 +511,16 @@ li + li {
 }
 ```
 
+**Scope the ledger's own rules to its direct children** — `.thing > ul` and
+`.thing > ul > li`, never `.thing ul` / `.thing li`. Written as descendant
+selectors they read fine right up until a row gains a nested list (a
+Disclosure, a detail nest), at which point the inner list silently inherits
+the ledger's grid template, its gaps, its row padding and its hairlines. The
+grid template is the one that bites hardest: the inner list's columns are
+resolved against tracks meant for a different row shape, so a 12px glyph
+column can land at `0px` and the glyph overprints the text beside it. Nothing
+errors and the validator can't see it; it just looks subtly wrong.
+
 **Never let the value drift to the far edge.** A trailing value pinned to
 the frame's right while its label sits at the left forces an eye-trek
 across dead space, and the wider the surface the worse it reads. The `1fr`
@@ -698,6 +726,114 @@ not a rainbow of state pills: keep review-state icons in their semantic
 tone at low volume (a passing CI check is `ink-faint`, since healthy states
 stay quiet), and let the one orange marker carry the "act here" signal.
 
+### Disclosure (the rows behind a derived figure)
+
+A widget states derived figures — a bar's %, a readiness count, a verdict.
+The reader who wants to _check_ one needs the rows it was derived from, and
+that evidence is far too long to sit on the surface. A `<details>` under the
+figure carries it: **the summary line is real information even closed**, and
+opening it lists the underlying records.
+
+Use it when a figure is an aggregate someone will want to audit or reconcile.
+Not for content that simply didn't fit — that's the fit pass's job, and
+`+N more` is its honest answer.
+
+**Page tier only.** Tiles never scroll (ADR-0019), so a body that opens on a
+tile expands straight into the clipped region. This is the Meter's
+progressive-disclosure rule made concrete: hidden on tiles, shown on the
+raw/full page. Where the summary line was already visible content (a caption
+under a rail), keep it on tiles and drop only the affordance and the body.
+
+Native `<details>`, never a modal or a popover. It needs no JS and no
+same-origin, several can be open at once (which is the point when the reader
+is comparing rows), it is keyboard-operable for free, and it keeps the
+evidence in place instead of covering the figure that prompted the question.
+
+```css
+.disclose > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+}
+.disclose > summary::-webkit-details-marker {
+  display: none;
+}
+.disclose > summary:focus-visible {
+  outline: 1px solid var(--color-ink-dim);
+  outline-offset: 3px;
+}
+.chev {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  align-self: center;
+  color: var(--color-ink-faint);
+}
+.disclose[open] > summary .chev {
+  transform: rotate(90deg);
+}
+/* The one sanctioned motion: state feedback on a user toggle, not entrance
+   choreography. The no-motion rule governs what happens on load. */
+@media (prefers-reduced-motion: no-preference) {
+  .chev {
+    transition: transform 120ms ease-out;
+  }
+}
+.dsum {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-ink-dim);
+}
+.dbody {
+  display: grid;
+  gap: 14px 32px;
+  margin: 8px 0 2px 18px;
+}
+html[data-steward-tile] .disclose > .dbody,
+html[data-steward-tile] .disclose > summary .chev {
+  display: none;
+}
+html[data-steward-tile] .disclose > summary {
+  pointer-events: none;
+  cursor: default;
+}
+```
+
+```html
+<details class="disclose">
+  <summary>
+    <svg class="chev" aria-hidden="true"><!-- lucide chevron-right --></svg>
+    <span class="dsum">19 tickets · 6 landed · 2 in review · 8 planned</span>
+  </summary>
+  <div class="dbody">…</div>
+</details>
+```
+
+**The summary line earns its row.** `Show details` is a wasted line; a
+distribution (`19 tickets · 6 landed · 2 in review · 8 planned`) is the
+figure's composition, readable without opening anything. When some rows want
+attention, put the tally there too, so a problem is findable without opening
+every disclosure in the list.
+
+**One grid for the whole body, not one per group.** A grouped body is the
+one-grid rule's case exactly: put the tracks on `.dbody`, relay `subgrid`
+through group → list → row, and span group headings `1 / -1`. Sized
+per-group instead, each group resolves its own `max-content` and the
+trailing column steps right at every heading. The groups are headings
+_within one list_, so the columns line up across the whole of it — and every
+layer relays or none does, `.dgroup` included.
+
+**Group on the axis the parent leaves open.** A disclosure under a workstream
+has its workstream fixed, so it groups by milestone and each row carries
+state; the same component under a milestone groups by state and each row
+carries the workstream. Repeating the group's own axis on every row inside it
+is the redundancy to avoid — the row template differs, the component does not.
+
+The trailing-value rules apply in full: give the list a trailing slack column
+so its metadata column sits a saccade from the row, never at the frame edge.
+
 ### Link
 
 Anything that names an object living elsewhere, such as a PR, an issue, or
@@ -827,9 +963,13 @@ glyph, so a reader who learned one widget has learned them all:
 | gap (spec'd, not built)     | `circle-dashed`      | orange                                     |
 | carried over                | `redo-2`             | yellow                                     |
 | blocked                     | `octagon-x`          | red                                        |
+| record in doubt / to check  | `circle-alert`       | yellow                                     |
 
 Don't mint a new glyph when a listed state fits; when a genuinely new
 state needs one, pick the plainest lucide match and use it everywhere.
+Plainest, specifically: `git-compare-arrows` is six strokes and turns to
+mush at 12px, which is why "record in doubt" takes `circle-alert` rather
+than borrowing the drift glyph.
 
 ```html
 <span class="key"
