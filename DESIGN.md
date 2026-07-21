@@ -259,8 +259,45 @@ appears.)
   actions collapse into one ⋯ menu on coarse pointers so the title
   keeps its bar.
 - Dialogs: never override the base `max-w-*` (it is the phone edge
-  margin). Widen with `sm:max-w-*`; tall content gets
-  `max-h-[85svh]` + a scrollable middle.
+  margin). Widen with `sm:max-w-*`; tall content gets `max-h-[85svh]` + a
+  scrollable middle. Width follows **what the surface holds, not how big
+  the screen is** — no chrome surface scales on a viewport breakpoint
+  alone. Three tiers:
+  - **Task** — fixed, content-sized, does not scale. Confirms, renames,
+    create-forms (`sm:max-w-sm`/`md`/`lg`), the step picked from the
+    measure the fields actually need: a `steward-data-<login>` value must
+    fit its input. A task dialog is one focused job, and that job's
+    measure doesn't change when the monitor does. Stretching it to hold a
+    viewport fraction strands short fields in a wide empty box — space
+    _inside_ a dialog reads as a mistake where the same space outside it
+    reads as focus. Before reaching for the next width step, check the
+    **column split**: a row of fields divided evenly gives every field the
+    same measure regardless of what it holds, so the longest one truncates
+    while its neighbour sits half empty. Weight the tracks to the content
+    (`sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]` for the data repo's
+    owner/name pair) and the width problem usually turns out to have been
+    a distribution problem.
+  - **Content** — fluid to a cap, for a surface you scan or compare: the
+    routine picker (`sm:max-w-[720px]`), the sync diff (`sm:max-w-2xl`).
+    Here width buys information — one line per template description
+    instead of two, so more of the list fits a screen.
+  - **Viewer** — fluid to a large cap, where pixels _are_ the content:
+    the artifact lightbox and version browser
+    (`w-[calc(100%-3rem)] max-w-[1500px]`).
+
+  The board draws the same line one level up: `wide` opts a dashboard into
+  `max-w-[1800px]` because a board is content. The scrim is deliberately
+  plain (`bg-bg/70`, no blur), so a task dialog on a 27" monitor sits in a
+  lot of still-legible board and can _read_ small. That is the scrim's
+  job, not a width problem; widen the dialog and it looks worse on
+  approach, better only in a thumbnail.
+
+- Popovers carrying an identifier size to their content (`w-auto` plus a
+  `min-w`/`max-w` pair), not a fixed `w-*`: a repo slug that wraps
+  mid-name costs more than the ragged right edge a content-sized panel
+  gets. The floor holds the panel's other rows together, the cap stops a
+  pathological name from making a slab, and `overflow-wrap` on the title
+  covers whatever still exceeds it.
 - Radius: `--radius: 0.5rem`; cards `rounded-lg`, small controls tighter.
 
 ## Components

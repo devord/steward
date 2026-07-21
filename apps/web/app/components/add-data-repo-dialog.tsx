@@ -129,7 +129,13 @@ export function AddDataRepoDialog({
         onOpenChange(next)
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      {/* Task tier, sized to the measure its fields need (DESIGN.md), not to
+          the monitor: at `md` the Name input measured 201px against a 245px
+          `steward-data-<login>` value, so the identifier being created was
+          truncated in its own field. The 1:2 column split below is what
+          actually fixes that; `lg` is what buys the row real headroom
+          (311px vs 268px), which a 39-char GitHub login needs. */}
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("addRepo.title")}</DialogTitle>
           <DialogDescription>{t("addRepo.description")}</DialogDescription>
@@ -179,7 +185,13 @@ export function AddDataRepoDialog({
           </div>
 
           {mode === "create" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
+            // 1:2, not 50/50: the two fields hold very different measures.
+            // Owner is a login or org (`danielmoraes`, `Form-Factory`); Name is
+            // that same string plus the `steward-data-` prefix, so an even
+            // split starves the longer field by exactly the prefix. At 50/50
+            // the input measured 201px against a 245px value and truncated the
+            // repo name the user was creating.
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
               <div className="grid gap-2">
                 <Label>{t("addRepo.owner")}</Label>
                 <Select
