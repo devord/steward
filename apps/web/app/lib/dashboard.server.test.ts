@@ -90,9 +90,10 @@ describe("loadDashboard", () => {
       size: { cols: 2, rows: 2 },
     })
     // The data repo's daily-plan shadows the bundled built-in of the same
-    // name; repo-pulse arrives as a built-in with no repo seeded at all.
+    // name; the rest arrive as built-ins with no repo seeded at all.
     expect(view.templates.map((t) => [t.id, t.source])).toEqual([
       ["daily-plan", "repo"],
+      ["repo-narrative", "builtin"],
       ["repo-pulse", "builtin"],
     ])
     expect(view.artifacts["daily-plan"]).toEqual({
@@ -126,6 +127,7 @@ describe("loadDashboard", () => {
     // Built-ins ship in the bundle — they're there even with no config.
     expect(view.templates.map((t) => [t.id, t.source])).toEqual([
       ["daily-plan", "builtin"],
+      ["repo-narrative", "builtin"],
       ["repo-pulse", "builtin"],
     ])
     expect(view.baseShas).toEqual({ routines: null, dashboard: null })
