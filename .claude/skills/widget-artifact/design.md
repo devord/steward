@@ -1285,11 +1285,12 @@ every row — a window has far fewer people than it has rows.
 Four steps, each falling into the next:
 
 1. **The people registry**, when the routine sets `params.people` (an
-   `owner/repo:path` naming a committed JSON map, `login → { name, src }`,
-   whose `src` is a 48px `data:` URI). Read it from the mounted checkout;
-   fall back to `gh api repos/<owner>/<repo>/contents/<path>` (base64 in
-   `.content`) if the repo is a source the environment did not check out.
-   Keys are lowercased, so look up `login | tr '[:upper:]' '[:lower:]'`.
+   `owner/repo:path` naming a committed JSON map, `login → { name, src,
+jira? }`, whose `src` is a 48px `data:` URI). Read it from the mounted
+   checkout; fall back to `gh api repos/<owner>/<repo>/contents/<path>`
+   (base64 in `.content`) if the repo is a source the environment did not
+   check out. Keys are lowercased, so look up
+   `login | tr '[:upper:]' '[:lower:]'`.
    **This is the only step that cannot fail by environment** — no network,
    no host, no token scope. It is why the chain exists in this order.
 2. **`gh api users/<login>`** for the display name (`.name // .login`) of
@@ -1321,6 +1322,30 @@ provenance line (they need a `github:` or an `avatar:` upstream). Someone
 outside it — a bot, an outside contributor, a first-time committer — is
 expected and silent. An undifferentiated "avatars unavailable" caveat says
 nothing actionable and trains the reader to skip the line.
+
+#### When the person is a ticket assignee, not a login (ADR-0045)
+
+The chain above resolves a **GitHub login**. A widget built on Jira holds no
+login — it holds whatever the assignee field carried. Those widgets join on
+the assignee's **`accountId`**, matched against each registry entry's `jira`
+(compared as typed: accountIds are case-sensitive and opaque, unlike a login).
+Steps 2 and 3 have no equivalent here — there is no reachable
+`api.github.com` for a Jira identity — so the chain is two steps: registry,
+then the monogram.
+
+**Never join on the display name.** It is right there in the payload and it
+looks like the key. It is not: Jira and a Slack-sourced roster disagree about
+a third of a team — `Mark Cosca` is `Mark Dylan`, `Joshua Roxas` is
+`Joshua Gabriel`, `John Albert De Guzman Angeles` is `John Angeles`. A name
+join resolves most rows and silently drops the rest, and a dropped row is
+indistinguishable from a person who never uploaded a photo, so it fails
+without ever looking broken. The email is not a key either — the same person
+is `dylan@theformfactory.co`. Any identity space worth joining on has an
+opaque stable id; use it, and treat the readable field as a label.
+
+The `accountId` arrives free: it sits in the same assignee object a query
+already returns when it asks for the field at all, so this costs no extra
+call.
 
 **A registry that is set but unreadable is the loud case.** Registries live
 in private repos, and a run reaches one only if that repo is in the
