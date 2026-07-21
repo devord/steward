@@ -106,6 +106,25 @@ tokens only; a literal hex breaks every non-default theme.
   bar deliberately shows the `slug`, not the name: editing is the machine
   view — the bar is a drag handle over the routines.yaml entry being
   rearranged — so the identifier git cares about is the honest label there.
+- Ledger rows are the opposite exception: the routine pool, the templates
+  ledger, and the run history (`routines-view`, `routine-runs-view`) set
+  **`text-xs` on the `<table>` and nothing per cell** — one 13px line box for
+  every column. Two reasons, one structural and one about voice. Structurally,
+  cells only align across a row if they share a line-height; a 13px link inside
+  a 15px line box sits a few pixels low, and a table of those reads as drifting
+  columns. In voice, a ledger row is one line of machine output — `gh run list`,
+  not a list of headings — so the row name takes the same 13px as the data
+  beside it and earns its prominence from full `foreground` ink, medium weight,
+  and the state dot leading it, against `ink-dim` peers. This is the "mono
+  content rows" case the size rule above names: it is a data carrier at the
+  13px floor, not body copy. Layout follows the same discipline — exactly one
+  column is flexible (`w-full max-w-0` + `truncate` on the name, or on the
+  description in the templates ledger) and every other cell is
+  `whitespace-nowrap`. So the short fixed phrases never wrap (a state, a
+  schedule, a host) and a long name ellipsises instead of widening the table.
+  A cell holding a list of unknown length (boards, used-by) carries its own
+  `w-40`, since the flexible column starves every other column to min-content
+  and a wrapping list's min-content is one slug.
 - Artifacts set their own type, one register bolder than chrome since they
   are the content that glows: body/data ≥14px, section labels ≥12px, nothing
   below 12px (the contract lives in `docs/widget-standard.md` §6 and the

@@ -536,10 +536,18 @@ export function RoutinesTable({
     // the row wash gets breathing room around the leading state dot and the
     // trailing ⋯ instead of cutting flush against them.
     <div className="-mx-3 overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+      {/* One 13px line box for every cell (`text-xs` on the table, no per-cell
+          size overrides): a ledger row is one line, and cells only align across
+          columns if they share a line-height — a 13px link inside a 15px line
+          box sits a few pixels low, which read as drifting columns. The name
+          column is the single flexible one (`w-full max-w-0` + `truncate`): it
+          absorbs all slack so the data columns shrink-wrap to their content
+          instead of being squeezed into two- and three-line wraps, and it
+          ellipsises rather than widening the table. */}
+      <table className="w-full border-collapse text-xs">
         <thead>
-          <tr className="border-b border-border text-left align-bottom font-mono text-xs text-ink-faint">
-            <th scope="col" className="px-3 py-1.5 font-normal">
+          <tr className="border-b border-border text-left align-bottom font-mono whitespace-nowrap text-ink-faint">
+            <th scope="col" className="w-full px-3 py-1.5 font-normal">
               {t("routines.colName")}
             </th>
             <th scope="col" className="py-1.5 pr-3 font-normal">
@@ -626,9 +634,11 @@ const rowActionCls =
   "size-6 text-ink-faint opacity-0 transition-opacity group-hover:opacity-100 hover:bg-bg3 hover:text-foreground focus-visible:opacity-100 pointer-coarse:opacity-100"
 
 /** The dotted-underline cross-reference the ledgers and the routine detail
-    view (ADR-0033) share (boards, used-by, receipts). */
+    view (ADR-0033) share (boards, used-by, receipts). Every one of these is an
+    identifier — a slug, a login, a SHA — so it never breaks across lines; a
+    list of them wraps between its items, never inside `turtle-beach`. */
 export const rowLinkCls =
-  "font-mono text-xs text-ink-dim underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
+  "font-mono text-xs whitespace-nowrap text-ink-dim underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
 
 /**
  * A schedule, spoken before spelled: a preset cron reads as its picker phrase
@@ -696,7 +706,10 @@ function RoutineRow({
 }) {
   const t = useT()
   const cloud = routineHost(routine) === "cloud"
-  const nameCls = "truncate font-mono text-sm font-medium text-foreground"
+  // Row size is the ledger's 13px; the name earns its prominence from full
+  // `foreground` ink and medium weight against the row's `ink-dim` peers, plus
+  // the state dot leading it — not from a size step that widens every row.
+  const nameCls = "truncate font-mono font-medium text-foreground"
   const name = (
     <>
       {routine.name}
@@ -719,7 +732,7 @@ function RoutineRow({
           A committed routine's name links to its detail view — facts + run
           history (ADR-0033); a draft-only routine has no server-side page
           to land on, so its name stays inert until synced. */}
-      <td className="px-3 py-2 align-top">
+      <td className="w-full max-w-0 px-3 py-2 align-top">
         <div className="flex min-w-0 items-center gap-2">
           <StateDot status={status} />
           {committed ? (
@@ -741,11 +754,15 @@ function RoutineRow({
         </div>
       </td>
 
-      <td className="py-2 pr-3 align-top">
+      {/* State and schedule are short, fixed phrases — "Ran 1h ago", "Every 4
+          hours". Left to wrap they became the tallest thing in the row for no
+          information gained, so they hold one line and the name column gives
+          up the width. */}
+      <td className="py-2 pr-3 align-top whitespace-nowrap">
         <StateLabel status={status} lastRunAt={lastRunAt} now={now} />
       </td>
 
-      <td className="hidden py-2 pr-3 align-top font-mono text-xs text-ink-dim md:table-cell">
+      <td className="hidden py-2 pr-3 align-top font-mono whitespace-nowrap text-ink-dim md:table-cell">
         {isManual(routine) ? (
           <span className="text-ink-faint">{t("routines.manualDash")}</span>
         ) : routine.schedule != null ? (
@@ -753,11 +770,11 @@ function RoutineRow({
         ) : null}
       </td>
 
-      <td className="hidden py-2 pr-3 align-top font-mono text-xs text-ink-dim md:table-cell">
+      <td className="hidden py-2 pr-3 align-top font-mono whitespace-nowrap text-ink-dim md:table-cell">
         {cloud ? "cloud" : "local"}
       </td>
 
-      <td className="hidden py-2 pr-3 align-top md:table-cell">
+      <td className="hidden py-2 pr-3 align-top whitespace-nowrap md:table-cell">
         {/* The owning Claude account (ADR-0029) rides the login as the native
             title tooltip plus an sr-only echo — the slug idiom. An email is
             rarely the scan target and it's the ledger's only PII, so the cell
@@ -876,7 +893,7 @@ function dotTone(status: WidgetStatus): string {
  * tone to report, and they should recede.
  */
 const chipBase =
-  "inline-flex items-center rounded px-1.5 py-0.5 font-mono text-xs leading-none"
+  "inline-flex items-center rounded px-1.5 py-0.5 font-mono text-xs leading-none whitespace-nowrap"
 
 export function StateLabel({
   status,
@@ -952,8 +969,15 @@ function BoardsCell({
       </span>
     )
   }
+  // The declared width sits on the list, not the column: once the name column
+  // claims the slack with `w-full`, the table hands every other column its
+  // min-content and ignores a `<th>` width — and a wrapping list's min-content
+  // is one slug, which stacks a multi-board routine one line per board. A width
+  // here is the cell's min-content, so the column can't be starved below it.
+  // Roughly two typical slugs; past that the list wraps in place instead of widening
+  // the table.
   return (
-    <span className="flex flex-wrap gap-x-2 gap-y-0.5">
+    <span className="flex w-40 flex-wrap gap-x-2 gap-y-0.5">
       {boards.map((slug) => (
         <Link
           key={slug}
@@ -1044,15 +1068,20 @@ export function TemplatesSection({
           the content column while the edge cells pad the text back to the
           page rail. */}
       <div className="-mx-3 overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
+        {/* Same ledger contract as the pool table above: one 13px line box for
+            every cell, and one flexible column. Here it's the description —
+            the only genuinely variable-length string — so the source, schedule,
+            and used-by columns stop being squeezed into three-line wraps and
+            the last column stops being pushed past the container edge. */}
+        <table className="w-full border-collapse text-xs">
           <thead>
-            <tr className="border-b border-border text-left align-bottom font-mono text-xs text-ink-faint">
+            <tr className="border-b border-border text-left align-bottom font-mono whitespace-nowrap text-ink-faint">
               <th scope="col" className="px-3 py-1.5 font-normal">
                 {t("templates.colTemplate")}
               </th>
               <th
                 scope="col"
-                className="hidden py-1.5 pr-3 font-normal md:table-cell"
+                className="hidden w-full py-1.5 pr-3 font-normal md:table-cell"
               >
                 {t("templates.colDescription")}
               </th>
@@ -1127,7 +1156,7 @@ function TemplateRow({
   onUse: () => void
 }) {
   const t = useT()
-  const nameCls = "truncate font-mono text-sm font-medium text-foreground"
+  const nameCls = "truncate font-mono font-medium text-foreground"
   const name = (
     <>
       {template.name}
@@ -1144,7 +1173,7 @@ function TemplateRow({
           way a routine's name links to its detail view; a built-in ships in
           the app bundle and has no file in the viewer's repos, so its name
           stays inert. */}
-      <td className="px-3 py-2 align-top">
+      <td className="px-3 py-2 align-top whitespace-nowrap">
         {template.source === "repo" ? (
           <a
             href={templateFileUrl(repo.full, template.id)}
@@ -1166,16 +1195,19 @@ function TemplateRow({
         )}
       </td>
 
-      <td className="hidden max-w-96 py-2 pr-3 align-top text-ink-dim md:table-cell">
+      {/* The flexible column: `max-w-0` lets it shrink so the ellipsis does the
+          work, `w-full` hands it every pixel the fixed columns don't claim. */}
+      <td className="hidden w-full max-w-0 py-2 pr-3 align-top text-ink-dim md:table-cell">
         <div className="truncate">{template.description}</div>
       </td>
 
-      <td className="py-2 pr-3 align-top">
-        <span className="inline-flex flex-wrap items-center gap-1.5">
+      {/* The source is a repo name — an identifier, never broken across lines. */}
+      <td className="py-2 pr-3 align-top whitespace-nowrap">
+        <span className="inline-flex items-center gap-1.5">
           {template.source === "builtin" ? (
             <TemplateTag>{t("templates.builtin")}</TemplateTag>
           ) : (
-            <span className="font-mono text-xs text-ink-dim">{repo.name}</span>
+            <span className="font-mono text-ink-dim">{repo.name}</span>
           )}
           {template.shadows && (
             <TemplateTag>{t("templates.shadows")}</TemplateTag>
@@ -1183,7 +1215,7 @@ function TemplateRow({
         </span>
       </td>
 
-      <td className="hidden py-2 pr-3 align-top font-mono text-xs text-ink-dim md:table-cell">
+      <td className="hidden py-2 pr-3 align-top font-mono whitespace-nowrap text-ink-dim md:table-cell">
         {template.widget.schedule != null ? (
           <ScheduleText schedule={template.widget.schedule} />
         ) : (
@@ -1203,8 +1235,9 @@ function TemplateRow({
           </span>
         ) : (
           // Anchors to the pool rows above — the same dotted cross-reference
-          // idiom as the boards cell, not inert text (one page, one graph).
-          <span className="flex flex-wrap gap-x-2 gap-y-0.5">
+          // idiom as the boards cell — including its declared width, for the
+          // same min-content reason — not inert text (one page, one graph).
+          <span className="flex w-40 flex-wrap gap-x-2 gap-y-0.5">
             {usedBy.map((slug) => (
               <a key={slug} href={`#routine-${slug}`} className={rowLinkCls}>
                 {slug}
