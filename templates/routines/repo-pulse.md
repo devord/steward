@@ -224,3 +224,12 @@ Size behavior:
 Degrade gracefully: a repo that can't be read gets an "unreachable" row, not
 an error; no watched repos configured → an empty state telling the user to
 set the routine's repositories.
+
+Carry a context block (`widget-artifact` § The context block): every PR the
+tile trimmed to `+N more`, why each blocked one is blocked (failing check,
+requested reviewer, merge conflict), the age outliers, and any repo that
+read as unreachable. Name PR numbers and logins so they can be acted on
+without a lookup. Keep it viewer-neutral like the render — the block is
+copied by whoever is looking, and the run doesn't know who that is. Close
+with `## Ask me about` — what to review first, which PRs have gone stale
+enough to close, and what a repeatedly-failing check is telling us.

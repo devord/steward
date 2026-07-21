@@ -113,3 +113,10 @@ gruvbox tokens, breakpoints, generated-at meta + footer). Size behavior:
 
 Degrade gracefully: with no reachable data sources, still publish a plan
 derived from the instructions alone, with an explicit "no live data" note.
+
+Carry a context block (`widget-artifact` § The context block): the full
+carry-over list rather than the capped five, what each priority is waiting
+on, the conflicts and overruns the grid could only show as geometry, and
+which sources were unreachable this run. Close with `## Ask me about` —
+resequencing the day, what to drop when the blocks don't fit, and what a
+carry-over keeps slipping past.

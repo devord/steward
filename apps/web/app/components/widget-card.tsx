@@ -7,6 +7,7 @@ import {
   Check,
   Copy,
   Maximize2,
+  MessageSquare,
   MoreHorizontal,
   Pencil,
   Power,
@@ -33,7 +34,12 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { cn } from "~/lib/utils"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
+import {
+  artifactContextMessage,
+  extractArtifactContext,
+} from "../lib/artifact-context.ts"
 import { useT } from "../lib/i18n.tsx"
+import { ChatAction } from "./chat-action.tsx"
 import {
   claudeRoutineUrl,
   setupCommands,
@@ -175,6 +181,13 @@ export function WidgetCard({
           )
         : null,
     [artifact?.html, theme, login],
+  )
+  // The briefing the artifact carries for Claude (ADR-0043). Read straight
+  // out of the published HTML the host already holds on its way to srcDoc —
+  // there is no channel into the sandbox, and this needs none.
+  const context = useMemo(
+    () => (artifact?.html ? extractArtifactContext(artifact.html) : null),
+    [artifact?.html],
   )
   const lastRunAt = artifact?.lastRunAt ?? null
   // Manual routines have no cadence to be stale against (ADR-0016).
@@ -354,6 +367,17 @@ export function WidgetCard({
                   <Pencil />
                 </Button>
               )}
+              {/* Take it to Claude. Sits beside expand because both are
+                  "look closer" moves — one zooms the render, one hands the
+                  data over. Absent when the artifact carries no briefing. */}
+              {context && (
+                <ChatAction
+                  name={routine.name}
+                  ranLabel={ranLabel}
+                  context={context}
+                  className={cn(BAR_ACTION, "opacity-0")}
+                />
+              )}
               {/* Peek at full size. Recedes until the card is hovered/focused
                 (fine pointers); on touch it lives in the ⋯ menu below. The
                 reserved slot means no layout shift on reveal. */}
@@ -369,15 +393,16 @@ export function WidgetCard({
                   <Maximize2 />
                 </Button>
               )}
-              {/* Touch: the three hover-revealed icons above collapse into
-                  one ⋯ menu so the title keeps its bar (BAR_ACTION hides
-                  them on coarse pointers, this trigger only shows there). */}
+              {/* Touch: the hover-revealed icons above collapse into one ⋯
+                  menu so the title keeps its bar (BAR_ACTION hides them on
+                  coarse pointers, this trigger only shows there). */}
               <WidgetTouchMenu
                 routine={routine}
                 dataRepo={updateEligible ? dataRepo : undefined}
                 onEdit={onEdit}
                 onExpand={html ? () => setExpanded(true) : undefined}
                 onFired={onFired}
+                chat={context ? { context, ranLabel } : undefined}
               />
               <span className="flex items-center gap-1.5">
                 {running ? (
@@ -478,6 +503,7 @@ export function WidgetCard({
           html={fullHtml}
           ranLabel={ranLabel}
           stale={stale}
+          context={context}
         />
       )}
     </>
@@ -666,6 +692,7 @@ function WidgetTouchMenu({
   onEdit,
   onExpand,
   onFired,
+  chat,
 }: {
   routine: Routine
   /** Present only when the Update action is eligible — mirrors UpdateAction's
@@ -674,8 +701,11 @@ function WidgetTouchMenu({
   onEdit?: () => void
   onExpand?: () => void
   onFired?: () => void
+  /** Present only when the artifact carries a briefing (ADR-0043). */
+  chat?: { context: string; ranLabel: string }
 }) {
-  if (dataRepo == null && onEdit == null && onExpand == null) return null
+  if (dataRepo == null && onEdit == null && onExpand == null && chat == null)
+    return null
   // The fetcher-bearing variant mounts only with a repo to fire against —
   // standalone renders (tests, previews) have no data router, and useFetcher
   // throws outside one. The split keeps the hook unconditional per component.
@@ -686,9 +716,15 @@ function WidgetTouchMenu({
       onEdit={onEdit}
       onExpand={onExpand}
       onFired={onFired}
+      chat={chat}
     />
   ) : (
-    <TouchMenuFrame routine={routine} onEdit={onEdit} onExpand={onExpand} />
+    <TouchMenuFrame
+      routine={routine}
+      onEdit={onEdit}
+      onExpand={onExpand}
+      chat={chat}
+    />
   )
 }
 
@@ -703,12 +739,14 @@ function TouchMenuWithUpdate({
   onEdit,
   onExpand,
   onFired,
+  chat,
 }: {
   routine: Routine
   dataRepo: string
   onEdit?: () => void
   onExpand?: () => void
   onFired?: () => void
+  chat?: { context: string; ranLabel: string }
 }) {
   const t = useT()
   const local = routineHost(routine) === "local"
@@ -720,6 +758,7 @@ function TouchMenuWithUpdate({
         routine={routine}
         onEdit={onEdit}
         onExpand={onExpand}
+        chat={chat}
         updateItem={
           <DropdownMenuItem
             disabled={busy}
@@ -749,11 +788,13 @@ function TouchMenuFrame({
   onEdit,
   onExpand,
   updateItem,
+  chat,
 }: {
   routine: Routine
   onEdit?: () => void
   onExpand?: () => void
   updateItem?: React.ReactNode
+  chat?: { context: string; ranLabel: string }
 }) {
   const t = useT()
   return (
@@ -776,6 +817,24 @@ function TouchMenuFrame({
           <DropdownMenuItem className="min-h-11" onClick={onEdit}>
             <Pencil />
             {t("widget.editShort")}
+          </DropdownMenuItem>
+        )}
+        {/* No copied-confirmation here the way the icon button has one: the
+            menu closes on select, so there is nothing left to confirm on. */}
+        {chat && (
+          <DropdownMenuItem
+            className="min-h-11"
+            onClick={() =>
+              void navigator.clipboard.writeText(
+                artifactContextMessage(chat.context, {
+                  name: routine.name,
+                  ranLabel: chat.ranLabel,
+                }),
+              )
+            }
+          >
+            <MessageSquare />
+            {t("widget.chatShort")}
           </DropdownMenuItem>
         )}
         {onExpand && (

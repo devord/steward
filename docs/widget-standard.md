@@ -109,6 +109,17 @@ An artifact MUST:
    `docs/samples/`. These double as the built-in templates' picker previews
    (ADR-0037), keyed to the template by basename, so a repo template can ship
    its own preview as a `templates/routines/<id>.sample.html` sibling.
+9. **Carry a briefing for Claude** (ADR-0043) — a SHOULD, not a MUST. A tile
+   is a compressed view: it shows 15 of 61 rows and a bar standing in for 200
+   tickets. Embed the fuller story as markdown in an inert
+   `<script type="text/markdown" id="steward-context">`, and the board grows a
+   Chat-with-Claude button that copies it, paste-ready. The block is
+   **richer than the render**: what the tile cropped, the caveats the run hit,
+   and a closing `## Ask me about` naming the questions this widget invites.
+   Browsers neither execute nor render an unknown script type, so it costs no
+   layout and no request; only `</script>` terminates it, so a briefing that
+   quotes markup escapes it as `<\/script>`. Artifacts without a block keep
+   working — they just show no button.
 
 ## Person-relative content (ADR-0039)
 
