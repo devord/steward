@@ -9,8 +9,8 @@
      against the injected window.__STEWARD_VIEWER__, leaving the neutral
      render whenever no viewer is injected. Shows the avatar key, links,
      Jira tickets, PR size, the queue table's per-state icon columns
-     (review / CI / needs-you — icons on tiles, icon + word from the wide
-     tier), the stat tier, and one grid whose columns align across every
+     (review / CI — icons on tiles, icon + word from the wide tier), the
+     stat tier, and one grid whose columns align across every
      section (nested subgrid), so no state ever drifts between groups. -->
 <html lang="en">
   <head>
@@ -86,7 +86,7 @@
          down the artifact — no section sizes its own table, so nothing
          drifts between groups. Every state gets its own column (the queue
          table — never several states in one cell):
-         avatar · title · review · ci · marker · age on tiles; ticket and
+         avatar · title · review · ci · age on tiles; ticket and
          size join at ≥700px. */
       /* Sections breathe more than rows (rows run 4–6px, sections 14px), and
          the separation is a `gap` on every element that stacks sections —
@@ -105,7 +105,7 @@
       main {
         grid-template-columns:
           max-content minmax(0, 1fr)
-          max-content max-content max-content max-content;
+          max-content max-content max-content;
         /* The subgrid columns are laid out by the grid, not by the rhythm, so
            the column gap keeps its own (tighter) value. */
         column-gap: 12px;
@@ -177,7 +177,7 @@
         grid-column: 6;
       }
       .head .h-age {
-        grid-column: 8;
+        grid-column: 7;
         text-align: right;
       }
 
@@ -311,11 +311,8 @@
       .ci {
         grid-column: 4;
       }
-      .mark {
-        grid-column: 5;
-      }
       .age {
-        grid-column: 6;
+        grid-column: 5;
         font-family: var(--font-mono);
         font-size: 12px;
         color: var(--color-ink-faint);
@@ -358,17 +355,6 @@
         color: var(--color-red);
         border-color: color-mix(in srgb, var(--color-red) 40%, transparent);
         background: color-mix(in srgb, var(--color-red) 10%, transparent);
-      }
-
-      /* The viewer-relative "needs you" marker — 12px mono orange, added
-         by the enhancer into the marker column of rows requesting the
-         signed-in viewer. Never present in the neutral markup, but its
-         column is, so nothing shifts when it lands. */
-      .needs-you {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--color-orange);
-        white-space: nowrap;
       }
 
       a {
@@ -471,8 +457,7 @@
         main {
           grid-template-columns:
             max-content minmax(0, 1fr)
-            max-content max-content max-content max-content max-content
-            max-content;
+            max-content max-content max-content max-content max-content;
         }
         .head {
           display: grid;
@@ -487,11 +472,8 @@
         .ci {
           grid-column: 6;
         }
-        .mark {
-          grid-column: 7;
-        }
         .age {
-          grid-column: 8;
+          grid-column: 7;
         }
         /* The state words return beside their icons. */
         .st .word {
@@ -1370,23 +1352,13 @@
               g.sec.hidden = g.rows.length === 0
             })
 
-            // Mark needs-you rows: an orange "needs you" tag in the marker
-            // column (reserved in the grid, so nothing shifts), and a
-            // yellow age once the wait passes three days (a big number is
-            // not the alarm — old AND waiting on you is).
+            // The "Needs your review" heading already says the queue is
+            // the viewer's, so no per-row "needs you" tag repeats it (the
+            // marker belongs to the several-repos shape, where sections are
+            // per-repo and carry no ownership). Just tint the age yellow once
+            // the wait passes three days — a big number is not the alarm; old
+            // AND waiting on you is.
             needs.forEach(function (li) {
-              var mark = li.querySelector(".mark")
-              if (!mark) {
-                mark = document.createElement("span")
-                mark.className = "st mark"
-                li.appendChild(mark)
-              }
-              if (!mark.querySelector(".needs-you")) {
-                var tag = document.createElement("span")
-                tag.className = "needs-you"
-                tag.textContent = "needs you"
-                mark.appendChild(tag)
-              }
               var age = li.querySelector(".age")
               if (age && now - createdOf(li) > 3 * DAY)
                 age.setAttribute("data-stale", "")

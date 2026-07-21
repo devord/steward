@@ -178,10 +178,15 @@ rel="noopener"`), so the picture is the click-through to the person.
   tone. **CI** is a compact icon when the PR has checks (`check`
   passing ink-faint, `circle-x` failing red, `clock` pending ink-dim);
   empty when it has none. **Marker** is the `needs you` slot (12px mono
-  orange), viewer-relative, added by the enhancer to rows requesting
-  the signed-in viewer (in the several-repos shape, where no section
-  carries ownership); it is never in the published markup, but its
-  column is, so nothing shifts when it lands.
+  orange), viewer-relative, added by the enhancer to rows requesting the
+  signed-in viewer — **only in the several-repos shape**, where the
+  sections are per-repo and carry no ownership. In the one-repo shape the
+  enhancer's own `Needs your review` heading already says the queue is
+  the viewer's, so a per-row `needs you` on every row only repeats the
+  header in the accent color; drop the marker _and_ its column there
+  (avatar · title · review · ci · age). Where the column does exist it is
+  never in the published markup, but its column is, so nothing shifts
+  when it lands.
 - **Age** in 12px mono. The enhancer tints it yellow only when the
   wait is on the viewer (a needs-you row older than 3 days). A big
   number alone is not an alarm, and the neutral render carries no
@@ -193,16 +198,18 @@ every state icon and age sits on the same vertical down the page. A
 per-`<ul>` grid gives each section its own column widths, which is the
 misaligned-state smell. Ticket and size are wide-tier columns: reveal
 them at 3-column widths and up (`min-width: 700px`) and in the full
-view; 1–2-column tiles keep avatar · title · review · ci · marker · age.
+view; 1–2-column tiles keep avatar · title · review · ci · age (plus
+the several-repos-only marker column between ci and age).
 
 **The enhancer.** Embed one self-contained script (widget-artifact's
 person-relative snippet) that runs on `DOMContentLoaded`: read
 `window.__STEWARD_VIEWER__?.login`, and if it matches any row's
 `data-author` or `data-reviewers`, re-bucket the existing `<li>` nodes
 into `Needs your review` / `Yours` / `Open`, swap the section headings
-and counts, re-sort by actionability, add the `needs you` markers and
-the needs-you age-yellow, and rewrite the 1×1 KPI to the viewer's review
-count. Move nodes _within_ the one `main` grid so the subgrid alignment
+and counts, re-sort by actionability, apply the needs-you age-yellow
+(and, in the several-repos shape only, the `needs you` markers — see
+Marker above), and rewrite the 1×1 KPI to the viewer's review count.
+Move nodes _within_ the one `main` grid so the subgrid alignment
 survives; don't rebuild the grid. Wrap it in `try`/`catch` and bail on
 no match: the neutral render is the floor. Register it before the
 fit-to-height pass (or re-fit at its end) so fitting measures the

@@ -803,6 +803,11 @@ The queue's glance answer is the **marker column** (needs you / blocked),
 not a rainbow of state pills: keep review-state icons in their semantic
 tone at low volume (a passing CI check is `ink-faint`, since healthy states
 stay quiet), and let the one orange marker carry the "act here" signal.
+A marker earns its column only where it **varies** row to row: if the
+section heading already asserts what the marker would say (a `Needs your
+review` group whose every row is "needs you"), the marker is the heading
+restated in the accent color on each line — drop it and its column there,
+and let the heading carry the signal.
 
 **A recommendation list is a queue, not a ledger.** The archetype reaches
 past PRs to anything that is _findings plus per-finding qualifiers_ — a
