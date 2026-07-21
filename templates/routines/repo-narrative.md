@@ -31,6 +31,13 @@ widget:
       label: Jira base URL
       placeholder: https://acme.atlassian.net
       hint: Ticket keys found in titles link into this site
+    - key: people
+      label: People registry
+      placeholder: owner/repo:data/avatars-48.json
+      hint: >-
+        Optional. A committed JSON map, login to name and 48px data URI,
+        for real faces on the rail. Needs the repo in the routine's repos
+        list; without it faces fall back to GitHub, then to initials
 ---
 
 # Repo narrative
@@ -131,42 +138,22 @@ already gathered, plus a count of everyone else:
   it puts a person's name on a commitment they never made, in front of the
   executive who would hold them to it.
 
-Then resolve **display name and avatar in one authenticated call** per
-unique person, and reuse both everywhere that person appears:
+Then resolve a **display name and a face** per unique person, and reuse both
+everywhere that person appears. Follow the design language's resolution
+chain unchanged (`widget-artifact` design.md · Avatar · Where the face comes
+from): `params.people` registry first, then `gh api users/<login>` for the
+name, then a best-effort image fetch, then the initial circle.
 
-```bash
-# Tab-separated, and split on tab ONLY: display names contain spaces
-# ("Daniel Moraes"), so a bare `read -r name url` puts the surname in the
-# URL and every fetch fails.
-IFS=$'\t' read -r name avatar_url < <(
-  gh api "users/$login" -q '[.name // .login, .avatar_url] | @tsv'
-) || { name=$login; avatar_url=; }
-```
+The name matters twice over here — it is the hover label on a face _and_
+the name this artifact says in prose, per the third-person rule below — so
+a registry that carries `Daniel Moraes` beats a `.name` field that is null
+for most bots and stale for everyone else.
 
-`.name` falls back to the login when null or empty (most bots). It is the
-one name this artifact uses — on hover over a face and in prose alike, per
-the third-person rule below.
-
-The avatar is inlined as a data URI, since widget-standard rule 1 forbids
-images by URL. Fetch it **through `gh`, not bare curl**:
-
-```bash
-for attempt in 1 2; do
-  # Authenticated (5000 req/hr). avatar_url always carries ?v=4, so &s=48
-  # appends cleanly.
-  [ -n "$avatar_url" ] && gh api "${avatar_url}&s=48" > "$tmp/$login" 2>/dev/null && break
-  # Unauthenticated, rate-limited by IP — the backstop, never the default.
-  curl -fsSL "https://github.com/$login.png?size=48" -o "$tmp/$login" && break
-  sleep 2
-done
-```
-
-`https://github.com/<login>.png` is throttled per IP, so on a busy day it
-starts failing and rows silently drop to initials; `gh api` carries the
-routine's token and shares the API's hourly budget, which is why it goes
-first. Verify the result is an image (`file -b --mime-type`), base64 it
-into a `data:<mime>;base64,…` URI, and only after **both** paths fail
-twice let a person degrade to the initial fallback — never a broken image.
+The face rail is the reason to bother with the registry at all. Both halves
+of this artifact read down a human spine by design, and the image fetch it
+used to lead with reaches `avatars.githubusercontent.com`, a host a
+scheduled run cannot get to — so the weekly run, the one an executive
+actually reads, was the run that lost every face (ADR-0044).
 
 A window has far fewer distinct people than it has PRs. Resolve once per
 person and reuse; never per row, and never per repo.

@@ -23,6 +23,13 @@ widget:
       label: Jira base URL
       placeholder: https://acme.atlassian.net
       hint: Ticket keys found in PR titles link into this site
+    - key: people
+      label: People registry
+      placeholder: owner/repo:data/avatars-48.json
+      hint: >-
+        Optional. A committed JSON map, login to name and 48px data URI,
+        for real faces on rows. Needs the repo in the routine's repos list;
+        without it faces fall back to GitHub, then to initials
 ---
 
 # Repo pulse
@@ -68,51 +75,19 @@ For each watched repo, via `gh` (preferred) or the GitHub API:
    "mine" / "needs me" judgement is deferred to render time, not
    decided here.
 
-   Then, for each unique author, resolve **display name and avatar in
-   one authenticated call** and reuse both on every row by that author:
+   Then resolve a **display name and a face** for each unique author,
+   and reuse both on every row by that author. Follow the design
+   language's resolution chain unchanged (`widget-artifact` design.md ·
+   Avatar · Where the face comes from): `params.people` registry first,
+   then `gh api users/<login>` for the name, then a best-effort image
+   fetch, then the initial circle.
 
-   ```bash
-   # Tab-separated, and split on tab ONLY: display names contain spaces
-   # ("Daniel Moraes"), so a bare `read -r name url` puts the surname in
-   # the URL and every fetch fails.
-   IFS=$'\t' read -r name avatar_url < <(
-     gh api "users/$author" -q '[.name // .login, .avatar_url] | @tsv'
-   ) || { name=$author; avatar_url=; }
-   ```
-
-   - **Display name**: `.name`, falling back to the login when null or
-     empty (most bots). This is the avatar's hover label, so a row
-     answers _who_ with a real name (`Daniel Moraes`), not a handle
-     (`danielmoraes`).
-   - **Avatar**: inline it as a data URI so the artifact stays
-     self-contained (widget-standard rule 1, no images by URL). Fetch it
-     **through `gh`, not bare curl**:
-
-     ```bash
-     for attempt in 1 2; do
-       # Authenticated (5000 req/hr). avatar_url always carries ?v=4,
-       # so &s=48 appends cleanly.
-       [ -n "$avatar_url" ] && gh api "${avatar_url}&s=48" > "$tmp/$author" 2>/dev/null && break
-       # Unauthenticated fallback; rate-limited by IP, hence second.
-       curl -fsSL "https://github.com/$author.png?size=48" -o "$tmp/$author" && break
-       sleep 2
-     done
-     ```
-
-     **Why the order matters.** `https://github.com/<login>.png` is
-     unauthenticated and rate-limited **by IP**, so on a busy day it
-     starts failing and every row silently drops to an initial — runs
-     five seconds apart have landed on opposite outcomes. `gh api`
-     carries the routine's token and shares the API's 5000/hr budget, so
-     it is the reliable path; curl is the backstop, not the default.
-
-     Verify it is an image (`file -b --mime-type`) and base64 it into a
-     `data:<mime>;base64,…` URI. Only after **both** paths fail twice
-     does the author degrade to the initial fallback, never a broken
-     image. Avatars are the widget's human anchor — a queue of initials
-     is a materially worse read, so treat a fetch failure as a defect
-     worth reporting in the artifact's head comment (naming the failing
-     step), not a routine outcome.
+   The registry is the step that matters here. A PR queue is a column of
+   faces, and the fetch it used to lead with reaches
+   `avatars.githubusercontent.com` — a host a scheduled run cannot get
+   to, so every row degraded to an initial on exactly the runs nobody
+   was watching (ADR-0044). Set `params.people` and the faces come from
+   a file instead.
 
 2. Issues opened since the last run (previous artifact's generated-at time,
    else the last 24h).
