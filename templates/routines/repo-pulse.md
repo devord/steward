@@ -160,14 +160,21 @@ rel="noopener"`) — the picture is the click-through to the person.
   `--color-red`, each mixed toward `--color-ink` so it reads as the
   familiar diffstat and stays calm, never the alarm-red of a failing
   pill.
-- **State**: a pill only when the state demands action
-  (`changes requested` bad, `approved` ok, `draft` neutral — and dim
-  the whole draft row; plain `review required` needs no pill), a CI
-  dot when the PR has checks. The `needs you` marker (12px mono
-  orange, outranked by a bad-state pill) is viewer-relative — the
-  enhancer adds it to rows requesting the signed-in viewer (in the
-  several-repos shape, where no section carries ownership); it is
-  never in the published markup.
+- **Review / CI / marker**: three separate columns (the design
+  language's queue table — never several states in one cell, which can't
+  align). **Review** is the state's lucide icon from the shared
+  vocabulary (`check` approved, `circle-x` changes requested, `pencil`
+  draft — and dim the whole draft row; plain `review required` leaves
+  the cell empty): icon-only at tile widths with the word sr-only + in
+  the cell's `title`, icon + 12px mono word from the wide tier up.
+  Healthy states whisper (ink-faint); only actionable states take their
+  tone. **CI** is a compact icon when the PR has checks (`check`
+  passing ink-faint, `circle-x` failing red, `clock` pending ink-dim);
+  empty when it has none. **Marker** is the `needs you` slot (12px mono
+  orange) — viewer-relative, added by the enhancer to rows requesting
+  the signed-in viewer (in the several-repos shape, where no section
+  carries ownership); it is never in the published markup, but its
+  column is, so nothing shifts when it lands.
 - **Age** in 12px mono. The enhancer tints it yellow only when the
   wait is on the viewer (a needs-you row older than 3 days) — a big
   number alone is not an alarm, and the neutral render carries no
@@ -175,11 +182,11 @@ rel="noopener"`) — the picture is the click-through to the person.
 
 Columns must align **across the whole artifact, not per section**: one
 grid on `main`, sections and their lists laid in with `subgrid`, so
-every state pill and age sits on the same vertical down the page. A
+every state icon and age sits on the same vertical down the page. A
 per-`<ul>` grid gives each section its own column widths — the
 misaligned-state smell. Ticket and size are wide-tier columns: reveal
 them at 3-column widths and up (`min-width: 700px`) and in the full
-view; 1–2-column tiles keep avatar · title · state · age.
+view; 1–2-column tiles keep avatar · title · review · ci · marker · age.
 
 **The enhancer.** Embed one self-contained script (widget-artifact's
 person-relative snippet) that runs on `DOMContentLoaded`: read
@@ -210,9 +217,9 @@ Size behavior:
   stamp so the raw page keeps every group.
 - **Tall tiles** (~380px+): every group, each fit-trimmed from the bottom.
 - **Wide tile / full view**: a real table — the same ledger grid with a
-  12px mono header row (`pr · ticket · size · state · age`), columns
-  aligned by subgrid, hairline-separated rows. Spend width on columns,
-  not longer lines.
+  12px mono header row (`pr · ticket · size · review · ci · age`),
+  columns aligned by subgrid, hairline-separated rows, state words back
+  beside their icons. Spend width on columns, not longer lines.
 
 Degrade gracefully: a repo that can't be read gets an "unreachable" row, not
 an error; no watched repos configured → an empty state telling the user to

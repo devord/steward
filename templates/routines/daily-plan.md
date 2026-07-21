@@ -52,8 +52,11 @@ environment — skip silently anything that isn't:
 
 ## Compose
 
-- **Top priorities**: at most 3, one line each. Derive from instructions +
-  gathered data; when in doubt, prefer what the instructions emphasize.
+- **Top priorities**: at most 3, one line each — a short imperative
+  **lead** (what to do, ≤ ~6 words) followed by the ticket key and the
+  evidence as **detail** (the design language's lead + detail row), never
+  one undifferentiated sentence. Derive from instructions + gathered data;
+  when in doubt, prefer what the instructions emphasize.
 - **Time blocks**: a full time-block plan (Cal Newport style) — every
   30-minute slot from day start to shutdown has a job, snapped to
   :00/:30. The day span comes from the day itself: the working hours the
@@ -69,16 +72,24 @@ environment — skip silently anything that isn't:
      the concrete task the block advances, never the epic it rolls up to —
      epics stay out of labels and goal notes just as they stay out of the
      item lists.
-  3. Batch the shallow work — review queues, replies, small carry-overs —
+  3. **Label every work block `Type — Project: task`**, concise (≤ ~6
+     words after the colon): the label is the block's name on the grid,
+     the `goal:` note is its detail — ticket enumerations go in the note,
+     never the label. The project is the tracker's project (or what the
+     instructions call it); it is what per-project totals sum, so spell it
+     consistently across blocks. Personal and free blocks carry no
+     project.
+  4. Batch the shallow work — review queues, replies, small carry-overs —
      into named 30–60m blocks, and end the day with a 30m **shutdown**
      block (clear queues, plan tomorrow).
-  4. Whatever remains is a **free** block: honest slack, labeled with
+  5. Whatever remains is a **free** block: honest slack, labeled with
      what it buffers.
      Block types are deep / meeting / shallow / personal / free — the
      `widget-artifact` design language defines their tones and the three
      renderings (ledger, day strip, time grid).
-- **Day totals**: sum deep / meetings / shallow / free hours — the
-  process metric the totals line renders.
+- **Day totals**: sum deep / meetings / shallow / free hours, and the
+  hours per project from the work blocks' `Type — Project: task` labels —
+  the two process metrics the totals lines render (by type, by project).
 - **Carry-overs**: unfinished items from the previous plan, max 5.
 
 ## Author the artifact
@@ -89,11 +100,15 @@ gruvbox tokens, breakpoints, generated-at meta + footer). Size behavior:
 - **1×1**: count of priorities done/total plus the single top priority.
 - **2×1 / 1×2**: the three priorities as a list.
 - **2×2 and larger**: priorities, then the day (strip + block ledger),
-  then carry-overs; wide tiles add the totals line.
+  then carry-overs; wide tiles add the totals lines (by type, by
+  project).
 - **Tall wide tiles (~4 rows and up), raw page, full view**: the
   30-minute time grid with the live now line — the plan its owner reads
-  the day from, spanning the full day range. Past blocks always stay
-  visible (they recede, never disappear).
+  the day from, spanning the full day range — with its right-side
+  details column carrying each block's `goal:` note beside the block
+  (design language: the box keeps the concise label, the column keeps
+  the detail). Past blocks always stay visible (they recede, never
+  disappear).
 
 Degrade gracefully: with no reachable data sources, still publish a plan
 derived from the instructions alone, with an explicit "no live data" note.

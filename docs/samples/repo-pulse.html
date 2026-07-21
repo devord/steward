@@ -8,9 +8,10 @@
      contained enhancer re-buckets into Needs your review / Yours / Open
      against the injected window.__STEWARD_VIEWER__, leaving the neutral
      render whenever no viewer is injected. Shows the avatar key, links,
-     Jira tickets, PR size, state pills, CI dots, the stat tier, and one
-     grid whose columns align across every section (nested subgrid), so
-     state and age never drift between groups. -->
+     Jira tickets, PR size, the queue table's per-state icon columns
+     (review / CI / needs-you — icons on tiles, icon + word from the wide
+     tier), the stat tier, and one grid whose columns align across every
+     section (nested subgrid), so no state ever drifts between groups. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -81,20 +82,25 @@
       }
 
       /* One grid for the whole ledger: sections, their column headers, and
-         every row are subgrid, so the ticket/size/state/age columns share
-         one set of widths down the artifact — no section sizes its own
-         table, so nothing drifts between groups. Columns:
-         avatar · title · ticket · size · state · age. Ticket and size are
-         wide-tier columns (revealed ≥700px); tiles keep the other four. */
+         every row are subgrid, so every column shares one set of widths
+         down the artifact — no section sizes its own table, so nothing
+         drifts between groups. Every state gets its own column (the queue
+         table — never several states in one cell):
+         avatar · title · review · ci · marker · age on tiles; ticket and
+         size join at ≥700px. */
       main {
         display: grid;
         grid-template-columns:
           max-content minmax(0, 1fr)
-          max-content max-content;
+          max-content max-content max-content max-content;
         column-gap: 12px;
         row-gap: 14px;
         align-content: start;
         min-height: 0;
+        /* Unshrunk, so overflow pushes past the body edge where the fit
+           script can measure it — a squeezed main paints over the footer
+           while scrollHeight stays clean. */
+        flex-shrink: 0;
       }
       section {
         grid-column: 1 / -1;
@@ -148,12 +154,14 @@
       .head .h-size {
         grid-column: 4;
       }
-      .head .h-state {
+      .head .h-rev {
         grid-column: 5;
-        text-align: right;
+      }
+      .head .h-ci {
+        grid-column: 6;
       }
       .head .h-age {
-        grid-column: 6;
+        grid-column: 8;
         text-align: right;
       }
 
@@ -243,18 +251,55 @@
         color: color-mix(in srgb, var(--color-red) 74%, var(--color-ink));
       }
 
-      /* State — a pill only when the state asks for action, plus a CI dot
-         when the PR has checks. On tiles this is column 3. */
-      .state {
-        grid-column: 3;
+      /* State cells (the queue table): one column per state, aligned down
+         the whole artifact. Icon-only at tile widths — the word lives
+         sr-only and in the cell's title — and icon + 12px mono word from
+         the wide tier up. A row without a state leaves the cell empty.
+         Healthy states whisper (ink-faint); only actionable states take
+         their tone. */
+      .st {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
         align-self: center;
-        justify-content: flex-end;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        white-space: nowrap;
+        color: var(--color-ink-dim);
+      }
+      .st svg {
+        width: 12px;
+        height: 12px;
+        flex: none;
+      }
+      .st.ok {
+        color: var(--color-green);
+      }
+      .st.bad {
+        color: var(--color-red);
+      }
+      .st.dim {
+        color: var(--color-ink-faint);
+      }
+      .st .word {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
+      .rev {
+        grid-column: 3;
+      }
+      .ci {
+        grid-column: 4;
+      }
+      .mark {
+        grid-column: 5;
       }
       .age {
-        grid-column: 4;
+        grid-column: 6;
         font-family: var(--font-mono);
         font-size: 12px;
         color: var(--color-ink-faint);
@@ -298,19 +343,11 @@
         border-color: color-mix(in srgb, var(--color-red) 40%, transparent);
         background: color-mix(in srgb, var(--color-red) 10%, transparent);
       }
-      .dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 999px;
-        background: var(--color-green);
-      }
-      .dot.bad {
-        background: var(--color-red);
-      }
 
       /* The viewer-relative "needs you" marker — 12px mono orange, added
-         by the enhancer to rows requesting the signed-in viewer. Outranked
-         by a bad-state pill; never present in the neutral markup. */
+         by the enhancer into the marker column of rows requesting the
+         signed-in viewer. Never present in the neutral markup, but its
+         column is, so nothing shifts when it lands. */
       .needs-you {
         font-family: var(--font-mono);
         font-size: 12px;
@@ -406,13 +443,18 @@
       @media (min-width: 700px) {
         main,
         footer {
+          /* width: 100% is load-bearing — an auto inline margin disables
+             the flex column's stretch, and a shrink-to-fit footer lets its
+             two spans collapse together. */
+          width: 100%;
           max-width: 52rem;
           margin-inline: 0 auto;
         }
         main {
           grid-template-columns:
             max-content minmax(0, 1fr)
-            max-content max-content max-content max-content;
+            max-content max-content max-content max-content max-content
+            max-content;
         }
         .head {
           display: grid;
@@ -421,11 +463,24 @@
         .size {
           display: block;
         }
-        .state {
+        .rev {
           grid-column: 5;
         }
-        .age {
+        .ci {
           grid-column: 6;
+        }
+        .mark {
+          grid-column: 7;
+        }
+        .age {
+          grid-column: 8;
+        }
+        /* The state words return beside their icons. */
+        .st .word {
+          position: static;
+          width: auto;
+          height: auto;
+          clip: auto;
         }
       }
 
@@ -475,7 +530,8 @@
           <span class="pr">pr</span>
           <span class="h-ticket">ticket</span>
           <span class="h-size">size</span>
-          <span class="h-state">state</span>
+          <span class="h-rev">review</span>
+          <span class="h-ci">ci</span>
           <span class="h-age">age</span>
         </div>
         <ul data-fit-list>
@@ -505,9 +561,20 @@
             <span class="size"
               ><span class="add">+210</span><span class="del">−34</span></span
             >
-            <span class="state"
-              ><span class="dot bad"></span
-              ><span class="pill bad">CI ✗</span></span
+            <span class="st ci bad" title="CI failing"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="m15 9-6 6" />
+                <path d="m9 9 6 6" /></svg
+              ><span class="word">failing</span></span
             >
             <time class="age">26d</time>
           </li>
@@ -538,9 +605,20 @@
             <span class="size"
               ><span class="add">+36</span><span class="del">−4</span></span
             >
-            <span class="state"
-              ><span class="dot bad"></span
-              ><span class="pill bad">CI ✗</span></span
+            <span class="st ci bad" title="CI failing"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="m15 9-6 6" />
+                <path d="m9 9 6 6" /></svg
+              ><span class="word">failing</span></span
             >
             <time class="age">3d</time>
           </li>
@@ -553,7 +631,8 @@
           <span class="pr">pr</span>
           <span class="h-ticket">ticket</span>
           <span class="h-size">size</span>
-          <span class="h-state">state</span>
+          <span class="h-rev">review</span>
+          <span class="h-ci">ci</span>
           <span class="h-age">age</span>
         </div>
         <ul data-fit-list>
@@ -583,7 +662,6 @@
             <span class="size"
               ><span class="add">+64</span><span class="del">−12</span></span
             >
-            <span class="state"></span>
             <time class="age">26d</time>
           </li>
           <li
@@ -612,7 +690,6 @@
             <span class="size"
               ><span class="add">+380</span><span class="del">−12</span></span
             >
-            <span class="state"></span>
             <time class="age">24d</time>
           </li>
           <li
@@ -648,7 +725,6 @@
             <span class="size"
               ><span class="add">+820</span><span class="del">−40</span></span
             >
-            <span class="state"></span>
             <time class="age">12d</time>
           </li>
           <li
@@ -677,7 +753,6 @@
             <span class="size"
               ><span class="add">+512</span><span class="del">−88</span></span
             >
-            <span class="state"></span>
             <time class="age">12d</time>
           </li>
           <li
@@ -713,7 +788,6 @@
             <span class="size"
               ><span class="add">+430</span><span class="del">−16</span></span
             >
-            <span class="state"></span>
             <time class="age">10d</time>
           </li>
           <li
@@ -749,7 +823,6 @@
             <span class="size"
               ><span class="add">+120</span><span class="del">−340</span></span
             >
-            <span class="state"></span>
             <time class="age">4d</time>
           </li>
           <li
@@ -778,7 +851,6 @@
             <span class="size"
               ><span class="add">+18</span><span class="del">−6</span></span
             >
-            <span class="state"></span>
             <time class="age">4d</time>
           </li>
           <li
@@ -807,7 +879,6 @@
             <span class="size"
               ><span class="add">+900</span><span class="del">−120</span></span
             >
-            <span class="state"></span>
             <time class="age">4d</time>
           </li>
           <li
@@ -846,7 +917,6 @@
             <span class="size"
               ><span class="add">+260</span><span class="del">−40</span></span
             >
-            <span class="state"></span>
             <time class="age">2d</time>
           </li>
         </ul>
@@ -858,7 +928,8 @@
           <span class="pr">pr</span>
           <span class="h-ticket">ticket</span>
           <span class="h-size">size</span>
-          <span class="h-state">state</span>
+          <span class="h-rev">review</span>
+          <span class="h-ci">ci</span>
           <span class="h-age">age</span>
         </div>
         <ul data-fit-list>
@@ -899,7 +970,22 @@
             <span class="size"
               ><span class="add">+1240</span><span class="del">−0</span></span
             >
-            <span class="state"><span class="pill">draft</span></span>
+            <span class="st rev dim" title="draft"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+                />
+                <path d="m15 5 4 4" /></svg
+              ><span class="word">draft</span></span
+            >
             <time class="age">22d</time>
           </li>
           <li
@@ -939,7 +1025,22 @@
             <span class="size"
               ><span class="add">+96</span><span class="del">−8</span></span
             >
-            <span class="state"><span class="pill">draft</span></span>
+            <span class="st rev dim" title="draft"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+                />
+                <path d="m15 5 4 4" /></svg
+              ><span class="word">draft</span></span
+            >
             <time class="age">20d</time>
           </li>
           <li
@@ -979,7 +1080,22 @@
             <span class="size"
               ><span class="add">+140</span><span class="del">−22</span></span
             >
-            <span class="state"><span class="pill">draft</span></span>
+            <span class="st rev dim" title="draft"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+                />
+                <path d="m15 5 4 4" /></svg
+              ><span class="word">draft</span></span
+            >
             <time class="age">20d</time>
           </li>
           <li
@@ -1012,7 +1128,22 @@
             <span class="size"
               ><span class="add">+58</span><span class="del">−6</span></span
             >
-            <span class="state"><span class="pill">draft</span></span>
+            <span class="st rev dim" title="draft"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+                />
+                <path d="m15 5 4 4" /></svg
+              ><span class="word">draft</span></span
+            >
             <time class="age">19d</time>
           </li>
           <li
@@ -1044,7 +1175,19 @@
             <span class="size"
               ><span class="add">+64</span><span class="del">−0</span></span
             >
-            <span class="state"><span class="pill ok">approved</span></span>
+            <span class="st rev ok" title="approved"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6 9 17l-5-5" /></svg
+              ><span class="word">approved</span></span
+            >
             <time class="age">14d</time>
           </li>
           <li
@@ -1081,7 +1224,22 @@
             <span class="size"
               ><span class="add">+72</span><span class="del">−14</span></span
             >
-            <span class="state"><span class="pill">draft</span></span>
+            <span class="st rev dim" title="draft"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+                />
+                <path d="m15 5 4 4" /></svg
+              ><span class="word">draft</span></span
+            >
             <time class="age">3d</time>
           </li>
         </ul>
@@ -1189,16 +1347,22 @@
               g.sec.hidden = g.rows.length === 0
             })
 
-            // Mark needs-you rows: an orange "needs you" tag, and a yellow age
-            // once the wait passes three days (a big number is not the alarm —
-            // old AND waiting on you is).
+            // Mark needs-you rows: an orange "needs you" tag in the marker
+            // column (reserved in the grid, so nothing shifts), and a
+            // yellow age once the wait passes three days (a big number is
+            // not the alarm — old AND waiting on you is).
             needs.forEach(function (li) {
-              var state = li.querySelector(".state")
-              if (state && !state.querySelector(".needs-you")) {
+              var mark = li.querySelector(".mark")
+              if (!mark) {
+                mark = document.createElement("span")
+                mark.className = "st mark"
+                li.appendChild(mark)
+              }
+              if (!mark.querySelector(".needs-you")) {
                 var tag = document.createElement("span")
                 tag.className = "needs-you"
                 tag.textContent = "needs you"
-                state.appendChild(tag)
+                mark.appendChild(tag)
               }
               var age = li.querySelector(".age")
               if (age && now - createdOf(li) > 3 * DAY)

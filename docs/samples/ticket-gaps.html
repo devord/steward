@@ -57,6 +57,10 @@
         display: grid;
         gap: 12px;
         min-height: 0;
+        /* Unshrunk, so overflow pushes past the body edge where the fit
+           script can measure it — a squeezed main paints over the footer
+           while scrollHeight stays clean. */
+        flex-shrink: 0;
       }
       @media (max-height: 160px) {
         [data-steward-tile] main {
@@ -74,13 +78,19 @@
       }
 
       /* Heading — hidden to the glance tiers, revealed at the wide grid up
-         and on the raw/full page (design.md · Heading). */
+         and on the raw/full page. Two registers (design.md · Heading): on
+         a tile it stays within the chrome title's scale; on the raw/full
+         page it steps up to the 18px semibold page register. */
       .heading {
         font-family: var(--font-mono);
-        font-size: 18px;
-        font-weight: 600;
+        font-size: 16px;
+        font-weight: 500;
         letter-spacing: -0.01em;
         color: var(--color-ink);
+      }
+      :root:not([data-steward-tile]) .heading {
+        font-size: 18px;
+        font-weight: 600;
       }
       .heading .sub {
         display: block;
@@ -197,10 +207,16 @@
         text-decoration: none;
       }
 
-      /* State pill (design.md · Pill): gap = attn-orange, drift = yellow. */
+      /* State pill (design.md · Pill): gap = attn-orange circle-dashed,
+         drift = yellow git-compare-arrows (the shared icon vocabulary).
+         Pills fill the shared column and center in it, so "gap" and
+         "drift" read as one aligned rail, not two ragged capsules; they
+         center vertically on the row, never on the text baseline. */
       .pill {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
+        gap: 4px;
         height: 18px;
         padding: 0 7px;
         border-radius: 999px;
@@ -208,10 +224,16 @@
         font-size: 12px;
         line-height: 1;
         align-self: center;
+        justify-self: stretch;
         color: var(--color-orange);
         border: 1px solid
           color-mix(in srgb, var(--color-orange) 40%, transparent);
         background: color-mix(in srgb, var(--color-orange) 10%, transparent);
+      }
+      .pill svg {
+        width: 12px;
+        height: 12px;
+        flex: none;
       }
       .pill.drift {
         color: var(--color-yellow);
@@ -283,6 +305,46 @@
         color: var(--color-ink-dim);
       }
 
+      /* Ready now — tickets already unblocked and actionable: content, not
+         provenance, so it gets a section. Secondary to the glance — short
+         tiles drop it whole rather than orphaning its header. */
+      .ready ul {
+        grid-template-columns: max-content 1fr;
+      }
+      .ready .jira {
+        align-self: baseline;
+      }
+      .ready .detail {
+        color: var(--color-ink-dim);
+      }
+      @media (max-height: 379px) {
+        [data-steward-tile] .ready {
+          display: none;
+        }
+      }
+
+      /* Provenance (design.md · Provenance line): the run's method facts,
+         one quiet mono line above the footer — never a paragraph among the
+         sections. Wide tiers and the page only. */
+      .provenance {
+        display: none;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-ink-faint);
+      }
+      @media (min-width: 700px) {
+        .provenance {
+          display: block;
+          margin-top: auto;
+          padding-top: 10px;
+        }
+        /* The provenance line takes over the footer's auto margin — two
+           autos would split the slack and strand the line mid-page. */
+        .provenance + footer {
+          margin-top: 0;
+        }
+      }
+
       @media (min-width: 900px) {
         main,
         footer {
@@ -335,7 +397,7 @@
       <!-- 2×1 and up -->
       <section class="ledger" aria-labelledby="title">
         <h2>
-          Recommended <span class="count">5</span>
+          Recommended <span class="count">5 · 2 held back</span>
           <span class="rule"></span>
           <button
             type="button"
@@ -350,7 +412,26 @@
           <li
             data-prompt="/eng:triage Create a ticket: Add a staleness badge to overdue widgets. The spec at docs/widget-standard.md §Addressing & freshness requires a staleness badge when a run is overdue relative to the routine's schedule; apps/web/app/components/widget-card.tsx renders freshness but has no overdue branch (gap). Acceptance: an overdue widget shows the staleness badge. Possibly related: none."
           >
-            <span class="pill">gap</span>
+            <span class="pill"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M10.1 2.182a10 10 0 0 1 3.8 0" />
+                <path d="M13.9 21.818a10 10 0 0 1-3.8 0" />
+                <path d="M17.609 3.721a10 10 0 0 1 2.69 2.7" />
+                <path d="M2.182 13.9a10 10 0 0 1 0-3.8" />
+                <path d="M20.279 17.609a10 10 0 0 1-2.7 2.69" />
+                <path d="M21.818 10.1a10 10 0 0 1 0 3.8" />
+                <path d="M3.721 6.391a10 10 0 0 1 2.7-2.69" />
+                <path d="M6.391 20.279a10 10 0 0 1-2.69-2.7" /></svg
+              >gap</span
+            >
             <span>
               <span class="title"
                 >Add a staleness badge to overdue widgets</span
@@ -372,7 +453,26 @@
           <li
             data-prompt="/eng:triage Create a ticket: Full-view overlay must close on Escape. The spec at knowledge-base/accessibility.md §Overlays requires Esc to dismiss any full-screen overlay; the full-view lightbox in apps/web/app/components/widget-full-view.tsx registers no keydown handler (gap). Acceptance: pressing Esc closes the full view and returns focus to the tile. Possibly related: none."
           >
-            <span class="pill">gap</span>
+            <span class="pill"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M10.1 2.182a10 10 0 0 1 3.8 0" />
+                <path d="M13.9 21.818a10 10 0 0 1-3.8 0" />
+                <path d="M17.609 3.721a10 10 0 0 1 2.69 2.7" />
+                <path d="M2.182 13.9a10 10 0 0 1 0-3.8" />
+                <path d="M20.279 17.609a10 10 0 0 1-2.7 2.69" />
+                <path d="M21.818 10.1a10 10 0 0 1 0 3.8" />
+                <path d="M3.721 6.391a10 10 0 0 1 2.7-2.69" />
+                <path d="M6.391 20.279a10 10 0 0 1-2.69-2.7" /></svg
+              >gap</span
+            >
             <span>
               <span class="title">Full-view overlay must close on Escape</span>
               <span class="evidence"
@@ -392,7 +492,24 @@
           <li
             data-prompt="/eng:triage Create a ticket: Person-relative render leaks the runner login. The spec at docs/adr/0039-person-relative-content.md requires the static markup to be viewer-neutral; the repo-pulse enhancer bakes a 'Yours' label into the published markup instead of resolving it against __STEWARD_VIEWER__ at render time (drift). Acceptance: the raw page shows no 'yours' before a viewer is injected. Possibly related: STEW-214 (marked Done — verify)."
           >
-            <span class="pill drift">drift</span>
+            <span class="pill drift"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="5" cy="6" r="3" />
+                <path d="M12 6h5a2 2 0 0 1 2 2v7" />
+                <path d="m15 9-3-3 3-3" />
+                <circle cx="19" cy="18" r="3" />
+                <path d="M12 18H7a2 2 0 0 1-2-2V9" />
+                <path d="m9 15 3 3-3 3" /></svg
+              >drift</span
+            >
             <span>
               <span class="title"
                 >Person-relative render leaks the runner login</span
@@ -419,7 +536,26 @@
           <li
             data-prompt="/eng:triage Create a ticket: Surface the dry-run clause on the receipt. The spec at docs/adr/0017-dry-runs.md defines a dry run as the pointer prompt plus a dry clause; run-routine composes the clause but the receipt view in apps/web/app/components/routine-detail.tsx omits it, so a dry run is indistinguishable from a real one (gap). Acceptance: a dry-run receipt is labelled as such. Possibly related: none."
           >
-            <span class="pill">gap</span>
+            <span class="pill"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M10.1 2.182a10 10 0 0 1 3.8 0" />
+                <path d="M13.9 21.818a10 10 0 0 1-3.8 0" />
+                <path d="M17.609 3.721a10 10 0 0 1 2.69 2.7" />
+                <path d="M2.182 13.9a10 10 0 0 1 0-3.8" />
+                <path d="M20.279 17.609a10 10 0 0 1-2.7 2.69" />
+                <path d="M21.818 10.1a10 10 0 0 1 0 3.8" />
+                <path d="M3.721 6.391a10 10 0 0 1 2.7-2.69" />
+                <path d="M6.391 20.279a10 10 0 0 1-2.69-2.7" /></svg
+              >gap</span
+            >
             <span>
               <span class="title"
                 >Surface the dry-run clause on the receipt</span
@@ -441,7 +577,24 @@
           <li
             data-prompt="/eng:triage Create a ticket: Grid row height ignores board density. The spec at docs/widget-standard.md §The grid says the row unit is adjustable via grid.rowHeight as board density; packages/schema and the grid renderer hard-code ~150px, so the density control has no effect (drift). Acceptance: changing grid.rowHeight re-flows the board. Possibly related: STEW-190."
           >
-            <span class="pill drift">drift</span>
+            <span class="pill drift"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="5" cy="6" r="3" />
+                <path d="M12 6h5a2 2 0 0 1 2 2v7" />
+                <path d="m15 9-3-3 3-3" />
+                <circle cx="19" cy="18" r="3" />
+                <path d="M12 18H7a2 2 0 0 1-2-2V9" />
+                <path d="m9 15 3 3-3 3" /></svg
+              >drift</span
+            >
             <span>
               <span class="title">Grid row height ignores board density</span>
               <span class="evidence"
@@ -464,11 +617,54 @@
           </li>
         </ul>
       </section>
+
+      <!-- Tickets already unblocked and actionable — content, not
+           provenance (design.md · Provenance line), so it earns a
+           section. -->
+      <section class="ready">
+        <h2>
+          Ready now <span class="count">2</span>
+          <span class="rule"></span>
+        </h2>
+        <ul data-fit-list>
+          <li>
+            <a
+              class="jira"
+              href="https://acme.atlassian.net/browse/STEW-137"
+              target="_blank"
+              rel="noopener"
+              >STEW-137</a
+            >
+            <span
+              ><span class="title">Request Access form</span>
+              <span class="detail">Ready for Agent</span></span
+            >
+          </li>
+          <li>
+            <a
+              class="jira"
+              href="https://acme.atlassian.net/browse/STEW-64"
+              target="_blank"
+              rel="noopener"
+              >STEW-64</a
+            >
+            <span
+              ><span class="title">Checkout apps — Avalara/FedEx/UPS</span>
+              <span class="detail">Ready for Agent</span></span
+            >
+          </li>
+        </ul>
+      </section>
     </main>
+
+    <p class="provenance">
+      12 kb pages audited · 21 built · 3 gaps · 2 drifts · 2 held back as
+      duplicates
+    </p>
 
     <footer>
       <span>steward-gaps</span>
-      <span>2026-07-14 09:00Z · 2 low-confidence held back</span>
+      <span>2026-07-14 09:00Z</span>
     </footer>
 
     <script>
