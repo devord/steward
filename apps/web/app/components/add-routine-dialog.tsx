@@ -719,10 +719,15 @@ export function AddRoutineDialog({
         onOpenChange(next)
       }}
     >
-      {/* `sm:max-w-lg` (not `max-w-lg`) keeps the base mobile width cap;
-          the height cap + scrollable middle keep the wizard usable on
-          small phones with the keyboard open. */}
-      <DialogContent className="flex max-h-[85svh] flex-col sm:max-w-lg">
+      {/* Content tier (DESIGN.md): the picker is a list you scan, so width
+          buys information. Measured across the built-in descriptions, `lg`
+          gave 2/2/1/1 lines and 720px gives 1/1/1/1 — the two longest drop a
+          line each, so more templates fit a screen. `line-clamp-2` below stays
+          the safety net for longer strings (pt-BR), not the target.
+          `sm:` (not bare `max-w-`) keeps the base mobile width cap; the height
+          cap + scrollable middle keep the wizard usable on small phones with
+          the keyboard open. */}
+      <DialogContent className="flex max-h-[85svh] flex-col sm:max-w-[720px]">
         <DialogHeader>
           <DialogTitle>
             {t(isEdit ? "dialog.editTitle" : "dialog.title")}

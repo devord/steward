@@ -213,10 +213,17 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
             >
               <MoreHorizontal />
             </PopoverTrigger>
+            {/* Sizes to the identifier it leads with, not a fixed step
+                (DESIGN.md): at `w-64` a real `<org>/steward-data-<name>` slug
+                wrapped to two lines, so the panel's own subject was the one
+                string it couldn't show whole. Floor keeps the collaborator
+                list from collapsing to avatar width; the cap keeps a
+                pathological slug from turning the panel into a slab — past it
+                the title's `overflow-wrap` still takes over. */}
             <PopoverContent
               align="end"
               sideOffset={4}
-              className="w-64 gap-0 p-0"
+              className="w-auto min-w-64 max-w-[22rem] gap-0 p-0"
             >
               <PopoverHeader className="px-3 py-2.5">
                 {/* overflow-wrap:anywhere, not break-all: the slug wraps at its
