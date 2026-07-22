@@ -26,12 +26,12 @@ import { useT } from "../lib/i18n.tsx"
  * demo board) and ends on a pager-style `more` cue, since a large screen
  * makes the hero look like the whole page; the sections below argue the
  * product for a reader who has never heard of Steward: the loop, ownership,
- * what's built in. Terminal-calm per PRODUCT.md — the hero itself has no
- * entrance choreography (the caret blink is the one signature motion);
- * below the fold each section prints in once as it scrolls into view
- * (useReveal), the way terminal output arrives. Section headings stay in
- * the chrome scale; only the hero headline shares the wordmark's display
- * latitude.
+ * what's built in. Terminal-calm per PRODUCT.md — the hero itself is
+ * still: the identity chip is a finished object, not an animation (motion
+ * on the page belongs to the board, where it means something); below the
+ * fold each section prints in once as it scrolls into view (useReveal),
+ * the way terminal output arrives. Section headings stay in the chrome
+ * scale; only the hero headline shares the wordmark's display latitude.
  */
 export function Landing() {
   const t = useT()
@@ -64,7 +64,7 @@ export function Landing() {
         <div className="relative flex min-h-dvh flex-col justify-center gap-12 py-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-16">
           <div className="max-w-md">
             <h1>
-              <Wordmark live display className="text-4xl sm:text-5xl" />
+              <Wordmark display className="text-4xl sm:text-5xl" />
             </h1>
             <p className="mt-7 text-2xl leading-snug text-pretty text-foreground sm:text-3xl">
               {t("landing.headline")}
@@ -660,45 +660,37 @@ function ShowcaseBoard() {
         </div>
       </Widget>
 
-      <Widget name="Repo stats" ago="Ran 7h ago">
-        <p className="mb-3 font-mono text-xs text-ink-dim">
-          Commits · 12 weeks
-        </p>
-        <BarChart />
+      {/* The wide slot: a half-year of commit history — the one content
+          type that genuinely earns a full row. It also carries the stale
+          badge (freshness is the product, and the showcase stays honest
+          about it): a chart nine hours old on an hourly schedule. */}
+      <Widget
+        name="Repo stats"
+        ago="Ran 9h ago"
+        stale
+        staleLabel={t("widget.stale")}
+        className="sm:col-span-2"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <p className="font-mono text-xs text-ink-dim">Commits · 26 weeks</p>
+          <p className="font-mono text-xs text-ink-faint">
+            318 commits · 74 PRs merged · 5 contributors
+          </p>
+        </div>
+        <BarChart className="mt-3" />
+        {/* Month ticks: six labels spread under 26 weekly bars — the
+            terminal-calm axis, names not gridlines. */}
+        <div
+          aria-hidden
+          className="mt-1.5 flex justify-between font-mono text-xs text-ink-faint"
+        >
+          {["Feb", "Mar", "Apr", "May", "Jun", "Jul"].map((month) => (
+            <span key={month}>{month}</span>
+          ))}
+        </div>
         <div className="mt-3 flex items-center gap-4 font-mono text-xs text-ink-faint">
           <Legend tone="green">merged</Legend>
           <Legend tone="primary">open</Legend>
-        </div>
-      </Widget>
-
-      <Widget
-        name="Ticket gaps"
-        ago="Ran 6h ago"
-        stale
-        staleLabel={t("widget.stale")}
-      >
-        <p className="mb-3 font-mono text-xs text-ink-dim">Recommended 14</p>
-        <div className="space-y-2.5">
-          <GapRow
-            kind="gap"
-            title="Build the export-to-CSV flow"
-            ticket="ATL-84"
-          />
-          <GapRow
-            kind="drift"
-            title="Wire the empty-state illustration"
-            ticket="ATL-77"
-          />
-          <GapRow
-            kind="gap"
-            title="Add keyboard nav to the grid"
-            ticket="ATL-69"
-          />
-          <GapRow
-            kind="gap"
-            title="Rate-limit the webhook intake"
-            ticket="ATL-61"
-          />
         </div>
       </Widget>
     </div>
@@ -916,53 +908,40 @@ function PrRow({
   )
 }
 
-/** A gap/drift finding: a typed badge, the recommendation, and its ticket. */
-function GapRow({
-  kind,
-  title,
-  ticket,
-}: {
-  kind: "gap" | "drift"
-  title: string
-  ticket: string
-}) {
-  return (
-    <div className="flex items-center gap-2.5 font-mono text-xs">
-      <span
-        className={cn(
-          "w-11 shrink-0 rounded border px-1 text-center text-xs",
-          kind === "gap"
-            ? "border-primary/40 bg-primary/10 text-ink"
-            : "border-yellow/45 bg-yellow/10 text-ink",
-        )}
-      >
-        {kind}
-      </span>
-      <span className="min-w-0 flex-1 truncate text-ink-dim">{title}</span>
-      <span className="shrink-0 text-ink-faint">{ticket}</span>
-    </div>
-  )
-}
-
 /** A small bar chart — merged commits with an open-PR cap — the kind of glance
-    stat a repo widget carries. Heights are illustrative. */
-function BarChart() {
+    stat a repo widget carries. Heights are illustrative: 26 weekly bars, a
+    believable half-year rhythm (quiet winter, a spring push, release spikes). */
+function BarChart({ className }: { className?: string }) {
   const bars = [
-    { h: 34, open: 0 },
-    { h: 52, open: 8 },
-    { h: 46, open: 0 },
-    { h: 70, open: 14 },
+    { h: 30, open: 0 },
+    { h: 42, open: 0 },
+    { h: 36, open: 6 },
+    { h: 54, open: 0 },
+    { h: 47, open: 9 },
+    { h: 62, open: 0 },
+    { h: 40, open: 0 },
+    { h: 58, open: 11 },
+    { h: 73, open: 0 },
+    { h: 66, open: 8 },
+    { h: 88, open: 14 },
+    { h: 79, open: 0 },
+    { h: 52, open: 7 },
     { h: 61, open: 0 },
-    { h: 88, open: 10 },
-    { h: 74, open: 0 },
-    { h: 96, open: 18 },
-    { h: 58, open: 6 },
-    { h: 80, open: 0 },
-    { h: 44, open: 9 },
-    { h: 67, open: 12 },
+    { h: 96, open: 16 },
+    { h: 84, open: 0 },
+    { h: 70, open: 10 },
+    { h: 45, open: 0 },
+    { h: 57, open: 8 },
+    { h: 76, open: 0 },
+    { h: 90, open: 18 },
+    { h: 68, open: 0 },
+    { h: 49, open: 6 },
+    { h: 63, open: 12 },
+    { h: 81, open: 0 },
+    { h: 72, open: 15 },
   ]
   return (
-    <div className="flex h-20 items-end gap-1.5">
+    <div className={cn("flex h-24 items-end gap-1.5", className)}>
       {bars.map((bar, i) => (
         <span
           key={i}

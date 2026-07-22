@@ -31,3 +31,21 @@ degraded fallback ADR-0009 already accepts.
 This is a per-device default, not data: it changes only what an unconfigured
 browser shows first. Every stored preference is honoured unchanged, and the
 picker still offers all seven families.
+
+## Amendment (2026-07-21): the SSR stamp and the identity follow
+
+Two follow-ups, neither touching the anchor:
+
+- **root.tsx now stamps `data-theme` with `DEFAULT_DARK_THEME` at SSR** (and
+  `theme-color` + the manifest colors moved to Flexoki's `#100f0f`), so the
+  no-JS fallback and the pre-hydration frame match what a fresh viewer
+  resolves to instead of surfacing the anchor. `DEFAULT_THEME` itself is
+  untouched: the `:root` palette block, artifact authoring, and
+  `artifactThemeStyle`'s null case all still point at gruvbox-dark, so no
+  published artifact is stranded. The degraded no-JS surface simply upgraded
+  from "the anchor" to "the fresh-install default".
+- **The mark took Flexoki as its fixed identity** (DESIGN.md § Mark): the
+  bow tie no longer follows the active theme at all — one light and one dark
+  colorway from the Flexoki rows, emitted as `--mark-*` vars outside the
+  `[data-theme]` blocks, with every static identity asset (favicon, launcher
+  icons, wordmark lockups, og card) re-baked from gruvbox to match.

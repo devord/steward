@@ -4,8 +4,8 @@
   "description": "Reports that update themselves — a dashboard of living widgets, kept fresh by scheduled routines.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1d2021",
-  "theme_color": "#1d2021",
+  "background_color": "#100f0f",
+  "theme_color": "#100f0f",
   "icons": [
     { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any" },
     {

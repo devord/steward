@@ -15,7 +15,7 @@ import { RouteProgress } from "./components/route-progress.tsx"
 import { DEFAULT_LOCALE, I18nProvider, useT } from "./lib/i18n.tsx"
 import { getLocale } from "./lib/locale.server.ts"
 import {
-  DEFAULT_THEME,
+  DEFAULT_DARK_THEME,
   THEME_INIT_SCRIPT,
   themeStylesheet,
 } from "./lib/theme.ts"
@@ -49,13 +49,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const locale = data?.locale ?? DEFAULT_LOCALE
 
   return (
-    // SSR assumes the canonical default; THEME_INIT_SCRIPT re-stamps both
-    // attributes from the stored preference before first paint, hence
-    // suppressHydrationWarning (ADR-0009).
+    // SSR stamps the fresh-install dark default, so the no-JS fallback and
+    // the pre-hydration frame match what a new viewer resolves to
+    // (ADR-0046 amendment — the gruvbox canonical anchor stays on `:root`
+    // for the artifact contract; only the stamped attribute moved).
+    // THEME_INIT_SCRIPT re-stamps both attributes from the stored
+    // preference before first paint, hence suppressHydrationWarning
+    // (ADR-0009).
     <html
       lang={locale}
       className="dark"
-      data-theme={DEFAULT_THEME}
+      data-theme={DEFAULT_DARK_THEME}
       suppressHydrationWarning
     >
       <head>
@@ -64,9 +68,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
-        {/* Match the SSR default (gruvbox dark) so mobile browser chrome
-            reads as part of the dark board, like the identity tile. */}
-        <meta name="theme-color" content="#1d2021" />
+        {/* Match the SSR-stamped fresh-install default (flexoki dark) so
+            mobile browser chrome reads as part of the dark board, like the
+            identity tile. */}
+        <meta name="theme-color" content="#100f0f" />
         <Meta />
         <Links />
         {/* Palette blocks for every theme (single source: lib/theme.ts). */}
