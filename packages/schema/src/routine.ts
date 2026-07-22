@@ -13,6 +13,17 @@ export const repoRefSchema = z
   .regex(/^[^/\s]+\/[^/\s]+$/, "must be owner/repo")
 
 /**
+ * A connector's canonical sanitized name on the runner's Claude account
+ * (e.g. `Google-Calendar`, `Atlassian-Rovo`) — the claude.ai charset,
+ * `[a-zA-Z0-9_-]`, no spaces (ADR-0046). The regex rejects what could
+ * never resolve; whether the name is *on* the roster is sync's job, not
+ * the schema's — rosters are per-account, this file is shared.
+ */
+export const connectorNameSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, "must be a sanitized connector name")
+
+/**
  * Where a routine's runs execute (ADR-0012). Left unset in YAML it means
  * `cloud` — the schema keeps it optional (rather than defaulting) so
  * serialization doesn't stamp `host: cloud` onto every entry.
@@ -97,13 +108,14 @@ export const routineSchema = z.object({
    */
   repos: z.array(repoRefSchema).optional(),
   /**
-   * MCP connector allowlist for a cloud run, by the connector's account
-   * name (e.g. `GitHub`, `Google_Calendar`). Absent or empty → no
-   * connectors: the run gets none rather than inheriting the account's
-   * full set (ADR-0018). Cloud-only: local runs inherit the machine's MCP
-   * servers.
+   * MCP connector allowlist for a cloud run — service requirements by the
+   * connector's canonical sanitized name (e.g. `Google-Calendar`,
+   * `Atlassian-Rovo`), resolved against the runner's account roster by
+   * routines:sync (ADR-0046). Absent or empty → no connectors: the run
+   * gets none rather than inheriting the account's full set (ADR-0018).
+   * Cloud-only: local runs inherit the machine's MCP servers.
    */
-  connectors: z.array(z.string().min(1)).optional(),
+  connectors: z.array(connectorNameSchema).optional(),
   enabled: z.boolean().default(true),
 })
 

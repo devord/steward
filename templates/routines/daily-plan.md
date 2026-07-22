@@ -10,7 +10,7 @@ widget:
     default: { cols: 2, rows: 2 }
     min: { cols: 1, rows: 1 }
   schedule: "0 8 * * *"
-  connectors: [Google_Calendar]
+  connectors: [Google-Calendar]
   # No `category:` on purpose (ADR-0044). A daily plan is person-owned, not
   # a facet of a project, so it has no honest place on the band axis and
   # leads a board in the unlabeled band. Give an instance one with its own

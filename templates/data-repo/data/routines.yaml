@@ -11,8 +11,10 @@
 #                 is the only host that can read local data
 #   repos:        extra source repos a CLOUD run needs beyond the two always
 #                 attached (the Steward app repo + this data repo)
-#   connectors:   MCP connector allowlist for a CLOUD run, by account name
-#                 (e.g. GitHub, Google_Calendar). Omit → none
+#   connectors:   MCP connector allowlist for a CLOUD run, by the connector's
+#                 canonical name (e.g. Google-Calendar, Atlassian-Rovo) —
+#                 what claude.ai/customize/connectors calls it, spaces as
+#                 hyphens. Omit → none
 # Enact schedules and triggers with the routines:sync CLI, from a Steward
 # checkout: `pnpm routines:sync --repo <owner>/<name> --apply`.
 routines:

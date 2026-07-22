@@ -36,12 +36,20 @@ describe("widgetMetaSchema", () => {
         { key: "repos", label: "Repositories to watch", type: "repos" },
         { key: "focus", label: "Focus" },
       ],
-      connectors: ["Google_Calendar"],
+      connectors: ["Google-Calendar"],
     })
     expect(result.params?.[1]).toMatchObject({
       type: "string",
       required: false,
     })
+  })
+
+  it("rejects a connector hint outside the sanitized charset (ADR-0046)", () => {
+    const result = widgetMetaSchema.safeParse({
+      artifact: "x",
+      connectors: ["Google Calendar"],
+    })
+    expect(result.success).toBe(false)
   })
 
   it("rejects a select param without options and duplicate keys", () => {

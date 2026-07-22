@@ -152,12 +152,32 @@ describe("routinesFileSchema", () => {
           template: "repo-pulse",
           schedule: "0 */4 * * *",
           repos: ["devord/plugins"],
-          connectors: ["GitHub"],
+          connectors: ["Atlassian-Rovo", "Google_Calendar"],
         },
       ],
     })
     expect(parsed.routines[0]?.repos).toEqual(["devord/plugins"])
-    expect(parsed.routines[0]?.connectors).toEqual(["GitHub"])
+    expect(parsed.routines[0]?.connectors).toEqual([
+      "Atlassian-Rovo",
+      "Google_Calendar",
+    ])
+  })
+
+  it("rejects a connector name outside the sanitized charset (ADR-0046)", () => {
+    // Spaces and dots can never resolve — claude.ai sanitizes them away.
+    for (const connectors of [["Atlassian Rovo"], ["mcp.slack.com"], [""]]) {
+      const result = routinesFileSchema.safeParse({
+        routines: [
+          {
+            slug: "repo-pulse",
+            name: "Repo Pulse",
+            template: "repo-pulse",
+            connectors,
+          },
+        ],
+      })
+      expect(result.success).toBe(false)
+    }
   })
 
   it("rejects a repo that is not owner/repo", () => {

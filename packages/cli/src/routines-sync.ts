@@ -28,12 +28,16 @@
  * between crons — so --apply prompts for every missing token in one sitting
  * (skippable; `steward trigger <slug>` mints one later).
  *
- * Cloud routine state has no public read API — it's managed by Claude
- * Code's schedule tooling. So this script:
+ * Cloud routine state is driven through Claude Code's RemoteTrigger tooling
+ * (research preview) — reachable from a Claude session, not from Node. So
+ * this script:
  *   - default: prints the desired state as a reconciliation plan;
- *   - --apply: hands the cloud plan to a headless `claude -p` run, writes
- *     the launchd plists (deleting orphans), and prompts for missing
- *     trigger tokens.
+ *   - --apply: hands the cloud plan to a headless `claude -p` run that
+ *     resolves connector names against the account roster and must end
+ *     with a machine-readable result block, which this script parses —
+ *     exit 0 iff cloud state converged on the plan (ADR-0046); then
+ *     writes the launchd plists (deleting orphans) and prompts for
+ *     missing trigger tokens.
  *
  * Usage: steward sync [--repo <owner/repo>]
  *                     [--file <path/to/routines.yaml>] [--apply]
@@ -42,7 +46,7 @@
  * script-managed clone under ~/.cache/steward/repos/; --file targets a
  * checkout you manage; neither means "run from a data-repo checkout".
  */
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawn } from "node:child_process"
 import {
   existsSync,
   mkdirSync,
@@ -65,6 +69,7 @@ import {
 import { ghLogin, inferRepo, repoTag, routinesFileFor } from "./data-repo.ts"
 import { cronToLaunchd, launchdPlist, plistRepo } from "./launchd.ts"
 import { contractSkillsDir } from "./skills.ts"
+import { parseSyncResult, syncResultProblems } from "./sync-result.ts"
 import {
   claudeAccountEmail,
   promptTriggerToken,
@@ -79,7 +84,30 @@ import {
  */
 const CONTRACT_REPO = "devord/steward"
 
-export function main(argv: string[]): void {
+/**
+ * Run the headless cloud reconcile, streaming its output live while
+ * buffering stdout — the trailing result block must be parsed after the
+ * fact (ADR-0046), but a minutes-long silent run is not acceptable UX.
+ * Null when the binary is missing; otherwise the exit code and full stdout.
+ */
+function runClaude(
+  instructions: string,
+): Promise<{ code: number | null; output: string } | null> {
+  return new Promise((resolve) => {
+    const child = spawn("claude", ["-p", instructions], {
+      stdio: ["ignore", "pipe", "inherit"],
+    })
+    let output = ""
+    child.stdout.on("data", (chunk: Buffer) => {
+      output += chunk.toString()
+      process.stdout.write(chunk)
+    })
+    child.on("error", () => resolve(null))
+    child.on("close", (code) => resolve({ code, output }))
+  })
+}
+
+export async function main(argv: string[]): Promise<void> {
   const args = argv
   const apply = args.includes("--apply")
   const fileFlag = args.indexOf("--file")
@@ -399,49 +427,112 @@ export function main(argv: string[]): void {
   // --- Apply: cloud -------------------------------------------------------------
 
   const instructions = [
-    "Reconcile my cloud Claude Code routines with the desired state below,",
-    "using your routine/schedule tooling (the claude.ai code-triggers API:",
-    "list, get, create, update). Each routine's source repos live at",
+    "Reconcile my cloud Claude Code routines with the desired state below.",
+    "Tooling: load the RemoteTrigger tool via ToolSearch",
+    '("select:RemoteTrigger") and use it for every trigger read and write',
+    "(actions: list, get, create, update — there is NO delete). Each",
+    "routine's source repos live at",
     "job_config.ccr.session_context.sources[].git_repository.url and its MCP",
-    "connectors at mcp_connections[]; both are settable on create and update.",
-    "1. List the current cloud routines (and read one existing routine to see",
-    "   the shape of sources[] and mcp_connections[]).",
-    "2. Create every listed routine that is missing, with EXACTLY the given",
+    "connectors at mcp_connections[] (entries of {connector_uuid, name,",
+    "url}); both are settable on create and update.",
+    "1. Obtain the account connector ROSTER — the connected connectors with",
+    "   their name, connector_uuid, and url: invoke the Skill tool with",
+    "   skill 'schedule' and read the 'Available MCP Connectors' section of",
+    "   its context. Only if that listing is unavailable, fall back to",
+    "   collecting name→uuid/url pairs from existing triggers'",
+    "   mcp_connections[] and record roster_source 'triggers' in the result",
+    "   block (step 7); a fallback roster only knows connectors already on",
+    "   some trigger.",
+    "2. List the current cloud routines with RemoteTrigger.",
+    "3. Create every listed routine that is missing, with EXACTLY the given",
     "   name, cron, prompt, repos (as sources[]), and connectors (as",
     "   mcp_connections[]). For entries marked manual (no cron): create the",
-    "   routine WITHOUT any schedule if your tooling supports that; otherwise",
-    "   report it as needing manual creation in the Claude web UI.",
-    "3. For each listed routine that already exists, reconcile it to match:",
+    "   routine WITHOUT any schedule if the API accepts that; otherwise add",
+    "   a needs_web_ui entry for it.",
+    "4. For each listed routine that already exists, reconcile it to match:",
     "   fix a drifted cron; set sources[] to EXACTLY the listed repos (add",
     "   missing, remove extras); set mcp_connections[] to EXACTLY the listed",
     "   connectors (add missing, remove extras). A routine with connectors",
     "   '(none)' must end up with an empty mcp_connections[]. Never edit an",
     "   existing routine's prompt.",
-    "4. To set a connector you must supply its account-specific connector_uuid",
-    "   and url. Resolve each connector NAME to its uuid/url from the",
-    "   mcp_connections[] of the existing routines you listed in step 1 (they",
-    "   already map name → uuid/url on this account). If a listed connector",
-    "   name resolves to no uuid anywhere, do NOT guess — report it as",
-    "   unresolved and leave that routine's other changes applied.",
-    "5. Delete orphans per the rule in the plan (this covers the disabled",
-    "   ones). Match on the prompt's repo clause, not just the name.",
-    "6. Print a summary table: name, action taken (created/ok/reconciled/",
-    "   deleted/needs-web-ui), and what changed (cron/repos/connectors).",
-    "Touch nothing that is not named steward-*.",
+    "5. Connector resolution (ADR-0046) — deterministic, no judgement calls:",
+    "   match each listed connector name against ROSTER names by normalized",
+    "   equality ONLY — case-insensitive, '-' and '_' the same character. NO",
+    "   substring, prefix, or similarity matching. Exactly one match →",
+    "   attach using the roster's connector_uuid, name, and url (the roster",
+    "   spelling, not the YAML's). Zero matches → record the name under that",
+    "   routine's 'unresolved'; several → under 'ambiguous'. Never guess,",
+    "   and apply the routine's other changes regardless. A name that",
+    "   matches only via normalization (e.g. Google_Calendar →",
+    "   Google-Calendar) also goes under 'drifted' as {from, to}.",
+    "6. Orphans, per the rule in the plan header (this covers the disabled",
+    "   entries): RemoteTrigger cannot delete, so for each orphan add a",
+    "   needs_web_ui entry naming it and its",
+    "   https://claude.ai/code/routines/<id> URL. Match on the prompt's repo",
+    "   clause, not just the name. Touch nothing that is not named",
+    "   steward-*.",
+    "7. End your reply with EXACTLY one fenced code block tagged",
+    "   `json steward-sync-result` holding ONLY this JSON shape:",
+    '   { "roster_source": "roster" | "triggers",',
+    '     "routines": [ { "routine": "<name as listed in the plan>",',
+    '       "action": "created" | "ok" | "reconciled" | "needs-web-ui",',
+    '       "unresolved": ["<yaml name>", …], "ambiguous": ["<yaml name>", …],',
+    '       "drifted": [ { "from": "<yaml name>", "to": "<roster name>" }, …',
+    "       ] }, … ],",
+    '     "needs_web_ui": ["<human action>", …] }',
+    "   Every routine from the plan appears exactly once, under its plan",
+    "   name. The block is parsed by a machine: no comments, no prose after",
+    "   it.",
     "",
     cloudPlan.join("\n"),
   ].join("\n")
 
   console.log("Applying cloud state via `claude -p`…\n")
-  try {
-    execFileSync("claude", ["-p", instructions], { stdio: "inherit" })
-  } catch {
+  const run = await runClaude(instructions)
+  if (run == null || run.code !== 0) {
     console.error(
       "routines-sync: `claude -p` failed. Is the Claude Code CLI installed" +
         " and authenticated? The plan above can be applied by hand via" +
         " /schedule.",
     )
     process.exit(1)
+  }
+
+  // Convergence is decided here, from the parsed result block — never from
+  // the prose above it (ADR-0046). No block, bad block, unresolved or
+  // ambiguous connector, or anything only the web UI can finish: exit 1.
+  let cloudProblems: string[]
+  const parsed = parseSyncResult(run.output)
+  if (!parsed.ok) {
+    cloudProblems = [`cloud reconcile unverifiable — ${parsed.error}`]
+  } else {
+    const expected = [...cloudScheduled, ...cloudManual].map(cloudName)
+    cloudProblems = syncResultProblems(parsed.result, expected)
+    if (parsed.result.roster_source === "triggers") {
+      console.warn(
+        "\n# roster fallback: names were resolved from existing triggers," +
+          " not the account roster — connectors on no trigger look" +
+          " unresolved (ADR-0046).",
+      )
+    }
+    const drifted = parsed.result.routines.flatMap((entry) => entry.drifted)
+    if (drifted.length > 0) {
+      console.warn(
+        "\n# drifted connector names — resolved, but update routines.yaml" +
+          " to the canonical spelling (ADR-0046):",
+      )
+      for (const { from, to } of drifted) {
+        console.warn(`#   ${from} → ${to}`)
+      }
+    }
+  }
+  if (cloudProblems.length > 0) {
+    console.error("\nroutines-sync: cloud state did NOT converge:")
+    for (const problem of cloudProblems) {
+      console.error(`  - ${problem}`)
+    }
+  } else {
+    console.log("\nCloud state converged on the plan.")
   }
 
   // --- Apply: local (launchd) ---------------------------------------------------
@@ -555,5 +646,8 @@ export function main(argv: string[]): void {
     }
   }
 
-  if (localErrors.length > 0) process.exit(1)
+  // Exit 0 iff converged (ADR-0046): cloud divergence and launchd failures
+  // alike make the run red — re-runs are idempotent, so red stays red until
+  // the cause is fixed, never silently green.
+  if (localErrors.length > 0 || cloudProblems.length > 0) process.exit(1)
 }

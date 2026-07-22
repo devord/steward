@@ -31,7 +31,7 @@ const templates: DiscoveredTemplate[] = [
           hint: "Colors how the plan weighs the calendar",
         },
       ],
-      connectors: ["Google_Calendar"],
+      connectors: ["Google-Calendar"],
     },
     source: "builtin",
     sample: dailyPlanSample,
@@ -52,7 +52,8 @@ const templates: DiscoveredTemplate[] = [
           required: true,
         },
       ],
-      connectors: ["GitHub"],
+      // No connectors, like the real template: cloud runs read GitHub via
+      // the session's git credentials, not an MCP connector (ADR-0046).
     },
     source: "repo",
   },
@@ -133,7 +134,8 @@ const editable: Routine = {
   instructions: "Only the devord org repos.",
   params: { repos: ["devord/steward", "devord/plugins"] },
   repos: ["devord/steward", "devord/plugins", "devord/kb"],
-  connectors: ["GitHub"],
+  // A custom name off the shipped catalog — exercises the round-trip chip.
+  connectors: ["Scoro"],
   enabled: true,
 }
 
@@ -151,6 +153,7 @@ export default function DevDialog() {
         templates={templates}
         columns={4}
         existingSlugs={["daily-plan", "repo-pulse"]}
+        existingConnectors={["Scoro"]}
         onAdd={(_routine: Routine, _size: WidgetSize) => setMode(null)}
         editRoutine={mode === "edit" ? editable : null}
         onEdit={(_routine: Routine) => setMode(null)}

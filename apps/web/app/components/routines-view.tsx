@@ -279,6 +279,19 @@ export function RoutinesView({
       ),
     [effective, templateCategories],
   )
+
+  // Every connector name in use across the pool — how a team's custom
+  // connector (never in the shipped catalog, ADR-0046) gets offered on the
+  // next routine. Read from the draft, like poolCategories.
+  const poolConnectors = useMemo(
+    () =>
+      [
+        ...new Set(
+          effective.routines.flatMap((routine) => routine.connectors ?? []),
+        ),
+      ].sort(),
+    [effective],
+  )
   const committedSlugs = useMemo(
     () => new Set(base.routines.routines.map((r) => r.slug)),
     [base.routines],
@@ -474,6 +487,7 @@ export function RoutinesView({
         columns={4}
         existingSlugs={effective.routines.map((r) => r.slug)}
         existingCategories={poolCategories}
+        existingConnectors={poolConnectors}
         onAdd={addRoutine}
         editRoutine={editingRoutine}
         onEdit={editRoutine}

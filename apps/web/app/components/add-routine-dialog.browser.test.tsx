@@ -17,7 +17,9 @@ const editable: Routine = {
   instructions: "Only the devord org repos.",
   params: { repos: ["devord/steward", "devord/plugins"] },
   repos: ["devord/steward", "devord/kb"],
-  connectors: ["GitHub"],
+  // A custom connector, deliberately off the shipped catalog (ADR-0046) —
+  // edit mode must round-trip it, not drop it.
+  connectors: ["Scoro"],
   runner: "alice",
   enabled: true,
 }
@@ -243,7 +245,7 @@ describe("AddRoutineDialog add mode", () => {
       sample: undefined,
       widget: {
         ...dailyPlanTemplate.widget,
-        connectors: ["Google_Calendar"],
+        connectors: ["Google-Calendar"],
       },
     }
     await renderDialog({ templates: [calTemplate] })
@@ -627,15 +629,16 @@ describe("AddRoutineDialog edit mode", () => {
   })
 
   it("toggles a connector from the catalog and saves the updated allowlist", async () => {
-    // editable already allows GitHub; the Advanced section auto-opens because
-    // it has content. Toggling Gmail on adds it to the allowlist.
+    // editable already allows Scoro — a custom name outside the shipped
+    // catalog (ADR-0046), rendered pre-selected via the value round-trip.
+    // The Advanced section auto-opens because it has content. Toggling
+    // Gmail (a catalog chip) on adds it to the allowlist.
     const { onEdit } = await renderDialog({ editRoutine: editable })
     await vi.waitFor(() =>
       expect(input("routine-name").value).toBe("Repo Pulse"),
     )
 
-    // The catalog renders as toggles; GitHub is pre-selected.
-    expect(button("GitHub").getAttribute("aria-pressed")).toBe("true")
+    expect(button("Scoro").getAttribute("aria-pressed")).toBe("true")
     expect(button("Gmail").getAttribute("aria-pressed")).toBe("false")
 
     button("Gmail").click()
@@ -645,8 +648,22 @@ describe("AddRoutineDialog edit mode", () => {
     button("Save changes").click()
 
     expect(onEdit).toHaveBeenCalledWith(
-      expect.objectContaining({ connectors: ["GitHub", "Gmail"] }),
+      expect.objectContaining({ connectors: ["Scoro", "Gmail"] }),
     )
+  })
+
+  it("offers the pool's in-use connectors beside the catalog (ADR-0046)", async () => {
+    // A team custom (Scoro) never ships in the catalog; it reaches the
+    // toggles through existingConnectors — offered, not pre-selected.
+    await renderDialog({ existingConnectors: ["Scoro"] })
+    typeInto(textarea("routine-prompt"), "Track Scoro time entries.")
+    button("Next").click()
+    await vi.waitFor(() =>
+      expect(document.querySelector("#routine-name")).not.toBeNull(),
+    )
+    button("Advanced").click()
+    const chip = await vi.waitFor(() => button("Scoro"))
+    expect(chip.getAttribute("aria-pressed")).toBe("false")
   })
 
   it("applies an edited field on save", async () => {
