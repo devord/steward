@@ -129,7 +129,11 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
       // to the marker column, so the heading joins the group's glyph column
       // (repo → boards → pool) and roots it — the name aligns with the board
       // names it heads, one tier up by weight and voice, not by outdent.
-      className="group/repo relative mb-1 flex h-5 items-center gap-1.5 pr-1.5 pl-6 pointer-coarse:pr-1"
+      // mb-0.5 (not mb-1): the caption hugs its content at the same 2px the
+      // group's own gap-0.5 threads its boards, so the tier steps read as one
+      // rhythm — the first section (or first board) tucks under the repo
+      // exactly as a board tucks under its section, no wider seam at the top.
+      className="group/repo relative mb-0.5 flex h-5 items-center gap-1.5 pr-1.5 pl-6 pointer-coarse:pr-1"
       title={group.repo}
     >
       {/* The repo tier's anchor (ADR-0023): a repo glyph on the marker column
