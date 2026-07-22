@@ -104,6 +104,46 @@ describe("syncResultProblems", () => {
     ).toBe(true)
   })
 
+  it("rejects a routine reported twice, even when both entries are clean", () => {
+    // "Exactly once" is the contract — a duplicated entry means the block
+    // doesn't describe the plan, however clean each copy looks.
+    const parsed = parseSyncResult(
+      block(
+        JSON.stringify({
+          roster_source: "roster",
+          routines: [
+            { routine: "steward-corza-pulse", action: "ok" },
+            { routine: "steward-corza-pulse", action: "ok" },
+            { routine: "steward-corza-gaps", action: "ok" },
+          ],
+        }),
+      ),
+    )
+    if (!parsed.ok) throw new Error("fixture should parse")
+    expect(syncResultProblems(parsed.result, expected)).toEqual([
+      "steward-corza-pulse: reported 2 times in the result block",
+    ])
+  })
+
+  it("rejects an entry for a routine the plan never listed", () => {
+    const parsed = parseSyncResult(
+      block(
+        JSON.stringify({
+          roster_source: "roster",
+          routines: [
+            { routine: "steward-corza-pulse", action: "ok" },
+            { routine: "steward-corza-gaps", action: "ok" },
+            { routine: "steward-somebody-elses", action: "reconciled" },
+          ],
+        }),
+      ),
+    )
+    if (!parsed.ok) throw new Error("fixture should parse")
+    expect(syncResultProblems(parsed.result, expected)).toEqual([
+      "steward-somebody-elses: in the result block but not in the plan",
+    ])
+  })
+
   it("does not treat drift as a divergence — it resolved (ADR-0046)", () => {
     const parsed = parseSyncResult(
       block(

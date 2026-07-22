@@ -652,6 +652,44 @@ describe("AddRoutineDialog edit mode", () => {
     )
   })
 
+  it("dedupes a legacy spelling onto its canonical chip (ADR-0046)", async () => {
+    // A stored pre-0046 `Google_Calendar` is the same connector as the
+    // catalog's `Google-Calendar` — one chip, pressed, canonical label;
+    // never two "Google Calendar" twins. Untouched, the legacy value
+    // round-trips; re-toggling migrates it to the chip's spelling.
+    const { onEdit } = await renderDialog({
+      editRoutine: { ...editable, connectors: ["Google_Calendar"] },
+    })
+    await vi.waitFor(() =>
+      expect(input("routine-name").value).toBe("Repo Pulse"),
+    )
+
+    const chips = [...document.querySelectorAll("[aria-pressed]")].filter(
+      (el) => el.textContent === "Google Calendar",
+    )
+    expect(chips).toHaveLength(1)
+    expect(chips[0]?.getAttribute("aria-pressed")).toBe("true")
+
+    // Off (removes the legacy value by key), on again (adds canonical).
+    button("Google Calendar").click()
+    await vi.waitFor(() =>
+      expect(button("Google Calendar").getAttribute("aria-pressed")).toBe(
+        "false",
+      ),
+    )
+    button("Google Calendar").click()
+    await vi.waitFor(() =>
+      expect(button("Google Calendar").getAttribute("aria-pressed")).toBe(
+        "true",
+      ),
+    )
+    button("Save changes").click()
+
+    expect(onEdit).toHaveBeenCalledWith(
+      expect.objectContaining({ connectors: ["Google-Calendar"] }),
+    )
+  })
+
   it("offers the pool's in-use connectors beside the catalog (ADR-0046)", async () => {
     // A team custom (Scoro) never ships in the catalog; it reaches the
     // toggles through existingConnectors — offered, not pre-selected.
