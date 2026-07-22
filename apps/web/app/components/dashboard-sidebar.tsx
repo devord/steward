@@ -173,7 +173,7 @@ export function DashboardSidebar({
                   {sectionBoards(
                     repoGroup.dashboards,
                     repoGroup.sections,
-                  ).flatMap((section, sectionIndex) => {
+                  ).flatMap((section) => {
                     // Hoisted so the menu closures capture a narrowed string,
                     // not the section's string | null label.
                     const label = section.label
@@ -182,7 +182,6 @@ export function DashboardSidebar({
                         <SectionLabel
                           key={`section:${label}`}
                           label={label}
-                          first={sectionIndex === 0}
                           onRename={
                             onRenameSection
                               ? () => onRenameSection(repoGroup.repo, label)
@@ -435,9 +434,13 @@ function RailAction({
  * as subordinate by weight, the missing glyph, and the indent — not by being
  * smaller than the boards it heads (the inversion the caption idiom avoids). It
  * stays `ink-dim`, never the ≥3:1 `ink-faint` metadata role — the user reads it
- * to steer, so it must clear AA at this size. A generous gap opens above each
- * section (tight within, air between) except the first, which tucks straight
- * under the repo heading. The label is the viewer's own words (a display label,
+ * to steer, so it must clear AA at this size. A generous gap opens above every
+ * section (tight within, air between) — the first included: it sits the same
+ * 14px below the repo heading that a later section sits below the board above
+ * it (`mt-3` here, plus the 2px each gets from its own lead — the group's
+ * `gap-0.5` mid-list, the repo caption's `mb-0.5` at the top), so the section
+ * captions read as one evenly-spaced tier rather than a tucked first and airy
+ * rest. The label is the viewer's own words (a display label,
  * ADR-0026), verbatim but cased up by the caption — truncated, never wrapped.
  *
  * When `onRename`/`onDelete` are set the heading carries a trailing `⋯` menu —
@@ -458,14 +461,10 @@ function RailAction({
  */
 function SectionLabel({
   label,
-  first,
   onRename,
   onDelete,
 }: {
   label: string
-  /** The section leads the group (no ungrouped boards above it): drop the top
-      gap so it sits directly under the repo heading. */
-  first?: boolean
   onRename?: () => void
   onDelete?: () => void
 }) {
@@ -479,10 +478,7 @@ function SectionLabel({
       // an auto-height text row, and pr-1.5 (pr-1 on coarse, where both buttons
       // hit the icon-xs size-8 floor) lands the size-5 glyph on the same
       // trailing column the size-6 board rows use.
-      className={cn(
-        "group/section relative flex h-5 items-center pr-1.5 pl-6 pointer-coarse:pr-1",
-        !first && "mt-3",
-      )}
+      className="group/section relative mt-3 flex h-5 items-center pr-1.5 pl-6 pointer-coarse:pr-1"
     >
       <span className="min-w-0 flex-1 truncate text-[11px] font-medium tracking-wider text-ink-dim uppercase">
         {label}
