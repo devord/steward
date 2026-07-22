@@ -84,17 +84,32 @@ export function parseSyncResult(output: string): ParsedSyncResult {
 /**
  * Everything keeping this sync from convergence, one line each — empty
  * means cloud state == desired state and the run may exit 0 (ADR-0046).
- * `expected` is the plan's cloud routine names: a routine the result block
- * skipped is unaccounted for, which is itself a divergence.
+ * `expected` is the plan's cloud routine names, and the block must account
+ * for each exactly once: a skipped routine is unaccounted for, and a
+ * duplicated or unplanned entry means the block doesn't describe the plan
+ * it claims to — either way, not convergence.
  */
 export function syncResultProblems(
   result: SyncResult,
   expected: string[],
 ): string[] {
   const problems: string[] = []
-  const reported = new Set(result.routines.map((entry) => entry.routine))
+  const counts = new Map<string, number>()
+  for (const entry of result.routines) {
+    counts.set(entry.routine, (counts.get(entry.routine) ?? 0) + 1)
+  }
+  const planned = new Set(expected)
   for (const name of expected) {
-    if (!reported.has(name)) problems.push(`${name}: not in the result block`)
+    const seen = counts.get(name) ?? 0
+    if (seen === 0) problems.push(`${name}: not in the result block`)
+    if (seen > 1) {
+      problems.push(`${name}: reported ${seen} times in the result block`)
+    }
+  }
+  for (const name of counts.keys()) {
+    if (!planned.has(name)) {
+      problems.push(`${name}: in the result block but not in the plan`)
+    }
   }
   for (const entry of result.routines) {
     if (entry.action === "needs-web-ui") {

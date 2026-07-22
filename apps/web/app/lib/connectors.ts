@@ -27,3 +27,14 @@ export const CONNECTOR_CATALOG: readonly string[] = [
 export function connectorLabel(name: string): string {
   return name.replaceAll(/[-_]/g, " ")
 }
+
+/**
+ * The ADR-0046 identity of a connector name — case-insensitive, `-` ≡ `_`
+ * — the same normalization routines:sync matches with. Two spellings with
+ * one key are the same connector (`Google_Calendar` = `Google-Calendar`);
+ * the chips dedupe on this so a legacy spelling never renders beside its
+ * canonical twin.
+ */
+export function connectorKey(name: string): string {
+  return name.toLowerCase().replaceAll("_", "-")
+}

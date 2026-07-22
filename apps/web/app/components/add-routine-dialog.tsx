@@ -37,7 +37,11 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
-import { CONNECTOR_CATALOG, connectorLabel } from "../lib/connectors.ts"
+import {
+  CONNECTOR_CATALOG,
+  connectorKey,
+  connectorLabel,
+} from "../lib/connectors.ts"
 import { useT } from "../lib/i18n.tsx"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
 import { frameArtifactHtml } from "../lib/theme.ts"
@@ -1576,16 +1580,22 @@ function ConnectorField({
   inUse: string[]
   onChange: (next: string[]) => void
 }) {
-  const known = new Set([...CONNECTOR_CATALOG, ...inUse])
-  const options = [
-    ...CONNECTOR_CATALOG,
-    ...inUse.filter((name) => !CONNECTOR_CATALOG.includes(name)),
-    ...value.filter((name) => !known.has(name)),
-  ]
+  // One chip per connectorKey, first spelling wins — catalog first, so the
+  // canonical form shadows a legacy in-use or stored spelling
+  // (`Google_Calendar` never renders beside `Google-Calendar`). Selection
+  // matches by key too: a stored legacy value presses its canonical chip,
+  // survives an untouched save verbatim, and migrates to the chip's
+  // spelling on the next re-toggle.
+  const byKey = new Map<string, string>()
+  for (const name of [...CONNECTOR_CATALOG, ...inUse, ...value]) {
+    if (!byKey.has(connectorKey(name))) byKey.set(connectorKey(name), name)
+  }
+  const options = [...byKey.values()]
+  const selected = new Set(value.map(connectorKey))
   function toggle(name: string) {
     onChange(
-      value.includes(name)
-        ? value.filter((entry) => entry !== name)
+      selected.has(connectorKey(name))
+        ? value.filter((entry) => connectorKey(entry) !== connectorKey(name))
         : [...value, name],
     )
   }
@@ -1596,7 +1606,7 @@ function ConnectorField({
       className="flex flex-wrap gap-1.5"
     >
       {options.map((name) => {
-        const on = value.includes(name)
+        const on = selected.has(connectorKey(name))
         return (
           <button
             key={name}
