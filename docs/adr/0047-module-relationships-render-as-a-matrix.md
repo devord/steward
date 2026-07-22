@@ -46,9 +46,13 @@ Add a **coupling matrix** to `design.md`'s component set: a square
   _argues_ the artifact's verdict instead of decorating it.
 - **Markup is a real `<table>`** with `scope`-carrying headers, because
   this is genuinely tabular data. Screen readers get row and column
-  headers for free, which no `<div>` grid can offer, and each cell
-  carries its own text label so the encoding never stands on color
-  alone (the meter's rule).
+  headers for free, which no `<div>` grid can offer. Each cell carries
+  its own **visually-hidden text node** — not merely a `title` — so the
+  encoding never stands on color alone (the meter's rule). A tooltip is
+  unreachable by touch, skipped by keyboard navigation and announced
+  inconsistently across screen readers, so a cell whose only text is a
+  `title` is an empty box to a good share of readers; the `title` stays
+  as supplemental hover text for everyone else.
 - **It is capped per tier, not scrolled.** Tiles render the top N
   modules by score; the full view renders all of them. Cropping a
   matrix is a contract violation the same way cropping a ledger is

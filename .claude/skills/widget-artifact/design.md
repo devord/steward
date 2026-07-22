@@ -1509,12 +1509,16 @@ give screen readers row/column association no `<div>` grid can:
   <tbody>
     <tr>
       <th scope="row"><span class="n">1</span> cart</th>
-      <td class="dg" title="cart — 41 files"></td>
+      <td class="dg" title="cart — 41 files">
+        <span class="sr-only">cart, 41 files</span>
+      </td>
       <td
         style="--c: 71"
         class="undeclared"
         title="cart ↔ checkout — 71%, no import"
-      ></td>
+      >
+        <span class="sr-only">cart and checkout, 71 percent, no import</span>
+      </td>
     </tr>
     <tr>
       <th scope="row"><span class="n">2</span> checkout</th>
@@ -1522,8 +1526,12 @@ give screen readers row/column association no `<div>` grid can:
         style="--c: 71"
         class="undeclared"
         title="checkout ↔ cart — 71%, no import"
-      ></td>
-      <td class="dg" title="checkout — 12 files"></td>
+      >
+        <span class="sr-only">checkout and cart, 71 percent, no import</span>
+      </td>
+      <td class="dg" title="checkout — 12 files">
+        <span class="sr-only">checkout, 12 files</span>
+      </td>
     </tr>
   </tbody>
 </table>
@@ -1580,18 +1588,29 @@ it. Mark that case and only that case. The inverse (a declared edge that
 never co-changes) is a healthy seam and needs no marker; the ledger's
 own fan-in/fan-out already carries it.
 
-**Color never stands alone.** Every cell carries a `title` naming the
-pair and its value, the way the meter carries its number — a matrix read
-by shade alone is unreadable to a screen reader and to anyone who can't
-separate two steps of one ramp.
+**Color never stands alone, and `title` is not the answer.** Every cell
+carries a real **`.sr-only` text node** stating its pair and value. A
+tooltip is supplemental hover text: it is unreachable by touch, skipped
+by keyboard navigation, and announced inconsistently across screen
+readers — so a cell whose only text is a `title` is, to a good share of
+readers, an empty box. Keep the `title` for the sighted hover, and let
+the sr-only node be the accessible content. Empty cells with a tooltip
+are the failure this rule exists to prevent; the same discipline as the
+meter, which pairs its shape with a number rather than standing on color.
+
+Values inside the node are **spoken, not typed**: `71 percent`, not
+`71%`, and `and` rather than `↔`, because a screen reader reads the glyph
+aloud or drops it.
 
 **Cap by tier; never crop.** N modules cost N² cells, so the matrix is a
-designed tier like everything else (ADR-0019): tiles render the top N by
-whatever the artifact ranks on, the full view renders all of them, and
-the count held back is **stated** (`+12 modules in full view`). A matrix
-sliced by the frame's clip is a contract violation, not a compromise.
-Below ~4 rows there is no field left to see — drop to the ledger and let
-the pairs be rows.
+designed tier like everything else (ADR-0019): tiles render a **fixed**
+top N by whatever the artifact ranks on — an exact number with a stated
+tie-breaker, never "about eight", or two runs over one tree draw
+different matrices — the full view renders all of them, and the count
+held back is **stated**, computed from the uncapped set
+(`+12 modules in full view`). A matrix sliced by the frame's clip is a
+contract violation, not a compromise. Below 4 rows there is no field left
+to see — drop to the ledger and let the pairs be rows.
 
 ### Time blocks (the Newport day)
 

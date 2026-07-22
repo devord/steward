@@ -97,6 +97,15 @@ Two layers:
   absent, these signals are **unavailable**, not zero: they drop out of
   the score (see normalization) and the provenance line says so.
 
+**`hidden coupling` belongs to the TS/JS layer, not the core.** It is
+defined by the _absence_ of an import edge, and with no import overlay
+"no import" and "imports were never measured" are the same observation.
+Scoring it anyway would fire the penalty on every co-changing pair in
+every non-JS repo — the loudest possible signal produced by having
+measured nothing. Without the overlay it is **unavailable** and
+normalizes out, exactly like `wide interface`. The matrix still renders:
+co-change shading is core, and it simply carries no markers.
+
 Resolve `params.window` (default **90**) days and `params.history`
 (default **8**) weekly points once, up front.
 
@@ -150,34 +159,67 @@ keyed on. Never key on a display name.
 
 ## 3 · Measure
 
+**Resolve the window to two absolute timestamps first**, and pass those to
+every command:
+
+```bash
+until=$(git log -1 --format=%cI "$ref")           # the point being scored
+since=$(date -u -d "$until - $window days" +%FT%TZ)   # BSD: date -u -v-"$window"d
+```
+
+Never write `--since="$window days ago"`. A relative date is resolved
+against the wall clock at run time, so a historical point (step 5) would
+silently reuse _today's_ trailing window and every point in the trend
+would measure the same weeks. `$ref` is `HEAD` for the current score and
+the boundary sha for a historical one; everything below is then identical
+at every point.
+
 Per module, over the window:
 
 ```bash
 # churn — commits touching the module
-git log --since="$window days ago" --oneline -- $paths | wc -l
+git log --since="$since" --until="$until" --oneline -- $paths | wc -l
 
 # authors, and the top author's share (bus factor)
-git log --since="$window days ago" --format='%an' -- $paths | sort | uniq -c | sort -rn
+git log --since="$since" --until="$until" --format='%an' -- $paths \
+  | sort | uniq -c | sort -rn
 
 # size — source files, and the largest
-git ls-files -- $paths | grep -vE '\.(test|spec|stories)\.' | wc -l
+git ls-tree -r --name-only "$ref" -- $paths | grep -vE '\.(test|spec|stories)\.' | wc -l
 
-# test seam — is there any test/story file at all, and what share
-git ls-files -- $paths | grep -cE '\.(test|spec|stories)\.'
+# test seam — how many of the module's files are tests/stories
+git ls-tree -r --name-only "$ref" -- $paths | grep -cE '\.(test|spec|stories)\.'
 ```
 
-TS/JS layer only:
+TS/JS layer only. Both fan measurements need the **module** on each side,
+so keep filenames (never `grep -h`) and map every path back to its module
+id before counting:
 
 ```bash
 # interface width — exported symbols per source file
-git grep -cE '^export ' -- $paths
+git grep -cE '^export ' "$ref" -- $paths
 
-# fan-out — distinct modules this one imports
-git grep -hE "^import .* from " -- $paths
+# fan-out — distinct OTHER modules this module imports.
+# Keep the filename, resolve each import target to a path, map that path
+# to its module id, drop self-references, count distinct.
+git grep -hoE "from ['\"][^'\"]+['\"]" "$ref" -- $paths \
+  | sed -E "s/.*from ['\"]//; s/['\"]$//"
 
-# fan-in — files outside the module importing it
-git grep -lE "from '[^']*<module path or alias>" -- $srcglobs
+# fan-in — files outside the module that import it. Substitute the
+# module's own path AND its alias form; a repo with an alias (~/, @/,
+# a workspace package name) writes most imports that way, so matching
+# only the relative path undercounts to near zero.
+git grep -lE "from ['\"][^'\"]*(${module_path}|${module_alias})" "$ref" -- $src_globs \
+  | grep -v "^${module_path}/"
 ```
+
+Resolve each import target the way the repo does: strip the extension,
+follow the alias prefix to its real directory (`~/` → `app/`, a workspace
+name → that package's source dir), then find which module's paths contain
+it. A target that resolves outside every root (`node_modules`, a bare
+package name) is **external** and counts toward neither fan-in nor
+fan-out — those measure coupling inside the codebase, and every module
+importing `react` is not a finding.
 
 **Co-change** drives the matrix. For every commit in the window, list the
 modules its files touch (`git log --format='%H' --since=...` then
@@ -186,9 +228,12 @@ appears in the same commit. The pair's strength is
 `shared / min(commits_a, commits_b)` as a percent — normalizing by the
 quieter module, so a busy module doesn't read as coupled to everything.
 
-Ignore commits touching more than ~15 files: a repo-wide rename or a
-formatting sweep couples everything to everything and is not evidence of
-anything. State the ignored count in provenance.
+Ignore any commit touching **more than 15 files** — exactly 15, not a
+judgement about size. A repo-wide rename or a formatting sweep couples
+everything to everything and is not evidence of anything, and a threshold
+stated as "about fifteen" is one the next run can resolve differently,
+which is the reproducibility rule broken in the one place it matters
+most. State the ignored count in provenance.
 
 ## 4 · Score
 
@@ -205,12 +250,29 @@ a row can show its own arithmetic. Defaults (override via
 | `stated-rule breach` | 15  | 8 per distinct rule in `params.rules` breached               |
 | `single author`      | 10  | 10 at one author in the window, 5 at two, 0 at three or more |
 
+**Every penalty is clamped to its own max**: `min(raw, max)`, always. The
+two per-item penalties overrun trivially — four hidden couplings raise 32
+against a max of 25, three breached rules raise 24 against 15 — and an
+unclamped penalty pushes the normalized score past 100, which makes the
+bar meaningless and the trend discontinuous at exactly the modules the
+widget most wants to be believed about. Clamp, then show the clamp in the
+arithmetic (`hidden coupling ×4 +25 (capped)`), because a reader who sees
+`+25` for four pairs and `+25` for eight deserves to know why they match.
+
 **Normalize to percent-of-available-max.** A signal that could not be
-computed (no `package.json` → no `wide interface`; no `params.rules` → no
-breach) is excluded from _both_ the numerator and the denominator:
-`score = 100 × Σ penalties / Σ max of available penalties`. A repo missing
-the TS/JS layer must not score lower merely for being unmeasurable. State
-which signals were available in provenance.
+computed is excluded from _both_ the numerator and the denominator:
+`score = 100 × Σ clamped penalties / Σ max of available penalties`. The
+exclusions:
+
+- no `package.json` → `wide interface` **and** `hidden coupling` are
+  unavailable (both need the import overlay; see above)
+- no `params.rules` → `stated-rule breach` is unavailable
+- a shallow clone → `churn`, `hidden coupling` and `single author` are
+  unavailable, since none of them survive without history
+
+A repo must never score higher merely for being unmeasurable, nor lower.
+State which signals were available in provenance, always — a score of 62
+built from three signals and one built from six are different claims.
 
 `wide interface` is a **proxy and says so**. `/codebase-design` explicitly
 rejects depth-as-ratio-of-lines, because it rewards padding the
@@ -224,8 +286,14 @@ step 6, by reading the code.
 Recompute from git — **never** from a stored file and never from the
 previous artifact. Take the last commit on or before each of
 `params.history` weekly boundaries, and recompute the score at that sha
-(`git grep`, `git ls-tree` and a trailing-window `git log` all accept a
-sha, so no checkout is needed).
+(`git grep`, `git ls-tree` and a date-bounded `git log` all accept a sha,
+so no checkout is needed).
+
+**Each point carries its own window.** Set `$ref` to that point's sha and
+re-derive `$until`/`$since` from _its_ commit date, exactly as step 3
+specifies. A point scored with the current window is not a past score —
+it is today's churn attached to an old tree, which is the one failure
+that would make the sparkline look plausible while being wrong.
 
 This has three properties worth the extra cost: run 1 ships with a full
 trend, a skipped week leaves no hole, and changing the weights re-bases
@@ -336,14 +404,17 @@ Size behavior:
   bottom line clamped to two lines beneath. A bare index would say the
   house is on fire without naming the room.
 - **2×1 / 1×2**: the bottom line in full, then the top two rows with bars
-  and scores. No matrix — below ~4 rows there is no field to see.
+  and scores. No matrix — a field needs at least 4 rows to read as one.
 - **2×2**: the bottom line, then the ledger's top rows.
 - **Wide tile (3–4 cols)**: ledger and matrix side by side, the ledger
-  taking the flexible track. Cap the matrix at the top ~8 modules and
-  **state the count held back** (`+12 in full view`). Both columns carry
-  `data-fit-list` — a column with no trimmable list is a floor the fit
-  pass cannot get under, and it will trim the other to nothing while the
-  tile still overflows.
+  taking the flexible track. Cap the matrix at **exactly the top 8
+  modules** by score, ties broken by churn, then by module id
+  ascending — a deterministic order, so two runs over the same tree pick
+  the same eight. **State the count held back**, computed from the
+  uncapped census (`+12 in full view`, never a recount of what happened
+  to render). Both columns carry `data-fit-list` — a column with no
+  trimmable list is a floor the fit pass cannot get under, and it will
+  trim the other to nothing while the tile still overflows.
 - **Full view / raw page**: a page. The bottom line as a lede, the full
   matrix (every module), the complete ledger with each judged row's
   penalty arithmetic, then the provenance line: repo and window, resolved

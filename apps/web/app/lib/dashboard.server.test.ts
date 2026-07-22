@@ -93,6 +93,7 @@ describe("loadDashboard", () => {
     // name; the rest arrive as built-ins with no repo seeded at all.
     expect(view.templates.map((t) => [t.id, t.source])).toEqual([
       ["daily-plan", "repo"],
+      ["module-entropy", "builtin"],
       ["repo-narrative", "builtin"],
       ["repo-pulse", "builtin"],
     ])
@@ -127,6 +128,7 @@ describe("loadDashboard", () => {
     // Built-ins ship in the bundle — they're there even with no config.
     expect(view.templates.map((t) => [t.id, t.source])).toEqual([
       ["daily-plan", "builtin"],
+      ["module-entropy", "builtin"],
       ["repo-narrative", "builtin"],
       ["repo-pulse", "builtin"],
     ])
