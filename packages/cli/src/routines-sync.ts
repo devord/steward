@@ -532,6 +532,29 @@ export async function main(argv: string[]): Promise<void> {
     for (const problem of cloudProblems) {
       console.error(`  - ${problem}`)
     }
+    // A connector reported `unresolved` under the triggers fallback is NOT
+    // proof it is disconnected: the headless apply run reads no account
+    // roster, so a connector connected on the account but attached to no
+    // trigger yet is invisible to it (ADR-0046). The schedule skill's
+    // generic "connect it at /customize/connectors" is wrong here — that
+    // never reaches the headless roster, so re-running loops forever. Name
+    // the one remedy that actually seeds the fallback.
+    if (parsed.ok && parsed.result.roster_source === "triggers") {
+      const unresolved = [
+        ...new Set(parsed.result.routines.flatMap((entry) => entry.unresolved)),
+      ]
+      if (unresolved.length > 0) {
+        console.error(
+          `\n# ${unresolved.join(", ")}: unresolved only because the headless` +
+            " apply cannot see the account roster — a connector on no trigger" +
+            " yet is invisible to it. Connecting it at /customize/connectors" +
+            " does NOT fix this. Seed it once — attach it to any routine at" +
+            " https://claude.ai/code/routines, or run this sync from an" +
+            " interactive Claude Code session — then re-run; the fallback will" +
+            " then see it.",
+        )
+      }
+    }
   } else {
     console.log("\nCloud state converged on the plan.")
   }
