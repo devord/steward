@@ -35,6 +35,7 @@ import {
   triggerPath,
 } from "@steward/schema"
 
+import { CLI } from "./cli-name.ts"
 import { ghLogin, inferRepo, repoTag, routinesFileFor } from "./data-repo.ts"
 import {
   claudeAccountEmail,
@@ -66,7 +67,7 @@ export function main(argv: string[]): void {
 
   if (!slug) {
     console.error(
-      "Usage: steward trigger <slug> [--repo <owner/repo>] [--file <path/to/routines.yaml>] [--account [<email>]]",
+      `Usage: ${CLI} trigger <slug> [--repo <owner/repo>] [--file <path/to/routines.yaml>] [--account [<email>]]`,
     )
     process.exit(1)
   }
@@ -114,7 +115,7 @@ export function main(argv: string[]): void {
   if (routineHost(routine) === "local") {
     console.error(
       `routine-trigger: ${slug} is local — local routines have no API trigger` +
-        ` (ADR-0016); run it with \`steward run ${slug}\`.`,
+        ` (ADR-0016); run it with \`${CLI} run ${slug}\`.`,
     )
     process.exit(1)
   }
@@ -188,7 +189,7 @@ export function main(argv: string[]): void {
       "\nwhere repo read access is exactly the entitlement to fire (ADR-0016)." +
       "\nLeave empty to skip." +
       `\n\nIf \`${cloudName}\` doesn't exist yet, enact it first:` +
-      `\n  steward sync --apply${repo ? ` --repo ${repo}` : ` --file ${file}`}\n`,
+      `\n  ${CLI} sync --apply${repo ? ` --repo ${repo}` : ` --file ${file}`}\n`,
   )
   if (existsSync(path.join(dataRepoDir, triggerPath(slug)))) {
     console.log(

@@ -21,6 +21,7 @@ import path from "node:path"
 
 import { slugSchema } from "@steward/schema"
 
+import { CLI } from "./cli-name.ts"
 import { ensureDataRepoCheckout, ghLogin } from "./data-repo.ts"
 import { contractSkillsDir } from "./skills.ts"
 
@@ -33,7 +34,7 @@ export function main(argv: string[]): void {
 
   if (!slug || !slugSchema.safeParse(slug).success) {
     console.error(
-      "usage: steward run <slug> [--dry] [--repo <owner/repo>]\n" +
+      `usage: ${CLI} run <slug> [--dry] [--repo <owner/repo>]\n` +
         "  <slug> is a kebab-case routine slug from data/routines.yaml",
     )
     process.exit(1)
