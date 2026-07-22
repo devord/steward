@@ -66,6 +66,7 @@ import {
   triggerPath,
 } from "@steward/schema"
 
+import { CLI } from "./cli-name.ts"
 import { ghLogin, inferRepo, repoTag, routinesFileFor } from "./data-repo.ts"
 import { cronToLaunchd, launchdPlist, plistRepo } from "./launchd.ts"
 import { contractSkillsDir } from "./skills.ts"
@@ -392,7 +393,7 @@ export async function main(argv: string[]): Promise<void> {
   }
   for (const routine of localManual) {
     console.log(
-      `# ${routine.slug} is manual + local — nothing to enact; run it with \`steward run ${routine.slug}\` (ADR-0016/0017)`,
+      `# ${routine.slug} is manual + local — nothing to enact; run it with \`${CLI} run ${routine.slug}\` (ADR-0016/0017)`,
     )
   }
   if (localManual.length > 0) console.log("")
@@ -408,8 +409,8 @@ export async function main(argv: string[]): Promise<void> {
     if (missingTriggers.length > 0) {
       console.log(
         "# Missing API-trigger tokens (create the trigger in the Claude web",
-        "\n# UI, then re-run with --apply — or run `steward trigger",
-        "\n# <slug>` any time — to paste + commit them):",
+        "\n# UI, then re-run with --apply — or run",
+        `\n# \`${CLI} trigger <slug>\` any time — to paste + commit them):`,
       )
       for (const routine of missingTriggers) {
         console.log(`#   ${routine.slug} → ${triggerPath(routine.slug)}`)
@@ -417,9 +418,9 @@ export async function main(argv: string[]): Promise<void> {
       console.log("")
     }
     console.log(
-      "Dry run. Apply with `steward sync --apply` (drives a headless\n" +
-        "claude run for the cloud half and writes the launchd agents), or\n" +
-        "reconcile by hand via /schedule in Claude Code.",
+      `Dry run. Apply with \`${CLI} sync --apply\` (drives a\n` +
+        "headless claude run for the cloud half and writes the launchd\n" +
+        "agents), or reconcile by hand via /schedule in Claude Code.",
     )
     process.exit(localErrors.length > 0 ? 1 : 0)
   }
@@ -601,7 +602,7 @@ export async function main(argv: string[]): Promise<void> {
       console.error(
         "routines-sync: cloud routines are missing trigger tokens" +
           ` (${missingTriggers.map((r) => r.slug).join(", ")}) — re-run in a` +
-          " terminal to paste them, or use `steward trigger <slug>`.",
+          ` terminal to paste them, or use \`${CLI} trigger <slug>\`.`,
       )
     } else {
       console.log(
@@ -610,8 +611,8 @@ export async function main(argv: string[]): Promise<void> {
           "\nthey are committed to the data repo, where repo read access is" +
           "\nexactly the entitlement to fire (ADR-0016). A trigger only gates" +
           "\nfiring the cloud routine — from the API or the app's Update button;" +
-          "\n`steward run <slug>` always runs it locally without one. Leave empty" +
-          "\nto skip (mint later with `steward trigger <slug>`).\n",
+          `\n\`${CLI} run <slug>\` always runs it locally without one. Leave` +
+          `\nempty to skip (mint later with \`${CLI} trigger <slug>\`).\n`,
       )
       for (const routine of missingTriggers) {
         promptTriggerToken(routine.slug, dataRepoDir)
@@ -641,7 +642,7 @@ export async function main(argv: string[]): Promise<void> {
       console.log(
         `\n# ${unstamped.length} trigger(s) carry no owning Claude account and` +
           " none is signed in here — stamp with" +
-          " `steward trigger <slug> --account <email>`.",
+          `\n# \`${CLI} trigger <slug> --account <email>\`.`,
       )
     }
   }

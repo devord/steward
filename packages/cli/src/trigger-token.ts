@@ -25,6 +25,8 @@ import {
   triggerPath,
 } from "@steward/schema"
 
+import { CLI } from "./cli-name.ts"
+
 /**
  * The Claude account signed into this machine (~/.claude.json), best-effort.
  * Offered as the default for the trigger's `account` field — the runner mints
@@ -134,7 +136,7 @@ export function setTriggerAccount(
   } catch {
     console.error(
       `  no valid trigger at ${relPath} — mint one first with` +
-        ` \`steward trigger ${slug}\`.`,
+        ` \`${CLI} trigger ${slug}\`.`,
     )
     return false
   }

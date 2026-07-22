@@ -9,6 +9,7 @@
  *   steward run     <slug> [--dry] [--repo <owner/repo>]
  *   steward trigger <slug> [--repo <owner/repo>] [--file <path>] [--account [<email>]]
  */
+import { CLI } from "./cli-name.ts"
 import { main as run } from "./routine.ts"
 import { main as sync } from "./routines-sync.ts"
 import { main as trigger } from "./routine-trigger.ts"
@@ -16,6 +17,7 @@ import { main as trigger } from "./routine-trigger.ts"
 function usage(): void {
   console.log(
     "steward — keep your dashboard's routines in sync (ADR-0036)\n\n" +
+      `Usage: ${CLI} <command>\n\n` +
       "Commands:\n" +
       "  sync    [--apply] [--repo <owner/repo>] [--file <path>]  reconcile cloud + launchd\n" +
       "  run     <slug> [--dry] [--repo <owner/repo>]             run a routine interactively\n" +
