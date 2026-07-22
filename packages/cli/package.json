@@ -3,6 +3,11 @@
   "version": "0.2.0",
   "description": "Keep your Steward dashboard's routines in sync — cloud routines and local launchd agents from one routines.yaml.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devord/steward.git",
+    "directory": "packages/cli"
+  },
   "bin": {
     "steward": "./dist/cli.js"
   },
