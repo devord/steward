@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
+import { CONNECTOR_CATALOG, connectorLabel } from "../lib/connectors.ts"
 import { useT } from "../lib/i18n.tsx"
 import type { DiscoveredTemplate } from "../lib/templates.ts"
 import { frameArtifactHtml } from "../lib/theme.ts"
@@ -153,25 +154,9 @@ function isRepoRef(token: string): boolean {
   return repoRefSchema.safeParse(token).success
 }
 
-/**
- * The MCP connectors a cloud run may allow (ADR-0018), by account name. The
- * set is small and known, so the field offers it as toggles rather than a
- * free-typed list. The *stored* value stays the exact account-name machine
- * string (`Google_Calendar`); the chip shows its friendly form (underscores
- * → spaces, sans — the label is display, the YAML keeps the honest string).
- * Edit this list to change what's offered; a stored name outside it still
- * renders (see ConnectorField) so an edit never silently drops one.
- */
-const CONNECTOR_CATALOG: readonly string[] = [
-  "GitHub",
-  "Gmail",
-  "Google_Calendar",
-  "Google_Drive",
-  "Slack",
-  "Linear",
-  "Notion",
-  "Figma",
-]
+// The connector chips the wizard offers live in lib/connectors.ts (the
+// directory catalog, ADR-0046) and are unioned with the pool's in-use names
+// via `existingConnectors` — see ConnectorField.
 
 /**
  * The routine wizard, prompt-first (ADR-0013), in two steps. **Intent**:
@@ -195,6 +180,7 @@ export function AddRoutineDialog({
   columns,
   existingSlugs,
   existingCategories = [],
+  existingConnectors = [],
   onAdd,
   editRoutine,
   onEdit,
@@ -214,6 +200,10 @@ export function AddRoutineDialog({
       category field so a repo converges on its own vocabulary instead of
       sprouting "Eng" beside "Engineering". */
   existingCategories?: string[]
+  /** Connector names already in use across this repo's pool — how a team's
+      custom connector (never in the shipped catalog, ADR-0046) is offered
+      on the next routine. */
+  existingConnectors?: string[]
   onAdd: (routine: Routine, size: WidgetSize) => void
   /** When set, the form edits this routine in place instead of adding one. */
   editRoutine?: Routine | null
@@ -1318,6 +1308,7 @@ export function AddRoutineDialog({
                           <ConnectorField
                             labelledBy="routine-connectors-label"
                             value={connectors}
+                            inUse={existingConnectors}
                             onChange={(next) => {
                               // A manual toggle claims the set — template
                               // switches stop retracting auto-seeds.
@@ -1562,28 +1553,34 @@ function TemplatePreview({ html, name }: { html: string; name: string }) {
 }
 
 /**
- * The connector allowlist (ADR-0018) as a set of toggles over the known
- * catalog — the options are predetermined and few, so it's a pick-from-list,
- * not a free-typed field. Selection follows the app's idiom: a translucent
+ * The connector allowlist (ADR-0018) as a set of toggles: the directory
+ * catalog (lib/connectors.ts, ADR-0046), then the pool's in-use names —
+ * how an account-specific custom (a team's own MCP server) gets offered
+ * without ever shipping in the product — then any stored name outside both
+ * (hand-authored YAML, a template's suggestion), so an edit round-trips it
+ * instead of dropping it. Selection follows the app's idiom: a translucent
  * accent wash and accent border under unchanged mono ink — no per-chip
  * check (a reserved leading icon left every unchecked chip with a hollow
  * gap, off-center text, and ragged left edges; the wash + border carry the
- * state, `aria-pressed` carries it for AT). A stored connector the catalog
- * doesn't list (hand-authored YAML, or a template's suggestion) is appended
- * so an edit round-trips it instead of dropping it.
+ * state, `aria-pressed` carries it for AT).
  */
 function ConnectorField({
   labelledBy,
   value,
+  inUse,
   onChange,
 }: {
   labelledBy: string
   value: string[]
+  /** Connector names already used across this repo's pool (ADR-0046). */
+  inUse: string[]
   onChange: (next: string[]) => void
 }) {
+  const known = new Set([...CONNECTOR_CATALOG, ...inUse])
   const options = [
     ...CONNECTOR_CATALOG,
-    ...value.filter((name) => !CONNECTOR_CATALOG.includes(name)),
+    ...inUse.filter((name) => !CONNECTOR_CATALOG.includes(name)),
+    ...value.filter((name) => !known.has(name)),
   ]
   function toggle(name: string) {
     onChange(
@@ -1618,8 +1615,8 @@ function ConnectorField({
           >
             {/* Friendly display of the stored machine string: sans with
                 spaces ("Google Calendar"), per the per-string mono rule —
-                the label is prose; the YAML keeps `Google_Calendar`. */}
-            {name.replaceAll("_", " ")}
+                the label is prose; the YAML keeps `Google-Calendar`. */}
+            {connectorLabel(name)}
           </button>
         )
       })}

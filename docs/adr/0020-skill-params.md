@@ -28,7 +28,7 @@ widget:
       label: Repositories to watch
       type: repos
       required: true
-  connectors: [GitHub]
+  connectors: [Atlassian-Rovo]
 ```
 
 - **Param types v1**: `string` (free text), `select` (one of `options`),

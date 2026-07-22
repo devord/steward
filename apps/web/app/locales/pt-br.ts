@@ -487,7 +487,7 @@ export const ptBR: Messages = {
     "Repos que a execução na nuvem pode ler além dos repos de contrato e de dados — repos que um template observa são anexados automaticamente",
   "dialog.connectors": "Connectors",
   "dialog.connectorsHint":
-    "Connectors MCP que a execução pode usar, pelo nome da conta — ela não recebe nenhum a menos que listado",
+    "Connectors MCP que a execução pode usar, pelo nome exato do connector — ela não recebe nenhum a menos que listado",
   "dialog.repoEmpty": "Digite owner/repo — sugestões vêm dos seus repos",
   "dialog.addToken": 'Adicionar "{value}"',
   "dialog.removeToken": "Remover {value}",

@@ -504,7 +504,7 @@ export const en = {
     "Repos the cloud run can read beyond the contract and data repos — repos a template watches are attached automatically",
   "dialog.connectors": "Connectors",
   "dialog.connectorsHint":
-    "MCP connectors the run may use, by account name — it gets none unless listed",
+    "MCP connectors the run may use, by exact connector name — it gets none unless listed",
   "dialog.repoEmpty": "Type owner/repo — suggestions come from your repos",
   "dialog.addToken": 'Add "{value}"',
   "dialog.removeToken": "Remove {value}",

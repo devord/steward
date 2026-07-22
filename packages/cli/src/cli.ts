@@ -30,7 +30,8 @@ const [command, ...rest] = process.argv.slice(2)
 
 switch (command) {
   case "sync":
-    sync(rest)
+    // Top-level await (ESM): the apply path streams a headless claude run.
+    await sync(rest)
     break
   case "run":
     run(rest)

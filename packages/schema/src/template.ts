@@ -3,7 +3,7 @@ import { z } from "zod"
 
 import { categoryNameSchema } from "./category.ts"
 import { widgetSizeSchema } from "./dashboard.ts"
-import { slugSchema } from "./routine.ts"
+import { connectorNameSchema, slugSchema } from "./routine.ts"
 
 /**
  * One input a template asks of the person adding a routine (ADR-0020) —
@@ -60,11 +60,12 @@ export const widgetMetaSchema = z.object({
     )
     .optional(),
   /**
-   * MCP connector names the template's cloud runs typically need (e.g.
-   * `Google_Calendar`) — picking the template pre-fills the routine's
-   * `connectors:` allowlist, which otherwise defaults to none (ADR-0018).
+   * Canonical connector names the template's cloud runs typically need
+   * (e.g. `Google-Calendar`, ADR-0046) — picking the template pre-fills
+   * the routine's `connectors:` allowlist, which otherwise defaults to
+   * none (ADR-0018).
    */
-  connectors: z.array(z.string().min(1)).optional(),
+  connectors: z.array(connectorNameSchema).optional(),
   /**
    * Key of the param that carries the routine's *subject* — the thing an
    * instance is about (repo-pulse's `repos`). The wizard slugs instances

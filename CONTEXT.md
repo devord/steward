@@ -126,6 +126,17 @@ Meaningful in shared repos, where each collaborator's `routines:sync`
 enacts only their own entries; home pools leave it unset (the owner is the
 runner).
 
+**Connector**:
+An external service a cloud run may call over MCP, named in a routine's
+`connectors:` allowlist by its canonical sanitized name — what
+claude.ai/customize/connectors shows, spaces as hyphens (`Google-Calendar`,
+`Atlassian-Rovo`). The name is a service requirement, resolved against the
+routine's **runner**'s account roster at sync time; absent or empty means
+the run gets none (ADR-0018/0046). Directory connectors share names across
+accounts; custom ones are per-account by nature.
+_Avoid_: integration, MCP server (the protocol tier), uuid (resolution
+output, never authored)
+
 **Routine template**:
 A parameterized routine definition the wizard instantiates: a plain
 markdown file at `templates/routines/<id>.md`, with frontmatter (`name`,
