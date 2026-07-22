@@ -17,8 +17,12 @@ name: Release
 # already bundles.
 #
 # The private web app is never published; only `@devord/steward` has a public
-# access + version, so publish touches nothing else. No npm provenance: it
-# requires a public source repo, and this monorepo stays private (ADR-0036).
+# access + version, so publish touches nothing else. Trusted publishing
+# generates npm provenance automatically, and the registry validates it
+# against the package's `repository` field — packages/cli/package.json must
+# keep `repository.url` pointing at this repo or the publish is rejected
+# with E422. (ADR-0036 predates this: it opted out of provenance while the
+# monorepo was private; the repo is public now.)
 
 on:
   push:
