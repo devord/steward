@@ -708,16 +708,67 @@ function declarations(theme: Theme): string {
 }
 
 /**
+ * The mark's fixed identity (DESIGN.md § Mark). The bow tie stopped
+ * following the active theme: one light colorway and one dark colorway,
+ * keyed on mode alone, drawn from the Flexoki rows above so the registry
+ * stays the single source of every hex. `bevel` is the chip's top-lit
+ * highlight — a white stroke that must stay faint on the dark tile and
+ * strong on the light one.
+ */
+const flexokiLight = themes["flexoki-light"].tokens
+const flexokiDark = themes["flexoki-dark"].tokens
+export const MARK_IDENTITY = {
+  light: {
+    wingTip: flexokiLight.accent,
+    wingFold: flexokiLight.accentDeep,
+    knot: flexokiLight.ink,
+    tileTop: flexokiLight.bg1,
+    tileBottom: flexokiLight.bg,
+    tileBorder: flexokiLight.border,
+    tileBevel: "rgb(255 255 255 / 0.7)",
+  },
+  dark: {
+    wingTip: flexokiDark.accent,
+    wingFold: flexokiDark.accentDeep,
+    knot: flexokiDark.ink,
+    tileTop: flexokiDark.bg1,
+    tileBottom: flexokiDark.bg,
+    tileBorder: flexokiDark.border,
+    tileBevel: "rgb(255 255 255 / 0.06)",
+  },
+} as const satisfies Record<ThemeMode, Record<string, string>>
+
+function markDeclarations(mode: ThemeMode): string {
+  const m = MARK_IDENTITY[mode]
+  return [
+    `--mark-wing-tip:${m.wingTip}`,
+    `--mark-wing-fold:${m.wingFold}`,
+    `--mark-knot:${m.knot}`,
+    `--mark-tile-top:${m.tileTop}`,
+    `--mark-tile-bottom:${m.tileBottom}`,
+    `--mark-tile-border:${m.tileBorder}`,
+    `--mark-tile-bevel:${m.tileBevel}`,
+  ].join(";")
+}
+
+/**
  * The palette blocks served as an inline `<style>` from root.tsx: the
  * default on `:root`, then one `[data-theme]` block per theme. Semantic
  * tokens in app.css alias these vars, so flipping the attribute re-themes
- * everything at the next paint.
+ * everything at the next paint. The mark's fixed identity rides at the
+ * end — `--mark-*` never appears in a `[data-theme]` block, so no theme
+ * can re-color the tie.
  */
 export function themeStylesheet(): string {
   const blocks = themeEntries.map(
     ([name, theme]) => `[data-theme="${name}"]{${declarations(theme)}}`,
   )
-  return [`:root{${declarations(themes[DEFAULT_THEME])}}`, ...blocks].join("\n")
+  return [
+    `:root{${declarations(themes[DEFAULT_THEME])}}`,
+    ...blocks,
+    `:root{${markDeclarations("light")}}`,
+    `.dark{${markDeclarations("dark")}}`,
+  ].join("\n")
 }
 
 /**

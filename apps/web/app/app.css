@@ -145,19 +145,13 @@
   --sidebar-accent-foreground: var(--palette-ink);
   --sidebar-border: var(--palette-border-dim);
   --sidebar-ring: var(--palette-accent-deep);
-  /* Bow-tie wings read as folded fabric: brighter at the flared tips,
-     deeper where the fabric gathers at the knot. Which accent is the
-     "brighter" one flips by mode — a light palette's accent is the deep
-     rust and its accent-deep the brighter orange — so the pairing swaps
-     under .dark below. Aliases only; no literal color at this layer. */
-  --mark-wing-tip: var(--palette-accent-deep);
-  --mark-wing-fold: var(--palette-accent);
 }
 
-.dark {
-  --mark-wing-tip: var(--palette-accent);
-  --mark-wing-fold: var(--palette-accent-deep);
-}
+/* The mark's colors are deliberately absent here: the bow tie wears a fixed
+   identity (one light set, one dark set, Flexoki), emitted as `--mark-*`
+   vars by themeStylesheet() in lib/theme.ts — the registry stays the single
+   source of every hex, and no `[data-theme]` block can re-color the tie
+   (DESIGN.md § Mark). */
 
 @layer base {
   * {
@@ -200,36 +194,16 @@
 }
 
 /* Landing only: a faint dot grid hinting at the widget grid. Sits on bg,
-   never behind body copy blocks. */
+   never behind body copy blocks. 12% ink, not less: at 7% the grid vanished
+   entirely on the near-black Flexoki page, and an invisible hint informs
+   nothing. Still two steps quieter than the faintest hairline tier. */
 @layer components {
   .landing-bg {
     background-image: radial-gradient(
-      color-mix(in oklab, var(--color-ink) 7%, transparent) 1px,
+      color-mix(in oklab, var(--color-ink) 12%, transparent) 1px,
       transparent 1px
     );
     background-size: 24px 24px;
-  }
-
-  /* The mark's ink knot is the wordmark's block caret; on the landing it
-     blinks like a terminal cursor — the one signature motion, "the board,
-     still being written." Hard on/off (steps) reads as a caret, not a fade. */
-  @keyframes logo-cursor-blink {
-    0%,
-    45% {
-      opacity: 1;
-    }
-    55%,
-    100% {
-      opacity: 0.28;
-    }
-  }
-  .logo-cursor {
-    animation: logo-cursor-blink 1.15s steps(1, end) infinite;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .logo-cursor {
-      animation: none;
-    }
   }
 
   /* The display chip is a product icon, so it casts a soft ambient shadow —

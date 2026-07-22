@@ -5,6 +5,7 @@ import {
   DEFAULT_APPEARANCE,
   DEFAULT_THEME,
   familyForTheme,
+  MARK_IDENTITY,
   resolveTheme,
   frameArtifactHtml,
   themeEntries,
@@ -241,13 +242,19 @@ describe("every theme clears the contrast floors", () => {
       expect(contrast(t.inkFaint, t.bg)).toBeGreaterThanOrEqual(3)
       expect(contrast(t.inkFaint, t.bg1)).toBeGreaterThanOrEqual(3)
     })
-    it(`${name}: the mark's wings ≥ 3:1 on page and sidebar`, () => {
-      // The bow tie renders tile-less in chrome (wings `accent`, knot `ink`),
-      // so the wings must clear the WCAG graphics floor on the surfaces the
-      // glyph actually sits on: the landing page (bg) and the sidebar (bg1).
-      // (The ink knot rides on the body-text ratios tested above.)
-      expect(contrast(t.accent, t.bg)).toBeGreaterThanOrEqual(3)
-      expect(contrast(t.accent, t.bg1)).toBeGreaterThanOrEqual(3)
+    it(`${name}: the identity mark ≥ 3:1 on page and sidebar`, () => {
+      // The bow tie wears a fixed identity (DESIGN.md § Mark): one light
+      // and one dark colorway keyed on mode, never on the theme. So every
+      // theme must carry the *identity* wings and knot past the WCAG
+      // graphics floor on the surfaces the glyph sits on — the landing
+      // page (bg) and the sidebar (bg1) — including the fold end of the
+      // wing gradient, which is the darker stop.
+      const mark = MARK_IDENTITY[theme.mode]
+      for (const surface of [t.bg, t.bg1]) {
+        expect(contrast(mark.wingTip, surface)).toBeGreaterThanOrEqual(3)
+        expect(contrast(mark.wingFold, surface)).toBeGreaterThanOrEqual(3)
+        expect(contrast(mark.knot, surface)).toBeGreaterThanOrEqual(3)
+      }
     })
     it(`${name}: primary button label ≥ 4.5:1, fill and ring ≥ 3:1`, () => {
       // The button label is bg1 (--primary-foreground) — each palette's

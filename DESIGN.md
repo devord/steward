@@ -15,11 +15,16 @@ and stored per device (ADR-0009). Scene: a developer's editor environment
 in whichever palette they already live in. The board matches the terminal
 next to it; widgets carry the color, chrome stays near-monochrome.
 
-Curated registry (add themes there, with their contrast tests): Gruvbox,
-Catppuccin, Rosé Pine, and Tokyo Night, in light/dark families only; a theme
-without a twin doesn't ship. **Gruvbox dark hard is canonical**: it is the
-SSR default, and artifacts are authored in it. The dashboard injects
-the active theme into artifact iframes at render time.
+Curated registry (add themes there, with their contrast tests), in
+light/dark families only; a theme without a twin doesn't ship. **Gruvbox
+dark hard stays the canonical anchor** for the artifact contract: artifacts
+are authored in it and inline it at rest, and the `:root` palette block
+still carries it (ADR-0046). The **Flexoki pair is the fresh-install
+default** and the identity: root.tsx stamps `data-theme` with the dark
+Flexoki slot at SSR, so the no-JS fallback and browser-chrome colors
+(`theme-color`, the manifest) match what a new viewer resolves to
+(ADR-0046 amendment). The dashboard injects the active theme into artifact
+iframes at render time.
 
 ## Color
 
@@ -174,20 +179,35 @@ surface and sets its own inset.
 
 ## Mark
 
-The logo is **the bow tie**: two wings in the theme's accent, and the ink
-knot at center. The wings carry the brand color. With the accent confined to
-the old small knot the whole mark washed out muted, worst in light themes
-whose accents are dark. The knot is the same block that ends the wordmark,
-and a terminal caret takes the foreground color, so the knot is ink.
+The logo is **the bow tie**: two accent wings and the ink knot at center —
+the butler's uniform in three shapes. The cut is the **rounded butterfly**:
+each wing's long edges bow gently outward where the fabric puffs, the outer
+corners round off, and the outer edge folds back in a shallow concave notch
+toward the knot; the knot's sides cinch inward where the wrap gathers the
+fabric. The silhouette of a tied bow, not two chevrons — the straight-cut
+trapezoids read as basic at hero size. The knot is the same block that ends
+the wordmark, so the knot is ink.
+
+The mark wears a **fixed identity**: it never follows the active theme. One
+light colorway and one dark colorway, both drawn from the Flexoki rows of
+the registry (the fresh-install default, ADR-0046), keyed on the mode class
+alone. Dark: `#da702c`→`#bc5215` fold wings, `#cecdc3` knot, on a
+`#1c1b1a`→`#100f0f` tile with a `#403e3c` border. Light: `#bc5215`→`#9d4310`
+wings, `#100f0f` knot, `#fffcf0`→`#f2f0e5` tile, `#b7b5ac` border. The
+single source is `MARK_IDENTITY` in `lib/theme.ts` (built from the
+`flexoki-*` registry entries, so the no-invented-colors law holds);
+`themeStylesheet()` emits it as `--mark-*` vars on `:root`/`.dark`, outside
+every `[data-theme]` block, so no theme can re-color the tie.
+`theme.test.ts` holds the identity wings and knot to ≥3:1 on every theme's
+page and sidebar surfaces.
 
 Depth is **material, not decorative** (terminal-calm bans gradient glass).
-Each wing carries a fold gradient, brighter at the flared tip and deeper
-where the fabric gathers at the knot, so the wings read as folded fabric
-rather than two flat chevrons. The stops are
-`--mark-wing-tip` → `--mark-wing-fold`, aliases that swap which accent is
-the bright one per mode (a light palette's `accent` is the deep rust, its
-`accent-deep` the brighter orange). The knot stays solid ink; a gradient
-there would muddy it.
+Each wing carries a fold gradient — brighter at the flared tip
+(`--mark-wing-tip`), deeper where the fabric gathers at the knot
+(`--mark-wing-fold`) — and, at display sizes, four fold creases radiate
+from under the knot toward the wing corners (thin black strokes at 0.14,
+sub-pixel noise below ~32px so chrome sizes omit them). The knot stays
+solid ink; a gradient there would muddy it.
 
 Symmetric and solid, the mark holds one geometry at every size, from the
 16px favicon to the landing hero. Several mirrors must stay geometrically in
@@ -196,71 +216,70 @@ geometry. The wings tuck under the knot (drawn last) so the fills never show
 a background hairline; framed contexts draw the tie's own contact shadow
 first, so the bow sits on the surface instead of being painted into it.
 
-Two contexts, deliberately split. **In-app** the mark is chrome: the bare
-glyph in theme tokens (fold wings, ink knot, no tile). A tile behind a
-chrome mark either vanishes (light themes: `card` on `bg`) or punches a
-darker hole in the sidebar (dark themes); glyph-only is the mark-in-chrome
-treatment everywhere else (GitHub, Linear, Vercel). **On every uncontrolled
-surface** (browser tab, OS launcher, social card, README lockup) the mark
-wears the **product-icon chip**: a top-lit tile (`card`→`bg`), a crisp full
-`border`, a bevel highlight, and the tie's contact shadow. The chip is what
-holds contrast on any ground; the bare glyph floated on pale and gray tab
-strips. `favicon.svg` swaps the chip's tile + inks with a
-`prefers-color-scheme` block (flat fills, since the fold is invisible at
-16px); the `.ico` and OS launcher icons can't media-query, so they bake the
-fixed **dark identity chip** (`#282828`→`#1d2021` tile, `#fe8019`→`#d65d0e`
-fold wings, `#ebdbb2` knot). Launcher sources live at `scripts/icon.svg`
-(rounded, for apple-touch + `icon-{192,512}`) and `scripts/icon-maskable.svg`
-(full-bleed dark, bow inside the ~80% safe zone); each carries its
-headless-Chrome render recipe, since ImageMagick's SVG delegate is not
-faithful to the gradients and filters. Static SVGs carry explicit
-`width`/`height` (favicon renderers assume 300×150 and crop without them).
+Two framings, deliberately split. **In chrome** the mark is the bare glyph
+(fold wings, ink knot, no tile) — a tile behind a chrome mark either
+vanishes or punches a hole in the sidebar; glyph-only is the mark-in-chrome
+treatment everywhere else (GitHub, Linear, Vercel). **On display surfaces**
+(the landing hero, browser tab, OS launcher, social card, README lockup)
+the mark wears the **product-icon chip**: the top-lit identity tile, a
+bevel highlight, a crisp full border, the fold creases, and the tie's
+contact shadow. The chip is what holds contrast on any ground; the bare
+glyph floated on pale and gray tab strips. `favicon.svg` swaps the chip's
+light/dark identity sets with a `prefers-color-scheme` block (flat fills,
+since the fold is invisible at 16px); the `.ico` and OS launcher icons
+can't media-query, so they bake the dark identity chip. Launcher sources
+live at `scripts/icon.svg` (rounded, for apple-touch + `icon-{192,512}`)
+and `scripts/icon-maskable.svg` (full-bleed dark, bow inside the ~80% safe
+zone); regenerate every raster with `scripts/render-icons.sh` — the recipe
+can't live in the SVG comments (XML comments may not contain the double
+hyphens CLI flags are made of), and ImageMagick's SVG delegate is not
+faithful to the gradients and filters, so the script renders through
+headless Chrome. Static SVGs carry explicit `width`/`height` (favicon
+renderers assume 300×150 and crop without them).
 
 - `apps/web/app/components/logo.tsx`: `Logo` (mark) and `Wordmark`
-  (mark + mono name lockup, scales with font size) for in-app use; token-
-  based, so it follows the active theme. Wings take the fold gradient
-  (`--mark-wing-tip`→`--mark-wing-fold`), the knot `foreground`; `useId`
-  keeps the gradient/filter ids unique across the header/rail/account-bar
-  instances. Default is the bare glyph; the landing hero passes `display`
-  for the chip, a `card`→`bg` tile, full `border`, and the tie's contact
-  shadow, with a `.logo-tile` drop-shadow so it sits on the page. `live`
-  blinks the knot like a terminal caret (landing only).
+  (mark + mono name lockup, scales with font size) for in-app use; both
+  consume the fixed `--mark-*` identity vars, so only the mode changes the
+  tie. `useId` keeps the gradient/filter ids unique across the
+  header/rail/account-bar instances. Default is the bare glyph; the landing
+  hero passes `display` for the chip (tile, bevel, border, creases, contact
+  shadow) with a `.logo-tile` drop-shadow so it sits on the page. The chip
+  is a still object — the old caret-blink (`live`) is retired; motion
+  belongs to the board, where it means something.
 - `apps/web/public/favicon.svg`: the browser-tab mark, the product-icon
-  chip, tile + inks swapped by a `prefers-color-scheme` style block inside
-  the SVG (light: `#f9f5d7` tile / `#d65d0e` wings / `#3c3836` knot; dark:
-  `#282828` / `#fe8019` / `#ebdbb2`). Flat fills, since the fold is invisible
-  at 16px. `favicon.ico` (16/32/48) is the raster fallback; .ico can't
-  media-query, so it bakes the dark identity chip.
+  chip, identity sets swapped by a `prefers-color-scheme` style block
+  inside the SVG. Flat fills, since the fold is invisible at 16px.
+  `favicon.ico` (16/32/48, packed by `render-icons.sh` via ImageMagick from
+  Chrome-rendered PNGs) is the raster fallback; .ico can't media-query, so
+  it bakes the dark identity chip.
 - `apps/web/public/apple-touch-icon.png` (180) + `icon-{192,512}.png`
-  (`any`): the dark identity chip, opaque, rendered from `scripts/icon.svg`
+  (`any`): the dark identity chip, rendered from `scripts/icon.svg`
   (rounded corners on transparent; iOS/Android re-mask).
 - `apps/web/public/manifest.webmanifest` + `icon-maskable-512.png`
   (`maskable`, from `scripts/icon-maskable.svg`, full-bleed dark, bow
   scaled to ~0.82 so it survives a circle/squircle crop): the PWA/Android
   adaptive icon, so launchers build a real adaptive tile instead of masking
   apple-touch into a flat squircle. Linked from `root.tsx`;
-  `theme_color`/`background_color` are the dark `#1d2021`.
-- `apps/web/public/wordmark-{dark,light}.svg`: the mark (chip: fold wings,
-  contact shadow, bevel, `border`) + `Steward` lockup for the README,
-  swapped by `prefers-color-scheme` in a `<picture>`. These are a document
-  context (a light or dark page), so they keep the theme pair. Mirrored to
-  each data repo's `.github/` (built-in template + team/private repos).
-  Text baseline `y=46.5` centers the word's cap band on the tile center,
-  the measured optical alignment of the lockup. The word is **outlined
-  paths** (Geist Mono 600, 40px, tracking −1) rather than a `<text>` node,
-  because GitHub's image context can't load webfonts, so live text would
-  render in the viewer's system mono instead of the brand face.
+  `theme_color`/`background_color` are the identity dark `#100f0f`.
+- `apps/web/public/wordmark-{dark,light}.svg`: the identity chip + `Steward`
+  lockup for the README, swapped by `prefers-color-scheme` in a
+  `<picture>`. Mirrored to each data repo's `.github/` (built-in template +
+  team/private repos). Text baseline `y=46.5` centers the word's cap band
+  on the tile center, the measured optical alignment of the lockup. The
+  word is **outlined paths** (Geist Mono 600, 40px, tracking −1) rather
+  than a `<text>` node, because GitHub's image context can't load webfonts,
+  so live text would render in the viewer's system mono instead of the
+  brand face.
 - `apps/web/public/og.png`: 1200×630 (@2x) social card in the light
-  (gruvbox-light) palette; OG/Twitter meta lives in the home route's
-  `meta`. One fixed image for every viewer, since OG previews can't
-  theme-switch, so it stays light to match the default. Source is
-  `scripts/og-card.html` (fonts resolve from the installed fontsource
-  packages; the render command is in its header comment).
+  identity palette (flexoki-light); OG/Twitter meta lives in the home
+  route's `meta`. One fixed image for every viewer, since OG previews can't
+  theme-switch. Source is `scripts/og-card.html` (fonts resolve from the
+  installed fontsource packages); rendered by `render-icons.sh`.
 
 The wordmark text is `foreground` ink, mono, capitalized **`Steward`**; the
-mark's wings carry the orange. (The logotype was lowercase pre-rename;
-capitalized since the wordmark reads as the product noun everywhere it
-appears.)
+mark's wings carry the identity orange. (The logotype was lowercase
+pre-rename; capitalized since the wordmark reads as the product noun
+everywhere it appears.)
 
 ## Layout
 
