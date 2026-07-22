@@ -100,7 +100,8 @@ glance; detail tiers get the 14px body.
 file) before authoring. It carries the shared shell (vertical centering,
 tile-vs-page split) and the component set every artifact picks from:
 section rules, ledger rows, the stat tier, pills, dots, meters,
-sparklines, the now marker, empty states, and the tier playbook. One
+sparklines, the coupling matrix, the now marker, empty states, and the
+tier playbook. One
 board, one language; don't invent per-routine visuals.
 
 ## The fit-to-height snippet

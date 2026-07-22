@@ -1468,6 +1468,131 @@ grid at tile sizes; label the endpoint value in 12px mono instead.
 </svg>
 ```
 
+### Coupling matrix (a pairwise quantity)
+
+The one two-dimensional component (ADR-0047). Every other component says
+something about one subject; this one says something about a **pair** —
+how strongly two modules are coupled, how often two people review each
+other, any square relation the artifact needs to show as a field rather
+than as a list. Reach for it when the finding is a _cluster_: forty pair
+names in a ledger hide what one dense corner of a matrix shows at a
+glance.
+
+**Never draw a node-link graph instead.** Layout is the part a blind,
+single-pass author cannot do — no solver in the sandbox, no measurement
+of the box, and edge crossings decide readability by luck. A matrix has
+no layout: the labels place the cells. It also degrades in place, so the
+tile and the full view show the same picture with fewer rows, not two
+unrelated pictures.
+
+**Rows and columns carry the same order, so the row labels are the
+column key.** Columns are numbered `1..N` matching the row at that
+index; full words never sit above a 14px column, so nothing rotates and
+nothing is abbreviated into unreadability. The column `<th>` carries the
+real name as its accessible name.
+
+Markup is a real `<table>` — this is tabular data, and `scope`'d headers
+give screen readers row/column association no `<div>` grid can:
+
+```html
+<table class="matrix">
+  <caption class="sr-only">
+    Module co-change, last 90 days
+  </caption>
+  <thead>
+    <tr>
+      <td></td>
+      <th scope="col" aria-label="cart">1</th>
+      <th scope="col" aria-label="checkout">2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><span class="n">1</span> cart</th>
+      <td class="dg" title="cart — 41 files"></td>
+      <td
+        style="--c: 71"
+        class="undeclared"
+        title="cart ↔ checkout — 71%, no import"
+      ></td>
+    </tr>
+    <tr>
+      <th scope="row"><span class="n">2</span> checkout</th>
+      <td
+        style="--c: 71"
+        class="undeclared"
+        title="checkout ↔ cart — 71%, no import"
+      ></td>
+      <td class="dg" title="checkout — 12 files"></td>
+    </tr>
+  </tbody>
+</table>
+```
+
+```css
+.matrix {
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-family: var(--font-mono);
+  font-size: 12px; /* the label floor — never smaller to fit more columns */
+  color: var(--color-ink-dim);
+}
+.matrix th {
+  font-weight: 400;
+  white-space: nowrap;
+}
+.matrix tbody th {
+  text-align: left;
+  padding-right: 6px;
+}
+.matrix tbody th .n {
+  color: var(--color-ink-faint);
+  margin-right: 4px;
+}
+.matrix td {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border-radius: 2px;
+  /* One token, one ramp: --c is the pair's strength, 0–100. */
+  background: color-mix(
+    in srgb,
+    var(--color-orange) calc(var(--c, 0) * 1%),
+    var(--color-bg2)
+  );
+}
+/* The diagonal is the module against itself — the spine, not the
+   strongest coupling on the board. Quiet tone, never the accent. */
+.matrix td.dg {
+  background: var(--color-bg3);
+}
+/* The finding: this pair changes together with nothing declared
+   between them. The ring survives any shade underneath it. */
+.matrix td.undeclared {
+  box-shadow: inset 0 0 0 1.5px var(--color-red);
+}
+```
+
+**The marker is the argument.** A hot cell only means "these change
+together"; a hot cell with **no declared edge** means coupling nobody
+wrote down — invisible to the import graph and to every linter guarding
+it. Mark that case and only that case. The inverse (a declared edge that
+never co-changes) is a healthy seam and needs no marker; the ledger's
+own fan-in/fan-out already carries it.
+
+**Color never stands alone.** Every cell carries a `title` naming the
+pair and its value, the way the meter carries its number — a matrix read
+by shade alone is unreadable to a screen reader and to anyone who can't
+separate two steps of one ramp.
+
+**Cap by tier; never crop.** N modules cost N² cells, so the matrix is a
+designed tier like everything else (ADR-0019): tiles render the top N by
+whatever the artifact ranks on, the full view renders all of them, and
+the count held back is **stated** (`+12 modules in full view`). A matrix
+sliced by the frame's clip is a contract violation, not a compromise.
+Below ~4 rows there is no field left to see — drop to the ledger and let
+the pairs be rows.
+
 ### Time blocks (the Newport day)
 
 The plan archetype plans the whole day, not just meetings: every
