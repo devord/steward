@@ -30,6 +30,12 @@ widget:
       hint: >-
         Optional. Globs whose children are modules. Empty means infer them
         (the rule below), which is right for most repos
+    - key: exclude
+      label: Roots to leave out
+      placeholder: prototypes/*, knowledge-base/*, packages/*-config
+      hint: >-
+        Optional. Globs never censused — docs sites, prototypes, config-only
+        packages, generated trees. Inference drops the obvious ones already
     - key: rules
       label: Stated design rules
       placeholder: apps/storefront must not define badge/pill/chip primitives
@@ -123,21 +129,79 @@ Otherwise infer, in this order:
 3. **Roots** — each source dir's depth-1 children holding **≥3** source
    files, plus the source dir itself when it holds ≥3 loose source files.
 
-Print the resolved roots in the provenance line, always. A reader who
-disagrees with the rot ranking usually disagrees with the roots first, and
-they can only fix what they can see (`params.roots` is the fix).
+Then **drop the roots that are not the product**. A monorepo's workspace
+list is not its codebase: inference happily censuses a docs site, a
+prototype folder, and three config packages, and every one of them dilutes
+the ranking a reader came for. Drop, before scoring:
+
+- **config-only packages** — a workspace whose source is `*.config.*`,
+  `tsconfig`, lint/format presets (no source files by the step-3 count);
+- **generated or vendored trees** — codegen output (`*.generated.*`, GraphQL
+  types), `locales/`, `assets/`, `styles/`;
+- **workspaces that are not shipped product** — docs/marketing sites,
+  `prototypes/`, sandboxes, a knowledge base;
+- anything in `params.exclude`, which is the reader's own override.
+
+State the dropped roots and the reason in provenance, and print the
+resolved roots there too, always. A reader who disagrees with the rot
+ranking usually disagrees with the roots first, and they can only fix what
+they can see (`params.roots` and `params.exclude` are the fix).
+
+**Mirror roots are a category, not a finding.** Fixture and mock trees
+(MSW handlers, factories, `__fixtures__`) exist to track another module's
+shape: they co-change with their subject at 50–100% and import nothing from
+it, which is precisely the shape `hidden coupling` fires on. Left alone the
+run spends its judgement budget telling the reader that their mocks mock
+things. Name them in `params.instructions` (or detect the obvious ones —
+`mocks/`, `__mocks__/`, `fixtures/`) and exclude **only their pairs with the
+module they mirror** from `hidden coupling`; they keep their row, their
+churn, and their test-seam score, because a fixture tree that is itself
+untested and churning is still a real finding.
 
 ## 2 · Enumerate modules
 
 A **module** here is scale-agnostic, per `/codebase-design`: whatever has
-an interface and an implementation. Two shapes, chosen per root by what
+an interface and an implementation. Three shapes, chosen per root by what
 the root actually contains:
 
 **Nested root** (its children are directories) → each child directory is a
 module. Its name is the directory's own, which in a well-named repo is
 already the domain word (`cart`, `product`, `checkout`).
 
-**Flat root** (source files sit directly in it) → cluster by filename:
+**Convention root** (a framework decides the file layout) → the framework's
+own unit is the module. Detect it before falling back to the flat rule
+below, because a convention root is _designed_ to be a wide flat directory
+and clustering it by hyphen-prefix invents a finding out of the framework's
+own layout — the census then reports one giant `other` module and the run
+proposes restructuring a directory the framework requires.
+
+The case that matters today is **file-based routing** (React Router,
+Remix, Hydrogen, Next's `pages/`, SvelteKit): a `routes/` directory beside a
+`routes.ts`/`routes.tsx` config, or one whose filenames carry dot-segments
+(`products.$handle.tsx`). There the module is the **route family**: split the
+filename on dots that sit outside `[...]` escapes, drop the framework's own
+suffixes (`.loader.server`, `.action.server`, `.server`, `.client`, `.test`,
+`.spec`) and the extension, then key on the **first segment** with a trailing
+`_` stripped. So `products.$handle.tsx`, `products.$handle.loader.server.ts`
+and `products.$handle.loader.test.ts` are one module (`products`), and
+`account.tsx` / `account_.login.tsx` land together in `account`. A route
+family is the unit that changes together and the unit a reader names out
+loud; it is also the unit whose loader is worth reading.
+
+Two scoring rules follow from the convention, and both matter more than the
+naming:
+
+- **A route module's fan-in is zero by design.** Nothing imports a route;
+  the router mounts it. Treat route modules as entry points and exclude
+  them from the fan-in side of coupling rather than reporting `in 0` as if
+  it were an absence.
+- **Co-location is the convention, not sprawl.** A route family holding its
+  loader, action, component and tests in adjacent files is following the
+  framework. Never propose "give this route family its own directory" as a
+  move — that is the flat-root rule leaking into a root that was never flat
+  by accident.
+
+**Flat root** (loose source files, no convention) → cluster by filename:
 
 1. Normalize each filename: strip `.test.`, `.spec.`, `.stories.`,
    `.ui.test.`, `.browser.test.`, `.figma.`, `.generated.` and the
@@ -336,6 +400,23 @@ a scheduled run cannot have, and a headless run proposing a concrete
 refactor unprompted is exactly the "outrunning your headlights" failure
 (Hunt & Thomas). Hand that off through the context block.
 
+**A move that fights the framework is not a move.** Before naming one,
+check it against the conventions the repo already follows — the framework's
+own docs, the repo's `CLAUDE.md` and nested `CLAUDE.md` files, its ADRs.
+Proposing that a file-based-routing app stop keeping routes in flat files,
+that a Hydrogen storefront hand-roll what the framework's context provides,
+or that fixtures stop mirroring the shapes they exist to mirror, all read as
+authoritative and are all wrong; one of them in a run costs the reader more
+trust than five correct rows earn. Where the convention _is_ the constraint,
+the honest move points inward — the route family is fine, the 200-line
+loader inside it is the module that wants extracting.
+
+**Every judged row's move is an action, not an observation.** It opens with
+a verb, names the place, and stops before the design ("extract the pack
+bootstrap root.tsx inlines into its own module", not "root.tsx has grown").
+The dependency category rides with it, because that is what the move costs
+to test.
+
 ## 7 · Stated rules (the design concept)
 
 `params.rules` carries the project's **design concept** in Brooks's sense —
@@ -373,6 +454,20 @@ signals, and the artifact says so once, in the provenance line. A reader
 who thinks it is a measurement of quality will be wrong in a way that
 costs them; a reader who thinks it is a ranked attention list is right.
 
+**Close on one next action.** A ledger of scores tells a reader where to
+look and leaves them to work out what to do with it; a widget that is
+glanced at for two seconds has to answer that itself. So the render carries
+exactly one handoff line — the top module by score × churn, its dependency
+category, and the tool that takes it from there:
+
+> → hand `storefront/routes · products` to `/improve-codebase-architecture`
+
+One, not one per row: the moves are already on the judged rows, and a list
+of six handoffs is a backlog, which is the thing the reader already has. The
+brief behind it lives in the context block's `## Handoff` section, which the
+board's Chat button copies wholesale (ADR-0043) — so the line names the
+destination and the block carries the evidence.
+
 This artifact is **viewer-neutral** (ADR-0039): it is about the code, not
 the reader. No "you", no "yours", no render-time enhancer.
 
@@ -394,8 +489,35 @@ window (`corza · 90d`, mono).
 Each ledger row is: the module name as the lead; the bar, score, and
 direction arrow as its trailing cell; the signal breakdown as detail
 (`34 commits · 1 author · 28% tested · in 61 / out 12`). Judged rows add
-their sentence and the move. Score arithmetic — the named penalty lines —
-belongs on the raw/full page and in the context block, never on a tile.
+their move. Score arithmetic — the named penalty lines — belongs on the
+raw/full page and in the context block, never on a tile.
+
+**The bar is banded, not decorative.** One accent band: the top band
+(score ≥ 80) fills orange with its score in full ink, everything below fills
+`ink-faint` with an `ink-dim` score. Scores cluster in the 50s–80s, so length
+alone barely separates two rows; the band is what makes "where does the hot
+list end" readable at a glance. The direction arrow takes **yellow** for
+worsening (a warning), green for improving, `ink-faint` for steady — red is
+spent on the one genuinely bad state in this artifact, the undeclared-coupling
+ring, and a ledger of red arrows retires it as a signal.
+
+**A census of 136 is not a list.** A flat rank past its first handful is
+rows the reader scrolls without reading: `ui · tooltip 60 ↗` under
+`ui · separator 60 ↗`. Split it in two, and let each part do one job:
+
+- **Rot ledger** — the ranked attention list, a stated **top N of the
+  census** by score (12 is a good N), each row as above.
+- **Where else** — every root as a **one-line** index row: the root, its
+  `n modules · n commits · median`, and a banded bar carrying its **worst
+  module's** score and that module's arrow. Nineteen lines answer "where is
+  the rot concentrated" that 136 rows cannot. Keep the rows to one line;
+  at two, a root costs as much as a ledger row it is only pointing at.
+
+  On the page, this is also the **complete ledger**: each root's line becomes
+  the group header for its own modules, unfolded beneath it (module key,
+  signal breakdown, score) and relaying the list's tracks with `subgrid`, so
+  a module's score sits under its root's score instead of opening a second
+  value column.
 
 Size behavior:
 
@@ -403,28 +525,42 @@ Size behavior:
   with its name and direction (`84 ↗`, label `cart · worsening`), and the
   bottom line clamped to two lines beneath. A bare index would say the
   house is on fire without naming the room.
-- **2×1 / 1×2**: the bottom line in full, then the top two rows with bars
-  and scores. No matrix — a field needs at least 4 rows to read as one.
-- **2×2**: the bottom line, then the ledger's top rows.
-- **Wide tile (3–4 cols)**: ledger and matrix side by side, the ledger
-  taking the flexible track. Cap the matrix at **exactly the top 8
-  modules** by score, ties broken by churn, then by module id
-  ascending — a deterministic order, so two runs over the same tree pick
-  the same eight. **State the count held back**, computed from the
-  uncapped census (`+12 in full view`, never a recount of what happened
-  to render). Both columns carry `data-fit-list` — a column with no
-  trimmable list is a floor the fit pass cannot get under, and it will
-  trim the other to nothing while the tile still overflows.
-- **Full view / raw page**: a page. The bottom line as a lede, the full
-  matrix (every module), the complete ledger with each judged row's
-  penalty arithmetic, then the provenance line: repo and window, resolved
-  roots, module and file counts, which signal layers were available,
-  weights version, history points, commits ignored as sweeps, and the
-  proxy caveat.
+- **2×1 / 1×2**: the bottom line in full, then the top rows with bars and
+  scores, single-line. No matrix — a field needs at least 4 rows to read as
+  one.
+- **2×2**: the bottom line, then the ledger's top rows with their detail.
+- **Wide tile (≥ 900px and ≥ 240px)**: two columns — the **reading** on the
+  left (the ledger, its judged moves, the handoff line), the **instruments**
+  on the right (the field, the pairs it marks, the root map). Give each
+  column a real wrapper element; never place one section across two grid
+  rows with an area that spans. The fit pass measures the document after
+  each row it hides, and a spanning item's freed height is absorbed by the
+  row beside it — the pass reads that as "this row freed nothing", stops
+  early, and the tile overflows in silence with rows still available to trim.
+- **Tall wide tile (≥ 1100px and ≥ 480px)**: the co-change field joins the
+  right column. It is the one block here with no trimmable list, so it is a
+  floor the fit pass cannot get under: its tier query is what keeps a short
+  tile from overflowing, and every other block in both columns carries
+  `data-fit-list`. Cap it at **exactly the top 8 modules** by score, ties
+  broken by churn, then by module id ascending — a deterministic order, so
+  two runs over the same tree pick the same eight — and state the count held
+  back in the section's own count (`top 8 of 136 by score`), computed from
+  the uncapped census.
+- **Full view / raw page**: a page, two full-length columns (neither is a
+  rail): the bottom line as a lede, the ledger with each judged row's
+  sentence, move and sparkline on the left; the field, the named pairs, and
+  the complete census by root on the right. Then the provenance line: repo
+  and window, resolved roots, roots dropped and why, module and file counts,
+  which signal layers were available, weights version, history points,
+  commits ignored as sweeps, and the proxy caveat. The provenance line is
+  **page-only** — on a tile those three lines cost a ledger row and a half,
+  and the fit pass clips them anyway.
 
-Mark the worst row and any row carrying a hidden coupling `data-fit-keep`,
-so a short tile can never trim its way into reporting only healthy
-modules.
+**Pin sparingly.** Mark the worst row and the bottom line's own module
+`data-fit-keep`, and at most one or two rows of the root map. Every pin is a
+row the tile can never give back: five pinned rows is a ledger the fit pass
+cannot trim below, so it trims the sections beside it to nothing instead and
+the tile still overflows.
 
 Degrade gracefully: a repo with no history in the window gets a bottom
 line saying exactly that. A shallow clone (`git rev-parse --is-shallow-repository`)
