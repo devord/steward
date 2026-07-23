@@ -1514,6 +1514,16 @@ the marker swatch with what it means. This replaces prose like "Ring =
 co-change ≥40% with no import behind it", which asks the reader to hold a
 sentence in their head while scanning a grid.
 
+The key is `aria-hidden`, and the **`<caption>` carries the threshold
+instead**. A key decodes a visual encoding — a ramp and a ring — for readers
+who can see one; announced, its swatches are shapeless and its labels arrive
+detached from the cells they describe. The cells already carry every fact in
+text (`… 60 percent, no import`), so the only thing a screen reader would
+miss is the rule that makes a pair notable, and that belongs in the table's
+own description where it is read once, before the data. Never drop the
+`aria-hidden` and leave the caption bare: that trades a silent omission for
+a noisy one.
+
 **Name the marked pairs underneath.** The field answers "is there a
 cluster"; it does not answer "which two, and by how much" without a
 column-to-row join the reader has to perform per cell. So the marked cells
@@ -1529,7 +1539,8 @@ give screen readers row/column association no `<div>` grid can:
 ```html
 <table class="matrix">
   <caption class="sr-only">
-    Module co-change, last 90 days. Each pair appears once, below the diagonal.
+    Module co-change, last 90 days. Each pair appears once, below the diagonal;
+    a pair is marked when it co-changes 40% or more with no import between them.
   </caption>
   <thead>
     <tr>
