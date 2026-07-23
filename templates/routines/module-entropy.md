@@ -117,7 +117,7 @@ Resolve `params.window` (default **90**) days and `params.history`
 
 ## 1 · Resolve the roots
 
-If `params.roots` is set, use it verbatim and skip the rule.
+If `params.roots` is set, use it verbatim and skip the inference.
 
 Otherwise infer, in this order:
 
@@ -129,10 +129,17 @@ Otherwise infer, in this order:
 3. **Roots** — each source dir's depth-1 children holding **≥3** source
    files, plus the source dir itself when it holds ≥3 loose source files.
 
-Then **drop the roots that are not the product**. A monorepo's workspace
-list is not its codebase: inference happily censuses a docs site, a
-prototype folder, and three config packages, and every one of them dilutes
-the ranking a reader came for. Drop, before scoring:
+**Then filter, whichever way the roots arrived.** The two steps are
+sequential, not alternative branches: inference produces a candidate set,
+explicit `params.roots` _is_ a candidate set, and both go through the same
+filter. Skipping it for explicit roots is the bug that hides — a reader
+writes `roots: apps/*/app/*` plus an `exclude`, and the exclude silently
+does nothing because naming the roots took them off the path that reads it.
+
+**Drop the roots that are not the product.** A monorepo's workspace list is
+not its codebase: inference happily censuses a docs site, a prototype
+folder, and three config packages, and every one dilutes the ranking a
+reader came for. Drop, before scoring:
 
 - **config-only packages** — a workspace whose source is `*.config.*`,
   `tsconfig`, lint/format presets (no source files by the step-3 count);
@@ -140,7 +147,10 @@ the ranking a reader came for. Drop, before scoring:
   types), `locales/`, `assets/`, `styles/`;
 - **workspaces that are not shipped product** — docs or marketing sites,
   prototype folders, sandboxes, wikis;
-- anything in `params.exclude`, which is the reader's own override.
+- anything matching `params.exclude`, which is the reader's own override and
+  the only one of these four that applies to explicitly-named roots — the
+  category drops above are inference's own clean-up, so a reader who names a
+  root gets it, and prunes it with `exclude` if they want less.
 
 State the dropped roots and the reason in provenance, and print the
 resolved roots there too, always. A reader who disagrees with the rot
@@ -153,10 +163,19 @@ shape: they co-change with their subject at 50–100% and import nothing from
 it, which is precisely the shape `hidden coupling` fires on. Left alone the
 run spends its judgement budget telling the reader that their mocks mock
 things. Name them in `params.instructions` (or detect the obvious ones —
-`mocks/`, `__mocks__/`, `fixtures/`) and exclude **only their pairs with the
-module they mirror** from `hidden coupling`; they keep their row, their
+`mocks/`, `__mocks__/`, `fixtures/`), and suppress `hidden coupling` for
+**every pair with one side in a mirror root**. They keep their row, their
 churn, and their test-seam score, because a fixture tree that is itself
 untested and churning is still a real finding.
+
+Suppress by root membership, not by guessing which module each fixture
+mirrors. A mapping would have to be inferred — one mirror root serves many
+modules, and a stem match (`handlers` ↔ ?) resolves differently run to run,
+which is the reproducibility rule broken for a signal that exists to be
+argued with. Root membership is one stated test with one answer. It is
+deliberately broad: co-changing with the thing it tracks is a fixture's
+whole job, so the suppressed pairs are the ones that were never evidence,
+and a repo that wants them scored says so by not declaring the root.
 
 ## 2 · Enumerate modules
 
@@ -176,10 +195,15 @@ own layout — the census then reports one giant `other` module and the run
 proposes restructuring a directory the framework requires.
 
 The case that matters today is **file-based routing** (React Router, Remix,
-Next's `pages/`, SvelteKit, and the meta-frameworks built on them): a
-`routes/` directory beside a routes config, or one whose filenames carry
-dot-segments (`products.$handle.tsx`). There the module is the **route
-family**, keyed by the **first segment** — split the filename on dots outside
+Next's `pages/`, SvelteKit, and the meta-frameworks built on them).
+**Filenames are corroboration, never the evidence.** Dot-segments are just a
+naming habit — `billing.tax.ts` in a `lib/` root is not a route, and reading
+it as one hands a normal module a zero-fan-in exemption and drops real
+findings. Require a root-level marker first: a routes config beside the
+directory (`routes.ts`, `routes.tsx`, a framework's routing manifest), the
+framework in the workspace's `package.json` dependencies, or the root named
+as a convention root in `params.instructions`. With the marker, the module is
+the **route family**, keyed by the **first segment** — split the filename on dots outside
 `[...]` escapes, take segment one, strip a trailing `_`. Keying on the head
 means no suffix list to maintain: a route's component, its split-out
 loader/action files, and its tests all begin with the same segment, so
@@ -465,6 +489,14 @@ brief behind it lives in the context block's `## Handoff` section, which the
 board's Chat button copies wholesale (ADR-0043) — so the line names the
 destination and the block carries the evidence.
 
+The ranking degrades with its inputs, and the line never outlives them. With
+**no churn** — a shallow clone, or a window with no commits — rank on score
+alone and say which ranking ran, since score × churn and score are different
+claims about where to spend an afternoon. With **no module to name** — no
+repo configured, an empty census — the line is the empty state's own next
+action ("set the routine's repository"), never a handoff to a module that
+does not exist.
+
 This artifact is **viewer-neutral** (ADR-0039): it is about the code, not
 the reader. No "you", no "yours", no render-time enhancer.
 
@@ -534,11 +566,13 @@ Size behavior:
   each row it hides, and a spanning item's freed height is absorbed by the
   row beside it — the pass reads that as "this row freed nothing", stops
   early, and the tile overflows in silence with rows still available to trim.
-- **Tall wide tile (≥ 1100px and ≥ 480px)**: the co-change field joins the
-  right column. It is the one block here with no trimmable list, so it is a
-  floor the fit pass cannot get under: its tier query is what keeps a short
-  tile from overflowing, and every other block in both columns carries
-  `data-fit-list`. Cap it at **exactly the top 8 modules** by score, ties
+- **Tall wide tile (≥ 1100px and ≥ 480px)**: the co-change field **joins**
+  the wide tile's layout — the tiers stack rather than replace, so this one
+  reveals a section inside the two columns the rule above already set up,
+  and its query only ever has to answer "is there room for the field". It is
+  the one block here with no trimmable list, so it is a floor the fit pass
+  cannot get under: that query is what keeps a short tile from overflowing,
+  and every other block in both columns carries `data-fit-list`. Cap it at **exactly the top 8 modules** by score, ties
   broken by churn, then by module id ascending — a deterministic order, so
   two runs over the same tree pick the same eight — and state the count held
   back in the section's own count (`top 8 of 136 by score`), computed from
