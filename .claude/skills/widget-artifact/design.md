@@ -1491,13 +1491,45 @@ index; full words never sit above a 14px column, so nothing rotates and
 nothing is abbreviated into unreadability. The column `<th>` carries the
 real name as its accessible name.
 
+**Draw the lower triangle only.** A pairwise relation is symmetric, so the
+upper half is the same data mirrored: it doubles the cells without adding a
+fact, and on a small field that redundancy is exactly what makes the thing
+read as noise rather than as a picture. Row `i` carries cells `1..i`, ending
+on its own diagonal cell, so each pair appears once and the staircase reads
+as a shape. It also frees the upper-right of the block, which is where the
+key goes.
+
+**Print the value in the cells that carry the finding.** Shading alone
+makes a reader estimate a number from a colour and then hunt for a legend to
+calibrate it. Above a stated threshold (≥25% works when the ramp tops out
+near 60), set the number in the cell in 12px mono; below it the cell stays a
+bare tint, because a field of numbers is as unreadable as a field of
+squares. Halve the ramp's slope to pay for it (`calc(var(--c) * 0.5%)`): the
+numbers now carry precision, the shading only has to carry texture, and a
+paler field keeps 12px text above the contrast floor on every cell.
+
+**A key, not a footnote.** Two rows in the freed corner (or under the
+table when the column is narrow): a gradient strip labelled `0 — 100%`, and
+the marker swatch with what it means. This replaces prose like "Ring =
+co-change ≥40% with no import behind it", which asks the reader to hold a
+sentence in their head while scanning a grid.
+
+**Name the marked pairs underneath.** The field answers "is there a
+cluster"; it does not answer "which two, and by how much" without a
+column-to-row join the reader has to perform per cell. So the marked cells
+also ride as a short list directly below the table — `types · other ↔
+settings · other … 60%`, sorted descending, with a dot leader to the value.
+The list is the argument in words and the field is its context; on tiers too
+short for the field the list carries the section alone, and it is the
+trimmable block the fit pass needs beside a table that cannot give way.
+
 Markup is a real `<table>` — this is tabular data, and `scope`'d headers
 give screen readers row/column association no `<div>` grid can:
 
 ```html
 <table class="matrix">
   <caption class="sr-only">
-    Module co-change, last 90 days
+    Module co-change, last 90 days. Each pair appears once, below the diagonal.
   </caption>
   <thead>
     <tr>
@@ -1512,22 +1544,16 @@ give screen readers row/column association no `<div>` grid can:
       <td class="dg" title="cart — 41 files">
         <span class="sr-only">cart, 41 files</span>
       </td>
-      <td
-        style="--c: 71"
-        class="undeclared"
-        title="cart ↔ checkout — 71%, no import"
-      >
-        <span class="sr-only">cart and checkout, 71 percent, no import</span>
-      </td>
     </tr>
     <tr>
       <th scope="row"><span class="n">2</span> checkout</th>
       <td
         style="--c: 71"
-        class="undeclared"
+        class="undeclared hot"
         title="checkout ↔ cart — 71%, no import"
       >
         <span class="sr-only">checkout and cart, 71 percent, no import</span>
+        <span class="v" aria-hidden="true">71</span>
       </td>
       <td class="dg" title="checkout — 12 files">
         <span class="sr-only">checkout, 12 files</span>
@@ -1535,6 +1561,10 @@ give screen readers row/column association no `<div>` grid can:
     </tr>
   </tbody>
 </table>
+<div class="mtx-key" aria-hidden="true">
+  <div><span class="ramp"></span> 0 — 100% co-change</div>
+  <div><span class="swatch ring"></span> ≥40%, no import</div>
+</div>
 ```
 
 ```css
@@ -1558,16 +1588,57 @@ give screen readers row/column association no `<div>` grid can:
   margin-right: 4px;
 }
 .matrix td {
-  width: 14px;
-  height: 14px;
+  /* Wide enough for a two-digit value at the 12px floor. */
+  width: 30px;
+  height: 20px;
   padding: 0;
+  text-align: center;
   border-radius: 2px;
-  /* One token, one ramp: --c is the pair's strength, 0–100. */
+  /* One token, one ramp: --c is the pair's strength, 0–100 — at half
+     slope, so the printed values stay legible on the hottest cells. */
   background: color-mix(
     in srgb,
-    var(--color-orange) calc(var(--c, 0) * 1%),
+    var(--color-orange) calc(var(--c, 0) * 0.5%),
     var(--color-bg2)
   );
+}
+.matrix td .v {
+  color: var(--color-ink-dim);
+}
+.matrix td.hot .v {
+  color: var(--color-ink);
+}
+.mtx-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-ink-faint);
+}
+.mtx-key > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mtx-key .ramp {
+  width: 44px;
+  height: 10px;
+  flex: none;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--color-bg2),
+    color-mix(in srgb, var(--color-orange) 50%, var(--color-bg2))
+  );
+}
+.mtx-key .swatch {
+  width: 14px;
+  height: 10px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--color-bg2);
+  box-shadow: inset 0 0 0 1.5px var(--color-red);
 }
 /* The diagonal is the module against itself — the spine, not the
    strongest coupling on the board. Quiet tone, never the accent. */
