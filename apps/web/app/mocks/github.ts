@@ -193,6 +193,22 @@ function json(request: Request, value: unknown): Response {
   })
 }
 
+/** Like {@link json} but for a raw (non-JSON) body — the blobs API's
+    `application/vnd.github.raw` response. Same ETag/304 contract so the gh
+    client's cache path behaves identically. */
+function rawText(request: Request, text: string): Response {
+  const etag = etagFor(text)
+  if (request.headers.get("If-None-Match") === etag) {
+    githubStats.conditional += 1
+    return new HttpResponse(null, { status: 304, headers: { ETag: etag } })
+  }
+  githubStats.full += 1
+  return new HttpResponse(text, {
+    status: 200,
+    headers: { ETag: etag, "Content-Type": "application/vnd.github.raw" },
+  })
+}
+
 export function seedRepo(
   repo: string,
   files: Record<string, string | { text: string; lastCommit?: string }>,
@@ -400,10 +416,51 @@ export const githubHandlers = [
           })),
         )
       }
+      // Over GitHub's 1MB inline cap the contents API omits the body
+      // (encoding "none", empty content) — getFile then falls back to the
+      // blobs endpoint below. Under it, the base64 body rides inline.
+      if (Buffer.byteLength(file.text, "utf8") > 1_000_000) {
+        return json(request, {
+          content: "",
+          encoding: "none",
+          sha: blobSha(ref, path, file.text),
+        })
+      }
       return json(request, {
         content: Buffer.from(file.text, "utf8").toString("base64"),
+        encoding: "base64",
         sha: blobSha(ref, path, file.text),
       })
+    },
+  ),
+
+  // Git blobs API — how getFile reads a file too big for the contents API's
+  // inline body. With the raw media type it returns the bytes verbatim; keyed
+  // by the same content-derived sha the contents metadata reports. Wildcard
+  // path (not `:sha`) because the mock's blobSha embeds `/` from the file path.
+  http.get(
+    "https://api.github.com/repos/:owner/:repo/git/blobs/*",
+    ({ params, request }) => {
+      const repo = `${params.owner}/${params.repo}`
+      const url = new URL(request.url)
+      const wanted = decodeURIComponent(
+        url.pathname.replace(`/repos/${repo}/git/blobs/`, ""),
+      )
+      for (const [key, file] of repos.get(repo) ?? []) {
+        const sep = key.indexOf(":")
+        const ref = key.slice(0, sep)
+        const path = key.slice(sep + 1)
+        if (blobSha(ref, path, file.text) !== wanted) continue
+        if (request.headers.get("Accept") === "application/vnd.github.raw") {
+          return rawText(request, file.text)
+        }
+        return json(request, {
+          sha: wanted,
+          encoding: "base64",
+          content: Buffer.from(file.text, "utf8").toString("base64"),
+        })
+      }
+      return new HttpResponse(null, { status: 404 })
     },
   ),
 

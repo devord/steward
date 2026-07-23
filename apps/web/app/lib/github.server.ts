@@ -349,7 +349,12 @@ export async function listUserOrgs(token: string): Promise<string[]> {
   return orgs.map((org) => org.login)
 }
 
-const contentsSchema = z.object({ content: z.string(), sha: z.string() })
+// `content` is absent/empty for files over the contents API's 1MB inline cap
+// (encoding "none"); `sha` is always present, and drives the blobs-API fallback.
+const contentsSchema = z.object({
+  content: z.string().optional(),
+  sha: z.string(),
+})
 
 export interface RepoFile {
   text: string
@@ -375,17 +380,35 @@ export async function getFile(
   if (!res.ok) {
     throw new GitHubError(res.status, `${repo}/${path} → ${res.status}`)
   }
-  // Directories come back as arrays; >1MB files with empty content. Fail as
-  // a GitHubError like every other path here, not a bare ZodError.
-  const parsed = contentsSchema.safeParse(await res.json())
+  // Directories come back as arrays, never a file. Fail as a GitHubError like
+  // every other path here, not a bare ZodError.
+  const body: unknown = await res.json()
+  if (Array.isArray(body)) {
+    throw new GitHubError(422, `${repo}/${path} is a directory, not a file`)
+  }
+  const parsed = contentsSchema.safeParse(body)
   if (!parsed.success) {
-    throw new GitHubError(
-      422,
-      `${repo}/${path} is not a regular file readable via the contents API (directory or >1MB?)`,
-    )
+    throw new GitHubError(422, `${repo}/${path} is not a regular file`)
   }
   const { content, sha } = parsed.data
-  return { text: Buffer.from(content, "base64").toString("utf8"), sha }
+  // Files up to 1MB carry inline base64. GitHub omits the body of anything
+  // larger (encoding "none", empty content) — its hard contents-API cap — so
+  // read those from the git blobs API instead, which serves blobs up to 100MB.
+  // Keyed by the blob sha the metadata still returns, and a distinct endpoint
+  // from the contents call so the GET cache can't answer the raw read with the
+  // empty contents JSON. Without this, every >1MB artifact (a repo-stats card
+  // with embedded avatars runs ~3MB) loaded blank and its widget showed the
+  // first-run empty state despite having published fine.
+  if (content) {
+    return { text: Buffer.from(content, "base64").toString("utf8"), sha }
+  }
+  const blob = await gh(token, `/repos/${repo}/git/blobs/${sha}`, {
+    headers: { Accept: "application/vnd.github.raw" },
+  })
+  if (!blob.ok) {
+    throw new GitHubError(blob.status, `${repo}/${path} blob → ${blob.status}`)
+  }
+  return { text: await blob.text(), sha }
 }
 
 const pathCommitsSchema = z.array(
