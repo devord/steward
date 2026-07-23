@@ -138,8 +138,8 @@ the ranking a reader came for. Drop, before scoring:
   `tsconfig`, lint/format presets (no source files by the step-3 count);
 - **generated or vendored trees** — codegen output (`*.generated.*`, GraphQL
   types), `locales/`, `assets/`, `styles/`;
-- **workspaces that are not shipped product** — docs/marketing sites,
-  `prototypes/`, sandboxes, a knowledge base;
+- **workspaces that are not shipped product** — docs or marketing sites,
+  prototype folders, sandboxes, wikis;
 - anything in `params.exclude`, which is the reader's own override.
 
 State the dropped roots and the reason in provenance, and print the
@@ -148,7 +148,7 @@ ranking usually disagrees with the roots first, and they can only fix what
 they can see (`params.roots` and `params.exclude` are the fix).
 
 **Mirror roots are a category, not a finding.** Fixture and mock trees
-(MSW handlers, factories, `__fixtures__`) exist to track another module's
+(request handlers, factories, `__fixtures__`) exist to track another module's
 shape: they co-change with their subject at 50–100% and import nothing from
 it, which is precisely the shape `hidden coupling` fires on. Left alone the
 run spends its judgement budget telling the reader that their mocks mock
@@ -175,18 +175,19 @@ and clustering it by hyphen-prefix invents a finding out of the framework's
 own layout — the census then reports one giant `other` module and the run
 proposes restructuring a directory the framework requires.
 
-The case that matters today is **file-based routing** (React Router,
-Remix, Hydrogen, Next's `pages/`, SvelteKit): a `routes/` directory beside a
-`routes.ts`/`routes.tsx` config, or one whose filenames carry dot-segments
-(`products.$handle.tsx`). There the module is the **route family**: split the
-filename on dots that sit outside `[...]` escapes, drop the framework's own
-suffixes (`.loader.server`, `.action.server`, `.server`, `.client`, `.test`,
-`.spec`) and the extension, then key on the **first segment** with a trailing
-`_` stripped. So `products.$handle.tsx`, `products.$handle.loader.server.ts`
-and `products.$handle.loader.test.ts` are one module (`products`), and
-`account.tsx` / `account_.login.tsx` land together in `account`. A route
-family is the unit that changes together and the unit a reader names out
-loud; it is also the unit whose loader is worth reading.
+The case that matters today is **file-based routing** (React Router, Remix,
+Next's `pages/`, SvelteKit, and the meta-frameworks built on them): a
+`routes/` directory beside a routes config, or one whose filenames carry
+dot-segments (`products.$handle.tsx`). There the module is the **route
+family**, keyed by the **first segment** — split the filename on dots outside
+`[...]` escapes, take segment one, strip a trailing `_`. Keying on the head
+means no suffix list to maintain: a route's component, its split-out
+loader/action files, and its tests all begin with the same segment, so
+`products.$handle.tsx` and `products.$handle.loader.server.ts` land together
+in `products` whatever the repo calls the halves, and `account.tsx` /
+`account_.login.tsx` land together in `account`. A route family is the unit
+that changes together and the unit a reader names out loud; it is also the
+unit whose loader is worth reading.
 
 Two scoring rules follow from the convention, and both matter more than the
 naming:
@@ -200,6 +201,11 @@ naming:
   framework. Never propose "give this route family its own directory" as a
   move — that is the flat-root rule leaking into a root that was never flat
   by accident.
+
+**Read `params.instructions` before scoring, and let it win.** This template
+states what holds for any repo of a given shape; the facts that hold for
+_this_ one — its framework, a root that looks conventional but isn't, a decay
+already accepted — arrive there, and they override the inference above.
 
 **Flat root** (loose source files, no convention) → cluster by filename:
 
@@ -400,22 +406,13 @@ a scheduled run cannot have, and a headless run proposing a concrete
 refactor unprompted is exactly the "outrunning your headlights" failure
 (Hunt & Thomas). Hand that off through the context block.
 
-**A move that fights the framework is not a move.** Before naming one,
-check it against the conventions the repo already follows — the framework's
-own docs, the repo's `CLAUDE.md` and nested `CLAUDE.md` files, its ADRs.
-Proposing that a file-based-routing app stop keeping routes in flat files,
-that a Hydrogen storefront hand-roll what the framework's context provides,
-or that fixtures stop mirroring the shapes they exist to mirror, all read as
-authoritative and are all wrong; one of them in a run costs the reader more
-trust than five correct rows earn. Where the convention _is_ the constraint,
-the honest move points inward — the route family is fine, the 200-line
-loader inside it is the module that wants extracting.
-
-**Every judged row's move is an action, not an observation.** It opens with
-a verb, names the place, and stops before the design ("extract the pack
-bootstrap root.tsx inlines into its own module", not "root.tsx has grown").
-The dependency category rides with it, because that is what the move costs
-to test.
+**A move points inward from a convention, never at it.** Check the move
+against what the repo already follows — the framework's docs, its `CLAUDE.md`
+files, its ADRs, `params.instructions`. Where the convention is the
+constraint, the module that wants extracting is the one _inside_ it: the
+route family is fine, its 200-line loader is the finding. A move that asks a
+repo to abandon its framework's layout reads as authoritative and is wrong;
+one of those costs more trust than five correct rows earn.
 
 ## 7 · Stated rules (the design concept)
 
@@ -460,7 +457,7 @@ glanced at for two seconds has to answer that itself. So the render carries
 exactly one handoff line — the top module by score × churn, its dependency
 category, and the tool that takes it from there:
 
-> → hand `storefront/routes · products` to `/improve-codebase-architecture`
+> → hand `app/lib · cart` to `/improve-codebase-architecture`
 
 One, not one per row: the moves are already on the judged rows, and a list
 of six handoffs is a backlog, which is the thing the reader already has. The
@@ -501,8 +498,8 @@ worsening (a warning), green for improving, `ink-faint` for steady — red is
 spent on the one genuinely bad state in this artifact, the undeclared-coupling
 ring, and a ledger of red arrows retires it as a signal.
 
-**A census of 136 is not a list.** A flat rank past its first handful is
-rows the reader scrolls without reading: `ui · tooltip 60 ↗` under
+**A census is not a list.** A flat rank past its first handful is rows the
+reader scrolls without reading: `ui · tooltip 60 ↗` under
 `ui · separator 60 ↗`. Split it in two, and let each part do one job:
 
 - **Rot ledger** — the ranked attention list, a stated **top N of the
