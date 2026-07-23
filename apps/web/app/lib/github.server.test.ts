@@ -58,6 +58,45 @@ describe("gh ETag revalidation", () => {
   })
 })
 
+describe("getFile with files over the contents API's 1MB cap", () => {
+  // A repo-stats card with embedded avatars runs ~3MB; the contents API omits
+  // the body of anything over 1MB, so getFile must fall back to the blobs API
+  // or the widget loads blank and shows its first-run state despite publishing.
+  it("reads a >1MB file via the blobs API instead of loading it blank", async () => {
+    const big = `<!doctype html>\n${"x".repeat(1_200_000)}`
+    seedRepo(
+      REPO,
+      { "w/turtle-beach-hydrogen-stats/index.html": big },
+      "artifacts",
+    )
+
+    const file = await getFile(
+      "token",
+      REPO,
+      "w/turtle-beach-hydrogen-stats/index.html",
+      "artifacts",
+    )
+
+    expect(file?.text).toBe(big)
+    expect(file?.text.length).toBeGreaterThan(1_000_000)
+    expect(file?.sha).toBeTruthy()
+  })
+
+  it("still reads a normal (sub-1MB) file inline, no blob round trip", async () => {
+    seedRepo(
+      REPO,
+      { "w/pulse/index.html": "<!doctype html><p>small" },
+      "artifacts",
+    )
+
+    const file = await getFile("token", REPO, "w/pulse/index.html", "artifacts")
+
+    expect(file?.text).toBe("<!doctype html><p>small")
+    // One contents call, no blob fetch — the inline body was enough.
+    expect(githubStats).toEqual({ full: 1, conditional: 0 })
+  })
+})
+
 describe("repoExists", () => {
   it("returns true for a visible repo", async () => {
     seedRepo(REPO, {})
