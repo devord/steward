@@ -157,6 +157,64 @@ export function setTriggerAccount(
   return true
 }
 
+/** The Claude account a routine was enacted under, per its trigger receipt
+    (ADR-0029), or undefined when there's no receipt, it's malformed, or it
+    predates the account field. */
+export function triggerAccount(
+  slug: string,
+  dataRepoDir: string,
+): string | undefined {
+  const absPath = path.join(dataRepoDir, triggerPath(slug))
+  if (!existsSync(absPath)) return undefined
+  try {
+    return triggerFileSchema.parse(JSON.parse(readFileSync(absPath, "utf8")))
+      .account
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Whether `--apply` may drive the cloud reconcile from this machine
+ * (ADR-0029). The reconcile runs through a headless `claude -p`, and
+ * RemoteTrigger only ever sees the signed-in account's routines — so pointing
+ * it at the wrong account doesn't fail loudly, it finds none of the expected
+ * routines, decides they're all missing, and creates a duplicate set there
+ * while the real ones keep drifting.
+ *
+ *  - `ok`       — every stamped receipt names the signed-in account (or none
+ *                 is stamped yet, which the backfill step then fills in).
+ *  - `unknown`  — ~/.claude.json gave no account, so nothing can be compared;
+ *                 the caller warns and proceeds rather than blocking on a
+ *                 best-effort read.
+ *  - `mismatch` — at least one receipt names a different account. Refuse.
+ */
+export type AccountVerdict =
+  | { kind: "ok" }
+  | { kind: "unknown"; owners: string[] }
+  | { kind: "mismatch"; owners: { account: string; slugs: string[] }[] }
+
+export function checkOwningAccounts(
+  signedIn: string | undefined,
+  enacted: { slug: string; account: string | undefined }[],
+): AccountVerdict {
+  // Unstamped receipts say nothing about ownership — a routine enacted before
+  // ADR-0029, or one whose trigger doesn't exist yet. Only stamped ones vote.
+  const owners = new Map<string, string[]>()
+  for (const { slug, account } of enacted) {
+    if (account == null) continue
+    owners.set(account, [...(owners.get(account) ?? []), slug])
+  }
+  if (owners.size === 0) return { kind: "ok" }
+  if (signedIn == null) return { kind: "unknown", owners: [...owners.keys()] }
+  const foreign = [...owners.entries()]
+    .filter(([account]) => account !== signedIn)
+    .map(([account, slugs]) => ({ account, slugs }))
+  return foreign.length > 0
+    ? { kind: "mismatch", owners: foreign }
+    : { kind: "ok" }
+}
+
 /** True when a trigger receipt exists but carries no `account` (ADR-0029) —
     the backfill target. A missing or malformed file is not unstamped: there's
     no trigger there to stamp. */

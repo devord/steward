@@ -72,9 +72,11 @@ import { cronToLaunchd, launchdPlist, plistRepo } from "./launchd.ts"
 import { contractSkillsDir } from "./skills.ts"
 import { parseSyncResult, syncResultProblems } from "./sync-result.ts"
 import {
+  checkOwningAccounts,
   claudeAccountEmail,
   promptTriggerToken,
   setTriggerAccount,
+  triggerAccount,
   triggerNeedsAccount,
 } from "./trigger-token.ts"
 
@@ -247,6 +249,19 @@ export async function main(argv: string[]): Promise<void> {
     return existsSync(path.join(dataRepoDir, triggerPath(routine.slug)))
   }
 
+  /** The trigger line's parenthetical: whether a token is present and — the
+      part that decides which account `--apply` must be signed into — who owns
+      the enacted routine (ADR-0029). */
+  function triggerNote(routine: Routine, manual: boolean): string {
+    if (!hasTrigger(routine)) {
+      return manual
+        ? "(TOKEN MISSING — see below)"
+        : "(no token — the app's Update button won't work; see below)"
+    }
+    const owner = triggerAccount(routine.slug, dataRepoDir)
+    return owner ? `(token present, account ${owner})` : "(token present)"
+  }
+
   // --- Cloud half -------------------------------------------------------------
 
   const orphanRule = `# Routines named steward-* whose prompt targets \`${dataRepo}\` and are
@@ -273,7 +288,7 @@ export async function main(argv: string[]): Promise<void> {
       `  prompt:     ${pointerPrompt(routine)}`,
       `  repos:      ${orNone(sourcesFor(routine))}`,
       `  connectors: ${orNone(connectorsFor(routine))}`,
-      `  trigger:    ${triggerPath(routine.slug)} ${hasTrigger(routine) ? "(token present)" : "(no token — the app's Update button won't work; see below)"}`,
+      `  trigger:    ${triggerPath(routine.slug)} ${triggerNote(routine, false)}`,
       "",
     ]),
     ...cloudManual.flatMap((routine) => [
@@ -282,7 +297,7 @@ export async function main(argv: string[]): Promise<void> {
       `  prompt:     ${pointerPrompt(routine)}`,
       `  repos:      ${orNone(sourcesFor(routine))}`,
       `  connectors: ${orNone(connectorsFor(routine))}`,
-      `  trigger:    ${triggerPath(routine.slug)} ${hasTrigger(routine) ? "(token present)" : "(TOKEN MISSING — see below)"}`,
+      `  trigger:    ${triggerPath(routine.slug)} ${triggerNote(routine, true)}`,
       "",
     ]),
     ...(disabled.length > 0
@@ -423,6 +438,47 @@ export async function main(argv: string[]): Promise<void> {
         "agents), or reconcile by hand via /schedule in Claude Code.",
     )
     process.exit(localErrors.length > 0 ? 1 : 0)
+  }
+
+  // --- Apply: cloud account preflight (ADR-0029) --------------------------------
+  // The reconcile runs through a headless `claude -p`, which acts on whichever
+  // Claude account this machine is signed into — and RemoteTrigger sees only
+  // that account's routines. Point it at the wrong one and it finds none of
+  // the routines below, concludes they're all missing, and creates a full
+  // duplicate set on the wrong account, while the real ones keep drifting.
+  // The receipts (ADR-0029) already record who owns what, so check first.
+  const signedIn = claudeAccountEmail()
+  const verdict = checkOwningAccounts(
+    signedIn,
+    [...cloudScheduled, ...cloudManual].map((routine) => ({
+      slug: routine.slug,
+      account: triggerAccount(routine.slug, dataRepoDir),
+    })),
+  )
+  if (verdict.kind === "unknown") {
+    console.warn(
+      "\n# WARNING: couldn't read this machine's signed-in Claude account, so" +
+        "\n# the owning-account check was skipped. These routines are enacted" +
+        `\n# under: ${verdict.owners.join(", ")}. Make sure \`claude\` is` +
+        "\n# signed into that account before continuing.\n",
+    )
+  } else if (verdict.kind === "mismatch") {
+    console.error(
+      `routines-sync: signed into ${signedIn}, but these routines are` +
+        " enacted under another Claude account:",
+    )
+    for (const { account, slugs } of verdict.owners) {
+      console.error(`  - ${account}: ${slugs.join(", ")}`)
+    }
+    console.error(
+      "\nRemoteTrigger only sees the signed-in account's routines, so" +
+        " applying\nnow would create a duplicate set on the wrong account and" +
+        " leave the\nreal ones untouched. Sign in as the owner" +
+        ` (${verdict.owners[0]?.account}) and re-run.\n` +
+        "\nIf a receipt names the wrong account, correct it with" +
+        `\n\`${CLI} trigger <slug> --account <email>\`.`,
+    )
+    process.exit(1)
   }
 
   // --- Apply: cloud -------------------------------------------------------------
