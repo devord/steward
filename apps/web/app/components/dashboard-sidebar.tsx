@@ -128,26 +128,45 @@ export function DashboardSidebar({
     <div className="flex h-full flex-col">
       {/* Brand row, exactly the board toolbar's height (h-11 + border-b) so
           the top hairline runs unbroken across both columns. */}
-      <div className="flex h-11 shrink-0 items-center border-b border-border-dim px-3">
+      {/* pl-[11px], not px-3: the lockup's mark is 1.25em — 20px at the brand's
+          16px — and this lands its center on the rail's one glyph column
+          (the nav's p-2 + the rows' left-[13px] = 21px), so the tie, every repo
+          folder, every board dot and the foot's glyphs hang on a single
+          vertical line down the whole rail. The Link's -mx-1/px-1 pair cancels,
+          so the row's own padding is what positions the mark. */}
+      <div className="flex h-11 shrink-0 items-center border-b border-border-dim pr-3 pl-[11px]">
         <Link
           to="/"
           aria-label="Steward"
           onClick={onNavigate}
           className="-mx-1 inline-flex items-center rounded-md px-1 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <Wordmark className="text-sm" />
+          <Wordmark />
         </Link>
       </div>
 
+      {/* p-2, matching the foot's own inset: every hairline in the rail — the
+          brand row's, the one over "New dashboard", the foot's — then clears its
+          nearest row by the same 8px, so the frame reads as one inset instead of
+          12px at the top and 8px everywhere else. */}
       <nav
         aria-label={t("nav.boards")}
-        className="flex flex-1 flex-col overflow-y-auto px-2 py-3"
+        className="flex flex-1 flex-col overflow-y-auto p-2"
       >
         {sidebar === null ? (
           <RailSkeleton />
         ) : (
           <>
-            <div className="space-y-4">
+            {/* space-y-8 (32px) — the rail's top-level boundary, and the widest
+                step in its ladder: 2px between sibling rows, 8px from a caption
+                to its own content, 22px between sections inside a repo, 32px
+                between repos (DESIGN.md § Layout). It was 16px, which put the
+                outermost boundary *below* the 22px one nested inside it, so a
+                new data repo announced itself more quietly than a new section
+                did and the rail read as one flat list of captions. Each step is
+                now ≥1.5× the step it contains, which is what lets the eye find
+                the groups without reading them. */}
+            <div className="space-y-8">
               {sidebar.repos.map((repoGroup) => (
                 <NavGroup
                   key={repoGroup.repo}
@@ -173,7 +192,7 @@ export function DashboardSidebar({
                   {sectionBoards(
                     repoGroup.dashboards,
                     repoGroup.sections,
-                  ).flatMap((section) => {
+                  ).flatMap((section, index) => {
                     // Hoisted so the menu closures capture a narrowed string,
                     // not the section's string | null label.
                     const label = section.label
@@ -183,6 +202,9 @@ export function DashboardSidebar({
                           key={`section:${label}`}
                           label={label}
                           count={section.boards.length}
+                          // First section in the group → the repo caption's own
+                          // content, so it opens no air above itself.
+                          lead={index === 0}
                           onRename={
                             onRenameSection
                               ? () => onRenameSection(repoGroup.repo, label)
@@ -366,13 +388,16 @@ export function DashboardSidebar({
  */
 function RailSkeleton() {
   return (
-    <div aria-hidden className="space-y-4">
+    // The resolved rail's own rhythm, so the ghost's silhouette is the shape
+    // that lands: 32px between groups, 8px from a caption to its rows, and a
+    // row pitch (12px bar + 16px gap) matching the real 28px rows.
+    <div aria-hidden className="space-y-8">
       {[3, 2].map((rows, group) => (
         <div key={group}>
           <div className="mb-2 px-2.5 py-1">
             <Skeleton className="h-2.5 w-24" />
           </div>
-          <div className="flex flex-col gap-2 py-1 pl-6">
+          <div className="flex flex-col gap-4 pl-6">
             {Array.from({ length: rows }, (_, row) => (
               <Skeleton
                 key={row}
@@ -416,11 +441,13 @@ function RailAction({
         className,
       )}
     >
-      {/* 14px like the pool glyph — every marker-column icon shares one size,
-          so nothing outdents past the group headings. */}
+      {/* size-3 (12px) — the one marker-column glyph size, shared with the repo
+          folder (repo-group-header.tsx) and the pool's ledger. It rode at 14px:
+          two pixels is invisible in isolation and obvious in a column, and the
+          `+` outweighed the folder it sits under in the foot. */}
       <Icon
         aria-hidden
-        className="absolute top-1/2 left-[13px] size-3.5 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
+        className="absolute top-1/2 left-[13px] size-3 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
       />
       {label}
     </button>
@@ -442,15 +469,23 @@ function RailAction({
  * count is what makes the caption navigation — you can see how much is folded
  * under a section without reading its rows.
  *
- * A generous gap opens above every section (tight within, air between) — the
- * first included: it sits the same distance below the repo heading that a later
- * section sits below the board above it (`mt-5` here, plus the 2px each gets
- * from its own lead — the group's `gap-0.5` mid-list, the repo caption's
- * `mb-0.5` at the top), so the section captions read as one evenly-spaced tier
- * rather than a tucked first and airy rest. `mt-5` and not the old `mt-3`
+ * A generous gap opens above every section but the group's first (`mt-5`, 22px
+ * with the flex `gap-0.5` it adds to) and its own boards hug it below at the
+ * caption step (`mb-1.5` + that same gap = 8px). `mt-5` and not the old `mt-3`
  * because the rhythm law (ADR-0048) wants the between-group gap to read as
  * roughly three times the within-group one; at 12px the sections blurred into
- * the ~24px row pitch and the rail read as a single undifferentiated ladder.
+ * the ~28px row pitch and the rail read as a single undifferentiated ladder.
+ *
+ * The **`lead` section takes no top margin**: it is the repo caption's own
+ * first content, so the caption's `mb-2` is the whole gap (8px, the same step
+ * this label gives its boards). It used to open the full 22px there too, on the
+ * theory that every section caption should sit the same distance below whatever
+ * precedes it — but what precedes the first one is the heading that owns it,
+ * not a peer's last board. Spending the between-groups gap inside a group
+ * detached the repo caption from its own contents and flattened the rail into
+ * one ladder of evenly-spaced captions. Air belongs at boundaries; the first
+ * section isn't one.
+ *
  * The label is the viewer's own words (a display label, ADR-0026), verbatim but
  * cased up by the caption — truncated, never wrapped.
  *
@@ -466,18 +501,20 @@ function RailAction({
  * pointer-coarse:pr-1` row, height fixed to `h-5`), so the glyph lands on the
  * same trailing column the repo caption and board rows already share — in both
  * pointer modes — instead of drifting right the way a size-5 button pinned at
- * the rows' size-6 `right-1` would. The vertical rhythm stays the section's own,
- * though: air above (`mt-5`) sets each section off, but its boards hug it below
- * (the group's `gap-0.5`, no caption `mb-1`) so they read as its children.
+ * the rows' size-6 `right-1` would.
  */
 function SectionLabel({
   label,
   count,
+  lead,
   onRename,
   onDelete,
 }: {
   label: string
   count: number
+  /** This is the group's first child — the repo caption's own content, so the
+      caption's `mb-2` is the gap and the section opens no air of its own. */
+  lead?: boolean
   onRename?: () => void
   onDelete?: () => void
 }) {
@@ -491,7 +528,12 @@ function SectionLabel({
       // an auto-height text row, and pr-1.5 (pr-1 on coarse, where both buttons
       // hit the icon-xs size-8 floor) lands the size-5 glyph on the same
       // trailing column the size-6 board rows use.
-      className="group/section relative mt-5 flex h-5 items-center pr-1.5 pl-6 pointer-coarse:pr-1"
+      // Margins add to the parent's gap-0.5 (2px): mt-5 → 22px of air above a
+      // section, mb-1.5 → the 8px caption step down to its own boards.
+      className={cn(
+        "group/section relative mb-1.5 flex h-5 items-center pr-1.5 pl-6 pointer-coarse:pr-1",
+        !lead && "mt-5",
+      )}
     >
       {/* Label and count share one flex-1 box so the ⋯ keeps its trailing
           column: the count sits outside the truncating label, so a long
@@ -582,11 +624,15 @@ function NavGroup({
         {/* bottom-[21px], not inset-y-1: the spine ends at the top edge of the
             pool row's ledger glyph (last row ~29px tall, 12px glyph on its
             center), leading into the terminal node instead of striking through
-            the icon's transparent strokes. It starts below the header,
-            descending from the repo glyph that roots it. */}
+            the icon's transparent strokes.
+            -top-1 reaches back up *into* the caption's 8px gap, so the line
+            starts 8px under the repo glyph and reads as hanging from it. Pinned
+            inside the column (top-1) it began 16px below the glyph once the
+            caption took its proper gap — far enough that the spine looked like
+            it belonged to the first section rather than to the repo. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute top-1 bottom-[21px] left-[13px] w-px bg-border-dim"
+          className="pointer-events-none absolute -top-1 bottom-[21px] left-[13px] w-px bg-border-dim"
         />
         {children}
         {foot}

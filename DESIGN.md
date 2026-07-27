@@ -181,9 +181,10 @@ surface and sets its own inset.
   landmarks whose legibility comes from tracking, caps, and weight, never
   data carriers. Nothing a reader must read to act goes under it; the sole
   exception is avatar initials, which duplicate a name already beside them.
-  Section headings 16–18px (`text-base`/`text-lg`). No display sizes in
-  chrome. Nav and other primary controls take body size, never the metadata
-  floor.
+  Section headings 16–18px (`text-base`/`text-lg`), and the brand lockup
+  sits in that tier too, at 16px on every chrome surface (§ Mark). No display
+  sizes in chrome. Nav and other primary controls take body size, never the
+  metadata floor.
 - 14px is also the artifact floor (widget-standard §6). That is the
   relationship, not a collision: chrome carries ceilings, artifacts carry
   floors, and the board has one baseline that artifacts rise above.
@@ -310,6 +311,17 @@ renderers assume 300×150 and crop without them).
   shadow) with a `.logo-tile` drop-shadow so it sits on the page. The chip
   is a still object — the old caret-blink (`live`) is retired; motion
   belongs to the board, where it means something.
+  **The chrome brand is one size, `text-base` (16px), and `Wordmark` carries
+  it** the way `railCaptionCls` carries the caption tier — so the rail, the
+  collapsed-rail header, the account bar, the error chrome and the device-code
+  page can't drift apart. It sat at 14px on all of them, stepping to 16px only
+  in the phone header: the identity read at the body size of the nav rows under
+  it and a step below the 16px widget titles beside it. 16px is that same
+  heading tier — the brand is a section heading of the app, never a row in the
+  list. At 16px the lockup's mark is 20px, and the rail's brand row insets
+  `pl-[11px]` to put its center on the rail's one glyph column (21px: the nav's
+  `p-2` plus the rows' `left-[13px]`), so the tie, every repo folder, every
+  board dot and the foot's glyphs hang on a single line.
 - `apps/web/public/favicon.svg`: the browser-tab mark, the product-icon
   chip, identity sets swapped by a `prefers-color-scheme` style block
   inside the SVG. Flat fills, since the fold is invisible at 16px.
@@ -352,18 +364,33 @@ space, not by rules — a hairline for every boundary is a Grafana move. The
 gap that opens a new group runs several times the gap inside one, so the eye
 finds the groups without reading them:
 
-| Boundary                      | Gap  |
-| ----------------------------- | ---- |
-| sibling rows within a group   | 2px  |
-| a caption and its own content | 8px  |
-| a group and the next caption  | 20px |
-| board band to board band      | 32px |
+| Boundary                      | Gap     |
+| ----------------------------- | ------- |
+| sibling rows within a group   | 2px     |
+| a caption and its own content | 8px     |
+| a group and the next caption  | 20–22px |
+| top-level band to band        | 32px    |
 
 The ratio is the point, not the exact pixels. These used to be 12px and
 16px, close enough to the ~30px row pitch that the rail read as one
 undifferentiated ladder and two bands read as one long grid with a caption
 stranded mid-way. A new surface inherits this rhythm rather than inventing
 its own.
+
+**The ladder nests, so no boundary may be tighter than one inside it, and
+each step runs ≥1.5× the step it contains.** Stated because the rail broke it
+in a way that reads as random spacing rather than as a wrong number: the two
+tiers spent the same gap. A repo group's first section opened the full
+between-groups air below the repo caption (leaving the caption equidistant
+from the group above and its own contents — a heading attached to nothing),
+while the boundary _between_ repos was tighter still, at 16px. So a new data
+repo announced itself more quietly than a new section did. The rail's four
+boundaries now read 2 / 8 / 22 / 32: rows, caption-to-its-content (a repo
+caption to its first section or board, a section to its boards), section to
+section, repo group to repo group. The board's bands take the same 32px at
+their own tier. Frame insets are not rungs on this ladder: the rail's nav
+and foot both inset 8px, so every hairline in the chrome clears its nearest
+row by the same amount.
 
 - Dashboard grid: 4 columns desktop / 2 tablet / 1 phone, 150px row unit,
   12px gap (`.dash-grid` in app.css; placement via CSS custom properties).
@@ -373,10 +400,10 @@ its own.
   type, never cramped; the header is one slim row (`app-header` shell,
   shared by every route); panels use `gap-4`. The `NavShell` toolbar is
   `h-11` on desktop (the rail brand row's box, for an unbroken hairline) and
-  relaxes to `h-12` below `lg`, where the wordmark steps up to `text-base`
-  (the brand must not read smaller than the 16px widget titles) and a
-  `· <slug>` mono wayfinding label joins it, since the rail isn't there to
-  answer "where am I".
+  relaxes to `h-12` below `lg`, where touch targets take their coarse floors
+  and a `· <slug>` mono wayfinding label joins the brand, since the rail
+  isn't there to answer "where am I". The brand lockup itself doesn't change
+  size across those rows — it is 16px everywhere (§ Mark).
 - Page gutters: `px-4 sm:px-6` on every route container; `body` carries
   safe-area insets (`viewport-fit=cover`).
 - Touch: the vendored button/select primitives carry `pointer-coarse:`

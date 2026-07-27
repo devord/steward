@@ -30,7 +30,7 @@ export function AccountBar({
         aria-label="Steward"
         className="-mx-1 inline-flex items-center rounded-md px-1 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <Wordmark className="text-sm" />
+        <Wordmark />
       </Link>
 
       <div className="ml-auto flex min-w-0 items-center">

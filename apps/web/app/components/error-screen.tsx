@@ -21,7 +21,7 @@ export function ErrorChrome() {
         aria-label="Steward"
         className="-mx-1 inline-flex items-center rounded-md px-1 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <Wordmark className="text-sm" />
+        <Wordmark />
       </Link>
       <Form method="post" action="/auth/logout" className="ml-auto">
         <Button

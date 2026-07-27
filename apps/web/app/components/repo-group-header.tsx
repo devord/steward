@@ -129,11 +129,15 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
       // to the marker column, so the heading joins the group's glyph column
       // (repo → boards → pool) and roots it — the name aligns with the board
       // names it heads, one tier up by weight and voice, not by outdent.
-      // mb-0.5 (not mb-1): the caption hugs its content at the same 2px the
-      // group's own gap-0.5 threads its boards, so the tier steps read as one
-      // rhythm — the first section (or first board) tucks under the repo
-      // exactly as a board tucks under its section, no wider seam at the top.
-      className="group/repo relative mb-0.5 flex h-5 items-center gap-1.5 pr-1.5 pl-6 pointer-coarse:pr-1"
+      // mb-2 — the rhythm law's caption-to-its-own-content step (8px,
+      // DESIGN.md § Layout), the same one {@link SectionLabel} gives its
+      // boards. It was 2px, the row-to-row gap: at that distance the caption
+      // read as another row rather than as the head of one, and since the
+      // group's first section then had to open its own air *below* the
+      // caption, the repo heading ended up equidistant from the group above it
+      // and the section under it — a heading attached to nothing. 8px is close
+      // enough to bind, wide enough to rank.
+      className="group/repo relative mb-2 flex h-5 items-center gap-1.5 pr-1.5 pl-6 pointer-coarse:pr-1"
       title={group.repo}
     >
       {/* The repo tier's anchor (ADR-0023): a repo glyph on the marker column
