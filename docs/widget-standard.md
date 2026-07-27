@@ -63,13 +63,15 @@ An artifact MUST:
      scaling one number up. There is no separate full-screen artifact to
      author; the one published file must serve the 1×1 glance and the full
      page through its `@media` queries alone.
-3. **Use the shared theme tokens**, the gruvbox-dark-hard palette as CSS
-   custom properties with `color-scheme: dark`. The canonical values live in
-   the theme registry (`apps/web/app/lib/theme.ts`, the gruvbox-dark entry);
+3. **Use the shared theme tokens**, the gruvbox-dark palette as CSS custom
+   properties with `color-scheme: dark`. The canonical values live in the
+   theme registry (`apps/web/app/lib/theme.ts`, the gruvbox-dark entry);
    the `widget-artifact` skill inlines the same set. Do not invent colors,
-   and always paint via `var(--color-*)`: when the user picks another theme,
-   the dashboard appends an override of those same custom properties inside
-   the iframe (ADR-0009), and hard-coded hexes won't retheme.
+   and always paint via `var(--color-*)`: the dashboard appends an override
+   of those same custom properties inside the iframe for **every** theme,
+   gruvbox-dark included (ADR-0009), so hard-coded hexes won't retheme —
+   and won't track the registry when a palette is retranscribed either. The
+   inlined values are only what the file paints when opened raw.
 4. **Carry its generation time**:
    `<meta name="widget-generated-at" content="<ISO-8601>">` plus a visible
    compact timestamp in a `<footer>`. That footer is the artifact's
