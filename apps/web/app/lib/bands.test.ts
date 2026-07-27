@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import {
   buildBands,
   mergeTemplateCategories,
+  moveCategory,
   type PlacedCell,
 } from "./bands.ts"
 
@@ -134,6 +135,64 @@ describe("buildBands", () => {
       "Engineering",
       "Project Mgmt",
     ])
+  })
+})
+
+describe("moveCategory", () => {
+  it("moves a band up, in front of the neighbour above it", () => {
+    expect(
+      moveCategory(
+        ["Executive", "Project Mgmt", "Engineering"],
+        "Engineering",
+        "Project Mgmt",
+      ),
+    ).toEqual(["Executive", "Engineering", "Project Mgmt"])
+  })
+
+  it("moves a band down, behind the neighbour below it", () => {
+    expect(
+      moveCategory(
+        ["Executive", "Project Mgmt", "Engineering"],
+        "Executive",
+        "Project Mgmt",
+      ),
+    ).toEqual(["Project Mgmt", "Executive", "Engineering"])
+  })
+
+  // The reason the gesture names a neighbour instead of an index: the board in
+  // view shows a subset of the repo's bands, so "up" means past the band the
+  // reader can see, jumping whatever sits between them repo-wide.
+  it("jumps a band this board doesn't show", () => {
+    expect(
+      moveCategory(
+        ["Executive", "Experiments", "Engineering"],
+        "Engineering",
+        "Executive",
+      ),
+    ).toEqual(["Engineering", "Executive", "Experiments"])
+  })
+
+  it("returns the full present set, so a first nudge materializes the order", () => {
+    // Nothing was authored: the caller passes render order (listed names, then
+    // the rest alphabetically) and every name comes back listed.
+    expect(moveCategory(["Alpha", "Beta", "Zulu"], "Zulu", "Beta")).toEqual([
+      "Alpha",
+      "Zulu",
+      "Beta",
+    ])
+  })
+
+  it("is a no-op for an unknown name, an unknown neighbour, or itself", () => {
+    const order = ["Executive", "Engineering"]
+    expect(moveCategory(order, "Gone", "Executive")).toEqual(order)
+    expect(moveCategory(order, "Executive", "Gone")).toEqual(order)
+    expect(moveCategory(order, "Executive", "Executive")).toEqual(order)
+  })
+
+  it("never mutates the order it was given", () => {
+    const order = ["Executive", "Project Mgmt", "Engineering"]
+    moveCategory(order, "Engineering", "Executive")
+    expect(order).toEqual(["Executive", "Project Mgmt", "Engineering"])
   })
 })
 

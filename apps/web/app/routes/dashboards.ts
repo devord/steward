@@ -1,4 +1,5 @@
 import {
+  CATEGORY_NAME_MAX,
   dashboardFileSchema,
   dashboardPath,
   parseDashboardFile,
@@ -74,6 +75,17 @@ const payloadSchema = z.discriminatedUnion("intent", [
         lead section (the boards themselves are untouched). */
     section: z.string().min(1).max(SECTION_NAME_MAX),
   }),
+  z.object({
+    intent: z.literal("reorderCategories"),
+    repo: z.string(),
+    /** The repo's whole band order (ADR-0044) — every category its routines
+        use, in render order, replacing `categories:` wholesale. Sent whole
+        rather than as a move because the list only carries the names it
+        states: nudging one band has to write the rest down too, or the
+        unlisted ones would jump (see `moveCategory`). Membership isn't here
+        at all — that rides on each routine, through the board's draft. */
+    categories: z.array(z.string().min(1).max(CATEGORY_NAME_MAX)),
+  }),
 ])
 
 export async function action({ request }: { request: Request }) {
@@ -98,6 +110,66 @@ export async function action({ request }: { request: Request }) {
     auth.dataRepo,
   )
   const repo = dataRepo.full
+
+  // Band order (ADR-0044) is the one repo-level write that isn't about boards
+  // at all: `categories:` in data/repo.yaml, committed directly like the
+  // section order beside it. Band *membership* is a routine field and goes
+  // through the board's draft (ADR-0003) — only the sequence lands here.
+  if (payload.intent === "reorderCategories") {
+    // Trim and dedupe: two spellings differing only in whitespace would render
+    // as one band but list as two, and a repeated name makes orderCategories
+    // emit nothing for the second (delete() consumes it) — a silent hole in
+    // the order the user just set.
+    const next = [
+      ...new Set(payload.categories.map((name) => name.trim()).filter(Boolean)),
+    ]
+    try {
+      const raw = await getFile(auth.token, repo, REPO_FILE_PATH, "main")
+      // A repo.yaml that exists but doesn't parse is refused, not overwritten.
+      // Every reader already degrades to "no order authored" on a malformed
+      // file, so rewriting it here would silently drop whatever else the
+      // author had in there (a `name:`, a `sections:` list) to fix a band
+      // order. The section path never faces this — it only writes when the
+      // parsed order actually changed, which a null parse can't do.
+      let repoFile
+      if (raw) {
+        try {
+          repoFile = parseRepoFile(raw.text)
+        } catch {
+          return data(
+            { ok: false as const, error: "malformed" },
+            { status: 422 },
+          )
+        }
+      }
+      const { categories: _drop, ...rest } = repoFile ?? {}
+      await putFile(auth.token, repo, REPO_FILE_PATH, {
+        content: serializeRepoFile(
+          next.length ? { ...rest, categories: next } : rest,
+        ),
+        message: `config: reorder bands via steward`,
+        branch: "main",
+        // No sha creates the file; GitHub 422s a stale one, which the catch
+        // below translates into the conflict the caller retries from.
+        ...(raw ? { sha: raw.sha } : {}),
+      })
+    } catch (error) {
+      if (
+        error instanceof GitHubError &&
+        (error.status === 409 || error.status === 422)
+      ) {
+        return data({ ok: false as const, error: "conflict" }, { status: 409 })
+      }
+      if (
+        error instanceof GitHubError &&
+        (error.status === 403 || error.status === 404)
+      ) {
+        return data({ ok: false as const, error: "denied" }, { status: 403 })
+      }
+      throw error
+    }
+    return { ok: true as const }
+  }
 
   // Section rename/delete (ADR-0039) is a batch: a section isn't a record, just
   // a free-text `section` shared across boards, so editing it rewrites that
