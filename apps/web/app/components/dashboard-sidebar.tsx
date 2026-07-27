@@ -23,7 +23,7 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { Link } from "~/components/ui/link"
 import { Skeleton } from "~/components/ui/skeleton"
-import { cn } from "~/lib/utils"
+import { cn, railCaptionCls } from "~/lib/utils"
 import type { SidebarData } from "../lib/dashboard.server.ts"
 import { boardDraftKey, poolDraftKey } from "../lib/draft.ts"
 import { useRailStatus } from "../lib/rail-status.ts"
@@ -182,6 +182,7 @@ export function DashboardSidebar({
                         <SectionLabel
                           key={`section:${label}`}
                           label={label}
+                          count={section.boards.length}
                           onRename={
                             onRenameSection
                               ? () => onRenameSection(repoGroup.repo, label)
@@ -428,20 +429,30 @@ function RailAction({
 
 /**
  * A dashboard section's sub-heading (ADR-0034) — the repo caption's idiom one
- * tier in: 11px `ink-dim` UPPERCASE tracked, but medium where the repo is
- * semibold, glyph-less where the repo has one, and indented to the board-name
- * column with its own boards a step deeper. Same terminal-caption voice, read
- * as subordinate by weight, the missing glyph, and the indent — not by being
- * smaller than the boards it heads (the inversion the caption idiom avoids). It
- * stays `ink-dim`, never the ≥3:1 `ink-faint` metadata role — the user reads it
- * to steer, so it must clear AA at this size. A generous gap opens above every
- * section (tight within, air between) — the first included: it sits the same
- * 14px below the repo heading that a later section sits below the board above
- * it (`mt-3` here, plus the 2px each gets from its own lead — the group's
- * `gap-0.5` mid-list, the repo caption's `mb-0.5` at the top), so the section
- * captions read as one evenly-spaced tier rather than a tucked first and airy
- * rest. The label is the viewer's own words (a display label,
- * ADR-0026), verbatim but cased up by the caption — truncated, never wrapped.
+ * tier in: the shared caption tier (`railCaptionCls`) at medium weight where
+ * the repo is semibold, glyph-less where the repo has one, and indented to the
+ * board-name column with its own boards a step deeper. Same terminal-caption
+ * voice, read as subordinate by weight, the missing glyph, and the indent — not
+ * by being smaller than the boards it heads (the inversion the caption idiom
+ * avoids). It stays `ink-dim`, never `ink-faint` — the user reads it to steer,
+ * so it must clear AA at this size.
+ *
+ * It carries a count, like the repo caption above it and the band heading on
+ * the board (ADR-0048). A bare word at the head of a list is decoration; the
+ * count is what makes the caption navigation — you can see how much is folded
+ * under a section without reading its rows.
+ *
+ * A generous gap opens above every section (tight within, air between) — the
+ * first included: it sits the same distance below the repo heading that a later
+ * section sits below the board above it (`mt-5` here, plus the 2px each gets
+ * from its own lead — the group's `gap-0.5` mid-list, the repo caption's
+ * `mb-0.5` at the top), so the section captions read as one evenly-spaced tier
+ * rather than a tucked first and airy rest. `mt-5` and not the old `mt-3`
+ * because the rhythm law (ADR-0048) wants the between-group gap to read as
+ * roughly three times the within-group one; at 12px the sections blurred into
+ * the ~24px row pitch and the rail read as a single undifferentiated ladder.
+ * The label is the viewer's own words (a display label, ADR-0026), verbatim but
+ * cased up by the caption — truncated, never wrapped.
  *
  * When `onRename`/`onDelete` are set the heading carries a trailing `⋯` menu —
  * the same idiom the board rows ({@link NavItem}) and the repo caption
@@ -456,15 +467,17 @@ function RailAction({
  * same trailing column the repo caption and board rows already share — in both
  * pointer modes — instead of drifting right the way a size-5 button pinned at
  * the rows' size-6 `right-1` would. The vertical rhythm stays the section's own,
- * though: air above (`mt-3`) sets each section off, but its boards hug it below
+ * though: air above (`mt-5`) sets each section off, but its boards hug it below
  * (the group's `gap-0.5`, no caption `mb-1`) so they read as its children.
  */
 function SectionLabel({
   label,
+  count,
   onRename,
   onDelete,
 }: {
   label: string
+  count: number
   onRename?: () => void
   onDelete?: () => void
 }) {
@@ -478,10 +491,30 @@ function SectionLabel({
       // an auto-height text row, and pr-1.5 (pr-1 on coarse, where both buttons
       // hit the icon-xs size-8 floor) lands the size-5 glyph on the same
       // trailing column the size-6 board rows use.
-      className="group/section relative mt-3 flex h-5 items-center pr-1.5 pl-6 pointer-coarse:pr-1"
+      className="group/section relative mt-5 flex h-5 items-center pr-1.5 pl-6 pointer-coarse:pr-1"
     >
-      <span className="min-w-0 flex-1 truncate text-[11px] font-medium tracking-wider text-ink-dim uppercase">
-        {label}
+      {/* Label and count share one flex-1 box so the ⋯ keeps its trailing
+          column: the count sits outside the truncating label, so a long
+          section name shortens instead of pushing the number out of view. */}
+      <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
+        <span
+          data-testid="rail-section-label"
+          // Medium, overriding the tier's semibold: this is the repo caption's
+          // idiom one step in, and weight is what carries the subordination.
+          className={cn(railCaptionCls, "min-w-0 truncate font-medium")}
+        >
+          {label}
+        </span>
+        {/* aria-hidden: the boards it counts are listed directly beneath, so
+            a screen reader would be told the number and then read the items.
+            The count is a visual shortcut for the sighted scan, not new
+            information. */}
+        <span
+          aria-hidden
+          className="shrink-0 text-2xs text-ink-dim tabular-nums"
+        >
+          {count}
+        </span>
       </span>
       {hasMenu && (
         <DropdownMenu>
@@ -787,7 +820,7 @@ function NavItem({
             {age != null && (
               <span
                 aria-hidden
-                className="font-mono text-xs text-ink-faint tabular-nums"
+                className="font-mono text-xs text-ink-dim tabular-nums"
               >
                 {age}
               </span>

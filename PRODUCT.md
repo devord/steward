@@ -58,10 +58,15 @@ type, no decoration that doesn't inform.
 ## Accessibility & Inclusion
 
 WCAG 2.1 AA across every theme, enforced in code: theme.test.ts holds each
-palette to body text ≥4.5:1 on bg/bg1/bg2, secondary ink ≥4.5:1, metadata
-ink ≥3:1, and readable primary buttons. Where an upstream palette misses,
-the role is repointed within its own ramp (ADR-0009; ink-faint remains for
-de-emphasized metadata only, never body copy). Full keyboard operability
+palette to body text ≥4.5:1 on bg/bg1/bg2, secondary ink ≥4.5:1 on the same
+three, and readable primary buttons. **No text role sits below 4.5:1**
+(ADR-0048) — there is no metadata discount, because the freshness readout
+the product is built around was the text that discount applied to.
+`ink-faint` is a glyph role now, held to WCAG 1.4.11's ≥3:1 for icons and
+disabled controls. Where an upstream palette misses, the role is repointed
+within its own ramp (ADR-0009); where a palette has no ink both dimmer than
+body and AA-clearing, the secondary tier collapses onto body and hierarchy
+is carried by size and weight. Full keyboard operability
 for editing, sync, and the settings pickers (Base UI primitives and real
 radiogroups carry focus/ARIA). Respect prefers-reduced-motion; staleness
 never encoded by color alone (badge carries text). Chrome is localized

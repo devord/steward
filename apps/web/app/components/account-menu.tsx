@@ -141,8 +141,9 @@ export function AccountMenu({
         <span
           className={cn(
             "truncate text-left",
-            // A real name is prose (sans); a bare login is an identifier (mono).
-            name ? "font-sans" : "font-mono",
+            // One face for both (ADR-0048): the name and the login fall in the
+            // same slot of the same control, and swapping family between two
+            // renderings of one thing read as a glitch rather than as voice.
             block ? "flex-1" : "max-w-[16ch]",
           )}
         >
@@ -165,7 +166,7 @@ export function AccountMenu({
             <div className="truncate text-sm font-medium text-foreground">
               {primary}
             </div>
-            <div className="truncate font-mono text-xs text-ink-faint">
+            <div className="truncate font-mono text-xs text-ink-dim">
               {name ? `@${login}` : t("account.githubAccount")}
             </div>
           </div>

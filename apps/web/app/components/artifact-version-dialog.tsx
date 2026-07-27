@@ -168,7 +168,7 @@ function Pane({
     >
       {role != null && (
         <div className="flex shrink-0 items-baseline gap-2 border-b border-border-dim bg-bg1 px-3 py-1 font-mono text-xs text-ink-dim">
-          <span className="rounded border border-border-dim px-1 text-ink-faint">
+          <span className="rounded border border-border-dim px-1 text-ink-dim">
             {t(role === "older" ? "runs.compareOlder" : "runs.compareNewer")}
           </span>
           <time dateTime={pane.at} title={pane.at} className="tabular-nums">

@@ -33,7 +33,7 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "~/components/ui/popover"
-import { cn } from "~/lib/utils"
+import { cn, railCaptionCls } from "~/lib/utils"
 import type { SidebarRepo } from "../lib/dashboard.server.ts"
 import type { RenameRepoResult } from "../routes/data-repos.ts"
 import { useT } from "../lib/i18n.tsx"
@@ -147,20 +147,17 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
         data-testid="repo-glyph"
         className="absolute top-1/2 left-[13px] size-3 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
       />
-      {/* A caption, not a big heading: 11px semibold UPPERCASE, tracked, muted —
-          the terminal section-header idiom (tmux/lazygit, and Flow's overview).
+      {/* A caption, not a big heading — the shared caption tier (ADR-0048,
+          `railCaptionCls`): text-2xs semibold UPPERCASE, tracked, ink-dim, the
+          terminal section-header idiom (tmux/lazygit, and Flow's overview).
           Small reads as a deliberate caption *because* it's tracked caps with a
           glyph and a trailing count, not as a shrunk item; that lets the boards
           below be the bright, primary tier. ink-dim clears AA at this size (the
-          user reads it to steer). Voice follows the account menu's prose-vs-
-          identifier rule: a display name (or "Personal") is prose — sans — while
-          only the bare repo-name fallback keeps mono. */}
-      <span
-        className={cn(
-          "truncate text-[11px] font-semibold tracking-wider text-ink-dim uppercase",
-          group.displayName != null || group.isHome ? "font-sans" : "font-mono",
-        )}
-      >
+          user reads it to steer). The face no longer forks on prose-vs-
+          identifier: chrome is one material, and a caption that changed family
+          depending on whether the repo had a display name made the rail's own
+          heading tier look inconsistent with itself. */}
+      <span className={cn(railCaptionCls, "truncate")}>
         {group.displayName ??
           (group.isHome ? t("switcher.personal") : group.name)}
       </span>
@@ -266,7 +263,7 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
                     </li>
                   ))}
                   {overflow > 0 && (
-                    <li className="pl-7 font-mono text-xs text-ink-faint">
+                    <li className="pl-7 font-mono text-xs text-ink-dim">
                       {t("repo.moreCollaborators", { n: overflow })}
                     </li>
                   )}

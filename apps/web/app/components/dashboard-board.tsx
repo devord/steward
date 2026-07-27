@@ -57,7 +57,7 @@ import {
 } from "react-grid-layout"
 import "react-grid-layout/css/styles.css"
 
-import { cn } from "~/lib/utils"
+import { cn, railCaptionCls } from "~/lib/utils"
 import { writeCollapsedBands } from "../lib/band-collapse.ts"
 import {
   buildBands,
@@ -226,14 +226,17 @@ function BandHeading({
           !collapsed && "rotate-90",
         )}
       />
-      <span className="font-mono text-xs tracking-wide text-ink-dim uppercase">
-        {category}
+      <span className={railCaptionCls}>{category}</span>
+      {/* The count is always on (ADR-0048), the same way the rail's captions
+          carry theirs — a bare word heading a band is decoration, the number
+          makes it navigation. Collapsed, the number gives way to the phrase
+          that also says why the band is empty; one slot, two readings, never
+          both (a collapsed "EXECUTIVE 2 · 2 hidden" says the same thing
+          twice). `ink-dim`, not the old `ink-faint`: no chrome text sits in
+          the sub-AA tier any more. */}
+      <span className="text-2xs text-ink-dim tabular-nums">
+        {collapsed ? t("band.count", { count: String(count) }) : count}
       </span>
-      {collapsed && (
-        <span className="font-mono text-xs text-ink-faint">
-          {t("band.count", { count: String(count) })}
-        </span>
-      )}
       <span className="ml-1 h-px flex-1 bg-border" />
     </button>
   )
@@ -865,7 +868,13 @@ export function DashboardBoard({
                   return (
                     <section
                       key={label ?? ""}
-                      className={cn(label != null && "mb-4")}
+                      // mb-8, not the old mb-4: the rhythm law (ADR-0048)
+                      // wants the gap between groups to read as several times
+                      // the gap within one, and a band's cells sit 12px apart,
+                      // so 16px between bands barely separated them — two
+                      // bands read as one long grid with a caption stranded
+                      // mid-way. 32px makes the band the unit you scan.
+                      className={cn(label != null && "mb-8")}
                     >
                       {label != null && (
                         <BandHeading
@@ -1710,7 +1719,7 @@ function GridSettings({
             <kbd className="rounded-sm border border-border-dim bg-bg2 px-1 font-mono text-ink-dim">
               {t(keyToken)}
             </kbd>
-            <span className="text-ink-faint">{t(label)}</span>
+            <span className="text-ink-dim">{t(label)}</span>
           </span>
         ))}
       </span>

@@ -612,7 +612,7 @@ export function RoutinesTable({
           ellipsises rather than widening the table. */}
       <table className="w-full border-collapse text-xs">
         <thead>
-          <tr className="border-b border-border text-left align-bottom font-mono whitespace-nowrap text-ink-faint">
+          <tr className="border-b border-border text-left align-bottom font-mono whitespace-nowrap text-ink-dim">
             <th scope="col" className="w-full px-3 py-1.5 font-normal">
               {t("routines.colName")}
             </th>
@@ -719,16 +719,22 @@ export const rowLinkCls =
 
 /**
  * A schedule, spoken before spelled: a preset cron reads as its picker phrase
- * ("Every 4 hours" — prose, so sans), the raw expression riding as the native
- * title tooltip (the slug idiom) plus an sr-only echo. An off-preset cron has
- * no phrase to wear and stays verbatim mono — the honest machine string.
+ * ("Every 4 hours"), the raw expression riding as the native title tooltip
+ * (the slug idiom) plus an sr-only echo. An off-preset cron has no phrase to
+ * wear and stays verbatim — the honest machine string.
+ *
+ * Both are set in the chrome mono (ADR-0048); the phrase used to take the sans
+ * to mark itself as prose, but a ledger row is one line of machine output and
+ * a family change mid-column read as a defect. The two forms are already
+ * unmistakable from their own text — "Every 4 hours" against `0 * /4 * * *` —
+ * so the distinction never needed a second face to carry it.
  */
 export function ScheduleText({ schedule }: { schedule: string }) {
   const t = useT()
   const key = schedulePhraseKey(schedule)
   if (key == null) return <>{schedule}</>
   return (
-    <span className="font-sans" title={schedule}>
+    <span title={schedule}>
       {t(key)}
       <span className="sr-only"> — {schedule}</span>
     </span>
@@ -845,7 +851,7 @@ function RoutineRow({
 
       <td className="hidden py-2 pr-3 align-top font-mono whitespace-nowrap text-ink-dim md:table-cell">
         {isManual(routine) ? (
-          <span className="text-ink-faint">{t("routines.manualDash")}</span>
+          <span className="text-ink-dim">{t("routines.manualDash")}</span>
         ) : routine.schedule != null ? (
           <ScheduleText schedule={routine.schedule} />
         ) : null}
@@ -876,7 +882,7 @@ function RoutineRow({
           Read-only here — recategorizing goes through Edit, so the write path
           stays the routines draft + Sync flow like every other field. */}
       <td className="hidden py-2 pr-3 align-top whitespace-nowrap text-ink-dim lg:table-cell">
-        {category ?? <span className="text-ink-faint">—</span>}
+        {category ?? <span className="text-ink-dim">—</span>}
       </td>
 
       <td className="hidden py-2 pr-3 align-top sm:table-cell">
@@ -998,7 +1004,7 @@ export function StateLabel({
       <span className="inline-block h-4 w-16 animate-pulse rounded bg-bg3" />
     )
   }
-  const off = "font-mono text-xs text-ink-faint"
+  const off = "font-mono text-xs text-ink-dim"
   const fresh = cn(chipBase, "bg-green/12 text-ink")
   const stale = cn(chipBase, "bg-yellow/15 font-medium text-ink")
   const active = cn(chipBase, "bg-primary/15 font-medium text-ink")
@@ -1039,7 +1045,7 @@ function ranLabel(lastRunAt: string | null, now: number, t: Translate): string {
     state. Class string, not a component, since the chip wears it on a
     `<button>`. */
 const ledgerTagCls =
-  "rounded border border-border-dim px-1 font-mono text-xs text-ink-faint"
+  "rounded border border-border-dim px-1 font-mono text-xs text-ink-dim"
 
 /**
  * The ledgers' list cell (boards, used-by): a column holding an unbounded list
@@ -1103,7 +1109,7 @@ function CrossRefCell({
             +{tail.length}
           </PopoverTrigger>
           <PopoverContent align="start" className="w-auto max-w-72 gap-1.5 p-3">
-            <PopoverTitle className="font-mono text-xs text-ink-faint">
+            <PopoverTitle className="font-mono text-xs text-ink-dim">
               {heading}
             </PopoverTitle>
             {/* The head repeats here: the popover is the list, not the
@@ -1127,7 +1133,7 @@ function CrossRefCell({
     routine that renders nowhere, a template no routine instantiates. */
 function CrossRefEmpty({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink-faint">
+    <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink-dim">
       <span aria-hidden>—</span>
       <span className={ledgerTagCls}>{children}</span>
     </span>
@@ -1248,7 +1254,7 @@ export function TemplatesSection({
             the last column stops being pushed past the container edge. */}
         <table className="w-full border-collapse text-xs">
           <thead>
-            <tr className="border-b border-border text-left align-bottom font-mono whitespace-nowrap text-ink-faint">
+            <tr className="border-b border-border text-left align-bottom font-mono whitespace-nowrap text-ink-dim">
               <th scope="col" className="px-3 py-1.5 font-normal">
                 {t("templates.colTemplate")}
               </th>
@@ -1389,7 +1395,7 @@ function TemplateRow({
         {template.widget.schedule != null ? (
           <ScheduleText schedule={template.widget.schedule} />
         ) : (
-          <span aria-hidden className="text-ink-faint">
+          <span aria-hidden className="text-ink-dim">
             —
           </span>
         )}

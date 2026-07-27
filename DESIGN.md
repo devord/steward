@@ -42,7 +42,7 @@ gruvbox-dark row of the registry):
 | `border-strong` / `--input`      | `#7c6f64`    | control boundaries: inputs, checkboxes       |
 | `ink` / `--foreground`           | `#ebdbb2`    | body text                                    |
 | `ink-dim` / `--muted-foreground` | `#a89984`    | secondary text                               |
-| `ink-faint`                      | `#928374`    | metadata only, never body copy               |
+| `ink-faint`                      | `#928374`    | glyphs and disabled controls, never text     |
 | `accent` / `--primary`           | `#fe8019`    | the accent: primary actions, brand mark      |
 | `accent-deep` / `--ring`         | `#d65d0e`    | focus ring, selection                        |
 | `yellow`                         | `#fabd2f`    | staleness, warnings                          |
@@ -74,9 +74,22 @@ them: it answers to WCAG 1.4.11 and clears 3:1 on both surfaces. Pick by what
 the line is doing, not by how loud you want it; `theme.test.ts` holds every
 theme to all three floors and to their ordering.
 
+**No text role sits below AA** (ADR-0048). `ink` and `ink-dim` both clear
+4.5:1 on every surface of every theme, and there is no third, dimmer text
+tier and no exemption for "just metadata" — freshness is the product, so the
+readout carrying it is held to the same floor as body copy. Measured across
+the registry, `ink-faint` cleared 4.5:1 on one palette of fourteen and
+bottomed out at 3.20:1, so it is now a **glyph** role: resting icons,
+hover-revealed icon buttons, disabled controls, where WCAG 1.4.11's 3:1 is
+the applicable floor. De-emphasis in text is spent on size and weight.
+Where a palette has no ink both dimmer than body and AA-clearing,
+`ink-dim` collapses onto `ink` (rose-pine-dawn, tokyo-night-light) and the
+tier is carried by size and weight alone; `theme.test.ts` allows the
+collapse and forbids an inversion.
+
 Strategy: **restrained**. Near-monochrome chrome, accent ≤10% of any
 screen. Yellow/green/red appear only when they mean something (stale,
-added, removed), and never carry 13px text alone: state text stays in the
+added, removed), and never carry 12px text alone: state text stays in the
 ink roles while a tint wash, dot, or sign carries the tone (several light
 palettes have no AA-clearing yellow/green for small text). Chrome code uses
 tokens only; a literal hex breaks every non-default theme.
@@ -84,8 +97,8 @@ tokens only; a literal hex breaks every non-default theme.
 ## Shape
 
 Radius signals elevation, so only things that float carry it: dialogs,
-popovers, menus, pills, and controls keep `--radius` (8px, and its `sm`/`md`
-steps). **The widget frame is square.** A board cell has no fill — the
+popovers, menus, pills, and controls keep `--radius` (4px, and its `sm`/`md`
+steps, nothing past 6px). **The widget frame is square.** A board cell has no fill — the
 artifact is repainted flush to the board and the border is the cell's only
 frame — so that hairline is a _pane_ edge in the tmux/lazygit sense, not a
 card outline, and a radius there would round nothing (the artifact inside is
@@ -107,36 +120,52 @@ surface and sets its own inset.
 
 ## Typography
 
-- Sans: Geist Variable (bundled via fontsource), for UI copy.
-- Mono: Geist Mono Variable (bundled via fontsource; system mono fallback),
-  for identifiers (slugs, repo names, cron expressions), timestamps, state
-  labels, the wordmark. The mono is the brand voice. The wordmark and
-  widget titles set in it are the most visible type in the app, so it is
-  a designed face from the same family as the sans, never the viewer's
-  terminal default.
-- Rule of thumb: if git or the schema would care about the string, it's
-  mono. The rule applies per string, not per slot: the rail's group heading
-  and the account pill are sans when showing a display name ("Personal", a
-  repo.yaml `name`, a GitHub name) and mono only when falling back to the
-  repo name / login. Prose vs identifier is also what separates a heading
-  tier from mono content rows when size alone is too subtle at 13px-vs-15px.
-  The scale is set at the foundation by two Tailwind size tokens in
-  `app.css` (`--text-sm`/`--text-xs`), one step above Tailwind's defaults:
-  **body and interactive labels 15px (`text-sm`)** for nav items, buttons,
-  the account name; **secondary labels and metadata 13px (`text-xs`)**, the
-  floor for anything that carries data, including timestamps. One tier sits
-  below it: **tracked UPPERCASE captions at 11px** (the rail's repo and
-  section headers), navigational landmarks whose legibility comes from
-  tracking, caps, and weight, never data carriers. Nothing else goes under
-  13px. Section headings 16–18px (`text-base`/`text-lg`). No display sizes
-  in chrome. Nav and other primary controls take body size, never the
-  metadata floor.
-- Widget title exception: the `widget-card` tile name is **mono, `text-base`
-  (16px) semibold**, a deliberate break from sans-for-names. Each widget is a
-  section of the page, so its name reads as a section heading that owns the top
-  of the cell, not a faint label: it takes the 16px heading tier and a full
-  semibold, a clear step in size, weight, and color (full `foreground`) above
-  the 13px `ink-dim` freshness beside it, which stays quiet. With no card
+- Mono: Geist Mono Variable (bundled via fontsource; system mono fallback).
+  **The chrome is mono** (ADR-0048) — `font-mono` sits on `body`, so the
+  rail, header, ledgers, pills, controls, menus, dialog titles and widget
+  titles all set in it without asking. The mono is the brand voice, and it
+  must be a designed face, never the viewer's terminal default.
+- Sans: Geist Variable, for **prose only** — the landing page
+  (`data-prose-surface`) and the docs (`#nd-docs-layout`), which are read at
+  a 65–75ch measure where mono is the slower face. Same family as the mono,
+  so the two reading surfaces still belong to one system. Nothing in chrome
+  opts into it.
+- There is no per-string rule any more. The old one — "if git or the schema
+  would care about the string, it's mono" — forked the face inside single
+  slots: a display name was sans and the login it fell back to was mono, two
+  renderings of one control. A reader doesn't perceive "this string is an
+  identifier", they perceive a column that keeps changing material. Prose vs
+  identifier is still a real distinction; it is carried by the words, not by
+  the face.
+- The scale is Tailwind's own, set in `app.css`: **body and interactive
+  labels 14px (`text-sm`)** for nav items, buttons, the account name;
+  **secondary labels and metadata 12px (`text-xs`)**, the floor for anything
+  that carries data, including timestamps. One tier sits below it:
+  **tracked UPPERCASE captions at 11px (`text-2xs`)**, navigational
+  landmarks whose legibility comes from tracking, caps, and weight, never
+  data carriers. Nothing a reader must read to act goes under it; the sole
+  exception is avatar initials, which duplicate a name already beside them.
+  Section headings 16–18px (`text-base`/`text-lg`). No display sizes in
+  chrome. Nav and other primary controls take body size, never the metadata
+  floor.
+- 14px is also the artifact floor (widget-standard §6). That is the
+  relationship, not a collision: chrome carries ceilings, artifacts carry
+  floors, and the board has one baseline that artifacts rise above.
+- **The caption tier is one token**, `railCaptionCls` in `lib/utils.ts`:
+  mono, `text-2xs`, semibold, tracked, caps, `ink-dim`. The rail's repo
+  caption, its section labels, the board's band headings and the template
+  picker's group headers all resolve to it. It shipped at 11px in the rail
+  and 13px on the board once — a gap too small to read as hierarchy and big
+  enough to read as a mistake. A band heading earns its prominence from its
+  chevron, its count and the air above it. Captions carry their member count
+  at rest (`aria-hidden`; the items are listed right below): a bare word
+  heading a list is decoration, the number is what makes it navigation.
+- Widget titles: the `widget-card` tile name is **`text-base` (16px)
+  semibold**. Each widget is a section of the page, so its name reads as a
+  section heading that owns the top of the cell, not a faint label: it takes
+  the 16px heading tier and a full semibold, a clear step in size, weight, and
+  color (full `foreground`) above the 12px `ink-dim` freshness beside it,
+  which stays quiet. With no card
   border by design, that heading plus the whitespace rhythm _is_ the block's
   separation. The lightbox header carries the same name in the same mono
   heading voice. State reads as pills in that same mono voice
@@ -145,18 +174,17 @@ surface and sets its own inset.
   bar deliberately shows the `slug`, not the name: editing is the machine
   view, where the bar is a drag handle over the routines.yaml entry being
   rearranged, so the identifier git cares about is the honest label there.
-- Ledger rows are the opposite exception: the routine pool, the templates
-  ledger, and the run history (`routines-view`, `routine-runs-view`) set
-  **`text-xs` on the `<table>` and nothing per cell**, one 13px line box for
-  every column. Two reasons, one structural and one about voice. Structurally,
-  cells only align across a row if they share a line-height; a 13px link inside
-  a 15px line box sits a few pixels low, and a table of those reads as drifting
+- Ledger rows sit one tier down: the routine pool, the templates ledger, and
+  the run history (`routines-view`, `routine-runs-view`) set **`text-xs` on
+  the `<table>` and nothing per cell**, one 12px line box for every column.
+  Two reasons, one structural and one about voice. Structurally, cells only
+  align across a row if they share a line-height; a 12px link inside a 14px
+  line box sits a few pixels low, and a table of those reads as drifting
   columns. In voice, a ledger row is one line of machine output, closer to
-  `gh run list` than to a list of headings, so the row name takes the same 13px
-  as the data beside it and earns its prominence from full `foreground` ink,
-  medium weight, and the state dot leading it, against `ink-dim` peers. This is
-  the "mono content rows" case the size rule above names: it is a data carrier
-  at the 13px floor, not body copy. Layout follows the same discipline. Exactly
+  `gh run list` than to a list of headings, so the row name takes the same
+  12px as the data beside it and earns its prominence from full `foreground`
+  ink, medium weight, and the state dot leading it, against `ink-dim` peers.
+  It is a data carrier at the 12px floor, not body copy. Layout follows the same discipline. Exactly
   one column is flexible (`w-full max-w-0` + `truncate` on the name, or on the
   description in the templates ledger) and every other cell is
   `whitespace-nowrap`. So the short fixed phrases never wrap (a state, a
@@ -283,6 +311,24 @@ everywhere it appears.)
 
 ## Layout
 
+**Rhythm: tight within, air between** (ADR-0048). Grouping is carried by
+space, not by rules — a hairline for every boundary is a Grafana move. The
+gap that opens a new group runs several times the gap inside one, so the eye
+finds the groups without reading them:
+
+| Boundary                      | Gap  |
+| ----------------------------- | ---- |
+| sibling rows within a group   | 2px  |
+| a caption and its own content | 8px  |
+| a group and the next caption  | 20px |
+| board band to board band      | 32px |
+
+The ratio is the point, not the exact pixels. These used to be 12px and
+16px, close enough to the ~30px row pitch that the rail read as one
+undifferentiated ladder and two bands read as one long grid with a caption
+stranded mid-way. A new surface inherits this rhythm rather than inventing
+its own.
+
 - Dashboard grid: 4 columns desktop / 2 tablet / 1 phone, 150px row unit,
   12px gap (`.dash-grid` in app.css; placement via CSS custom properties).
   Below 4 columns, widgets render in visual (row, col) order so the stack
@@ -351,7 +397,13 @@ everywhere it appears.)
   gets. The floor holds the panel's other rows together, the cap stops a
   pathological name from making a slab, and `overflow-wrap` on the title
   covers whatever still exceeds it.
-- Radius: `--radius: 0.5rem`; cards `rounded-lg`, small controls tighter.
+- Radius: `--radius: 0.25rem` (4px), every derived step capped at 6px
+  (ADR-0048). The rule is unchanged — radius signals elevation, so only
+  things that float carry it — but the number came down: the widget frame is
+  square by design, and an 8px pill beside a square tile read as a different
+  material. 4px is the smallest step that still says "this floats" without
+  reading as a card. The scale is stated in pixels off the base, not as
+  multipliers, which had run the upper steps to 10px.
 
 ## Components
 

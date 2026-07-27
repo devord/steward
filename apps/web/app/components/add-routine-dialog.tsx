@@ -16,7 +16,7 @@ import {
 } from "@steward/schema"
 import { CheckIcon, ChevronRightIcon, SearchIcon } from "lucide-react"
 
-import { cn } from "~/lib/utils"
+import { cn, railCaptionCls } from "~/lib/utils"
 
 import { Button } from "~/components/ui/button"
 import {
@@ -931,12 +931,12 @@ export function AddRoutineDialog({
                       role="group"
                       aria-labelledby={`routine-template-group-${group.key}`}
                     >
-                      {/* The rail's landmark caption tier (11px tracked caps):
+                      {/* The chrome's one caption tier (`railCaptionCls`):
                           says the source once per group instead of pinning a
                           badge to every row. */}
                       <div
                         id={`routine-template-group-${group.key}`}
-                        className="mt-3 mb-1 px-2.5 text-[11px] font-semibold tracking-wider text-ink-dim uppercase"
+                        className={cn(railCaptionCls, "mt-3 mb-1 px-2.5")}
                       >
                         {group.label}
                       </div>
@@ -1549,7 +1549,7 @@ function TemplatePreview({ html, name }: { html: string; name: string }) {
           className="h-44 w-full border-0"
         />
       </div>
-      <figcaption className="font-mono text-xs text-ink-faint">
+      <figcaption className="font-mono text-xs text-ink-dim">
         {t("dialog.samplePreview")}
       </figcaption>
     </figure>

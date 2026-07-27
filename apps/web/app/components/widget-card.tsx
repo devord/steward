@@ -1135,11 +1135,9 @@ function WidgetEmptyState({
           onFired={onFired}
         />
       )}
-      {note && <span className="font-mono text-xs text-ink-faint">{note}</span>}
+      {note && <span className="font-mono text-xs text-ink-dim">{note}</span>}
       {command && <CopyableCommand command={command} />}
-      {runnerNote && (
-        <span className="text-xs text-ink-faint">{runnerNote}</span>
-      )}
+      {runnerNote && <span className="text-xs text-ink-dim">{runnerNote}</span>}
     </div>
   )
 }

@@ -234,13 +234,41 @@ describe("every theme clears the contrast floors", () => {
         expect(contrast(t.ink, surface)).toBeGreaterThanOrEqual(4.5)
       }
     })
-    it(`${name}: secondary ink ≥ 4.5:1 on page and cards`, () => {
-      expect(contrast(t.inkDim, t.bg)).toBeGreaterThanOrEqual(4.5)
-      expect(contrast(t.inkDim, t.bg1)).toBeGreaterThanOrEqual(4.5)
+    // Both text roles clear full AA on every surface they sit on. There is no
+    // third, dimmer text tier and no exemption for "just metadata" (ADR-0048):
+    // freshness is the product, so the readout that carries it is held to the
+    // same floor as body copy. De-emphasis is spent on size and weight.
+    it(`${name}: secondary ink ≥ 4.5:1 on every surface`, () => {
+      for (const surface of [t.bg, t.bg1, t.bg2]) {
+        expect(contrast(t.inkDim, surface)).toBeGreaterThanOrEqual(4.5)
+      }
     })
-    it(`${name}: metadata ink ≥ 3:1 on page and cards`, () => {
+    it(`${name}: ink-faint is a glyph role — ≥ 3:1, WCAG 1.4.11`, () => {
+      // ADR-0048 retired ink-faint as a *text* role: measured across the
+      // registry it cleared 4.5:1 on one palette of fourteen and bottomed out
+      // at 3.20:1 (rose-pine on bg1), so every timestamp and count set in it
+      // shipped sub-AA. It survives for what 3:1 genuinely covers — resting
+      // glyphs, hover-revealed icon buttons, disabled controls — and the floor
+      // below is the graphics one, not a discount on the text one.
       expect(contrast(t.inkFaint, t.bg)).toBeGreaterThanOrEqual(3)
       expect(contrast(t.inkFaint, t.bg1)).toBeGreaterThanOrEqual(3)
+    })
+    it(`${name}: the ink tiers never invert`, () => {
+      // A dimmer role that outweighs a brighter one inverts the hierarchy:
+      // metadata louder than the body it qualifies. Ordered, but not strictly
+      // for the secondary tier — rose-pine-dawn and tokyo-night-light have no
+      // ink that is both dimmer than body and AA-clearing, so `ink-dim`
+      // collapses onto `ink` and those themes carry the secondary tier with
+      // size and weight instead. That collapse is legal; an inversion is not.
+      for (const surface of [t.bg, t.bg1]) {
+        expect(contrast(t.inkDim, surface)).toBeLessThanOrEqual(
+          contrast(t.ink, surface),
+        )
+        // The glyph tier has headroom on every palette, so it stays strict.
+        expect(contrast(t.inkFaint, surface)).toBeLessThan(
+          contrast(t.inkDim, surface),
+        )
+      }
     })
     it(`${name}: the identity mark ≥ 3:1 on page and sidebar`, () => {
       // The bow tie wears a fixed identity (DESIGN.md § Mark): one light

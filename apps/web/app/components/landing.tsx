@@ -36,7 +36,13 @@ import { useT } from "../lib/i18n.tsx"
 export function Landing() {
   const t = useT()
   return (
-    <main className="landing-bg relative min-h-dvh">
+    // `data-prose-surface` opts this page back into the sans (app.css,
+    // ADR-0048). Chrome is mono everywhere else, but the landing page has to
+    // be *read* by someone meeting the product cold, at a measure where mono
+    // is the slower face. Its identifiers, the mock rail, and the widget-title
+    // samples still carry their own `font-mono`, so the page keeps the
+    // terminal voice where the voice is the point.
+    <main data-prose-surface className="landing-bg relative min-h-dvh">
       {/* The corner chrome: docs and the source repo beside the mode toggle —
           the nav a signed-out visitor gets, in the corner devs look for it.
           Each link wears the toggle's own control-chip dress (border + bg1,
@@ -74,14 +80,14 @@ export function Landing() {
             </p>
 
             <SignInButton size="lg" className="mt-8" />
-            <p className="mt-4 max-w-xs text-xs leading-relaxed text-ink-faint">
+            <p className="mt-4 max-w-xs text-xs leading-relaxed text-ink-dim">
               {t("landing.privacy")}
             </p>
             {/* Fallback for hosts the OAuth callback can't reach — chiefly
                 Vercel preview subdomains, whose URL no callback can match. */}
             <a
               href="/auth/device"
-              className="mt-3 inline-block text-xs text-ink-faint underline underline-offset-2 hover:text-ink-dim"
+              className="mt-3 inline-block text-xs text-ink-dim underline underline-offset-2 hover:text-ink-dim"
             >
               {t("landing.deviceLink")}
             </a>
@@ -182,7 +188,7 @@ function ScrollCue() {
         })
       }}
       className={cn(
-        "group absolute inset-x-0 bottom-4 z-10 mx-auto flex w-fit items-center gap-2 rounded-md px-3 py-2 font-mono text-xs text-ink-faint transition-opacity duration-200 outline-none hover:text-ink-dim focus-visible:ring-3 focus-visible:ring-ring/50",
+        "group absolute inset-x-0 bottom-4 z-10 mx-auto flex w-fit items-center gap-2 rounded-md px-3 py-2 font-mono text-xs text-ink-dim transition-opacity duration-200 outline-none hover:text-ink-dim focus-visible:ring-3 focus-visible:ring-ring/50",
         scrolled && "pointer-events-none opacity-0",
       )}
     >
@@ -548,7 +554,7 @@ function DemoBoard() {
       <Widget name="Daily plan" ago="Ran 2h ago" className="flex-1">
         <p className="mb-3 flex items-center justify-between font-mono text-xs text-ink-dim">
           Today
-          <span className="text-ink-faint">Jul 09</span>
+          <span className="text-ink-dim">Jul 09</span>
         </p>
         <ul className="space-y-2.5 text-xs">
           <Task done>Ship M1 acceptance</Task>
@@ -610,7 +616,7 @@ function ShowcaseBoard() {
           </span>
         </div>
         <ProgressBar value={62} tone="primary" className="mt-2.5" />
-        <p className="mt-2 font-mono text-xs text-ink-faint">
+        <p className="mt-2 font-mono text-xs text-ink-dim">
           9 landed · 3 in review
         </p>
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-xs">
@@ -673,7 +679,7 @@ function ShowcaseBoard() {
       >
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <p className="font-mono text-xs text-ink-dim">Commits · 26 weeks</p>
-          <p className="font-mono text-xs text-ink-faint">
+          <p className="font-mono text-xs text-ink-dim">
             318 commits · 74 PRs merged · 5 contributors
           </p>
         </div>
@@ -682,13 +688,13 @@ function ShowcaseBoard() {
             terminal-calm axis, names not gridlines. */}
         <div
           aria-hidden
-          className="mt-1.5 flex justify-between font-mono text-xs text-ink-faint"
+          className="mt-1.5 flex justify-between font-mono text-xs text-ink-dim"
         >
           {["Feb", "Mar", "Apr", "May", "Jun", "Jul"].map((month) => (
             <span key={month}>{month}</span>
           ))}
         </div>
-        <div className="mt-3 flex items-center gap-4 font-mono text-xs text-ink-faint">
+        <div className="mt-3 flex items-center gap-4 font-mono text-xs text-ink-dim">
           <Legend tone="green">merged</Legend>
           <Legend tone="primary">open</Legend>
         </div>
@@ -801,7 +807,11 @@ function Task({
       ) : (
         <span className="size-3 shrink-0 rounded-full border border-border" />
       )}
-      <span className={done ? "text-ink-faint line-through" : "text-ink-dim"}>
+      {/* Done and pending share the ink now (ADR-0048 retired the faint text
+          tier); the rule and the green check carry the distinction, which is
+          the stronger pair anyway — a strikethrough reads as done at any
+          contrast, a slightly paler gray does not. */}
+      <span className={cn("text-ink-dim", done && "line-through")}>
         {children}
       </span>
     </li>
@@ -830,7 +840,7 @@ function MeterRow({
           style={{ width: fill }}
         />
       </span>
-      <span className="w-8 shrink-0 text-right text-ink-faint">
+      <span className="w-8 shrink-0 text-right text-ink-dim">
         {suffix ?? n}
       </span>
     </div>
@@ -857,11 +867,10 @@ function Phase({
           !done && !active && "bg-bg3",
         )}
       />
-      <span
-        className={cn(
-          active ? "text-foreground" : done ? "text-ink-dim" : "text-ink-faint",
-        )}
-      >
+      {/* Two ink tiers, not three: the leading dot (accent + pulse when
+          active, bg3 when pending) is what separates done from pending —
+          ADR-0048 left no third text tier to spend on it. */}
+      <span className={active ? "text-foreground" : "text-ink-dim"}>
         {children}
       </span>
     </span>
@@ -889,10 +898,10 @@ function PrRow({
   return (
     <>
       <span className="flex min-w-0 items-baseline gap-2">
-        <span className="shrink-0 text-ink-faint">{pr}</span>
+        <span className="shrink-0 text-ink-dim">{pr}</span>
         <span className="truncate text-ink-dim">{title}</span>
       </span>
-      <span className="shrink-0 text-right text-ink-faint">
+      <span className="shrink-0 text-right text-ink-dim">
         <span className="text-green">{size.split(" ")[0]}</span>{" "}
         <span className="text-red">{size.split(" ")[1]}</span>
       </span>
