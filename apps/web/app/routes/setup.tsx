@@ -129,7 +129,7 @@ export default function Setup({ loaderData }: Route.ComponentProps) {
         {/* If the page insists on creating a repo you know exists, you're
             almost always signed in as the wrong account — name that, since the
             check is live per-load, not a stale cache. */}
-        <p className="mt-6 max-w-prose text-xs text-ink-faint">
+        <p className="mt-6 max-w-prose text-xs text-ink-dim">
           {t("setup.wrongAccount")}
         </p>
       </main>

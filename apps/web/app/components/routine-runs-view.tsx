@@ -237,7 +237,7 @@ export function RoutineRunsView({
           </Fact>
           <Fact label={t("routines.colSchedule")}>
             {isManual(routine) ? (
-              <span className="text-ink-faint">{t("routines.manualDash")}</span>
+              <span className="text-ink-dim">{t("routines.manualDash")}</span>
             ) : routine.schedule != null ? (
               <ScheduleText schedule={routine.schedule} />
             ) : null}
@@ -255,14 +255,14 @@ export function RoutineRunsView({
               {owner}
             </a>
             {artifact?.claudeAccount != null && (
-              <span className="ml-2 font-mono text-xs text-ink-faint">
+              <span className="ml-2 font-mono text-xs text-ink-dim">
                 {artifact.claudeAccount}
               </span>
             )}
           </Fact>
           <Fact label={t("routines.colBoards")}>
             {boards.length === 0 ? (
-              <span className="rounded border border-border-dim px-1 font-mono text-xs text-ink-faint">
+              <span className="rounded border border-border-dim px-1 font-mono text-xs text-ink-dim">
                 {t("routines.orphan")}
               </span>
             ) : (
@@ -292,7 +292,7 @@ export function RoutineRunsView({
               {t("runs.heading")}
             </h2>
             {runsData != null && runsData.receipts.length > 0 && (
-              <span className="font-mono text-xs text-ink-faint">
+              <span className="font-mono text-xs text-ink-dim">
                 {runsData.capped
                   ? t("runs.capped", { n: runsData.receipts.length })
                   : t("runs.count", { n: runsData.receipts.length })}
@@ -372,7 +372,7 @@ export function RoutineRunsView({
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <dt className="font-mono text-xs text-ink-faint">{label}</dt>
+      <dt className="font-mono text-xs text-ink-dim">{label}</dt>
       <dd className="mt-1 font-mono text-xs text-ink-dim">{children}</dd>
     </div>
   )
@@ -448,7 +448,7 @@ function RunsBody({
           sitting a few pixels low inside a taller line box. */}
       <table className="w-full border-collapse text-xs">
         <thead>
-          <tr className="border-b border-border text-left align-bottom font-mono whitespace-nowrap text-ink-faint">
+          <tr className="border-b border-border text-left align-bottom font-mono whitespace-nowrap text-ink-dim">
             {compareMode && (
               <th scope="col" className="w-8 px-3 py-1.5 font-normal">
                 <span className="sr-only">{t("runs.compare")}</span>
@@ -563,13 +563,13 @@ function RunRow({
           threshold the stale badge judges by). */}
       <td className="py-2 pr-3 align-top font-mono text-xs text-ink-dim">
         {run.cadence === "first" ? (
-          <span className="rounded border border-border-dim px-1 text-ink-faint">
+          <span className="rounded border border-border-dim px-1 text-ink-dim">
             {t("runs.firstTag")}
           </span>
         ) : run.gapMs == null ? (
           // The capped listing's oldest row: its previous run wasn't fetched,
           // so the gap is unknown — never claimed as a first run (ADR-0033).
-          <span aria-hidden className="text-ink-faint">
+          <span aria-hidden className="text-ink-dim">
             —
           </span>
         ) : (
@@ -591,7 +591,7 @@ function RunRow({
 
       <td className="hidden py-2 pr-3 align-top font-mono text-xs text-ink-dim sm:table-cell">
         {run.author ?? (
-          <span aria-hidden className="text-ink-faint">
+          <span aria-hidden className="text-ink-dim">
             —
           </span>
         )}

@@ -160,11 +160,18 @@ const groupedOver: Partial<Parameters<typeof DashboardSidebar>[0]> = {
   },
 }
 
-/** The `⋯` trigger inside a section heading, found by the section's label. */
+/** The `⋯` trigger inside a section heading, found by the section's label.
+    Matched on the label element, not the heading's whole textContent — the
+    caption also carries a count (ADR-0048) and a menu glyph. */
 const sectionMenuButton = (label: string): HTMLButtonElement | null => {
   const heading = [
     ...document.querySelectorAll<HTMLElement>('[data-testid="rail-section"]'),
-  ].find((el) => el.textContent?.trim() === label)
+  ].find(
+    (el) =>
+      el
+        .querySelector('[data-testid="rail-section-label"]')
+        ?.textContent?.trim() === label,
+  )
   return (
     heading?.querySelector<HTMLButtonElement>(
       'button[aria-label="Section options"]',
@@ -379,7 +386,7 @@ describe("DashboardSidebar per-board menu", () => {
 })
 
 const sectionLabels = (): string[] =>
-  [...document.querySelectorAll('[data-testid="rail-section"]')].map(
+  [...document.querySelectorAll('[data-testid="rail-section-label"]')].map(
     (el) => el.textContent?.trim() ?? "",
   )
 
