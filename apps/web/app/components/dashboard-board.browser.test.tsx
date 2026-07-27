@@ -100,6 +100,7 @@ async function renderBoard(
     base = view(),
     placements = {},
     collapsedBands = [],
+    actionResult = { ok: true },
   }: {
     viewerCanPush?: boolean | null
     base?: DashboardBase
@@ -107,8 +108,11 @@ async function renderBoard(
     placements?: Placements | null
     /** Bands folded on this device (ADR-0044). */
     collapsedBands?: string[]
+    /** What /dashboards answers — the failure path snaps a reorder back. */
+    actionResult?: { ok: boolean; error?: string }
   } = {},
 ) {
+  const submissions: unknown[] = []
   const router = createMemoryRouter([
     {
       path: "/",
@@ -171,11 +175,22 @@ async function renderBoard(
         />
       ),
     },
+    // The band-order write (ADR-0049) posts here, the way the rail's section
+    // edits do — recorded so a test can assert the payload, not just the
+    // optimistic reorder on screen.
+    {
+      path: "/dashboards",
+      action: async ({ request }: { request: Request }) => {
+        submissions.push(await request.json())
+        return actionResult
+      },
+    },
     // Catch-all so key-layer navigations (1–9 board switch) land somewhere
     // observable instead of tripping the memory router's error boundary.
     { path: "*", element: <p>ELSEWHERE</p> },
   ])
   await render(<RouterProvider router={router} />)
+  return submissions
 }
 
 describe("DashboardBoard", () => {
@@ -508,6 +523,136 @@ describe("DashboardBoard", () => {
 
       await userEvent.click(heading())
       await expect.poll(() => document.body.textContent).toContain("Pulse")
+    })
+  })
+
+  describe("band ordering and creation (ADR-0049)", () => {
+    const headings = () =>
+      [...document.querySelectorAll("[data-band-heading]")].map((el) =>
+        el.getAttribute("data-band-heading"),
+      )
+
+    async function openBandMenu(category: string) {
+      await userEvent.click(
+        page.getByRole("button", { name: `${category} band options` }),
+      )
+    }
+
+    // The end bands have nowhere to go in one direction, and the menu drops
+    // the item rather than showing it disabled — "first" is legible from the
+    // position, so a dead row would only be noise.
+    it("offers each end band only the move it can make", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), { base: bandedView() })
+      await expect.poll(headings).toEqual(["Project Mgmt", "Engineering"])
+
+      const menuItems = () =>
+        [...document.querySelectorAll('[role="menuitem"]')].map((el) =>
+          el.textContent?.trim(),
+        )
+
+      await openBandMenu("Project Mgmt")
+      await expect.poll(menuItems).toEqual(["Move band down", "New band…"])
+      await userEvent.keyboard("{Escape}")
+      await expect.poll(menuItems).toEqual([])
+
+      await openBandMenu("Engineering")
+      await expect.poll(menuItems).toEqual(["Move band up", "New band…"])
+    })
+
+    it("moves a band past its neighbour and writes the repo's whole order", async () => {
+      await page.viewport(1280, 900)
+      const submissions = await renderBoard(Promise.resolve({}), {
+        base: bandedView(),
+      })
+      await expect.poll(headings).toEqual(["Project Mgmt", "Engineering"])
+
+      await openBandMenu("Engineering")
+      await userEvent.click(
+        page.getByRole("menuitem", { name: "Move band up" }),
+      )
+
+      // Optimistic: the board reorders now, not after the commit round-trips —
+      // GitHub can serve the pre-commit blob for a beat, and a band that
+      // doesn't move gets nudged twice.
+      await expect.poll(headings).toEqual(["Engineering", "Project Mgmt"])
+      // The whole order goes, not a move: `categories:` carries only the names
+      // it lists, so a first nudge has to materialize the rest.
+      expect(submissions).toEqual([
+        {
+          intent: "reorderCategories",
+          repo: "alice/steward-alice",
+          categories: ["Engineering", "Project Mgmt"],
+        },
+      ])
+    })
+
+    it("snaps a refused move back, and says why", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), {
+        base: bandedView(),
+        actionResult: { ok: false, error: "conflict" },
+      })
+      await expect.poll(headings).toEqual(["Project Mgmt", "Engineering"])
+
+      await openBandMenu("Engineering")
+      await userEvent.click(
+        page.getByRole("menuitem", { name: "Move band up" }),
+      )
+
+      await expect
+        .poll(() => document.body.textContent)
+        .toContain("The repo changed just now")
+      // The board must not keep showing an order the repo doesn't have.
+      expect(headings()).toEqual(["Project Mgmt", "Engineering"])
+    })
+
+    // Order and membership are repo-wide writes (ADR-0023): a read-only viewer
+    // keeps the collapse row and gets no menu at all.
+    it("withholds the band menu from a read-only viewer", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), {
+        base: bandedView(),
+        viewerCanPush: false,
+      })
+      await expect.poll(headings).toEqual(["Project Mgmt", "Engineering"])
+      expect(
+        document.querySelectorAll('[aria-label$="band options"]'),
+      ).toHaveLength(0)
+    })
+
+    // A band with no routines cannot render, so creating one is naming it and
+    // saying what goes in it — one act, in the draft.
+    it("creates a band by filing this board's widgets into it", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), { base: bandedView() })
+      await expect.poll(headings).toEqual(["Project Mgmt", "Engineering"])
+
+      await openBandMenu("Engineering")
+      await userEvent.click(page.getByRole("menuitem", { name: "New band…" }))
+      await expect.poll(() => document.body.textContent).toContain("New band")
+
+      const name = document.querySelector<HTMLInputElement>("#band-name")
+      if (!name) throw new Error("band name field not rendered")
+      await userEvent.fill(name, "Executive")
+
+      // Daily is the uncategorized widget — filing it empties the unlabeled
+      // lead band and opens a third.
+      const row = [...document.querySelectorAll("li")].find((li) =>
+        li.textContent?.includes("Daily"),
+      )
+      const box = row?.querySelector<HTMLElement>('[role="checkbox"]')
+      if (!box) throw new Error("Daily row not offered in the picker")
+      await userEvent.click(box)
+
+      await userEvent.click(page.getByRole("button", { name: "Create band" }))
+      // Unlisted in repo.yaml, so it sorts after the two authored bands.
+      await expect
+        .poll(headings)
+        .toEqual(["Project Mgmt", "Engineering", "Executive"])
+      // Membership is a routine edit, so it rides the draft to Sync — never a
+      // direct commit like the order beside it.
+      await expect.poll(() => document.body.textContent).toContain("Sync")
     })
   })
 })

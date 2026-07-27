@@ -342,6 +342,22 @@ export const en = {
 
   "band.count": "{count} hidden",
   "band.toggle": "Collapse or expand {name} on every board",
+  "band.menu": "{name} band options",
+  "band.moveUp": "Move band up",
+  "band.moveDown": "Move band down",
+  "band.new": "New band…",
+  "band.reorderConflict": "The repo changed just now — try again",
+  "band.reorderMalformed": "data/repo.yaml couldn't be read — fix it on GitHub",
+  "band.reorderFailed": "Band order couldn't be saved",
+  "band.newTitle": "New band",
+  "band.newBody":
+    "Bands come from the widgets in them, so name it and pick what goes in. Filing a widget sets its category on every board that shows it.",
+  "band.nameLabel": "Band name",
+  "band.pickLabel": "Widgets on this board",
+  "band.pickHint": "Lands in the draft — review it in Sync before it commits.",
+  "band.none": "No band",
+  "band.onBoards": "on {n} boards",
+  "band.newConfirm": "Create band",
 
   "section.menu": "Section options",
   "section.rename": "Rename section",

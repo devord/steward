@@ -323,6 +323,23 @@ export const ptBR: Messages = {
 
   "band.count": "{count} ocultos",
   "band.toggle": "Recolher ou expandir {name} em todos os painéis",
+  "band.menu": "Opções da faixa {name}",
+  "band.moveUp": "Mover faixa para cima",
+  "band.moveDown": "Mover faixa para baixo",
+  "band.new": "Nova faixa…",
+  "band.reorderConflict": "O repositório mudou agora — tente de novo",
+  "band.reorderMalformed":
+    "Não foi possível ler data/repo.yaml — corrija no GitHub",
+  "band.reorderFailed": "Não foi possível salvar a ordem das faixas",
+  "band.newTitle": "Nova faixa",
+  "band.newBody":
+    "Uma faixa existe pelos widgets nela: dê um nome e escolha o que entra. Arquivar um widget define a categoria dele em todos os painéis que o mostram.",
+  "band.nameLabel": "Nome da faixa",
+  "band.pickLabel": "Widgets deste painel",
+  "band.pickHint": "Vai para o rascunho — revise no Sync antes de commitar.",
+  "band.none": "Sem faixa",
+  "band.onBoards": "em {n} painéis",
+  "band.newConfirm": "Criar faixa",
 
   "section.menu": "Opções da seção",
   "section.rename": "Renomear seção",

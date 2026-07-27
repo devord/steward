@@ -17,13 +17,22 @@ import {
 
 import type { DashboardFile, Routine, WidgetSize } from "@steward/schema"
 import {
+  CATEGORY_NAME_MAX,
   dashboardPath,
   GRID_MAX_COLS,
   orderCategories,
   resolveCategory,
   SECTION_NAME_MAX,
 } from "@steward/schema"
-import { ChevronRight, Pencil, Plus, Trash2 } from "lucide-react"
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronRight,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react"
 
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
 import { DashboardShell } from "./dashboard-shell.tsx"
@@ -32,6 +41,7 @@ import { SyncPanel } from "./sync-panel.tsx"
 import { WidgetCard } from "./widget-card.tsx"
 import { WidgetSkeleton } from "./widget-skeleton.tsx"
 import { Button } from "~/components/ui/button"
+import { Checkbox } from "~/components/ui/checkbox"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import {
@@ -42,6 +52,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
 import {
   Select,
   SelectContent,
@@ -57,11 +73,12 @@ import {
 } from "react-grid-layout"
 import "react-grid-layout/css/styles.css"
 
-import { cn, railCaptionCls } from "~/lib/utils"
+import { bandHeadingCls, cn } from "~/lib/utils"
 import { writeCollapsedBands } from "../lib/band-collapse.ts"
 import {
   buildBands,
   mergeTemplateCategories,
+  moveCategory,
   type PlacedCell,
 } from "../lib/bands.ts"
 import type {
@@ -190,9 +207,14 @@ function BandGrid({
 }
 
 /**
- * A band's heading — the click target that collapses it (ADR-0044). One tier
- * below the board itself and set off by weight, not color, matching how the
- * rail sets a section apart from its repo (ADR-0034).
+ * A band's heading — the click target that collapses it (ADR-0044), and the
+ * board's one landmark tier above the widgets themselves (ADR-0049).
+ *
+ * It sets in {@link bandHeadingCls}, not the rail's caption tier it used to
+ * share: a band heads 16px semibold widget titles across the whole board, and
+ * an 11px caption over them ranked the heading below its own children. The
+ * whole row stays the collapse target — the `⋯` sits on top of it, the way the
+ * rail's board rows carry theirs.
  *
  * Rendered only for a labeled band: the unlabeled band that leads a board has
  * no name to show and nothing to collapse into.
@@ -202,43 +224,132 @@ function BandHeading({
   count,
   collapsed,
   onToggle,
+  onMoveUp,
+  onMoveDown,
+  onNewBand,
+  error,
 }: {
   category: string
   count: number
   collapsed: boolean
   onToggle: () => void
+  /** Absent for the first/last labeled band on this board, and for a
+      read-only viewer — the menu hides an item it can't act on rather than
+      showing it disabled, since "first" is self-evident from the position. */
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  onNewBand?: () => void
+  /** The last reorder's failure, shown under the heading it belongs to. */
+  error?: string | null
 }) {
   const t = useT()
+  const hasMenu = onMoveUp != null || onMoveDown != null || onNewBand != null
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={!collapsed}
-      // Distinguishes a band heading from every other aria-expanded control
-      // on the board (menus, popovers) for tests and styling alike.
-      data-band-heading={category}
-      className="group mb-2 flex w-full items-center gap-2 text-left"
-    >
-      <ChevronRight
-        aria-hidden
-        className={cn(
-          "size-3 shrink-0 text-ink-faint transition-transform",
-          !collapsed && "rotate-90",
+    <div className="group/band mb-2">
+      {/* Its own positioning context, so the pinned chevron and ⋯ center on the
+          heading row rather than on the row plus an error line under it. */}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={!collapsed}
+          // Distinguishes a band heading from every other aria-expanded control
+          // on the board (menus, popovers) for tests and styling alike.
+          data-band-heading={category}
+          // pl-[15px] puts the band name on the same left edge as the widget
+          // titles under it: a cell's 1px frame plus the title bar's 14px
+          // inset, which is itself the artifact's own body padding
+          // (widget-standard § shell). DESIGN.md § Shape builds the tile on
+          // that shared edge; a heading indented 7px *past* its own content —
+          // which is where an in-flow chevron and gap put it — is the drift
+          // that rule exists to catch. pr-8 reserves the ⋯ column so the
+          // hairline stops short of the glyph instead of running under it.
+          className={cn(
+            "flex w-full items-center gap-2 pl-[15px] text-left",
+            hasMenu && "pr-8",
+          )}
+        >
+          {/* Hangs in the gutter on its own marker column, the way the rail's
+              repo glyph does — the label has to hold the content column, so
+              the disclosure marker outdents rather than pushing it right. The
+              chevron's ink sits in the middle ~40% of its box, so a flush box
+              still reads with ~6px of air before the name. */}
+          <ChevronRight
+            aria-hidden
+            className={cn(
+              "absolute top-1/2 left-0 size-3.5 -translate-y-1/2 text-ink-faint transition-[transform,color] group-hover/band:text-ink-dim",
+              !collapsed && "rotate-90",
+            )}
+          />
+          <span className={bandHeadingCls}>{category}</span>
+          {/* The count is always on (ADR-0048), the same way the rail's
+              captions carry theirs — a bare word heading a band is decoration,
+              the number makes it navigation. Collapsed, the number gives way
+              to the phrase that also says why the band is empty; one slot, two
+              readings, never both (a collapsed "EXECUTIVE 2 · 2 hidden" says
+              the same thing twice). It stays at the 12px metadata tier while
+              the name moved up to 14px: the name is the landmark, the number
+              is data beside it. */}
+          <span className="text-xs text-ink-dim tabular-nums">
+            {collapsed ? t("band.count", { count: String(count) }) : count}
+          </span>
+          <span className="ml-1 h-px flex-1 bg-border" />
+        </button>
+        {hasMenu && (
+          <DropdownMenu>
+            {/* The rail's caption ⋯ idiom (repo-group-header, SectionLabel):
+                faint at rest, brightening as the pointer nears the heading,
+                filled while open. Pinned rather than in-flow so the row under
+                it stays one uninterrupted collapse target. */}
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={t("band.menu", { name: category })}
+                  className="absolute top-1/2 right-0 size-6 -translate-y-1/2 text-ink-faint transition-colors group-hover/band:text-ink-dim hover:bg-bg3 hover:text-foreground focus-visible:text-foreground aria-expanded:bg-bg3 aria-expanded:text-foreground"
+                />
+              }
+            >
+              <MoreHorizontal />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={4} className="w-52">
+              {onMoveUp && (
+                <DropdownMenuItem onClick={onMoveUp}>
+                  <ArrowUp />
+                  {t("band.moveUp")}
+                </DropdownMenuItem>
+              )}
+              {onMoveDown && (
+                <DropdownMenuItem onClick={onMoveDown}>
+                  <ArrowDown />
+                  {t("band.moveDown")}
+                </DropdownMenuItem>
+              )}
+              {onNewBand && (
+                <DropdownMenuItem onClick={onNewBand}>
+                  <Plus />
+                  {t("band.new")}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
-      />
-      <span className={railCaptionCls}>{category}</span>
-      {/* The count is always on (ADR-0048), the same way the rail's captions
-          carry theirs — a bare word heading a band is decoration, the number
-          makes it navigation. Collapsed, the number gives way to the phrase
-          that also says why the band is empty; one slot, two readings, never
-          both (a collapsed "EXECUTIVE 2 · 2 hidden" says the same thing
-          twice). `ink-dim`, not the old `ink-faint`: no chrome text sits in
-          the sub-AA tier any more. */}
-      <span className="text-2xs text-ink-dim tabular-nums">
-        {collapsed ? t("band.count", { count: String(count) }) : count}
+      </div>
+      {/* Order is a direct commit with no dialog to fail into, so the failure
+          lands beside the band it belongs to — the same role="status" line the
+          widget bar's Update control uses, invisible until there's something
+          to say. */}
+      <span
+        role="status"
+        className={cn(
+          "mt-1 block text-xs text-destructive",
+          !error && "sr-only",
+        )}
+      >
+        {error ?? ""}
       </span>
-      <span className="ml-1 h-px flex-1 bg-border" />
-    </button>
+    </div>
   )
 }
 
@@ -468,22 +579,69 @@ export function DashboardBoard({
     () => mergeTemplateCategories(view.templateCategories, templatesData),
     [view.templateCategories, templatesData],
   )
+  // Reordering commits data/repo.yaml directly (ADR-0044's order tier), the
+  // way the rail's section edits do — it is repo config, not board layout, so
+  // it never joins the draft the widgets ride in.
+  const orderFetcher = useFetcher<{ ok: boolean; error?: string }>({
+    key: `band-order:${view.dataRepo}`,
+  })
+  // Gated on idle so the *previous* failure isn't still on screen while the
+  // retry it provoked is in flight — a fetcher holds its last response through
+  // the next submission.
+  const orderFailed =
+    orderFetcher.state === "idle" && orderFetcher.data?.ok === false
+  const orderError = orderFetcher.data?.error
+  const orderErrorText = !orderFailed
+    ? null
+    : orderError === "conflict"
+      ? t("band.reorderConflict")
+      : orderError === "malformed"
+        ? t("band.reorderMalformed")
+        : t("band.reorderFailed")
+
+  // Band order is a direct commit, so the loader is the truth — but GitHub's
+  // contents API can still serve the pre-commit blob for a beat after the
+  // write, and a band that doesn't move when you nudge it gets nudged twice.
+  // Hold the order we just sent until the loader agrees (the shape
+  // optimistic-boards uses for the rail).
+  const [pendingOrder, setPendingOrder] = useState<string[] | null>(null)
+  // A refused move is never shown: the pending order is derived away in the
+  // same render that surfaces the error, not unwound by an effect afterwards —
+  // an effect would paint the rejected order and its own rejection together
+  // for a frame.
+  const categoryOrder =
+    pendingOrder && !orderFailed ? pendingOrder : view.categoryOrder
+  const serverOrder = view.categoryOrder.join("\0")
+  useEffect(() => {
+    setPendingOrder((current) =>
+      current && current.join("\0") === serverOrder ? null : current,
+    )
+  }, [serverOrder])
+
   // One band per category, uncategorized leading unlabeled — or a single
   // unlabeled band below the floor, which renders exactly as a flat board.
   const bandSignature = placedCells
     .map(({ widget: w, routine: r }) => `${w.routine}:${r.category ?? ""}`)
     .join("|")
   const bands = useMemo(
-    () => buildBands(placedCells, templateCategories, view.categoryOrder),
+    () => buildBands(placedCells, templateCategories, categoryOrder),
     // placedCells is rebuilt each render; bandSignature captures its value.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [bandSignature, templateCategories, view.categoryOrder],
+    [bandSignature, templateCategories, categoryOrder],
   )
+
+  // The labeled bands in this board's render order. A move names the band it
+  // swaps with, so each heading needs to know who is above and below it here.
+  const labeledBands = bands
+    .map((band) => band.category)
+    .filter((category): category is string => category != null)
 
   // Bands already in use anywhere in this repo's pool — the category field's
   // datalist, so a repo converges on one vocabulary rather than sprouting
   // "Eng" beside "Engineering". Drawn from the whole pool, not this board, for
-  // the same reason routines are repo-scoped (ADR-0042).
+  // the same reason routines are repo-scoped (ADR-0042). It is also the list a
+  // reorder writes back: `categories:` is repo-wide, so a nudge on this board
+  // must carry the bands this board doesn't show.
   const repoCategories = useMemo(
     () =>
       orderCategories(
@@ -496,10 +654,55 @@ export function DashboardBoard({
             return resolved ? [resolved] : []
           }),
         ),
-        view.categoryOrder,
+        categoryOrder,
       ),
-    [routines, templateCategories, view.categoryOrder],
+    [routines, templateCategories, categoryOrder],
   )
+
+  // Which band the last move targeted, so a failure reports on that heading
+  // instead of lighting up every band on the board.
+  const [movedBand, setMovedBand] = useState<string | null>(null)
+  const moveBand = useCallback(
+    (category: string, neighbour: string) => {
+      const next = moveCategory(repoCategories, category, neighbour)
+      setPendingOrder(next)
+      setMovedBand(category)
+      void orderFetcher.submit(
+        JSON.stringify({
+          intent: "reorderCategories",
+          repo: view.dataRepo,
+          categories: next,
+        }),
+        { method: "post", action: "/dashboards", encType: "application/json" },
+      )
+    },
+    [orderFetcher, repoCategories, view.dataRepo],
+  )
+  // A committed order needs the loader re-read: revalidate once per success,
+  // keyed on the response object so a second move re-fires.
+  const orderData = orderFetcher.data
+  useEffect(() => {
+    if (orderData?.ok === true) void revalidator.revalidate()
+    // revalidator's identity churns; this must fire per response, not per render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderData])
+
+  // File a set of routines under a band, in one draft edit. The category rides
+  // on the routine (ADR-0044), so this moves them on every board that places
+  // them — which is why the dialog counts those boards before you confirm.
+  const setRoutineCategory = useCallback(
+    (slugs: readonly string[], category: string) => {
+      const wanted = new Set(slugs)
+      update((current) => {
+        for (const routine of current.routines.routines) {
+          if (wanted.has(routine.slug)) routine.category = category
+        }
+        return current
+      })
+    },
+    [update],
+  )
+  const [newBandOpen, setNewBandOpen] = useState(false)
 
   // Collapse is global by category and persists in a cookie (ADR-0009's
   // device-preference lane): folding "Engineering" folds it on every board,
@@ -865,16 +1068,25 @@ export function DashboardBoard({
                   // string rather than re-testing the nullable field.
                   const label = band.category
                   const isCollapsed = label != null && collapsed.includes(label)
+                  // Who sits above and below *on this board* — the move
+                  // gesture swaps with the band the reader can see, not with
+                  // whatever is adjacent in the repo-wide list (moveCategory).
+                  const at = label != null ? labeledBands.indexOf(label) : -1
+                  const above = at > 0 ? labeledBands[at - 1] : undefined
+                  const below = at >= 0 ? labeledBands[at + 1] : undefined
                   return (
                     <section
                       key={label ?? ""}
-                      // mb-8, not the old mb-4: the rhythm law (ADR-0048)
-                      // wants the gap between groups to read as several times
-                      // the gap within one, and a band's cells sit 12px apart,
-                      // so 16px between bands barely separated them — two
-                      // bands read as one long grid with a caption stranded
-                      // mid-way. 32px makes the band the unit you scan.
-                      className={cn(label != null && "mb-8")}
+                      // The rhythm law (ADR-0048) wants the gap between groups
+                      // to read as several times the gap within one, and a
+                      // band's cells sit 12px apart — 32px makes the band the
+                      // unit you scan. A *collapsed* band has no content for
+                      // that air to separate, so it closes to the caption step
+                      // (ADR-0049): folded bands stack as a drawer list
+                      // instead of scattering down the page.
+                      className={cn(
+                        label != null && (isCollapsed ? "mb-2" : "mb-8"),
+                      )}
                     >
                       {label != null && (
                         <BandHeading
@@ -882,6 +1094,23 @@ export function DashboardBoard({
                           count={band.cells.length}
                           collapsed={isCollapsed}
                           onToggle={() => toggleBand(label)}
+                          // Order and membership are repo-wide writes, so a
+                          // read-only viewer gets the collapse row and nothing
+                          // else (ADR-0023).
+                          onMoveUp={
+                            !readOnly && above
+                              ? () => moveBand(label, above)
+                              : undefined
+                          }
+                          onMoveDown={
+                            !readOnly && below
+                              ? () => moveBand(label, below)
+                              : undefined
+                          }
+                          onNewBand={
+                            readOnly ? undefined : () => setNewBandOpen(true)
+                          }
+                          error={label === movedBand ? orderErrorText : null}
                         />
                       )}
                       {/* A collapsed band unmounts its cells rather than
@@ -1053,6 +1282,15 @@ export function DashboardBoard({
           onConflictCommitted={patchBaseShas}
         />
       )}
+      <NewBandDialog
+        open={newBandOpen}
+        onOpenChange={setNewBandOpen}
+        cells={placedCells}
+        existingCategories={repoCategories}
+        templateCategories={templateCategories}
+        placements={placementsData}
+        onCreate={setRoutineCategory}
+      />
       <DeleteRoutineDialog
         slug={deletingRoutine}
         routines={routines.routines}
@@ -1139,6 +1377,168 @@ function useViewportBreakpoint(): "lg" | "md" | "sm" {
 interface DeleteResult {
   ok: boolean
   error?: string
+}
+
+/**
+ * Name a band and file this board's widgets under it (ADR-0044/0049).
+ *
+ * Naming and filling are one act because a band with no routines does not
+ * exist: `categories:` carries sequence only, and a listed name no routine
+ * uses renders nothing at all (the rule that keeps a board from ever showing
+ * an empty heading). A "create" that wrote only a name would appear to do
+ * nothing, so the widget list is not a convenience here — it is the half that
+ * makes the band real.
+ *
+ * What it writes is `category` on each picked routine, which is why the rows
+ * count boards. The field rides on the routine, not the placement (ADR-0044),
+ * so filing a widget here moves it on every board that places it — the
+ * explicit edit ADR-0042 wants in place of a silent drag. The change lands in
+ * the board's draft and ships through Sync like every other routine edit
+ * (ADR-0003); nothing is committed by closing this dialog.
+ */
+function NewBandDialog({
+  open,
+  onOpenChange,
+  cells,
+  existingCategories,
+  templateCategories,
+  placements,
+  onCreate,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  /** This board's widgets — the pickable set. Filing a routine from another
+      board isn't offered: you can only see what a band would look like here. */
+  cells: PlacedCell[]
+  /** The repo's bands, offered as a datalist — typing an existing name files
+      the picks into it rather than starting a rival spelling. */
+  existingCategories: string[]
+  templateCategories: Record<string, string>
+  /** Which boards place each routine (ADR-0025), or null while it streams —
+      the reach warning is omitted rather than guessed at. */
+  placements: Placements | null
+  onCreate: (slugs: readonly string[], category: string) => void
+}) {
+  const t = useT()
+  const listId = useId()
+  const [name, setName] = useState("")
+  const [picked, setPicked] = useState<string[]>([])
+
+  // Fresh every opening: an abandoned draft band must not resurrect the next
+  // time the menu item is clicked.
+  const [armed, setArmed] = useState(false)
+  if (open && !armed) {
+    setArmed(true)
+    setName("")
+    setPicked([])
+  }
+  if (!open && armed) setArmed(false)
+
+  const trimmed = name.trim()
+  const ready = trimmed.length > 0 && picked.length > 0
+
+  function submit() {
+    if (!ready) return
+    onCreate(picked, trimmed)
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* Content tier (DESIGN.md § Layout): the widget list is scanned and
+          compared, and width buys one line per row instead of two. Tall
+          content takes the house shape — capped at 85svh with the middle as
+          the one scroller, so a board with a dozen widgets grows to the cap
+          instead of pushing its own footer off screen. */}
+      <DialogContent className="flex max-h-[85svh] flex-col sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{t("band.newTitle")}</DialogTitle>
+          <DialogDescription>{t("band.newBody")}</DialogDescription>
+        </DialogHeader>
+        {/* min-h-0 without flex-1: it sizes to its content and only shrinks
+            (and scrolls) once the cap bites — flex-1 would stretch every
+            dialog to 85svh, however few widgets the board has. */}
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
+          <div className="grid gap-2">
+            <Label htmlFor="band-name">{t("band.nameLabel")}</Label>
+            <Input
+              id="band-name"
+              autoFocus
+              value={name}
+              list={existingCategories.length > 0 ? listId : undefined}
+              maxLength={CATEGORY_NAME_MAX}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t("dialog.categoryPlaceholder")}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") submit()
+              }}
+            />
+            {existingCategories.length > 0 && (
+              <datalist id={listId}>
+                {existingCategories.map((option) => (
+                  <option key={option} value={option} />
+                ))}
+              </datalist>
+            )}
+          </div>
+          <div className="grid gap-2">
+            <span className="text-sm font-medium">{t("band.pickLabel")}</span>
+            <ul className="rounded-sm border border-border-dim">
+              {cells.map(({ routine }) => {
+                const current = resolveCategory(
+                  routine,
+                  templateCategories[routine.template],
+                )
+                const boards = placements?.[routine.slug]?.length ?? 0
+                const checked = picked.includes(routine.slug)
+                return (
+                  <li
+                    key={routine.slug}
+                    className="border-b border-border-dim last:border-b-0"
+                  >
+                    <Label className="flex cursor-pointer items-center gap-2.5 px-3 py-2 font-normal hover:bg-bg2">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(next) =>
+                          setPicked((current) =>
+                            next
+                              ? [...current, routine.slug]
+                              : current.filter((s) => s !== routine.slug),
+                          )
+                        }
+                      />
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        {routine.name}
+                      </span>
+                      {/* Where it sits now, and how far moving it reaches.
+                          The board count shows only when it is more than one
+                          — "on 1 board" is noise on every row. */}
+                      <span className="shrink-0 text-xs text-ink-dim">
+                        {current ?? t("band.none")}
+                        {boards > 1 &&
+                          ` · ${t("band.onBoards", { n: boards })}`}
+                      </span>
+                    </Label>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        </div>
+        {/* Outside the scroller, so what happens on confirm stays next to the
+            button that confirms it however long the list runs. */}
+        <p className="text-xs text-ink-dim">{t("band.pickHint")}</p>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            {t("dialog.cancel")}
+          </Button>
+          <Button disabled={!ready} onClick={submit}>
+            {t("band.newConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 /**

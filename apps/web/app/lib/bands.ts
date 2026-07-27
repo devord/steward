@@ -75,6 +75,45 @@ export function buildBands(
 }
 
 /**
+ * The repo's `categories:` list (data/repo.yaml, ADR-0044) after one band is
+ * moved past a neighbour — the ordering gesture the board's band menu commits.
+ *
+ * `present` is every category the repo's routines resolve to, already in
+ * render order (`orderCategories` over the authored list). `neighbour` is the
+ * band sitting next to `name` **on the board in view**, which is usually not
+ * its neighbour repo-wide: each board shows a subset, so swapping adjacent
+ * entries of the authored list would routinely move nothing the reader can
+ * see. Moving past the *displayed* neighbour is the gesture; the repo-wide
+ * list absorbs it, and names this board never shows keep their relative
+ * places.
+ *
+ * The whole present set comes back, not only the names already listed.
+ * `categories:` carries just the sequence it names and everything else sorts
+ * alphabetically after it, so a first nudge has to materialize the rest or the
+ * unlisted bands would jump the moment one band moved. ADR-0039's
+ * parse-boundary move, one tier down: the first in-app edit writes the file
+ * forward and no migration is needed.
+ */
+export function moveCategory(
+  present: readonly string[],
+  name: string,
+  neighbour: string,
+): string[] {
+  const from = present.indexOf(name)
+  const to = present.indexOf(neighbour)
+  // A name absent from the list (or moved past itself) has no move to make —
+  // return the order untouched rather than inventing a slot for it.
+  if (from < 0 || to < 0 || from === to) return [...present]
+  const rest = present.filter((entry) => entry !== name)
+  const at = rest.indexOf(neighbour)
+  // Moving up (the neighbour precedes it) lands before the neighbour; moving
+  // down lands after. The two swap places as displayed, whatever sits between
+  // them repo-wide.
+  const cut = from > to ? at : at + 1
+  return [...rest.slice(0, cut), name, ...rest.slice(cut)]
+}
+
+/**
  * Merge the streamed repo templates' categories over the bundled built-in
  * ones (ADR-0021's shadowing order: a repo template shadows a same-named
  * built-in). Returns the base map unchanged when the stream hasn't landed,

@@ -190,13 +190,25 @@ surface and sets its own inset.
   floors, and the board has one baseline that artifacts rise above.
 - **The caption tier is one token**, `railCaptionCls` in `lib/utils.ts`:
   mono, `text-2xs`, semibold, tracked, caps, `ink-dim`. The rail's repo
-  caption, its section labels, the board's band headings and the template
-  picker's group headers all resolve to it. It shipped at 11px in the rail
-  and 13px on the board once — a gap too small to read as hierarchy and big
-  enough to read as a mistake. A band heading earns its prominence from its
-  chevron, its count and the air above it. Captions carry their member count
-  at rest (`aria-hidden`; the items are listed right below): a bare word
-  heading a list is decoration, the number is what makes it navigation.
+  caption, its section labels and the template picker's group headers all
+  resolve to it. It shipped at 11px in the rail and 13px on the board once — a
+  gap too small to read as hierarchy and big enough to read as a mistake.
+  Captions carry their member count at rest (`aria-hidden`; the items are
+  listed right below): a bare word heading a list is decoration, the number is
+  what makes it navigation.
+- **The board's band heading is not in that tier** (ADR-0049).
+  `bandHeadingCls`: the same tracked UPPERCASE landmark at **`text-sm` (14px),
+  semibold, full `foreground`**, its count one step down at `text-xs`. What a
+  caption heads is what decides its size. The rail's captions head 14px nav
+  rows in a 200px column, so 11px reads as a deliberate label; a band heads
+  16px semibold widget titles across the whole canvas, and at 11px the heading
+  ranked _below_ its own children. This is not the 11-vs-13px board caption
+  ADR-0048 rejected — that was one tier two pixels bigger, drift rather than
+  hierarchy. 14px is the body/control tier, where the rule above already puts
+  it: the row is the control that folds the band, and primary controls never
+  sit at the metadata floor. Caps, tracking and the full-bleed rule keep it a
+  landmark; its cap height still sits under the widget titles', so the band
+  frames and the widgets glow.
 - Widget titles: the `widget-card` tile name is **`text-base` (16px)
   semibold**. Each widget is a section of the page, so its name reads as a
   section heading that owns the top of the cell, not a faint label: it takes
@@ -370,6 +382,11 @@ finds the groups without reading them:
 | a caption and its own content | 8px     |
 | a group and the next caption  | 20–22px |
 | top-level band to band        | 32px    |
+
+A **collapsed** band is the exception, and it proves the rule: it drops to the
+8px caption step (ADR-0049). The 32px belongs to the content it separates, and
+a folded band has none — at full air, three shut bands read as debris down the
+page instead of a stack of drawers.
 
 The ratio is the point, not the exact pixels. These used to be 12px and
 16px, close enough to the ~30px row pitch that the rail read as one
