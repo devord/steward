@@ -667,6 +667,17 @@ export function coercePrefs(raw: unknown): AppearancePrefs {
   }
 }
 
+/**
+ * The color the *window chrome* paints for a theme — the installed PWA's
+ * title bar on macOS/Windows, the browser bar on mobile. The app's own chrome
+ * sits on the canvas plane (`--background` and `--sidebar` both alias
+ * `--palette-bg`), so the frame only reads as part of the board when it takes
+ * `bg`.
+ */
+export function themeColor(name: ThemeName): string {
+  return themes[name].tokens.bg
+}
+
 /** The theme a preference resolves to under the given system-dark state. */
 export function resolveTheme(
   prefs: AppearancePrefs,
@@ -965,12 +976,21 @@ export function frameArtifactHtml(
 }
 
 /**
- * Pre-paint init: stamps `data-theme` and the `.dark` class from the stored
- * preference before first paint, so a non-default theme never flashes
- * gruvbox. Inlined as a blocking script in <head> (root.tsx). Kept
- * dependency-free and defensive — any failure leaves the SSR default.
- * Mirrors coercePrefs: each slot only accepts a theme of its own mode, so
- * corrupt storage can't pair a light `data-theme` with the `.dark` class.
+ * Pre-paint init: stamps `data-theme`, the `.dark` class and the
+ * `theme-color` metas from the stored preference before first paint, so a
+ * non-default theme never flashes gruvbox. Inlined as a blocking script in
+ * <head> (root.tsx). Kept dependency-free and defensive — any failure leaves
+ * the SSR default. Mirrors coercePrefs: each slot only accepts a theme of its
+ * own mode, so corrupt storage can't pair a light `data-theme` with the
+ * `.dark` class.
+ *
+ * The `theme-color` pair is *written here rather than rendered* — see the
+ * root.tsx note. Two tags, both carrying the one resolved color: Chrome only
+ * themes an installed app's window frame under a dark OS when a
+ * dark-matching tag exists (it has honoured `media` on theme-color for
+ * installed PWAs since 93), while a forced light mode under that same dark OS
+ * must still paint the frame light. So the media attributes exist to satisfy
+ * the match, and the content answers the preference, not the OS.
  */
 export const THEME_INIT_SCRIPT = `(function(){try{var darks=${JSON.stringify(
   themeEntries.filter(([, t]) => t.mode === "dark").map(([n]) => n),
@@ -982,4 +1002,8 @@ export const THEME_INIT_SCRIPT = `(function(){try{var darks=${JSON.stringify(
   DEFAULT_DARK_THEME,
 )}:${JSON.stringify(
   DEFAULT_LIGHT_THEME,
-)};var d=document.documentElement;d.setAttribute("data-theme",t);d.classList.toggle("dark",dark)}catch(e){}})()`
+)};var d=document.documentElement;d.setAttribute("data-theme",t);d.classList.toggle("dark",dark);var c=${JSON.stringify(
+  Object.fromEntries(
+    themeEntries.map(([name, theme]) => [name, theme.tokens.bg]),
+  ),
+)}[t];["light","dark"].forEach(function(q){var m=document.createElement("meta");m.name="theme-color";m.media="(prefers-color-scheme: "+q+")";m.content=c;document.head.appendChild(m)})}catch(e){}})()`

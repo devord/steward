@@ -1,15 +1,22 @@
+import { readFile } from "node:fs/promises"
+
 import { describe, expect, it } from "vitest"
 
 import {
   coercePrefs,
   DEFAULT_APPEARANCE,
+  DEFAULT_DARK_THEME,
+  DEFAULT_LIGHT_THEME,
   DEFAULT_THEME,
   familyForTheme,
   MARK_IDENTITY,
   resolveTheme,
   frameArtifactHtml,
+  THEME_INIT_SCRIPT,
+  themeColor,
   themeEntries,
   themeFamilies,
+  type ThemeName,
   themes,
   themesByMode,
   themeStylesheet,
@@ -62,6 +69,119 @@ describe("resolveTheme", () => {
     expect(resolveTheme({ ...prefs, mode: "light" }, true)).toBe(
       "rose-pine-dawn",
     )
+  })
+})
+
+describe("THEME_INIT_SCRIPT", () => {
+  /**
+   * Run the pre-paint script against a hand-rolled document, the way it runs
+   * in <head> before React exists. `new Function` parameters shadow the four
+   * globals it touches, so nothing leaks into the node environment.
+   */
+  function runInit(stored: unknown, systemDark: boolean) {
+    const metas: Record<string, string>[] = []
+    const attributes: Record<string, string> = {}
+    let dark = false
+    const matchMedia = (query: string) => ({
+      matches: query === "(prefers-color-scheme: dark)" && systemDark,
+    })
+    const documentStub = {
+      documentElement: {
+        setAttribute: (name: string, value: string) => {
+          attributes[name] = value
+        },
+        classList: {
+          toggle: (_name: string, on: boolean) => {
+            dark = on
+          },
+        },
+      },
+      createElement: (tag: string) => {
+        expect(tag).toBe("meta")
+        return {}
+      },
+      head: {
+        appendChild: (meta: Record<string, string>) => metas.push(meta),
+      },
+    }
+    new Function(
+      "window",
+      "document",
+      "localStorage",
+      "matchMedia",
+      THEME_INIT_SCRIPT,
+    )(
+      { matchMedia },
+      documentStub,
+      { getItem: () => (stored == null ? null : JSON.stringify(stored)) },
+      matchMedia,
+    )
+    return { theme: attributes["data-theme"], dark, metas }
+  }
+
+  /** Both tags of the pair, media-scoped, on one color. */
+  const pair = (name: ThemeName) => [
+    {
+      name: "theme-color",
+      media: "(prefers-color-scheme: light)",
+      content: themeColor(name),
+    },
+    {
+      name: "theme-color",
+      media: "(prefers-color-scheme: dark)",
+      content: themeColor(name),
+    },
+  ]
+
+  it("stamps the fresh-install default when nothing is stored", () => {
+    expect(runInit(null, true)).toEqual({
+      theme: DEFAULT_DARK_THEME,
+      dark: true,
+      metas: pair(DEFAULT_DARK_THEME),
+    })
+    expect(runInit(null, false)).toEqual({
+      theme: DEFAULT_LIGHT_THEME,
+      dark: false,
+      metas: pair(DEFAULT_LIGHT_THEME),
+    })
+  })
+
+  // Both tags carry the *resolved* color, not the one their own media query
+  // implies: a forced light mode under a dark OS must paint the window frame
+  // light, and the dark-scoped tag is only there so Chrome themes the frame
+  // at all under that OS.
+  it("paints both tags with the resolved theme, not the OS's", () => {
+    const { theme, dark, metas } = runInit(
+      { mode: "light", lightTheme: "gruvbox-light", darkTheme: "gruvbox-dark" },
+      true,
+    )
+    expect([theme, dark]).toEqual(["gruvbox-light", false])
+    expect(metas).toEqual(pair("gruvbox-light"))
+  })
+
+  it("falls back to the default slot when storage names a bad theme", () => {
+    const { theme, metas } = runInit(
+      { mode: "dark", darkTheme: "gruvbox-light" },
+      false,
+    )
+    expect(theme).toBe(DEFAULT_DARK_THEME)
+    expect(metas).toEqual(pair(DEFAULT_DARK_THEME))
+  })
+})
+
+describe("the installed app's manifest", () => {
+  // The window frame paints from the manifest until THEME_INIT_SCRIPT writes
+  // the theme-color pair — that's why root.tsx renders no meta of its own.
+  // Drift here is a title bar flashing a retired color on every cold start.
+  it("holds the fresh-install dark canvas", async () => {
+    const manifest = JSON.parse(
+      await readFile(
+        new URL("../../public/manifest.webmanifest", import.meta.url),
+        "utf8",
+      ),
+    )
+    expect(manifest.theme_color).toBe(themeColor(DEFAULT_DARK_THEME))
+    expect(manifest.background_color).toBe(themeColor(DEFAULT_DARK_THEME))
   })
 })
 
