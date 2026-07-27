@@ -68,10 +68,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
-        {/* Match the SSR-stamped fresh-install default (flexoki dark) so
-            mobile browser chrome reads as part of the dark board, like the
-            identity tile. */}
-        <meta name="theme-color" content="#100f0f" />
+        {/* No `theme-color` meta here: THEME_INIT_SCRIPT writes the pair,
+            below, because only it knows the resolved theme (ADR-0009), and a
+            React-rendered meta the script then mutates is worse than none —
+            React 19 hoists head metadata and matches it at hydration by its
+            full attribute set, so the mutated tag matches nothing and React
+            appends a second copy carrying the stale SSR color. The manifest's
+            `theme_color` covers the pre-script frame and the no-JS case; it
+            holds the same fresh-install dark default this document stamps. */}
         <Meta />
         <Links />
         {/* Palette blocks for every theme (single source: lib/theme.ts). */}

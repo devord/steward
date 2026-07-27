@@ -23,6 +23,7 @@ import {
   DEFAULT_APPEARANCE,
   DEFAULT_THEME,
   resolveTheme,
+  themeColor,
   type ThemeName,
   themes,
 } from "./theme.ts"
@@ -107,6 +108,14 @@ function applyToDocument(prefs: AppearancePrefs): void {
     "dark",
     themes[resolved].mode === "dark",
   )
+  // The installed app's title bar repaints from these live, so a theme
+  // switch carries the window frame with it instead of stranding it on
+  // whatever was stamped at load. Every tag, for the reason the init script
+  // documents: the media-scoped pair must agree on the resolved theme.
+  const color = themeColor(resolved)
+  document
+    .querySelectorAll('meta[name="theme-color"]')
+    .forEach((meta) => meta.setAttribute("content", color))
 }
 
 /** Merge a partial change into the stored preference, persist, and apply. */
