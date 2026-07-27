@@ -193,11 +193,11 @@ export function NavShell({
             rail's brand row → continuous top hairline across the two columns;
             the default `border` tier would step darker mid-line. z-30 clears a lifted card
             (drag z-20) so a widget dragged up to the top can't cover it. */}
-        {/* Below lg the row relaxes to h-12: the brand lockup steps up to
-            text-base there (the wordmark must not read smaller than the 16px
-            widget titles it sits above) and touch targets take their coarse
-            floors, so the desktop-slim 44px row would crowd. On lg it stays
-            the same h-11 box as the rail's brand row → unbroken hairline. */}
+        {/* Below lg the row relaxes to h-12: touch targets take their coarse
+            floors there, so the desktop-slim 44px row would crowd. On lg it
+            stays the same h-11 box as the rail's brand row → unbroken
+            hairline. The brand lockup is 16px in both (Wordmark's own size —
+            one brand size across the chrome), which both rows hold. */}
         <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center border-b border-border-dim bg-background lg:h-11">
           <div
             className={cn(
@@ -228,9 +228,9 @@ export function NavShell({
               <Menu />
             </Button>
             {/* Brand shows here whenever the rail's own wordmark is hidden:
-                always below lg, and on desktop only while collapsed. Below lg
-                the lockup takes the 16px heading tier — the most visible type
-                in the app must anchor the header, not whisper under it. */}
+                always below lg, and on desktop only while collapsed. Same 16px
+                lockup as the rail's, so collapsing the rail moves the brand
+                without resizing it. */}
             <Link
               to="/"
               aria-label="Steward"
@@ -239,7 +239,7 @@ export function NavShell({
                 !collapsed && "lg:hidden",
               )}
             >
-              <Wordmark className="text-base lg:text-sm" />
+              <Wordmark />
             </Link>
             {/* Wayfinding: the active board, readable without opening the
                 drawer. Same visibility as the brand — wherever the rail isn't

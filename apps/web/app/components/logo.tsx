@@ -179,7 +179,19 @@ export function Logo({
   )
 }
 
-/** Mark + name lockup; the mark scales with the surrounding font size. */
+/**
+ * Mark + name lockup; the mark scales with the surrounding font size.
+ *
+ * **The chrome brand is one size, and it is `text-base` (16px)** — carried
+ * here rather than at each call site, the way `railCaptionCls` carries the
+ * caption tier. It sat at 14px in the rail, the account bar, the error chrome
+ * and the device-code page, stepping to 16px only in the phone header; so the
+ * identity read at the body size of the nav rows beneath it and a step under
+ * the 16px widget titles beside it — the brand whispering under the content it
+ * frames. 16px is the heading tier the widget titles take: the brand is a
+ * section heading of the app, never a row in the list. Callers may still pass a
+ * size (tailwind-merge lets it win), but no chrome surface should need to.
+ */
 export function Wordmark({
   className,
   display,
@@ -191,7 +203,7 @@ export function Wordmark({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-[0.55em] font-mono font-semibold tracking-tight text-foreground select-none",
+        "inline-flex items-center gap-[0.55em] font-mono text-base font-semibold tracking-tight text-foreground select-none",
         className,
       )}
     >

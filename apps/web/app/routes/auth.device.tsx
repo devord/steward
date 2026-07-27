@@ -122,7 +122,7 @@ export default function DeviceAuth({
     actionData && "error" in actionData ? actionData.error : null
   return (
     <main className="mx-auto max-w-md px-4 py-16 sm:px-6">
-      <Wordmark className="text-sm" />
+      <Wordmark />
       <h1 className="mt-10 font-mono text-2xl font-bold text-foreground">
         {t("device.title")}
       </h1>
