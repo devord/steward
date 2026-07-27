@@ -17,14 +17,20 @@ next to it; widgets carry the color, chrome stays near-monochrome.
 
 Curated registry (add themes there, with their contrast tests), in
 light/dark families only; a theme without a twin doesn't ship. **Gruvbox
-dark hard stays the canonical anchor** for the artifact contract: artifacts
-are authored in it and inline it at rest, and the `:root` palette block
-still carries it (ADR-0046). The **Flexoki pair is the fresh-install
-default** and the identity: root.tsx stamps `data-theme` with the dark
-Flexoki slot at SSR, so the no-JS fallback and browser-chrome colors
-(`theme-color`, the manifest) match what a new viewer resolves to
-(ADR-0046 amendment). The dashboard injects the active theme into artifact
-iframes at render time.
+dark stays the canonical anchor** for the artifact contract: artifacts are
+authored in it and inline it at rest, and the `:root` palette block still
+carries it (ADR-0046). Gruvbox is transcribed from **gruvbox-material**
+(medium background), not classic morhetz (ADR-0048): it is the flavour the
+terminal beside the board is running, and its warmer ink (`#d4be98` /
+`#654735`) is what reads as gruvbox rather than as a yellow-tinted
+greyscale. The **Flexoki pair is the fresh-install default** and the
+identity: root.tsx stamps `data-theme` with the dark Flexoki slot at SSR, so
+the no-JS fallback and browser-chrome colors (`theme-color`, the manifest)
+match what a new viewer resolves to (ADR-0046 amendment). The dashboard
+injects the active theme into artifact iframes at render time, for every
+theme including the anchor, so a file published against an older row still
+paints the current one — the anchor is an _authoring_ default, not a pin on
+the registry (ADR-0048).
 
 ## Color
 
@@ -33,37 +39,67 @@ gruvbox-dark row of the registry):
 
 | Token                            | gruvbox-dark | Role                                         |
 | -------------------------------- | ------------ | -------------------------------------------- |
-| `bg` / `--background`            | `#1d2021`    | page                                         |
-| `bg1` / `--card`                 | `#282828`    | widget cards, panels                         |
+| `bg` / `--background`            | `#282828`    | page                                         |
+| `bg1` / `--card`                 | `#1b1b1b`    | widget cards, panels                         |
 | `bg2` / `--muted`                | `#32302f`    | edit-mode surfaces, wells                    |
-| `bg3` / `--secondary`            | `#3c3836`    | hover fills, secondary controls              |
-| `border` / `--border`            | `#504945`    | object edges: popovers, cells, head rules    |
-| `border-dim`                     | `#3c3836`    | hairlines splitting the flat plane           |
-| `border-strong` / `--input`      | `#7c6f64`    | control boundaries: inputs, checkboxes       |
-| `ink` / `--foreground`           | `#ebdbb2`    | body text                                    |
+| `bg3` / `--secondary`            | `#45403d`    | hover fills, secondary controls              |
+| `border` / `--border`            | `#5a524c`    | object edges: popovers, cells, head rules    |
+| `border-dim`                     | `#45403d`    | hairlines splitting the flat plane           |
+| `border-strong` / `--input`      | `#928374`    | control boundaries: inputs, checkboxes       |
+| `ink` / `--foreground`           | `#d4be98`    | body text                                    |
 | `ink-dim` / `--muted-foreground` | `#a89984`    | secondary text                               |
 | `ink-faint`                      | `#928374`    | metadata only, never body copy               |
 | `accent` / `--primary`           | `#fe8019`    | the accent: primary actions, brand mark      |
 | `accent-deep` / `--ring`         | `#d65d0e`    | focus ring, selection                        |
-| `yellow`                         | `#fabd2f`    | staleness, warnings                          |
-| `green`                          | `#b8bb26`    | diff additions, success                      |
-| `red` / `--destructive`          | `#fb4934`    | diff deletions, destructive                  |
+| `yellow`                         | `#d8a657`    | staleness, warnings                          |
+| `green`                          | `#a9b665`    | diff additions, success                      |
+| `red` / `--destructive`          | `#ea6962`    | diff deletions, destructive                  |
 | `aqua` `blue` `purple`           | —            | artifact-side accents; chrome uses sparingly |
 
 Each theme fills the same roles from its own upstream palette. The accent
-is that palette's signature color (gruvbox orange, catppuccin mauve, rosé
-pine iris/pine, tokyo night blue). In artifacts the accent keeps its
-historical `--color-orange` name.
+is that palette's signature color (catppuccin mauve, rosé pine iris/pine,
+tokyo night blue). In artifacts the accent keeps its historical
+`--color-orange` name.
+
+Gruvbox is the exception, and the reason generalizes: **the accent must
+stay distinct from `green`, and it has to survive being a fill.**
+gruvbox-material's signature is its green, but it spends one color on both
+accent and success — while Steward spends `green` on the freshness dot and
+diff additions of every tile, so an olive accent would make the primary
+action the same color as the status beside it. It also can't carry a button
+label: gruvbox palettes calibrate their colors to be read _as ink on the
+background_ (material's own filled surfaces are dim washes under colored
+text), so the light green drops to 3.83:1 once inverted into a solid fill,
+and nothing in that ramp clears 4.5:1 — pure white only reaches 4.81:1.
+Classic gruvbox's _faded_ ramp exists for exactly the jobs needing contrast
+on a light ground, so `accent` keeps the gruvbox orange in both twins while
+every semantic role is material's.
 
 Surface hierarchy: chrome is **one flat plane**, with page, rail, and header
 all sitting on `bg`, split by hairlines. The widget cards (`bg1`) are the
-only elevated surface. Light themes spread their surface roles deliberately
-(values still transcribed, roles repointed within the palette's own ramp):
-the canvas takes a mid-neutral one step deeper and the cards keep the
-palette's lightest tone, so widgets glow against the board instead of the
-whole page collapsing into one near-white plane. Button labels take `bg1`
-(each palette's brightest/most-neutral surface, full AA on every accent);
-selection is a translucent accent wash under unchanged ink.
+only surface off that plane. Most themes spread their roles so cards sit
+_above_ it — light themes deliberately so (values still transcribed, roles
+repointed within the palette's own ramp): the canvas takes a mid-neutral one
+step deeper and the cards keep the palette's lightest tone, so widgets glow
+against the board instead of the whole page collapsing into one near-white
+plane.
+
+Gruvbox inverts that in both modes (ADR-0048), forced rather than chosen:
+material's ramp has nothing above `bg0`, so taking `bg0` as the canvas puts
+the card tone a step _down_, at `bg_dim`. Cards recede there. The alternative
+was a card separating from the page by 1.03:1 — a hierarchy you cannot see is
+not one, and a visible recess beats an invisible lift. It also matches how
+material uses `bg_dim` natively (statusline, popup menus, float backgrounds).
+Note what this means for the flush system: it survives the inversion untouched
+because it is written in roles, not hexes. Tiles repaint to `bg` and the board
+is `bg`; the lightbox is `--card` and artifacts author `bg1`. Both stay flush
+whichever way the ramp runs.
+
+Button labels take `bg1` — each palette's most neutral surface, and the tone
+furthest from its accent in either direction, which is why it holds AA whether
+the accent is a dark fill under a cream label (light themes) or a bright fill
+under a near-black one (gruvbox dark). Selection is a translucent accent wash
+under unchanged ink.
 
 Borders are three graded tiers, not one value dimmed: `border-dim` splits the
 flat plane (≥1.2:1 on `bg`/`bg1`), `border` edges objects that must read as

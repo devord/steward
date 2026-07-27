@@ -50,30 +50,37 @@ respond to the widget's grid size, with no JS needed for responsiveness.
 
 ## The token snippet
 
-Inline exactly this in `:root`. The values MUST stay identical to the
-`@theme` block in `apps/web/app/app.css` (ADR-0007); if they differ, fix
-whichever side drifted:
+Inline exactly this in `:root` — the gruvbox-dark row of the registry
+(gruvbox-material, medium background). The single source is
+`apps/web/app/lib/theme.ts`; `app.css` only aliases its runtime vars
+(ADR-0007/0009), so if these drift, the registry is the side that's right.
+
+They are what the artifact paints **at rest** — opened raw, with no chrome
+around it. On the board the frame injects the _active_ theme over them for
+every theme, this one included, so an artifact published against an older
+row still renders in the current palette. Author against these values; don't
+count on them surviving to the screen.
 
 ```css
 :root {
   color-scheme: dark;
-  --color-bg: #1d2021;
-  --color-bg1: #282828;
+  --color-bg: #282828;
+  --color-bg1: #1b1b1b;
   --color-bg2: #32302f;
-  --color-bg3: #3c3836;
-  --color-border: #504945;
-  --color-border-dim: #3c3836;
-  --color-ink: #ebdbb2;
+  --color-bg3: #45403d;
+  --color-border: #5a524c;
+  --color-border-dim: #45403d;
+  --color-ink: #d4be98;
   --color-ink-dim: #a89984;
   --color-ink-faint: #928374;
   --color-orange: #fe8019;
   --color-orange-deep: #d65d0e;
-  --color-yellow: #fabd2f;
-  --color-green: #b8bb26;
-  --color-aqua: #8ec07c;
-  --color-blue: #83a598;
+  --color-yellow: #d8a657;
+  --color-green: #a9b665;
+  --color-aqua: #89b482;
+  --color-blue: #7daea3;
   --color-purple: #d3869b;
-  --color-red: #fb4934;
+  --color-red: #ea6962;
   --font-sans: system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
 }

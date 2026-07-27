@@ -22,9 +22,16 @@ export default defineConfig({
       // authored surfaces: gruvbox at rest), switched by the app's `.dark`
       // class — not shiki's stock github themes, which clash with every
       // Steward palette.
+      //
+      // The *medium* variants, matching the registry's move to
+      // gruvbox-material medium: shiki's backgrounds (#282828 / #fbf1c7) are
+      // then the registry's own `bg`, so a block sits flush with the page the
+      // way the hard pair used to. Shiki ships no gruvbox-material, so the
+      // syntax hues stay classic — close enough at code-block scale, and
+      // nearer than any other bundled theme.
       themes: {
-        light: "gruvbox-light-hard",
-        dark: "gruvbox-dark-hard",
+        light: "gruvbox-light-medium",
+        dark: "gruvbox-dark-medium",
       },
     },
   },

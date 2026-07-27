@@ -5,10 +5,10 @@
  * Each theme carries the full Steward token set (the roles DESIGN.md
  * defines: surfaces bg…bg3, borders, inks, the accent pair, and the status
  * colors), transcribed from its upstream palette — no invented colors.
- * Gruvbox dark hard remains the canonical anchor: artifacts are authored
- * in it (docs/widget-standard.md) and the server renders it before the
- * client preference is known. The *fresh-install* default is a separate
- * choice — a new viewer now starts in the Flexoki pair (ADR-0046).
+ * Gruvbox dark remains the canonical anchor: artifacts are authored in it
+ * (docs/widget-standard.md) and the server renders it before the client
+ * preference is known. The *fresh-install* default is a separate choice —
+ * a new viewer now starts in the Flexoki pair (ADR-0046).
  *
  * The user's choice is an **appearance preference**: a `mode`
  * (`system` | `light` | `dark`) plus a `lightTheme` and a `darkTheme` slot
@@ -84,8 +84,8 @@ export interface Theme {
 
 /**
  * The curated set: seven families, each shipping a light and a dark member.
- * Values are transcribed from each palette's upstream definition (gruvbox
- * hard variants, Catppuccin mocha/latte, Rosé Pine main/dawn,
+ * Values are transcribed from each palette's upstream definition
+ * (gruvbox-material medium, Catppuccin mocha/latte, Rosé Pine main/dawn,
  * tokyonight.nvim night style + the Tokyo Night Light VS Code palette,
  * @primer/primitives light/dark, Flexoki's base + 400/600 ramps,
  * kanagawa.nvim wave/lotus).
@@ -95,6 +95,11 @@ export interface Theme {
  * tone, so widgets read as the elevated surface ("widgets glow, chrome
  * recedes") instead of the whole page collapsing into one near-white plane.
  * Dark themes get the same hierarchy for free from their upstream bg ramps.
+ * Gruvbox is the exception in both modes: material's ramp has nothing above
+ * `bg0`, so taking `bg0` as the canvas forces the card tone a step *down*
+ * (`bg_dim`). Cards recede there rather than glow. The alternative was a
+ * card that separates from the page by 1.03:1 — a hierarchy you cannot see
+ * is not one; a visible recess beats an invisible lift.
  *
  * The three border tiers are graded, not decorative: `borderDim` splits the
  * flat plane (≥1.2:1), `border` edges objects — popovers, board cells, table
@@ -105,6 +110,13 @@ export interface Theme {
  * its own ramp, which cascades the old `border` into `borderDim`.
  *
  * Documented residuals:
+ *  - gruvbox-material spends one color on both accent and success, and its
+ *    green cannot carry a button label at AA in light mode, so `accent`
+ *    keeps the gruvbox orange in both twins while every semantic role
+ *    (green, yellow, red, aqua, blue, purple) is material's;
+ *  - gruvbox-light's `inkDim` takes classic gruvbox fg3 (#665c54):
+ *    material's own grey ramp tops out at 4.29:1 on the canvas and 3.87:1
+ *    on the card tone, short of the 4.5 floor at every step;
  *  - Rosé Pine has no green, so `green` reuses foam;
  *  - where a palette's own dim/faint ink misses AA on its canvas, the role
  *    is repointed to the nearest AA-clearing tone from the same palette
@@ -127,54 +139,78 @@ export interface Theme {
  *    line with Wave (2.46:1 / 2.56:1).
  */
 export const themes = {
+  // Gruvbox is transcribed from **gruvbox-material** (sainnhe), medium
+  // background, not from classic morhetz gruvbox: it is the flavour the
+  // terminal next to the board is actually running, and its warmer ink
+  // (`fg0` #d4be98 / #654735 against classic's #ebdbb2 / #3c3836) is what
+  // reads as gruvbox rather than as a yellow-tinted greyscale.
+  //
+  // `accent` is the one role that does not follow material, and the reason
+  // is structural rather than aesthetic. Material's signature is its green
+  // (#a9b665 / #6c782e), but gruvbox palettes calibrate their colors to be
+  // read *as ink on the background* — material's own filled surfaces are
+  // the dim washes (`bg_green`, `bg_visual_green`) carrying colored text.
+  // Inverted into a solid button under a cream label the light green
+  // collapses to 3.83:1, and nothing in the light ramp clears 4.5:1 (pure
+  // white only reaches 4.81:1). Classic gruvbox's *faded* ramp exists for
+  // exactly the jobs that need contrast on a light ground, so `accent`
+  // keeps the gruvbox orange. It also has to: material spends one color on
+  // both accent and success, while Steward spends `green` on freshness
+  // dots and diff additions on every tile — an olive accent would make the
+  // primary action the same color as the status beside it.
   "gruvbox-dark": {
     label: "Gruvbox Dark",
     mode: "dark",
     tokens: {
-      bg: "#1d2021",
-      bg1: "#282828",
+      // Cards *recede* here, and in the light twin (see below): material's
+      // ramp has nothing above `bg0`, so with `bg0` as the canvas the card
+      // tone is necessarily a step down — `bg_dim`, which is how material
+      // itself uses it (statusline, popup menus, float backgrounds).
+      bg: "#282828",
+      bg1: "#1b1b1b",
       bg2: "#32302f",
-      bg3: "#3c3836",
-      border: "#504945",
-      borderDim: "#3c3836",
-      borderStrong: "#7c6f64",
-      ink: "#ebdbb2",
+      bg3: "#45403d",
+      border: "#5a524c",
+      borderDim: "#45403d",
+      borderStrong: "#928374",
+      ink: "#d4be98",
       inkDim: "#a89984",
       inkFaint: "#928374",
       accent: "#fe8019",
       accentDeep: "#d65d0e",
-      yellow: "#fabd2f",
-      green: "#b8bb26",
-      aqua: "#8ec07c",
-      blue: "#83a598",
+      yellow: "#d8a657",
+      green: "#a9b665",
+      aqua: "#89b482",
+      blue: "#7daea3",
       purple: "#d3869b",
-      red: "#fb4934",
+      red: "#ea6962",
     },
   },
   "gruvbox-light": {
     label: "Gruvbox Light",
     mode: "light",
     tokens: {
-      // Canvas bg0_s, cards bg0_h: the board recedes, the widgets keep the
-      // terminal's own paper tone and glow against it.
-      bg: "#f2e5bc",
-      bg1: "#f9f5d7",
-      bg2: "#ebdbb2",
-      bg3: "#d5c4a1",
+      bg: "#fbf1c7",
+      bg1: "#f2e5bc",
+      bg2: "#eee0b7",
+      bg3: "#e5d5ad",
       border: "#bdae93",
-      borderDim: "#d5c4a1",
+      borderDim: "#ddccab",
       borderStrong: "#7c6f64",
-      ink: "#3c3836",
+      ink: "#654735",
+      // Residual: no material grey clears AA on the card tone (grey2
+      // #7c6f64 dips to 3.87:1 on bg1), so `inkDim` takes classic
+      // gruvbox's fg3 — the nearest AA-clearing tone in the family.
       inkDim: "#665c54",
       inkFaint: "#7c6f64",
       accent: "#af3a03",
       accentDeep: "#d65d0e",
-      yellow: "#b57614",
-      green: "#79740e",
-      aqua: "#427b58",
-      blue: "#076678",
-      purple: "#8f3f71",
-      red: "#9d0006",
+      yellow: "#b47109",
+      green: "#6c782e",
+      aqua: "#4c7a5d",
+      blue: "#45707a",
+      purple: "#945e80",
+      red: "#c14a4a",
     },
   },
   "catppuccin-mocha": {
@@ -517,10 +553,11 @@ export const themeEntries: readonly [ThemeName, Theme][] = themeNames.map(
 /**
  * The canonical anchor — what the server renders on `:root` and the palette
  * artifacts are authored in and inline at rest (docs/widget-standard.md).
- * Stays gruvbox-dark even as the fresh-install default moves (ADR-0046):
- * retargeting it would strand every published artifact's inlined palette,
- * since `artifactThemeStyle` returns null for it. Distinct from the
- * fresh-install slots below — the palette a new user *starts* in.
+ * Stays gruvbox-dark even as the fresh-install default moves (ADR-0046).
+ * Distinct from the fresh-install slots below — the palette a new user
+ * *starts* in. Note this is only an *authoring* anchor: the frame injects
+ * the active palette unconditionally, including this one, so an artifact
+ * published against an older gruvbox row still renders in the current one.
  */
 export const DEFAULT_THEME: ThemeName = "gruvbox-dark"
 /** Fresh-install slots for a viewer with no stored preference (ADR-0046). */
@@ -787,11 +824,18 @@ export function themeStylesheet(): string {
  * artifacts inline the gruvbox palette as `--color-*` custom properties
  * (docs/widget-standard.md); appending this style block re-points those
  * same names at the active theme. `accent` maps onto the artifact contract's
- * historical `orange` slot. Returns null for the default theme — native
- * artifacts need no help.
+ * historical `orange` slot.
+ *
+ * Emitted for **every** theme, the default included. It used to short-circuit
+ * to null on the anchor, on the reasoning that a gruvbox artifact viewed under
+ * gruvbox already carries the right hexes — but that silently made the anchor's
+ * values unchangeable: the hexes baked into every already-published file became
+ * the real contract, and moving the registry row (as the material transcription
+ * did) would have left old artifacts painting the previous palette next to
+ * chrome painting the new one. Overriding unconditionally costs a few hundred
+ * bytes of srcdoc and makes the registry authoritative for artifacts too.
  */
-export function artifactThemeStyle(name: ThemeName): string | null {
-  if (name === DEFAULT_THEME) return null
+export function artifactThemeStyle(name: ThemeName): string {
   const { tokens: t, mode } = themes[name]
   const pairs: [string, string][] = [
     ["--color-bg", t.bg],
@@ -824,7 +868,7 @@ export function artifactThemeStyle(name: ThemeName): string | null {
  *    raw); on the board the WidgetCard footer already carries the routine
  *    name and freshness, so leaving both visible writes the identity and the
  *    run time twice, one row above the other.
- *  - Append the active theme override (a no-op string on the default).
+ *  - Append the active theme override, for every theme including the anchor.
  *
  * Only this embedded path suppresses the footer; a raw view of the artifact
  * keeps it.
@@ -869,7 +913,7 @@ const TILE_GUARD_STYLE =
   "html,body{overflow:hidden !important}" +
   "#steward-tile-fade{position:fixed;left:0;right:0;bottom:0;height:32px;" +
   "pointer-events:none;opacity:0;transition:opacity .15s;" +
-  "background:linear-gradient(transparent,var(--color-bg,#1d2021))}" +
+  "background:linear-gradient(transparent,var(--color-bg,#282828))}" +
   "</style>"
 
 /**
@@ -885,7 +929,7 @@ const TILE_GUARD_STYLE =
  */
 const TILE_FLUSH_STYLE =
   "<style data-steward-tile-flush>" +
-  "html,body{background:var(--color-bg,#1d2021) !important}" +
+  "html,body{background:var(--color-bg,#282828) !important}" +
   "</style>"
 
 const TILE_GUARD_SCRIPT =
@@ -971,7 +1015,7 @@ export function frameArtifactHtml(
     (view === "tile"
       ? TILE_GUARD_STYLE + TILE_GUARD_SCRIPT + TILE_FLUSH_STYLE
       : "") +
-    (artifactThemeStyle(name) ?? "")
+    artifactThemeStyle(name)
   )
 }
 

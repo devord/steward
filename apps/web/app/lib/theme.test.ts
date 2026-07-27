@@ -230,24 +230,26 @@ describe("registry integrity", () => {
       expect(css).toContain(`[data-theme="${name}"]`)
     }
     // The default block carries the canonical gruvbox page background.
-    expect(css.split("\n")[0]).toContain("--palette-bg:#1d2021")
+    expect(css.split("\n")[0]).toContain("--palette-bg:#282828")
   })
 })
 
 describe("frameArtifactHtml", () => {
   const doc = "<html><head></head><body>hi</body></html>"
 
-  it("hides the artifact footer, adding no theme override on the default", () => {
+  it("hides the artifact footer and overrides even on the default", () => {
     const framed = frameArtifactHtml(doc, DEFAULT_THEME)
     expect(framed.startsWith(doc)).toBe(true)
     // The card chrome renders identity + freshness; the artifact's own
     // footer is standalone-only, so the embedded frame suppresses it.
     expect(framed).toContain("footer{display:none !important}")
-    // No override block — the tile framing's var(--color-bg) fallbacks (flush
-    // surface + fade) are the only palette references the default framing
-    // carries.
-    expect(framed).not.toContain("data-steward-theme")
-    // A null override must not stringify into the srcdoc as visible "null".
+    // The anchor is overridden like any other theme. Skipping it here would
+    // freeze the anchor's hexes: every already-published artifact bakes them
+    // in, so a registry change (the gruvbox-material transcription) would
+    // leave old artifacts painting the previous palette beside new chrome.
+    expect(framed).toContain("data-steward-theme")
+    expect(framed).toContain(`--color-bg:${themes[DEFAULT_THEME].tokens.bg}`)
+    // Nothing may stringify into the srcdoc as a visible "null".
     expect(framed).not.toContain("null")
   })
 
