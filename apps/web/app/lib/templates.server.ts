@@ -28,10 +28,15 @@ const builtinFiles = import.meta.glob("../../../../templates/routines/*.md", {
   eager: true,
 })
 
-// The built-ins' picker previews: their canonical design archetypes in
-// docs/samples/ double as the sample renders (ADR-0037), keyed to the
-// template by basename and inlined the same way — one file, one source of
-// truth, no separate copy to drift.
+// The built-ins' picker previews (ADR-0037), keyed to the template by
+// basename and inlined the same way as the templates themselves.
+//
+// These are generated, never hand-authored: `scripts/gen-template-previews.ts`
+// renders each one from a kit fixture with the very command a routine runs, and
+// CI fails on drift (ADR-0050). They used to be hand-kept archetype samples
+// that the design language pointed at as well — that second job retired with
+// the prose, and with it the only reason a preview could disagree with what the
+// renderer actually emits.
 const builtinSampleFiles = import.meta.glob("../../../../docs/samples/*.html", {
   query: "?raw",
   import: "default",

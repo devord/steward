@@ -99,6 +99,12 @@ export default defineConfig({
       // bundle aborts it outright.
       ".claude/skills/widget-artifact/kit/kit.css",
       ".claude/skills/widget-artifact/kit/render.mjs",
+      // The built-ins' picker previews (ADR-0037), likewise generated — by
+      // `scripts/gen-template-previews.ts`, from the same renderer. Formatting
+      // them would put the formatter and CI's drift check in a loop: the
+      // generator emits the renderer's exact bytes, the formatter rewrites
+      // them, and the next `git status` reports output nobody edited.
+      "docs/samples/**",
     ],
   },
   staged: {
