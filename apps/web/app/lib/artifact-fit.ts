@@ -13,6 +13,8 @@
  *   [data-fit-item]     one unit, hidden as a whole when it will not fit
  *   [data-fit-keep]     never trim this unit
  *   [data-fit-section]  the block to collapse when its list empties out
+ *   [data-fit-first]    yield before every other list, whatever the order;
+ *                       reduces to its label rather than disappearing
  *
  * Two things the move let us fix. The marker is now injected as a *sibling*
  * of the list rather than a child, so it has no list or table semantics to
@@ -50,6 +52,8 @@ export const FIT_FACTORY = `(function(){
     var box = owner(list)
     box.hidden = false
     box.removeAttribute("data-fit-collapsed")
+    box.removeAttribute("data-fit-label-only")
+    list.hidden = false
     var m = marker(list)
     m.hidden = true
     // Every re-fit measures from the whole artifact. Without this a tile can
@@ -78,8 +82,21 @@ export const FIT_FACTORY = `(function(){
       // stays, carrying the row that had to survive.
       if (s.hidden + 1 === s.units.length && s.pinned === 0) {
         var box = owner(s.list)
-        box.setAttribute("data-fit-collapsed", "")
-        box.hidden = true
+        // …except for a yield-first band, where the heading is the point. A
+        // bookkeeping section reduced to its label still tells the reader
+        // there are records to tidy and how many; hiding it says there are
+        // none. Because it yields before everything else it reaches this
+        // branch on almost every tile, so collapsing it whole would mean it
+        // never appears outside the full view — narrower than the rule it
+        // replaced, which kept the label and dropped only the rows.
+        if (s.list.hasAttribute("data-fit-first")) {
+          s.list.hidden = true
+          s.more.hidden = true
+          box.setAttribute("data-fit-label-only", "")
+        } else {
+          box.setAttribute("data-fit-collapsed", "")
+          box.hidden = true
+        }
         s.done = true
         return true
       }
