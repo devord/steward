@@ -507,98 +507,64 @@ causal story the evidence doesn't support. Bus factor rides as a **number**
 a structural risk, not a personal one. Names appear only in the context
 block, where the reader is already on their way into a session.
 
-## Author the artifact
+## Emit
 
-Follow the `widget-artifact` skill for the HTML contract and compose from
-its design language — headings, sections, ledger rows with lead + detail,
-magnitude bars, sparklines, the **coupling matrix** (design.md · Coupling
-matrix), pills, the provenance line. The `<h1>` carries the subject and
-window (`corza · 90d`, mono).
+Write `data.json` and render it with the kit — the shape is documented once in
+`$STEWARD/.claude/skills/widget-artifact/kit/CONTRACT.md`; read it rather than
+inferring from this description. This routine's mapping onto it:
 
-Each ledger row is: the module name as the lead; the bar, score, and
-direction arrow as its trailing cell; the signal breakdown as detail
-(`34 commits · 1 author · 28% tested · in 61 / out 12`). Judged rows add
-their move. Score arithmetic — the named penalty lines — belongs on the
-raw/full page and in the context block, never on a tile.
+- **`stat`** — the **worst module's score** with its direction (`84 ↗`),
+  `label` naming the module and what it is doing (`cart · worsening`), `note`
+  the bottom line. A bare index would say the house is on fire without naming
+  the room.
+- **A `queue` block, "Rot ledger"** — a stated top N of the census by score
+  (12 is a good N), `count` saying so (`top 12 of 136 by score`). Each row:
+  the module as `title`, the signal breakdown as `detail` (`34 commits · 1
+author · 28% tested · in 61 / out 12`), and `values` carrying the score as a
+  **`meter`** and the direction as a **`spark`** with the arrow as its printed
+  figure. Judged rows add their move to the detail.
 
-**The bar is banded, not decorative.** One accent band: the top band
-(score ≥ 80) fills orange with its score in full ink, everything below fills
-`ink-faint` with an `ink-dim` score. Scores cluster in the 50s–80s, so length
-alone barely separates two rows; the band is what makes "where does the hot
-list end" readable at a glance. The direction arrow takes **yellow** for
-worsening (a warning), green for improving, `ink-faint` for steady — red is
-spent on the one genuinely bad state in this artifact, the undeclared-coupling
-ring, and a ledger of red arrows retires it as a signal.
+  **Tone the score only above the hot line.** Scores cluster in the 50s–80s so
+  bar length barely separates two rows; giving the top band the accent is what
+  makes "where does the hot list end" readable at a glance. Everything below it
+  stays untoned.
 
-**A census is not a list.** A flat rank past its first handful is rows the
-reader scrolls without reading: `ui · tooltip 60 ↗` under
-`ui · separator 60 ↗`. Split it in two, and let each part do one job:
+- **A `matrix` block, "Co-change"** — the field. Cap it at **exactly the top 8
+  modules** by score, ties broken by churn then by module id ascending, so two
+  runs over the same tree pick the same eight, and put the held-back count on
+  `count`. Name the pairs worth naming in `marks` — an undeclared coupling is
+  the one genuinely bad state this artifact reports, and it belongs in words
+  as well as in a cell.
+- **A `rail: true` `queue` block, "Where else"** — every root as a one-line
+  index row: the root, its `n modules · n commits · median` as `detail`, and
+  its **worst module's** score as a `meter` with that module's arrow. Nineteen
+  lines answer "where is the rot concentrated" that 136 rows cannot. Keep them
+  to one line: at two, a root costs as much as a ledger row it is only
+  pointing at.
+- **`provenance`** — repo and window, resolved roots, roots dropped and why,
+  module and file counts, which signal layers were available, weights version,
+  history points, commits ignored as sweeps, and the proxy caveat.
+- **`empty`** — no repo configured → a state naming the routine setting. A repo
+  with no history in the window is **not** empty: the bottom line says exactly
+  that.
 
-- **Rot ledger** — the ranked attention list, a stated **top N of the
-  census** by score (12 is a good N), each row as above.
-- **Where else** — every root as a **one-line** index row: the root, its
-  `n modules · n commits · median`, and a banded bar carrying its **worst
-  module's** score and that module's arrow. Nineteen lines answer "where is
-  the rot concentrated" that 136 rows cannot. Keep the rows to one line;
-  at two, a root costs as much as a ledger row it is only pointing at.
+Do not hand-write HTML or CSS. Do not size, trim or theme anything.
 
-  On the page, this is also the **complete ledger**: each root's line becomes
-  the group header for its own modules, unfolded beneath it (module key,
-  signal breakdown, score) and relaying the list's tracks with `subgrid`, so
-  a module's score sits under its root's score instead of opening a second
-  value column.
+**Pin sparingly, and only where the sort would not already have saved it.**
+The ledger is ranked by score, so its worst row leads and trimming from the
+bottom never reaches it — no pin needed there, and one would make a short tile
+advertise its calmest rows. The bottom line's own module is worth `keep` if it
+is not already at the top. Every pin is a row the tile can never give back:
+five pinned rows is a ledger the fit pass cannot trim below, so it trims the
+sections beside it to nothing instead and the tile still overflows.
 
-Size behavior:
+**The score arithmetic is page-only** — the named penalty lines belong on the
+raw page and in the context block, never on a tile.
 
-- **1×1**: the stat tier. The **worst module's score** in mono, labelled
-  with its name and direction (`84 ↗`, label `cart · worsening`), and the
-  bottom line clamped to two lines beneath. A bare index would say the
-  house is on fire without naming the room.
-- **2×1 / 1×2**: the bottom line in full, then the top rows with bars and
-  scores, single-line. No matrix — a field needs at least 4 rows to read as
-  one.
-- **2×2**: the bottom line, then the ledger's top rows with their detail.
-- **Wide tile (≥ 900px and ≥ 240px)**: two columns — the **reading** on the
-  left (the ledger, its judged moves, the handoff line), the **instruments**
-  on the right (the field, the pairs it marks, the root map). Give each
-  column a real wrapper element; never place one section across two grid
-  rows with an area that spans. The fit pass measures the document after
-  each row it hides, and a spanning item's freed height is absorbed by the
-  row beside it — the pass reads that as "this row freed nothing", stops
-  early, and the tile overflows in silence with rows still available to trim.
-- **Tall wide tile (≥ 1100px and ≥ 480px)**: the co-change field **joins**
-  the wide tile's layout — the tiers stack rather than replace, so this one
-  reveals a section inside the two columns the rule above already set up,
-  and its query only ever has to answer "is there room for the field". It is
-  the one block here with no trimmable list, so it is a floor the fit pass
-  cannot get under: that query is what keeps a short tile from overflowing,
-  and every other block in both columns carries `data-fit-list`. Cap it at **exactly the top 8 modules** by score, ties
-  broken by churn, then by module id ascending — a deterministic order, so
-  two runs over the same tree pick the same eight — and state the count held
-  back in the section's own count (`top 8 of 136 by score`), computed from
-  the uncapped census.
-- **Full view / raw page**: a page, two full-length columns (neither is a
-  rail): the bottom line as a lede, the ledger with each judged row's
-  sentence, move and sparkline on the left; the field, the named pairs, and
-  the complete census by root on the right. Then the provenance line: repo
-  and window, resolved roots, roots dropped and why, module and file counts,
-  which signal layers were available, weights version, history points,
-  commits ignored as sweeps, and the proxy caveat. The provenance line is
-  **page-only** — on a tile those three lines cost a ledger row and a half,
-  and the fit pass clips them anyway.
-
-**Pin sparingly.** Mark the worst row and the bottom line's own module
-`data-fit-keep`, and at most one or two rows of the root map. Every pin is a
-row the tile can never give back: five pinned rows is a ledger the fit pass
-cannot trim below, so it trims the sections beside it to nothing instead and
-the tile still overflows.
-
-Degrade gracefully: a repo with no history in the window gets a bottom
-line saying exactly that. A shallow clone (`git rev-parse --is-shallow-repository`)
-loses the trend and the co-change matrix — render the ledger, drop the
-sparklines, and say so in provenance rather than showing a flat line that
-looks like stability. No repo configured → an empty state telling the user
-to set the routine's repository.
+Degrade gracefully: a shallow clone (`git rev-parse --is-shallow-repository`)
+loses the trend and the co-change field. Render the ledger, **omit the sparks
+and the matrix**, and say so in provenance rather than showing a flat line
+that looks like stability.
 
 ## The context block
 

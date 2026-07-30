@@ -1,5 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server"
 
+import {
+  CouplingMatrix,
+  type MatrixSpec,
+} from "./components/CouplingMatrix.tsx"
 import { EmptyState } from "./components/EmptyState.tsx"
 import { Prose, type ProseItem } from "./components/Prose.tsx"
 import { ProvenanceLine } from "./components/ProvenanceLine.tsx"
@@ -70,6 +74,17 @@ export interface QueueBlock extends BlockBase {
 }
 
 /**
+ * A co-change field. Page-tall by default: a matrix needs at least four rows
+ * to read as a field rather than as scattered squares, and it is the one band
+ * with no trimmable list — a floor the fit pass cannot get under, so a tile
+ * that shows it overflows in silence with rows still available to trim.
+ */
+export interface MatrixBlock extends BlockBase {
+  kind: "matrix"
+  spec: MatrixSpec
+}
+
+/**
  * The day as a time grid. Page-tall by default for the same reason prose is:
  * every slot has a job, so the grid needs the height to say so, and a tile
  * that cannot show the shape of a day is better spending its rows on the
@@ -125,6 +140,7 @@ export type Block =
   | SeriesBlock
   | ProgressBlock
   | DayBlock
+  | MatrixBlock
 
 /** Whether a band has anything to render — an empty one is never drawn. */
 function filled(b: Block): boolean {
@@ -134,6 +150,8 @@ function filled(b: Block): boolean {
   if (b.kind === "progress")
     return b.rails.length > 0 || (b.stages ?? []).length > 0
   if (b.kind === "day") return b.spec.blocks.length > 0
+  // Four is the floor for a field. Below it the squares do not read as one.
+  if (b.kind === "matrix") return b.spec.labels.length >= 4
   return (
     (b.rows?.length ?? 0) > 0 || (b.groups ?? []).some((g) => g.rows.length > 0)
   )
@@ -195,7 +213,8 @@ function Band({ block, index }: { block: Block; index: number }) {
         (block.pageOnly ??
         (block.kind === "prose" ||
           block.kind === "series" ||
-          block.kind === "day"))
+          block.kind === "day" ||
+          block.kind === "matrix"))
           ? "hidden page-only:flex"
           : undefined
       }
@@ -210,6 +229,8 @@ function Band({ block, index }: { block: Block; index: number }) {
         />
       ) : block.kind === "series" ? (
         <Series spec={block.spec} />
+      ) : block.kind === "matrix" ? (
+        <CouplingMatrix spec={block.spec} />
       ) : block.kind === "day" ? (
         <TimeGrid spec={block.spec} />
       ) : block.kind === "progress" ? (

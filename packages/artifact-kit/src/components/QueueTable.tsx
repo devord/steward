@@ -7,6 +7,7 @@ import { type Tone, TONE_TEXT } from "../ui/tone.ts"
 import { Avatar, type Face } from "./Avatar.tsx"
 import { CopyAction } from "./CopyAction.tsx"
 import { Meter } from "./Meter.tsx"
+import { Sparkline } from "./Sparkline.tsx"
 
 /** Which tier a value column first appears at. */
 export type ColumnTier = "always" | "compact" | "detail" | "page"
@@ -63,6 +64,11 @@ export interface QueueValue {
    * give a passing check no tone and let only the actionable ones take one.
    */
   icon?: IconName
+  /**
+   * Render the value as a trend line, oldest to newest, with `value` as the
+   * printed figure beside it. Shape under a number, never instead of one.
+   */
+  spark?: number[]
   /**
    * Hover text plus an sr-only phrase, for a qualifier the narrow tiers have
    * no column for. A number whose basis is invisible is an unlabelled mixture
@@ -369,6 +375,11 @@ function RowPair({
                   label={v.value}
                   tone={v.tone}
                 />
+              ) : v?.spark ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Sparkline points={v.spark} label={`${col.label} trend`} />
+                  <span>{v.value}</span>
+                </span>
               ) : v?.icon ? (
                 <span className="inline-flex items-center gap-1">
                   <Icon name={v.icon} />

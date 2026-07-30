@@ -1110,6 +1110,104 @@ describe("the day grid", () => {
   })
 })
 
+describe("the co-change field", () => {
+  const labels = ["a", "b", "c", "d"]
+  const doc = (cells: object[], marks?: object[]): ArtifactDoc =>
+    JSON.parse(
+      JSON.stringify({
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [
+          {
+            kind: "matrix",
+            label: "Co-change",
+            spec: { labels, cells, marks },
+          },
+        ],
+      }),
+    )
+
+  it("mirrors a triangle rather than making the emitter say it twice", () => {
+    const html = renderArtifact(doc([{ a: 0, b: 2, value: 9 }]), "")
+    expect(html).toContain("a ↔ c: 9")
+    expect(html).toContain("c ↔ a: 9")
+  })
+
+  it("leaves the diagonal blank rather than drawing a self-pair", () => {
+    // A module co-changes with itself on every commit. Drawing that puts the
+    // darkest cells on the one axis carrying no information, and sets the
+    // scale against a number that means nothing.
+    const html = renderArtifact(doc([{ a: 0, b: 1, value: 4 }]), "")
+    expect(html).not.toContain("a ↔ a")
+  })
+
+  it("marks a named pair with a ring, not a hotter fill", () => {
+    // The fill already spends itself on magnitude; a second claim in the same
+    // channel leaves a dark cell ambiguous.
+    const html = renderArtifact(
+      doc(
+        [{ a: 0, b: 1, value: 4 }],
+        [{ a: 0, b: 1, label: "no declared import" }],
+      ),
+      "",
+    )
+    expect(html).toContain("ring-ink")
+    expect(html).toContain("no declared import")
+  })
+
+  it("needs four labels to read as a field", () => {
+    const small = doc([{ a: 0, b: 1, value: 4 }])
+    const block = small.blocks?.[0]
+    if (block?.kind === "matrix") block.spec.labels = ["a", "b"]
+    expect(renderArtifact(small, "")).not.toContain("Co-change")
+  })
+
+  it("rejects an index outside the label set", () => {
+    // Out of range addresses no cell, so the pair silently does not appear and
+    // the field looks sparser than the data is.
+    expect(validateDoc(doc([{ a: 0, b: 9, value: 4 }])).join(" ")).toContain(
+      "b must be an index into spec.labels",
+    )
+  })
+})
+
+describe("sparklines", () => {
+  const row = (spark: number[]): ArtifactDoc => ({
+    slug: "s",
+    generatedAt: "2026-07-30T09:00:00Z",
+    stat: { value: 1, label: "x" },
+    blocks: [
+      {
+        kind: "queue",
+        rows: [
+          {
+            id: "a",
+            title: "a",
+            values: [{ label: "trend", value: "↗", spark }],
+          },
+        ],
+      },
+    ],
+  })
+
+  it("draws a flat series on the midline rather than dividing by zero", () => {
+    // Flat is a real shape and should read as one, not vanish.
+    const html = renderArtifact(row([5, 5, 5]), "")
+    expect(html).toContain("<svg")
+    expect(html).not.toContain("NaN")
+  })
+
+  it("draws nothing from a single point", () => {
+    expect(renderArtifact(row([5]), "")).not.toContain("trend trend")
+  })
+
+  it("keeps the printed figure beside the shape", () => {
+    // The line is texture under a claim the row already states.
+    expect(renderArtifact(row([1, 2, 3]), "")).toContain("↗")
+  })
+})
+
 describe("the context block", () => {
   it("is carried inert, so it costs no layout and no request", () => {
     expect(html).toContain('<script type="text/markdown" id="steward-context">')

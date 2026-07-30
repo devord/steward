@@ -117,6 +117,37 @@ export function validateDoc(doc: unknown): string[] {
         if (b.pageOnly !== undefined && typeof b.pageOnly !== "boolean")
           errors.push(`${at}.pageOnly must be a boolean`)
 
+        if (b.kind === "matrix") {
+          if (!isObj(b.spec))
+            return void errors.push(`${at}.spec must be an object`)
+          const sp = b.spec
+          if (!Array.isArray(sp.labels))
+            return void errors.push(`${at}.spec.labels must be an array`)
+          sp.labels.forEach((l, j) => str(l, `${at}.spec.labels[${j}]`))
+          const n = sp.labels.length
+          if (!Array.isArray(sp.cells))
+            return void errors.push(`${at}.spec.cells must be an array`)
+          return void sp.cells.forEach((c, j) => {
+            const cat = `${at}.spec.cells[${j}]`
+            if (!isObj(c)) return void errors.push(`${cat} must be an object`)
+            // An index outside the label set silently addresses no cell, so
+            // the pair simply does not appear and the field looks sparser
+            // than the data is.
+            for (const k of ["a", "b"]) {
+              const v = c[k]
+              if (
+                typeof v !== "number" ||
+                !Number.isInteger(v) ||
+                v < 0 ||
+                v >= n
+              )
+                errors.push(`${cat}.${k} must be an index into spec.labels`)
+            }
+            if (typeof c.value !== "number" || !Number.isFinite(c.value))
+              errors.push(`${cat}.value must be a finite number`)
+          })
+        }
+
         if (b.kind === "day") {
           if (!isObj(b.spec))
             return void errors.push(`${at}.spec must be an object`)
@@ -235,7 +266,7 @@ export function validateDoc(doc: unknown): string[] {
 
         if (b.kind !== "queue")
           errors.push(
-            `${at}.kind must be "queue", "prose", "series", "progress" or "day"`,
+            `${at}.kind must be "queue", "prose", "series", "progress", "day" or "matrix"`,
           )
 
         // A queue carries either loose rows or labelled groups. Both absent is
