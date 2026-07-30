@@ -55,6 +55,19 @@ height. `tone` is one of `neutral` `attn` `warn` `bad` `good` — conventionally
 `count` is where facts that are **not rows** go. A held-back tally belongs on
 the label, never in a sentence underneath.
 
+**`note`** is one quiet line under the band, for a fact that qualifies it
+without belonging to it — `plus 15 in own backlog · 42h` under a ledger that
+deliberately excludes it. It takes no tone and stays subordinate; giving it the
+ledger's weight invites the reader to add it to the number above, which is the
+error the exclusion exists to prevent. It is the first thing the fit pass drops.
+
+**`rail: true`** puts the band in the page tier's right-hand column instead of
+the main one. Say it about **rank**, not layout: _this qualifies the story, it
+is not the story_. Below the page tier every band stacks in reading order
+regardless, and the kit decides what the split looks like. Without it a wide
+frame runs every band down one narrow ribbon — a shipped run spent 35% of a
+2560px frame that way.
+
 **`trimFirst: true`** makes this block give way before every other list,
 whatever the reading order. It exists for a bookkeeping band that sits _above_
 the content it serves: trimming is bottom-up, so without it the queue the
@@ -75,6 +88,32 @@ widget exists for collapses entirely before one housekeeping row goes.
 
 `from` decides the tier a column first appears at: `always` `compact` `detail`
 `page`. Order columns by what earns space soonest.
+
+**`meter`** turns a column into a magnitude bar of that many units, with
+`value` as its printed count. Every bar in the column shares one scale — the
+column's own largest — so lengths compare across rows and the ledger sorts
+itself on sight. Give it a `tone` only when the magnitude **is** the finding: a
+drift count earns orange because nothing else on the row competes, while commit
+volume beside a confidence chip stays neutral and reads as texture.
+
+### `blocks[]` — prose
+
+```json
+{
+  "kind": "prose",
+  "label": "Dives",
+  "items": [{ "id": "d1", "title": "…", "href": "…", "body": "…", "meta": "…" }]
+}
+```
+
+The long-form band: a ledger headline opening into the reasoning behind it.
+Blank lines in `body` become paragraphs, capped at the same measure as the
+ledger's flexible column.
+
+**Page only** — the whole band, heading included, appears on the raw page and
+the full view and never on a tile, however wide. A four-column tile is 1200px
+and still not a reading surface, and a paragraph is not a trimmable unit: a
+dive cut to `+1 more` is a truncated argument rather than a shorter list.
 
 **`keep` is for rows carrying bad news that would otherwise sink.** Trimming is
 bottom-up, so a repo with zero commits or a check that never ran gets cut

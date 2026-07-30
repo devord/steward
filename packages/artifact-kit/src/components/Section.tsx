@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 
+import { cn } from "../ui/cn.ts"
 import { CopyAction } from "./CopyAction.tsx"
 
 /**
@@ -16,11 +17,23 @@ import { CopyAction } from "./CopyAction.tsx"
 export function Section({
   label,
   count,
+  note,
   action,
+  className,
   children,
 }: {
   label?: string
   count?: string
+  /**
+   * One quiet line under the band, for a fact that qualifies it without
+   * belonging to it — `request-queue`'s "plus 15 in own backlog · 42h" under
+   * the ledger it is deliberately excluded from.
+   *
+   * It stays visibly subordinate and takes no tone: giving it the ledger's
+   * treatment would invite the reader to add it to the number above, which is
+   * the error the exclusion exists to prevent.
+   */
+  note?: string
   /**
    * A band-level copy — the whole set as one payload, where each row also
    * offers its own. `ticket-gaps` is the case: eighteen recommendations, and
@@ -29,10 +42,15 @@ export function Section({
    * width and a glance tier is not a working surface.
    */
   action?: { payload: string; label?: string }
+  /** Gate the whole band, heading included. See the prose case in render.tsx. */
+  className?: string
   children: ReactNode
 }) {
   return (
-    <section data-fit-section className="flex flex-col gap-1.5">
+    <section
+      data-fit-section
+      className={cn("flex flex-col gap-1.5", className)}
+    >
       {label ? (
         <div className="flex items-baseline gap-2">
           {/* 12px is the floor, not a starting point (widget-standard §6):
@@ -52,6 +70,23 @@ export function Section({
         </div>
       ) : null}
       {children}
+      {note ? (
+        // Its own fit section AND fit list, both on this element. The list is
+        // what makes the line trimmable; the section is what keeps `owner()`
+        // from walking up to the band above and collapsing the whole ledger
+        // when this one line has to go. Being a single unit, it shows whole or
+        // not at all — there is no "+1 more" to leave behind.
+        //
+        // No [data-fit-first]: it already sits below the ledger, and the pass
+        // trims bottom-up, so position alone gives it up before a single row.
+        <div
+          data-fit-section
+          data-fit-list
+          className="text-ink-dim font-mono text-xs"
+        >
+          <span data-fit-item>{note}</span>
+        </div>
+      ) : null}
     </section>
   )
 }

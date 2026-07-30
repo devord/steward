@@ -1,0 +1,194 @@
+{
+  "slug": "shopify-intel",
+  "title": "Shopify ecosystem intelligence",
+  "generatedAt": "2026-07-30T09:00:00Z",
+  "stat": {
+    "value": 5,
+    "label": "signals",
+    "tone": "attn",
+    "note": "7 days · 6 repos"
+  },
+  "blocks": [
+    {
+      "kind": "queue",
+      "label": "Signals",
+      "count": "7 days",
+      "showHeader": true,
+      "rows": [
+        {
+          "id": "s1",
+          "state": { "label": "confirmed", "tone": "good" },
+          "title": "Hydrogen is folding the CLI into the Oxygen deploy path",
+          "href": "https://github.com/Shopify/hydrogen/pull/2841",
+          "detail": "Three PRs in eight days move deploy config out of hydrogen.config.ts and into oxygen.toml — the standalone CLI stops being the integration point.",
+          "values": [
+            { "label": "area", "value": "hydrogen 5w" },
+            { "label": "evidence", "value": "3 PRs", "from": "detail" }
+          ]
+        },
+        {
+          "id": "s2",
+          "state": { "label": "emerging", "tone": "attn" },
+          "title": "Checkout extensibility gains a server-side validation hook",
+          "href": "https://github.com/Shopify/checkout-ui-extensions/pull/912",
+          "detail": "A single RFC plus one prototype branch. Nothing shipped, but it would move cart-attribution work we have queued.",
+          "values": [
+            { "label": "area", "value": "checkout 2w" },
+            { "label": "evidence", "value": "1 RFC", "from": "detail" }
+          ]
+        },
+        {
+          "id": "s3",
+          "state": { "label": "speculative", "tone": "neutral" },
+          "title": "Storefront API may deprecate the unstable cart mutations",
+          "detail": "Two deprecation notices in changelog entries, no timeline. Weak signal; watching.",
+          "values": [
+            { "label": "area", "value": "storefront 1w" },
+            { "label": "evidence", "value": "2 notes", "from": "detail" }
+          ]
+        },
+        {
+          "id": "s4",
+          "state": { "label": "cold", "tone": "info" },
+          "title": "Oxygen worker runtime has gone quiet",
+          "keep": true,
+          "detail": "No commits in 34 days after a year of weekly releases. Silence here is the finding — it precedes a rewrite or a wind-down.",
+          "values": [
+            { "label": "area", "value": "oxygen" },
+            { "label": "evidence", "value": "quiet 34d", "from": "detail" }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "queue",
+      "label": "Activity",
+      "count": "commits · 7 days",
+      "showHeader": false,
+      "rows": [
+        {
+          "id": "a1",
+          "title": "hydrogen",
+          "href": "https://github.com/Shopify/hydrogen",
+          "values": [{ "label": "commits", "value": "84", "meter": 84 }]
+        },
+        {
+          "id": "a2",
+          "title": "checkout-ui-extensions",
+          "href": "https://github.com/Shopify/checkout-ui-extensions",
+          "values": [{ "label": "commits", "value": "37", "meter": 37 }]
+        },
+        {
+          "id": "a3",
+          "title": "storefront-api-mirror",
+          "values": [{ "label": "commits", "value": "12", "meter": 12 }]
+        },
+        {
+          "id": "a4",
+          "title": "oxygen-workers",
+          "keep": true,
+          "values": [{ "label": "commits", "value": "quiet 34d", "meter": 0 }]
+        }
+      ]
+    },
+    {
+      "kind": "queue",
+      "label": "What to watch",
+      "rail": true,
+      "showHeader": false,
+      "rows": [
+        {
+          "id": "w1",
+          "title": "Whether oxygen.toml lands in the Hydrogen 2026.4 tag",
+          "values": [{ "label": "when", "value": "next wk" }]
+        },
+        {
+          "id": "w2",
+          "title": "If the validation hook RFC gets a shipping milestone",
+          "values": [{ "label": "when", "value": "2 wk" }]
+        }
+      ]
+    },
+    {
+      "kind": "queue",
+      "label": "Open questions",
+      "rail": true,
+      "showHeader": false,
+      "rows": [
+        {
+          "id": "q1",
+          "title": "Does Oxygen deploy stay usable without the CLI?",
+          "values": [{ "label": "flagged", "value": "2026-07-16" }]
+        },
+        {
+          "id": "q2",
+          "title": "Is the cart mutation deprecation tied to the 2026-10 API version?",
+          "values": [{ "label": "flagged", "value": "2026-07-23" }]
+        }
+      ]
+    },
+    {
+      "kind": "queue",
+      "label": "Track record",
+      "rail": true,
+      "showHeader": false,
+      "note": "3 standing predictions · 1 refuted since March",
+      "rows": [
+        {
+          "id": "t1",
+          "state": { "label": "confirmed", "tone": "good" },
+          "title": "Hydrogen would absorb the deploy config",
+          "values": [{ "label": "called", "value": "2026-06-11" }]
+        },
+        {
+          "id": "t2",
+          "state": { "label": "watching", "tone": "neutral" },
+          "title": "Checkout extensions get server-side hooks this half",
+          "values": [{ "label": "called", "value": "2026-05-02" }]
+        },
+        {
+          "id": "t3",
+          "state": { "label": "refuted", "tone": "bad" },
+          "title": "Oxygen would move to a Deno runtime",
+          "values": [{ "label": "called", "value": "2026-03-19" }]
+        }
+      ]
+    },
+    {
+      "kind": "prose",
+      "label": "Dives",
+      "items": [
+        {
+          "id": "d1",
+          "title": "Hydrogen is folding the CLI into the Oxygen deploy path",
+          "href": "https://github.com/Shopify/hydrogen/pull/2841",
+          "body": "Three PRs in eight days move deploy configuration out of hydrogen.config.ts and into a new oxygen.toml read directly by the platform. The CLI still writes the file, but it is no longer the thing that performs the deploy — that moved server-side.\n\nFor us this closes a question we have carried since the Turtle Beach build: whether to wrap the Hydrogen CLI in our own deploy tooling. Wrapping a CLI that is becoming a file generator buys nothing. The integration point to build against is oxygen.toml.",
+          "meta": "PRs #2841, #2847, #2852 · Kelly Ma, Devon Wu · Jul 22–30"
+        },
+        {
+          "id": "d2",
+          "title": "Oxygen worker runtime has gone quiet",
+          "body": "Thirty-four days with no commits, after fifty-one consecutive weeks with at least one. The last merged PR was a dependency bump. No deprecation notice, no RFC, no issue explaining it.\n\nSilence is ambiguous and worth saying so: it precedes a rewrite about as often as a wind-down, and we cannot tell which from the outside. What makes it worth flagging now rather than in a month is that our own Oxygen work is scheduled for Q4 — the cost of being wrong rises after we commit.",
+          "meta": "Last commit 2026-06-26 · 34 days quiet"
+        }
+      ]
+    }
+  ],
+  "provenance": [
+    "6 repos read",
+    "7-day window",
+    "412 commits",
+    "38 PRs",
+    "5 signals",
+    "2 carried forward"
+  ],
+  "provenanceLink": {
+    "href": "https://github.com/Shopify",
+    "label": "Shopify org"
+  },
+  "empty": {
+    "headline": "No new strategic signal this week",
+    "detail": "6 repos read over 7 days. Open questions and watch items carry forward."
+  },
+  "context": "## The evidence under each signal\n\n**Hydrogen / Oxygen deploy** — read from PRs #2841, #2847 and #2852, all merged between Jul 22 and Jul 30 by Kelly Ma and Devon Wu. Marked **confirmed** rather than emerging because the config file is already read by the platform in production, not behind a flag. What would move it back down: a revert, or the CLI regaining deploy responsibility in 2026.4.\n\n**Checkout validation hook** — one RFC (#912) and a prototype branch, no shipping milestone. **Emerging**, not confirmed: RFCs at this stage have roughly even odds. What would move it up is a milestone assignment or a second team's review.\n\n**Storefront cart mutation deprecation** — two changelog notes, no timeline, no RFC. **Speculative**, and it may simply be housekeeping.\n\n## Where the reading is contested\n\nOxygen's silence is the least safe claim here. A maintainer said in a Discord thread that the team is \"heads-down,\" which reads as continuity; the commit record reads as a stop. I have weighted the commit record, because stated intent is cheap and 34 days is not — but that is a judgment, and it is the one most likely to be wrong.\n\n## Carried forward\n\nBoth open questions are unresolved this week. The Deno-runtime prediction is **refuted** — Oxygen's runtime work stayed on workerd, which the March call got wrong.\n\n## Ask me about\n\nWhat the oxygen.toml shift means for our own deploy tooling and what it would change; whether the ecosystem is moving toward or away from the CLI-wrapping bet we nearly made; and what to watch next week to settle the Oxygen question fastest."
+}
