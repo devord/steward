@@ -281,11 +281,20 @@ it". Here it would not.
 
 ### Faces come from the registry
 
-`face.src` must be a `data:` URI and the kit drops anything else, so resolve
-the name and the image from `params.people` — never a fetch, which a scheduled
-run cannot make. When the registry has no entry, **the name is the login**:
-never empty, never omitted. It is what the initial comes from and what hover
-and a screen reader read, so a face without one identifies nobody.
+**The image, and only the image, is the thing never fetched.** `face.src` must
+be a `data:` URI — the kit drops anything else — so it comes from
+`params.people` or not at all. A fetched avatar URL is bytes spent on a row
+that renders an initial regardless, and the host a scheduled run would reach
+for it is one it cannot get to (ADR-0044).
+
+**The name follows the full chain in § Gather**, `gh api users/<login>`
+included. That lookup returns text, which the artifact then carries, so it has
+none of the image's problem — and skipping it means rendering `danielmoraes`
+where the registry-and-API pair would have given `Daniel Moraes`.
+
+Only when every step fails is **the name the login**: never empty, never
+omitted. It is what the initial comes from and what hover and a screen reader
+read, so a face without one identifies nobody.
 
 A row with no face is fine. The kit keeps the column and paints nothing, which
 is the honest render of a `stated` item and keeps every lead on one spine.
