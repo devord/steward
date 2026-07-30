@@ -46,27 +46,43 @@ An artifact MUST:
      (KPI row → line items → sparkline). **Fit the height at every tier**:
      tiles never scroll and the frame clips overflow (ADR-0019), so content
      that doesn't fit must degrade to fewer items plus a visible `+N more`
-     line. Silent cropping is a contract violation. Gate the fit-to-height
-     measurement on `html[data-steward-tile]` (the board's stamp) so the raw
-     page and the full view keep every row; the `widget-artifact` skill
-     carries the reference snippet.
+     line. Silent cropping is a contract violation. The measurement is gated
+     on `html[data-steward-tile]` (the board's stamp) so the raw page and the
+     full view keep every row, and the pass itself is **injected by the
+     board** (ADR-0050) rather than carried by each file — what the artifact
+     owes is trimmable units inside its lists, which the kit emits.
    - **Full view** (`≥ ~900 px` wide): the dashboard can lift any widget into
      a full-screen overlay, the same sandboxed, theme-injected iframe at
      nearly the whole viewport, so the reader sees every row of data. Author
-     for it: the widest tier must read like a page, not a stretched cell. The
-     artifact **fills the full width it is given**. The board controls the
-     widget's width, so the content is never capped; a ledger/table artifact
-     wants its columns to breathe edge to edge. (The one exception is
-     long-form prose: cap the measure on the text block itself, ~`72ch`, not
-     on the whole artifact.) Spend the extra height on the fullest detail
-     level (all line items, full history, the large sparkline) rather than
-     scaling one number up. There is no separate full-screen artifact to
-     author; the one published file must serve the 1×1 glance and the full
-     page through its `@media` queries alone.
+     for it: the widest tier must read like a page, not a stretched cell.
+
+     **Width: content shrinks to fit, and the surplus lands as one trailing
+     right gutter.** No cap, no centring, and no stretching columns to the
+     edge either. This resolves a contradiction that was live in two
+     documents at once — this section used to say the artifact "fills the
+     full width it is given… the content is never capped", while the
+     `widget-artifact` skill said to "cap the content column (~72ch/900px,
+     centered)". Both readings are wrong in the same way: they treat leftover
+     width as something to be spent. Stretching a ledger opens a hole in the
+     middle of every row between the label and its trailing values; capping
+     and centring puts two margins where one gutter reads better and throws
+     away the width a genuine multi-column table wants. A shrink-to-fit
+     `<table>` does the right thing for free, which is what the kit renders
+     (`Shell.tsx` carries no `max-width` and no `margin-inline: auto`). The
+     one measure that _is_ capped is long-form prose, on the text block
+     itself — a paragraph has a readable line length whatever the frame does.
+
+     Spend the extra height on the fullest detail level (all line items, full
+     history, the large sparkline) rather than scaling one number up. There is
+     no separate full-screen artifact to author; one published file serves the
+     1×1 glance and the full page alike.
+
 3. **Use the shared theme tokens**, the gruvbox-dark palette as CSS custom
    properties with `color-scheme: dark`. The canonical values live in the
-   theme registry (`apps/web/app/lib/theme.ts`, the gruvbox-dark entry);
-   the `widget-artifact` skill inlines the same set. Do not invent colors,
+   theme registry (`apps/web/app/lib/theme.ts`, the gruvbox-dark entry) and
+   are _derived_ from it into the kit's stylesheet by
+   `scripts/gen-artifact-tokens.ts`, CI-checked for drift, so there is no
+   second copy to keep identical. Do not invent colors,
    and always paint via `var(--color-*)`: the dashboard appends an override
    of those same custom properties inside the iframe for **every** theme,
    gruvbox-dark included (ADR-0009), so hard-coded hexes won't retheme —
@@ -86,8 +102,9 @@ An artifact MUST:
    **14px**, section labels at **12px** (the absolute floor; nothing
    smaller, no faint sub-12px uppercase eyebrow). Earn hierarchy with weight,
    color, and the palette accents, not by shrinking type. The 1×1 tier leans
-   on its KPI number; detail tiers carry the 14px body. (Type sizes are baked
-   into each published file, so a rescale only lands when the routine reruns.)
+   on its KPI number; detail tiers carry the 14px body. (The kit owns the
+   scale, and the board injects its stylesheet, so a rescale reaches every
+   stamped artifact on the next page load rather than on its next run.)
    The `--font-mono` token leads with `"Geist Mono Variable"`, the chrome's
    mono, but the artifact still loads no webfont itself (rule 1 holds): the
    dashboard injects the face into the iframe at render time, the same way it
@@ -99,18 +116,26 @@ An artifact MUST:
    carries `target="_blank" rel="noopener"`: in-frame navigation is
    sandbox-blocked (ADR-0028), so a bare href goes nowhere on the raw
    page. (On the board the frame retargets forgotten anchors as a
-   backstop.) Style links with the design language's link component:
-   calm ink, never browser blue.
-8. **Compose from the shared design language** (ADR-0027). The
-   `widget-artifact` skill's `design.md` defines the component set (shell,
-   section rules, ledger rows, the queue table, magnitude bars, the stat
-   tier, pills, dots, icons, meters, sparklines, the coupling matrix
-   (ADR-0047), the provenance line, empty states) and the per-tier playbook. Artifacts pick from it rather than
-   inventing per-routine visuals, so a board of widgets from different
-   routines reads as one product; the canonical samples live in
-   `docs/samples/`. These double as the built-in templates' picker previews
-   (ADR-0037), keyed to the template by basename, so a repo template can ship
-   its own preview as a `templates/routines/<id>.sample.html` sibling.
+   backstop.) The kit emits both attributes on every anchor it renders, and
+   styles links calm ink, never browser blue — what the routine supplies is
+   the `href`.
+8. **Be compiled from the shared kit** (ADR-0027, ADR-0050). The design
+   language is not documentation an author imitates; it is
+   `packages/artifact-kit/`, and an artifact is `render.mjs` over a
+   `data.json` the routine emits. The kit owns the shell, the tier system,
+   the type scale, the queue table, the stat and verdict, meters,
+   sparklines, the coupling matrix (ADR-0047), the day grid, rails, the
+   provenance line and empty states; `widget-artifact/kit/CONTRACT.md` is the
+   input shape and `design.md` is what is left to judgment. This is what makes
+   a board of widgets from different routines read as one product — and, since
+   the board injects the current stylesheet into every stamped artifact, what
+   lets a design fix reach a widget published months ago without rerunning it.
+
+   Picker previews (ADR-0037) are keyed to the template by basename:
+   `docs/samples/<id>.html` for a built-in, generated in CI by rendering an
+   archetype fixture, and `templates/routines/<id>.sample.html` for a repo
+   template that ships its own.
+
 9. **Carry a briefing for Claude** (ADR-0043) — a SHOULD, not a MUST. A tile
    is a compressed view: it shows 15 of 61 rows and a bar standing in for 200
    tickets. Embed the fuller story as markdown in an inert
@@ -144,21 +169,23 @@ For the shared shape:
    raw relationship data it needs (`data-author`, directly-requested
    reviewers), never a pre-computed "mine". This is what the raw page, and
    a viewer with no stake, see.
-2. **Read the injected viewer.** On the board the frame sets
+2. **The viewer is read for you.** On the board the frame sets
    `window.__STEWARD_VIEWER__ = { login, name? }` inside the iframe (same
-   render-time injection as the theme and font). Read it in a
-   `DOMContentLoaded` handler, never at parse time, and treat it as
-   possibly `undefined` (the raw page injects nothing).
+   render-time injection as the theme and font), and the board's enhancer
+   reads it against the row data above. A routine opts in by naming the
+   groups it wants (`viewerGroups`, `kit/CONTRACT.md`) — it writes no
+   JavaScript, and there is no per-artifact copy of the read to drift
+   (ADR-0050).
 3. **Enhance progressively, degrade to neutral.** If the viewer participates
-   (authors or is directly requested on a row), re-group into the
-   second-person view ("Needs your review" / "Yours") and relabel; wrap it
-   in `try`/`catch` so a missing viewer, a non-participant, or any failure
-   leaves the neutral render. Never claim a queue is "yours" without a
-   matched viewer.
+   (authors or is directly requested on a row), the render re-groups into the
+   second-person view ("Needs your review" / "Yours"). A missing viewer, a
+   non-participant, or any failure leaves the neutral render standing. A queue
+   is never claimed as "yours" without a matched viewer.
 
 The file stays self-contained (§1): the viewer is injected, not fetched.
-This is the one sanctioned use of JS for _content_ (not fit/responsiveness);
-the `widget-artifact` skill carries the read snippet.
+What remains the routine's own responsibility is every **string** it writes —
+a title, a row detail, a briefing. "Your" baked into text cannot be un-said at
+render time, and no mechanism will catch it for you (the validator warns).
 
 ## Addressing & freshness
 

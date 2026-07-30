@@ -19,7 +19,8 @@ the empty state. **Never hand-write HTML or CSS for a kit-rendered routine.**
 | `slug`           | yes      | the routine's slug; names the artifact in its footer              |
 | `title`          |          | document heading, screen-reader-only; defaults to the slug        |
 | `generatedAt`    | yes      | ISO-8601 UTC                                                      |
-| `stat`           | yes      | the 1×1 glance — see below                                        |
+| `stat`           | one of   | the 1×1 glance as a number — see below                            |
+| `verdict`        | one of   | the 1×1 glance as a judgement — see below                         |
 | `blocks`         |          | ordered content bands                                             |
 | `provenance`     |          | countable facts about what the run looked at                      |
 | `provenanceLink` |          | `{ href, label }` — where the underlying record lives             |
@@ -38,6 +39,37 @@ detail tier up the kit steps it down to a header KPI so the ledger gets the
 height. `tone` is one of `neutral` `attn` `warn` `bad` `good` — conventionally
 `neutral` at zero and `attn` above it.
 
+### `verdict` — the glance, when it is a judgement
+
+```json
+{
+  "level": "attn",
+  "word": "Behind",
+  "gate": "Aug 6 · 7d",
+  "clauses": [
+    { "lead": "ready", "value": "40%", "tail": "against 69% expected" },
+    {
+      "value": "2 in review",
+      "refs": [{ "label": "EXAMPLE-147", "href": "…" }]
+    }
+  ],
+  "caveat": "GitHub cross-check unavailable — Jira only"
+}
+```
+
+**Exactly one of `stat` and `verdict`.** Two hero figures at the glance is two
+glances, and the renderer rejects a document carrying both — or neither, since
+every artifact has to say something at 340×160.
+
+Use `verdict` when the honest headline is a **word** rather than a number: a
+release that is behind, a gate that will not be met. `level` is `good` `attn`
+`bad` `pending` and picks the colour and the glyph; **`word` is yours**,
+because the level is the severity and the word is the vocabulary this routine
+publishes. `gate` is the countdown, pushed right. `clauses` are the fired
+reasons, each with its measured `value` emphasised between an optional `lead`
+and `tail`; `caveat` is the completeness line, for what the run could not
+check.
+
 ### `blocks[]` — a queue
 
 ```json
@@ -54,6 +86,26 @@ height. `tone` is one of `neutral` `attn` `warn` `bad` `good` — conventionally
 
 `count` is where facts that are **not rows** go. A held-back tally belongs on
 the label, never in a sentence underneath.
+
+**`groups` instead of `rows`** puts labelled runs in **one** table sharing one
+set of column widths:
+
+```json
+{
+  "kind": "queue",
+  "groups": [
+    { "id": "blocked", "label": "Blocked", "count": "2", "rows": [] },
+    { "id": "review", "label": "In review", "count": "3", "rows": [] }
+  ]
+}
+```
+
+One block, not three. Three separate queue blocks would give each its own
+column widths, so the `age` column would land in a different place in every
+section and the reader would re-anchor at each heading rather than reading
+down one ledger. A group's `count` survives even when every row under it is
+trimmed, so a short tile still reports that the group exists and how big it
+is — which is why the heading is not a lie at 2×2.
 
 **`note`** is one quiet line under the band, for a fact that qualifies it
 without belonging to it — `plus 15 in own backlog · 42h` under a ledger that
@@ -95,11 +147,47 @@ widget exists for collapses entirely before one housekeeping row goes.
 | `href`     | makes the title a link; opened in a new tab automatically |
 | `detail`   | the evidence line under the title, detail tier and up     |
 | `values[]` | trailing columns: `{ label, value, from, tone, numeric }` |
+| `face`     | `{ name, src?, href? }` — the person this row belongs to  |
+| `data`     | `{ … }` inert relationship facts, for viewer resolution   |
 | `action`   | `{ payload, label }` — a copy button, detail tier and up  |
 | `keep`     | survive the fit trim                                      |
 
 `from` decides the tier a column first appears at: `always` `compact` `detail`
 `page`. Order columns by what earns space soonest.
+
+**`delta`** puts movement on a value — `{ value: "3d", direction: "up" }`
+beside `12d behind`, rendered as `12d behind ▲3d`. `direction` is `up` `down`
+`flat`; it is the arrow's geometry, not a judgement, so a rising bad number and
+a rising good one both point up and the tone says which it is.
+
+### The viewer, and why rows carry relationships
+
+**`face`** needs a `name` even when it has a `src`, because the avatar falls
+back to an initial and a face with no name fails as a missing field rather than
+a blank circle.
+
+**`data`** is the ADR-0039 seam. One published file is read by everyone the
+board is shared with, so "yours" cannot be decided when the artifact is built.
+Stamp the row with the **relationship** — `{ "author": "kelly", "reviewers":
+"devon sam" }` — never a resolved "mine", and opt into the regrouping by naming
+the labels:
+
+```json
+{
+  "kind": "queue",
+  "viewerGroups": {
+    "reviewer": "Needs your review",
+    "author": "Yours",
+    "rest": "Everything else"
+  }
+}
+```
+
+The board resolves the signed-in viewer against those keys at render time. A
+raw page, a signed-out reader, or a viewer who appears in no row keeps the
+neutral render — so the published grouping must be honest on its own, which
+means an objective axis (by state, by repo) rather than a placeholder waiting
+to be replaced.
 
 **`meter`** turns a column into a magnitude bar of that many units, with
 `value` as its printed count. Every bar in the column shares one scale — the
