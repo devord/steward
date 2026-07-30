@@ -191,6 +191,124 @@ describe("Meter columns", () => {
   })
 })
 
+describe("the page-tier rail", () => {
+  const base = {
+    slug: "s",
+    generatedAt: "2026-07-30T09:00:00Z",
+    stat: { value: 1, label: "x" },
+  }
+  const row = { id: "a", title: "a" }
+
+  it("emits no grid classes when nothing asks for the rail", () => {
+    // This is the markup gate, and it is the whole reason the rail is opt-in.
+    // kit.css is injected over artifacts published months earlier, so a
+    // restructure that reached them through the stylesheet would relayout
+    // them with no commit in the data repo to explain it. Layout changes
+    // travel through markup; only fixes travel through CSS.
+    const html = renderArtifact(
+      { ...base, blocks: [{ kind: "queue", rows: [row] }] },
+      "",
+    )
+    expect(html).not.toContain("tier-page:grid")
+  })
+
+  it("carries the live corpus unchanged", () => {
+    // The two artifacts already published against this kit.
+    expect(renderArtifact(fixture, "")).not.toContain("tier-page:grid")
+  })
+
+  it("splits main from rail once a band asks", () => {
+    const html = renderArtifact(
+      {
+        ...base,
+        blocks: [
+          { kind: "queue", label: "Ledger", rows: [row] },
+          { kind: "queue", label: "Aside", rail: true, rows: [row] },
+        ],
+      },
+      "",
+    )
+    expect(html).toContain("tier-page:grid")
+    // Reading order below the page tier: main first, rail after.
+    expect(html.indexOf("Ledger")).toBeLessThan(html.indexOf("Aside"))
+  })
+})
+
+describe("a band's note", () => {
+  const doc: ArtifactDoc = {
+    slug: "s",
+    generatedAt: "2026-07-30T09:00:00Z",
+    stat: { value: 1, label: "x" },
+    blocks: [
+      {
+        kind: "queue",
+        label: "Ahead of a new request",
+        note: "plus 15 in own backlog · 42h",
+        rows: [{ id: "a", title: "High" }],
+      },
+    ],
+  }
+
+  it("renders under the band", () => {
+    expect(renderArtifact(doc, "")).toContain("plus 15 in own backlog · 42h")
+  })
+
+  it("owns a fit section so trimming it cannot collapse the ledger", () => {
+    // owner() walks up to the nearest [data-fit-section]. Without one of its
+    // own, the note's list would resolve to the band above and hiding one
+    // quiet line would take the whole ledger with it.
+    const html = renderArtifact(doc, "")
+    const note = html.slice(
+      html.indexOf("plus 15") - 300,
+      html.indexOf("plus 15"),
+    )
+    expect(note).toContain("data-fit-section")
+    expect(note).toContain("data-fit-list")
+  })
+})
+
+describe("prose bands", () => {
+  it("renders page-only, out of the fit pass's reach", () => {
+    // The fit pass runs only on a tile. Paragraphs are not trimmable units,
+    // and a dive cut to "+1 more" is a truncated argument.
+    const html = renderArtifact(
+      {
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [
+          {
+            kind: "prose",
+            label: "Dives",
+            items: [{ id: "d1", title: "Hydrogen", body: "One.\n\nTwo." }],
+          },
+        ],
+      },
+      "",
+    )
+    expect(html).toContain("page-only:flex")
+    expect(html).toContain("Hydrogen")
+    // Blank lines become separate paragraphs rather than one run-on block.
+    expect(html).toContain("<p")
+    expect((html.match(/<p class/g) ?? []).length).toBeGreaterThanOrEqual(2)
+  })
+
+  it("draws nothing for a band with no items", () => {
+    const html = renderArtifact(
+      {
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [{ kind: "prose", label: "Dives", items: [] }],
+        empty: { headline: "Nothing yet" },
+      },
+      "",
+    )
+    expect(html).not.toContain("Dives")
+    expect(html).toContain("Nothing yet")
+  })
+})
+
 describe("the context block", () => {
   it("is carried inert, so it costs no layout and no request", () => {
     expect(html).toContain('<script type="text/markdown" id="steward-context">')

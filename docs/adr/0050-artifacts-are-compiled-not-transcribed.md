@@ -156,6 +156,27 @@ Two guards on the parts of this that are known to bite:
   now. That is the honest shape of the win: not retroactive, but permanent
   from each migration onward.
 
+  **A fix travels through CSS; a restructure travels through markup.** The
+  gate above is on the _presence_ of the stamp, not its version, so every
+  kit-rendered artifact picks up the current `kit.css` on next page load —
+  including ones published months earlier. That is the promise and the hazard
+  in one mechanism. The rule that keeps them apart: changing what something
+  _looks like_ is additive and may reach the published corpus through the
+  stylesheet, but changing what the document _is_ has to arrive as markup the
+  renderer emits, so only a re-rendered artifact adopts it.
+
+  The page-tier rail is the first case. It could have been a rule matching
+  every artifact's band wrapper — and would then have relaid out
+  `corza-gaps` and `corza-gated` with no commit in the data repo to explain
+  it, which is precisely the failure this ADR set out to stop importing. It
+  ships instead as a wrapper the renderer emits only when a band asks for the
+  rail, so an artifact that never asked carries none of the classes and
+  cannot be moved by them.
+
+  This is a discipline, not a mechanism, and it holds only while changes stay
+  honestly classified. The mitigation below — visual regression over the live
+  corpus — is what would catch a misclassification, and it is still unbuilt.
+
 - **`design.md` shrinks from 2,019 lines to roughly 300** — the domain
   vocabulary only. Layout, spacing, type scale and tiers move into the kit,
   where they are code.

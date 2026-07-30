@@ -68,7 +68,25 @@ export function validateDoc(doc: unknown): string[] {
       doc.blocks.forEach((b, i) => {
         const at = `blocks[${i}]`
         if (!isObj(b)) return void errors.push(`${at} must be an object`)
-        if (b.kind !== "queue") errors.push(`${at}.kind must be "queue"`)
+        if (b.note !== undefined) str(b.note, `${at}.note`, false)
+        if (b.rail !== undefined && typeof b.rail !== "boolean")
+          errors.push(`${at}.rail must be a boolean`)
+
+        if (b.kind === "prose") {
+          if (!Array.isArray(b.items))
+            return void errors.push(`${at}.items must be an array`)
+          return void b.items.forEach((it, j) => {
+            const iat = `${at}.items[${j}]`
+            if (!isObj(it)) return void errors.push(`${iat} must be an object`)
+            str(it.id, `${iat}.id`)
+            str(it.title, `${iat}.title`, false)
+            str(it.body, `${iat}.body`)
+            str(it.meta, `${iat}.meta`, false)
+          })
+        }
+
+        if (b.kind !== "queue")
+          errors.push(`${at}.kind must be "queue" or "prose"`)
         if (!Array.isArray(b.rows))
           return void errors.push(`${at}.rows must be an array`)
         b.rows.forEach((r, j) => {
