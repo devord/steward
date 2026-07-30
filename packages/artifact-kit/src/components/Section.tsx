@@ -1,5 +1,7 @@
 import type { ReactNode } from "react"
 
+import { CopyAction } from "./CopyAction.tsx"
+
 /**
  * A labelled band with a hairline rule.
  *
@@ -14,10 +16,19 @@ import type { ReactNode } from "react"
 export function Section({
   label,
   count,
+  action,
   children,
 }: {
   label?: string
   count?: string
+  /**
+   * A band-level copy — the whole set as one payload, where each row also
+   * offers its own. `ticket-gaps` is the case: eighteen recommendations, and
+   * the reader usually wants every prompt at once rather than eighteen
+   * clicks. Detail tier and up, like the per-row action, since it needs the
+   * width and a glance tier is not a working surface.
+   */
+  action?: { payload: string; label?: string }
   children: ReactNode
 }) {
   return (
@@ -33,6 +44,11 @@ export function Section({
             {count ? <span> · {count}</span> : null}
           </h2>
           <hr className="border-border-dim m-0 flex-1 border-t" />
+          {action ? (
+            <span className="hidden tier-detail:inline-flex">
+              <CopyAction {...action} />
+            </span>
+          ) : null}
         </div>
       ) : null}
       {children}

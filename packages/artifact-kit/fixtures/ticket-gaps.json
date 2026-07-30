@@ -90,7 +90,11 @@
             "label": "copy"
           }
         }
-      ]
+      ],
+      "action": {
+        "payload": "1. /eng:triage Enforce cart attribution on the checkout extensibility path\n\nThe spec at analytics.md §Attribution requires every checkout event to carry a cart token; app/checkout/events.ts currently emits none (gap). Acceptance: every checkout event carries a cart token, asserted in app/checkout/events.test.ts.\nPossibly related: CORZA-147\n\n2. /eng:triage Reconcile B2B price list import cadence with the spec\n\nb2b.md §Imports says hourly; jobs/price-import.ts is scheduled daily (drift). Neither side is obviously wrong — decide which is authoritative, then change the other.\nPossibly related: CORZA-412\n\n3. /eng:triage Define PLP facet counts for empty collections\n\nstorefront.md §Faceting defines counts for populated collections only; app/plp/facets.ts returns null and the UI renders a blank (gap). Acceptance: empty collections render a zero count.",
+        "label": "copy all"
+      }
     },
     {
       "kind": "queue",

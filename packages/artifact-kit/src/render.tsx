@@ -18,6 +18,8 @@ export type Block = {
   showHeader?: boolean
   /** Yield before every other block — for a bookkeeping band above content. */
   trimFirst?: boolean
+  /** A band-level copy: the whole set as one payload. */
+  action?: { payload: string; label?: string }
 }
 
 /**
@@ -70,7 +72,12 @@ function Document({ doc }: { doc: ArtifactDoc }) {
           blocks
             .filter((b) => b.rows.length > 0)
             .map((b, i) => (
-              <Section key={b.label ?? i} label={b.label} count={b.count}>
+              <Section
+                key={b.label ?? i}
+                label={b.label}
+                count={b.count}
+                action={b.action}
+              >
                 <QueueTable
                   rows={b.rows}
                   showHeader={b.showHeader}
