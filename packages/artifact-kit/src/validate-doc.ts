@@ -49,10 +49,16 @@ export function validateDoc(doc: unknown): string[] {
       errors.push(`${at} must be one of ${TONES.join(", ")}`)
   }
 
-  if (!isObj(doc.stat)) {
-    // Required because every artifact has to say something at 340×160.
-    errors.push("stat is required — it is what the 1×1 glance renders")
-  } else {
+  // One of the two is required, because every artifact has to say something at
+  // 340×160 — and only one, because two hero figures at the glance is two
+  // glances.
+  if (!isObj(doc.stat) && !isObj(doc.verdict)) {
+    errors.push(
+      "stat or verdict is required — it is what the 1×1 glance renders",
+    )
+  } else if (isObj(doc.stat) && isObj(doc.verdict)) {
+    errors.push("stat and verdict are alternatives — set one, not both")
+  } else if (isObj(doc.stat)) {
     if (
       typeof doc.stat.value !== "number" &&
       typeof doc.stat.value !== "string"
@@ -60,6 +66,31 @@ export function validateDoc(doc: unknown): string[] {
       errors.push("stat.value must be a number or a string")
     str(doc.stat.label, "stat.label")
     tone(doc.stat.tone, "stat.tone")
+  } else if (isObj(doc.verdict)) {
+    const LEVELS = ["good", "attn", "bad", "pending"]
+    if (
+      typeof doc.verdict.level !== "string" ||
+      !LEVELS.includes(doc.verdict.level)
+    )
+      errors.push(`verdict.level must be one of ${LEVELS.join(", ")}`)
+    // The word is not derived from the level: the level picks the colour and
+    // the glyph, the routine picks the vocabulary it publishes.
+    str(doc.verdict.word, "verdict.word")
+    str(doc.verdict.gate, "verdict.gate", false)
+    str(doc.verdict.caveat, "verdict.caveat", false)
+    str(doc.verdict.note, "verdict.note", false)
+    if (doc.verdict.clauses !== undefined) {
+      if (!Array.isArray(doc.verdict.clauses))
+        errors.push("verdict.clauses must be an array")
+      else
+        doc.verdict.clauses.forEach((c, i) => {
+          const cat = `verdict.clauses[${i}]`
+          if (!isObj(c)) return void errors.push(`${cat} must be an object`)
+          str(c.value, `${cat}.value`)
+          str(c.lead, `${cat}.lead`, false)
+          str(c.tail, `${cat}.tail`, false)
+        })
+    }
   }
 
   if (doc.blocks !== undefined) {

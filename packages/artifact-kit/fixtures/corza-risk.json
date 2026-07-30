@@ -1,0 +1,279 @@
+{
+  "slug": "corza-risk",
+  "title": "Corza delivery risk — team read",
+  "generatedAt": "2026-07-30T09:00:00Z",
+  "verdict": {
+    "level": "attn",
+    "word": "AMBER",
+    "gate": "Aug 6 gate · 7 days out",
+    "clauses": [
+      {
+        "lead": "Pace gap",
+        "value": "12d",
+        "tail": "on the Aug 6 gate"
+      },
+      {
+        "value": "11 asks",
+        "tail": "due ≤5d"
+      },
+      {
+        "lead": "oldest ask",
+        "value": "104d",
+        "refs": [
+          {
+            "label": "CORZA-4",
+            "href": "https://formfactory.atlassian.net/browse/CORZA-4"
+          }
+        ]
+      }
+    ],
+    "caveat": "Not a full read — R2 launch exposure has no input by design, so RED is reachable only through R3.",
+    "note": "overridden AMBER by John Costa, Jul 22 — \"CORZA-159 has a workaround\" (computed RED · expires Jul 29)"
+  },
+  "blocks": [
+    {
+      "kind": "queue",
+      "label": "Drivers",
+      "count": "rule-set B · 3 of 7 fired",
+      "showHeader": true,
+      "rows": [
+        {
+          "id": "a1",
+          "state": {
+            "label": "fired",
+            "tone": "neutral"
+          },
+          "title": "A1 · Gate pace gap",
+          "detail": "Slip against the Aug 6 gate, from corza-progress. Threshold: any positive gap.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "12d behind",
+              "delta": {
+                "value": "3d",
+                "direction": "up"
+              }
+            },
+            {
+              "label": "threshold",
+              "value": "> 0d",
+              "from": "detail"
+            }
+          ]
+        },
+        {
+          "id": "a2",
+          "state": {
+            "label": "fired",
+            "tone": "neutral"
+          },
+          "title": "A2 · Asks inside the proximity window",
+          "detail": "Open asks due within 5 days, on the earlier of needed-by and drop-dead.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "11 asks",
+              "delta": {
+                "value": "2",
+                "direction": "up"
+              }
+            },
+            {
+              "label": "threshold",
+              "value": "≥ 1",
+              "from": "detail"
+            }
+          ]
+        },
+        {
+          "id": "a4",
+          "state": {
+            "label": "fired",
+            "tone": "neutral"
+          },
+          "title": "A4 · Oldest open ask",
+          "detail": "Age off the anchor ladder. CORZA-4 has been open since 2026-04-17.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "104d",
+              "delta": {
+                "value": "1d",
+                "direction": "up"
+              }
+            },
+            {
+              "label": "threshold",
+              "value": "> 7d",
+              "from": "detail"
+            }
+          ]
+        },
+        {
+          "id": "a3",
+          "state": {
+            "label": "clear",
+            "tone": "neutral"
+          },
+          "title": "A3 · Breaches past drop-dead",
+          "detail": "No open ask is past its drop-dead date this run.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "0",
+              "delta": {
+                "value": "3",
+                "direction": "down"
+              }
+            },
+            {
+              "label": "threshold",
+              "value": "≥ 1",
+              "from": "detail"
+            }
+          ]
+        },
+        {
+          "id": "r3",
+          "state": {
+            "label": "clear",
+            "tone": "neutral"
+          },
+          "title": "R3 · Breaches gating the next milestone",
+          "detail": "The only RED condition with live input.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "0",
+              "from": "always"
+            },
+            {
+              "label": "threshold",
+              "value": "≥ 1",
+              "from": "detail"
+            }
+          ]
+        },
+        {
+          "id": "r1",
+          "state": {
+            "label": "no input",
+            "tone": "info"
+          },
+          "title": "R1 · Blocking ask past drop-dead",
+          "detail": "Needs a per-ask Blocking? marker no source carries. Structurally untestable, not merely unmet.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "—",
+              "from": "always"
+            },
+            {
+              "label": "threshold",
+              "value": "≥ 1",
+              "from": "detail"
+            }
+          ]
+        },
+        {
+          "id": "r2",
+          "state": {
+            "label": "no input",
+            "tone": "info"
+          },
+          "title": "R2 · Launch pace exposure",
+          "detail": "corza-progress declines to publish a launch pace pair, so this cannot be evaluated without deriving the forecast it refused. By design, not a bad run.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "—",
+              "from": "always"
+            },
+            {
+              "label": "threshold",
+              "value": "required > actual",
+              "from": "detail"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "queue",
+      "label": "Legs",
+      "rail": true,
+      "showHeader": false,
+      "note": "both legs read this morning",
+      "rows": [
+        {
+          "id": "pace",
+          "state": {
+            "label": "fresh",
+            "tone": "good"
+          },
+          "title": "corza-progress",
+          "values": [
+            {
+              "label": "as of",
+              "value": "08:05Z"
+            }
+          ]
+        },
+        {
+          "id": "breach",
+          "state": {
+            "label": "fresh",
+            "tone": "good"
+          },
+          "title": "corza-gated",
+          "values": [
+            {
+              "label": "as of",
+              "value": "08:12Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "queue",
+      "label": "What this banner cannot reach",
+      "rail": true,
+      "showHeader": false,
+      "rows": [
+        {
+          "id": "n1",
+          "title": "Two of three RED conditions have no live input",
+          "values": [
+            {
+              "label": "since",
+              "value": "R1, R2"
+            }
+          ]
+        },
+        {
+          "id": "n2",
+          "title": "GREEN needs the oldest ask under 7d against a backlog measured in weeks",
+          "values": [
+            {
+              "label": "reach",
+              "value": "narrow"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "provenance": [
+    "2 legs read",
+    "7 conditions",
+    "3 fired",
+    "2 no input",
+    "override active until Jul 29"
+  ],
+  "provenanceLink": {
+    "href": "https://formfactory.atlassian.net/browse/CORZA",
+    "label": "CORZA"
+  },
+  "context": "## Why AMBER and not RED\n\nThe computed colour this run was **RED**, on A3 — three asks past drop-dead. John Costa overrode it to AMBER on Jul 22 on the grounds that CORZA-159 has a workaround in place. The override expires Jul 29 and is shown with the computed colour beside it, always: \"machine says red, John says amber, because Y\" is the most useful sentence a weekly risk read produces, and hiding either half breaks it.\n\n## The honest dynamic range\n\nTwo of the three RED conditions cannot fire:\n\n- **R1** needs a per-ask `Blocking?` marker. No source carries one — not the register, not Jira. It is structurally untestable, not merely unmet this week.\n- **R2** tests `launch.required > launch.actual`. `corza-progress` refuses to publish that pair, in its own words: *\"extrapolating a launch rate from a team mid-ramp is exactly the forecast the next section refuses.\"* This banner must not resolve that by deriving the pace itself — deriving nothing is the whole basis of its independence.\n\nSo RED is reachable only through R3. Resolving either is an ADR-shaped decision, not a template edit.\n\n## Trend\n\nCompared against Jul 29, the last run on a previous calendar day — never simply the previous commit, because a re-run an hour later is a correction rather than a day of progress.\n\n## Ask me about\n\nWhether the override should be renewed on Jul 29 or allowed to lapse to the computed colour; what it would take to give R1 a real input; and whether rule-set B should shrink to the conditions that can actually fire."
+}

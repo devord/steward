@@ -6,6 +6,7 @@ import { ProvenanceLine } from "./components/ProvenanceLine.tsx"
 import { QueueTable, type QueueRow } from "./components/QueueTable.tsx"
 import { Section } from "./components/Section.tsx"
 import { StatTier } from "./components/StatTier.tsx"
+import { type Verdict, VerdictBand } from "./components/VerdictBand.tsx"
 import { Shell } from "./Shell.tsx"
 import type { Tone } from "./ui/tone.ts"
 
@@ -63,13 +64,19 @@ export interface ArtifactDoc {
   title?: string
   /** ISO-8601 UTC. */
   generatedAt: string
-  /** The 1×1 glance. Required: every artifact has to say something at 340×160. */
-  stat: {
+  /**
+   * The 1×1 glance. Every artifact has to say something at 340×160 — so one of
+   * `stat` or `verdict` is required, and they are alternatives rather than
+   * companions: two hero figures at the glance is two glances.
+   */
+  stat?: {
     value: number | string
     label: string
     tone?: Tone
     note?: string
   }
+  /** The glance as a one-word status read instead of a figure. */
+  verdict?: Verdict
   blocks?: Block[]
   provenance?: string[]
   /** Where the underlying record lives — the sheet, the board, the register. */
@@ -121,7 +128,11 @@ function Document({ doc }: { doc: ArtifactDoc }) {
     ))
   return (
     <>
-      <StatTier {...doc.stat} />
+      {doc.verdict ? (
+        <VerdictBand verdict={doc.verdict} />
+      ) : doc.stat ? (
+        <StatTier {...doc.stat} />
+      ) : null}
       {/* The glance tier is the stat and nothing else — at 340×160 there is no
           room for a ledger under it, and a tier is a viewport rather than a
           crop. Everything below appears once the tile grows in either
