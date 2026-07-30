@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest"
 
 import { escapeContextBlock, footerTimestamp } from "./Shell.tsx"
 import { type ArtifactDoc, renderArtifact } from "./render.tsx"
+import type { Verdict } from "./components/VerdictBand.tsx"
+import { validateDoc } from "./validate-doc.ts"
 
 const fixture: ArtifactDoc = JSON.parse(
   readFileSync(
@@ -353,6 +355,136 @@ describe("prose bands", () => {
     )
     expect(html).not.toContain("Dives")
     expect(html).toContain("Nothing yet")
+  })
+})
+
+describe("the verdict band", () => {
+  const base = { slug: "s", generatedAt: "2026-07-30T09:00:00Z" }
+  const verdict = (over: Partial<Verdict> = {}) => {
+    const doc: ArtifactDoc = {
+      ...base,
+      verdict: { level: "attn", word: "AMBER", ...over },
+    }
+    return renderArtifact(doc, "")
+  }
+
+  it("never ships colour alone", () => {
+    // Three redundant encodings, picked together by the level so no caller can
+    // separate them: the state has to survive colour-vision deficiency,
+    // grayscale and forced-colors, and two of the three carry no colour.
+    const levels: [Verdict["level"], string][] = [
+      ["good", "bg-green"],
+      ["attn", "bg-orange"],
+      ["bad", "bg-red"],
+      ["pending", "bg-ink-dim"],
+    ]
+    for (const [level, dot] of levels) {
+      const html = verdict({ level, word: "X" })
+      expect(html, level).toContain(dot) // 1. the dot
+      expect(html, level).toContain(">X<") // 2. the word
+      expect(html, level).toContain("<svg") // 3. the glyph
+    }
+  })
+
+  it("bolds the measured figure and nothing else", () => {
+    const html = verdict({
+      clauses: [{ lead: "Pace gap", value: "12d", tail: "on the Aug 6 gate" }],
+    })
+    expect(html).toContain(
+      '<strong class="text-ink font-semibold">12d</strong>',
+    )
+    expect(html).not.toContain(
+      '<strong class="text-ink font-semibold">Pace gap',
+    )
+  })
+
+  it("keeps the caveat out of the verdict's colour", () => {
+    // It qualifies the verdict rather than restating it, and the tile spends
+    // its accent on the word.
+    const html = verdict({ caveat: "Not a full read — R2 has no input." })
+    // The <p> that carries it, not a fixed-width slice — the icon's own markup
+    // sits between the tag and the text and swallowed the window.
+    const at = html.indexOf("Not a full read")
+    const cls =
+      /class="([^"]*)"/.exec(
+        html.slice(html.lastIndexOf("<p ", at), at),
+      )?.[1] ?? ""
+    expect(cls).toContain("text-ink")
+    expect(cls).not.toContain("text-orange")
+  })
+
+  it("gives the band trimmable units so a short tile cannot crop it", () => {
+    // Found from the render: with no [data-fit-item] anywhere, the fit pass had
+    // nothing to shed and a 2×1 clipped the override line mid-sentence.
+    const html = verdict({
+      clauses: [{ value: "12d" }],
+      note: "overridden by John Costa",
+    })
+    expect((html.match(/data-fit-item/g) ?? []).length).toBeGreaterThanOrEqual(
+      2,
+    )
+  })
+
+  it("trims the whole reason line, never half of it", () => {
+    // A clause list cut mid-way still reads as complete, which is worse than
+    // showing none of it.
+    const html = verdict({
+      clauses: [{ value: "12d" }, { value: "11 asks" }, { value: "104d" }],
+    })
+    const p = html.slice(html.indexOf("data-fit-list"), html.indexOf("104d"))
+    expect((p.match(/data-fit-item/g) ?? []).length).toBe(1)
+  })
+
+  it("refuses a doc that sets both stat and verdict", () => {
+    // Two hero figures at the glance is two glances.
+    expect(
+      validateDoc({
+        ...base,
+        stat: { value: 1, label: "x" },
+        verdict: { level: "attn", word: "AMBER" },
+      }),
+    ).toContain("stat and verdict are alternatives — set one, not both")
+  })
+
+  it("refuses a doc with neither", () => {
+    expect(validateDoc(base).join(" ")).toContain("stat or verdict is required")
+  })
+})
+
+describe("value deltas", () => {
+  it("marks direction and stays out of the accent budget", () => {
+    const html = renderArtifact(
+      {
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [
+          {
+            kind: "queue",
+            rows: [
+              {
+                id: "a",
+                title: "A1",
+                values: [
+                  {
+                    label: "measured",
+                    value: "12d behind",
+                    delta: { value: "3d", direction: "up" },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      "",
+    )
+    expect(html).toContain("▲")
+    expect(html).toContain("3d")
+    // Ink-dim whichever way it points: `▼` is good news on a slip and bad on a
+    // burn-up, so a tone here would have to be per-column.
+    const d = html.slice(html.indexOf("▲") - 120, html.indexOf("▲"))
+    expect(d).toContain("text-ink-dim")
   })
 })
 

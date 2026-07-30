@@ -13,6 +13,9 @@ export type ColumnTier = "always" | "compact" | "detail" | "page"
  * produces a class that exists in the markup and in no stylesheet — the column
  * silently never appears. Every variant used here has to be written out.
  */
+/** Direction glyphs. Text, not icons — they sit inline in a tabular figure. */
+const DELTA_MARK = { up: "▲", down: "▼", flat: "·" } as const
+
 const COLUMN_TIER: Record<ColumnTier, string> = {
   always: "table-cell",
   compact: "hidden beyond-glance:table-cell",
@@ -37,6 +40,16 @@ export interface QueueValue {
    * columns and gives every row a cell, so a bar needs no separate structure.
    */
   meter?: number
+  /**
+   * Movement since the previous run — `12d behind ▲3d`.
+   *
+   * Stays ink-dim whichever way it points. A worsening delta is tempting to
+   * paint red, but a tile spends its accent on one thing, and on a status
+   * artifact that thing is the verdict. The arrow already carries direction,
+   * and direction is not the same as badness: `▼` on a slip is good news and
+   * on a burn-up is bad, so a tone here would have to be per-column anyway.
+   */
+  delta?: { value: string; direction: "up" | "down" | "flat" }
   /**
    * Hover text plus an sr-only phrase, for a qualifier the narrow tiers have
    * no column for. A number whose basis is invisible is an unlabelled mixture
@@ -249,6 +262,12 @@ function RowPair({
               ) : (
                 (v?.value ?? "")
               )}
+              {v?.delta ? (
+                <span className="text-ink-dim ml-1">
+                  {DELTA_MARK[v.delta.direction]}
+                  {v.delta.value}
+                </span>
+              ) : null}
               {v?.title ? <span className="sr-only"> ({v.title})</span> : null}
             </td>
           )
