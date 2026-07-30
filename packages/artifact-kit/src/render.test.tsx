@@ -1026,6 +1026,90 @@ describe("progress rails", () => {
   })
 })
 
+describe("the day grid", () => {
+  const day = (blocks: object[], now?: string): ArtifactDoc =>
+    JSON.parse(
+      JSON.stringify({
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [
+          {
+            kind: "day",
+            label: "Today",
+            spec: { from: "08:00", to: "18:00", now, blocks },
+          },
+        ],
+      }),
+    )
+  const block = (id: string, start: string, end: string, type = "deep") => ({
+    id,
+    start,
+    end,
+    type,
+    label: id,
+  })
+
+  it("positions blocks by their real times, so a gap renders as a gap", () => {
+    // Stacking them in order would close an unplanned hour up, and an
+    // unplanned hour should look unplanned.
+    const html = renderArtifact(
+      day([block("a", "08:00", "09:00"), block("b", "11:00", "12:00")]),
+      "",
+    )
+    // 08:00 is the day start; 11:00 is 3h into a 10h day.
+    expect(html).toContain("top:0%")
+    expect(html).toContain("top:30%")
+  })
+
+  it("recedes a past block rather than dropping it", () => {
+    // A morning that is gone is still why the afternoon looks as it does.
+    const html = renderArtifact(
+      day(
+        [block("done", "08:00", "09:00"), block("next", "15:00", "16:00")],
+        "13:00",
+      ),
+      "",
+    )
+    expect(html).toContain("opacity-45")
+    expect(html).toContain(">done<")
+  })
+
+  it("draws the now line only inside the plotted day", () => {
+    expect(
+      renderArtifact(day([block("a", "08:00", "09:00")], "13:00"), ""),
+    ).toContain('aria-label="Now: 13:00"')
+    // A plan for another day carries no line rather than one pinned to an edge.
+    expect(
+      renderArtifact(day([block("a", "08:00", "09:00")], "21:00"), ""),
+    ).not.toContain("Now: 21:00")
+    expect(
+      renderArtifact(day([block("a", "08:00", "09:00")]), ""),
+    ).not.toContain("Now:")
+  })
+
+  it("says the type and the hours in words", () => {
+    // The block's colour is the fast read; a screen reader gets neither that
+    // nor the geometry.
+    expect(renderArtifact(day([block("a", "09:00", "10:30")]), "")).toContain(
+      "(deep, 09:00–10:30)",
+    )
+  })
+
+  it("is page-only without asking", () => {
+    expect(renderArtifact(day([block("a", "08:00", "09:00")]), "")).toContain(
+      "hidden page-only:flex",
+    )
+  })
+
+  it("rejects a time it cannot parse", () => {
+    // An unparseable time positions every block at the top of the day rather
+    // than failing, which reads as a plan that starts all at once.
+    const errs = validateDoc(day([{ ...block("a", "9am", "10:30") }]))
+    expect(errs.join(" ")).toContain("start must be HH:MM")
+  })
+})
+
 describe("the context block", () => {
   it("is carried inert, so it costs no layout and no request", () => {
     expect(html).toContain('<script type="text/markdown" id="steward-context">')

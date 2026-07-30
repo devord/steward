@@ -117,6 +117,40 @@ export function validateDoc(doc: unknown): string[] {
         if (b.pageOnly !== undefined && typeof b.pageOnly !== "boolean")
           errors.push(`${at}.pageOnly must be a boolean`)
 
+        if (b.kind === "day") {
+          if (!isObj(b.spec))
+            return void errors.push(`${at}.spec must be an object`)
+          const sp = b.spec
+          // `HH:MM` and nothing else: the grid derives its whole scale from
+          // these, and a value it cannot parse positions every block at the
+          // top of the day rather than failing.
+          const hhmm = (v: unknown, at2: string, req = true) => {
+            if (v === undefined) {
+              if (req) errors.push(`${at2} is required`)
+              return
+            }
+            if (typeof v !== "string" || !/^\d{1,2}:\d{2}$/.test(v))
+              errors.push(`${at2} must be HH:MM`)
+          }
+          hhmm(sp.from, `${at}.spec.from`)
+          hhmm(sp.to, `${at}.spec.to`)
+          hhmm(sp.now, `${at}.spec.now`, false)
+          if (!Array.isArray(sp.blocks))
+            return void errors.push(`${at}.spec.blocks must be an array`)
+          const TYPES = ["deep", "meeting", "shallow", "personal", "free"]
+          return void sp.blocks.forEach((k, j) => {
+            const kat = `${at}.spec.blocks[${j}]`
+            if (!isObj(k)) return void errors.push(`${kat} must be an object`)
+            str(k.id, `${kat}.id`)
+            str(k.label, `${kat}.label`)
+            str(k.note, `${kat}.note`, false)
+            hhmm(k.start, `${kat}.start`)
+            hhmm(k.end, `${kat}.end`)
+            if (typeof k.type !== "string" || !TYPES.includes(k.type))
+              errors.push(`${kat}.type must be one of ${TYPES.join(", ")}`)
+          })
+        }
+
         if (b.kind === "progress") {
           if (!Array.isArray(b.rails))
             return void errors.push(`${at}.rails must be an array`)
@@ -201,7 +235,7 @@ export function validateDoc(doc: unknown): string[] {
 
         if (b.kind !== "queue")
           errors.push(
-            `${at}.kind must be "queue", "prose", "series" or "progress"`,
+            `${at}.kind must be "queue", "prose", "series", "progress" or "day"`,
           )
 
         // A queue carries either loose rows or labelled groups. Both absent is

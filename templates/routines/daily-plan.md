@@ -58,8 +58,8 @@ environment, skipping silently anything that isn't:
 
 - **Top priorities**: at most 3, one line each. A short imperative
   **lead** (what to do, ≤ ~6 words) followed by the ticket key and the
-  evidence as **detail** (the design language's lead + detail row), never
-  one undifferentiated sentence. Derive from instructions + gathered data;
+  evidence as **detail** — a row's `title` and its `detail`, never one
+  undifferentiated sentence. Derive from instructions + gathered data;
   when in doubt, prefer what the instructions emphasize.
 - **Time blocks**: a full time-block plan (Cal Newport style), where every
   30-minute slot from day start to shutdown has a job, snapped to
@@ -88,35 +88,53 @@ environment, skipping silently anything that isn't:
      block (clear queues, plan tomorrow).
   5. Whatever remains is a **free** block: honest slack, labeled with
      what it buffers.
-     Block types are deep / meeting / shallow / personal / free. The
-     `widget-artifact` design language defines their tones and the three
-     renderings (ledger, day strip, time grid).
+     Block types are deep / meeting / shallow / personal / free, and the
+     kit owns what each looks like — say what a block is _for_ and it
+     follows.
 - **Day totals**: sum deep / meetings / shallow / free hours, and the
   hours per project from the work blocks' `Type — Project: task` labels.
   Those are the two process metrics the totals lines render (by type, by
   project).
 - **Carry-overs**: unfinished items from the previous plan, max 5.
 
-## Author the artifact
+## Emit
 
-Follow the `widget-artifact` skill for the HTML contract (self-contained,
-gruvbox tokens, breakpoints, generated-at meta + footer). Size behavior:
+Write `data.json` and render it with the kit — the shape is documented once in
+`$STEWARD/.claude/skills/widget-artifact/kit/CONTRACT.md`; read it rather than
+inferring from this description. This routine's mapping onto it:
 
-- **1×1**: count of priorities done/total plus the single top priority.
-- **2×1 / 1×2**: the three priorities as a list.
-- **2×2 and larger**: priorities, then the day (strip + block ledger),
-  then carry-overs; wide tiles add the totals lines (by type, by
-  project).
-- **Tall wide tiles (~4 rows and up), raw page, full view**: the
-  30-minute time grid with the live now line, the plan its owner reads
-  the day from, spanning the full day range, with its right-side
-  details column carrying each block's `goal:` note beside the block
-  (design language: the box keeps the concise label, the column keeps
-  the detail). Past blocks always stay visible (they recede, never
-  disappear).
+- **`stat`** — priorities done over planned (`2 of 3`), `label` `"priorities
+done"`, `note` what is left and the day's shape (`3 deep blocks left · 4.5h
+deep · 2h meetings`). At 340×160 that is the whole plan, and it is the one
+  number the owner checks against the day.
+- **A `queue` block, "Top priorities"** — at most 3. `state` is `done` / `now`
+  / `next`, `title` the imperative lead (≤ ~6 words), `detail` the ticket key
+  and the evidence. Never one undifferentiated sentence.
+- **A `day` block** — `from` and `to` are the day's own span, `now` the run
+  time, and one entry per 30-minute-snapped block with its `type`, its `label`
+  (`Type — Project: task`) and its `goal:` as the `note`. The kit places blocks
+  by their real times, recedes the ones already past, draws the now line, and
+  puts the note beside the block where there is width. **Do not lay out the
+  grid** — that is the whole of what it does.
+- **A `rail: true` `queue` block, "Carry-overs"** — at most 5, with how long
+  each has been waiting.
+- **`provenance`** — the day's totals, decomposed: hours planned, and the
+  by-type and by-project sums the work blocks' labels produce. Those are the
+  two process metrics, and the provenance line is where a countable fact goes.
+- **`empty`** — nothing reachable → a designed state naming what could not be
+  read, with the plan still derived from the instructions alone where they
+  carry enough. A plan with no live data is a real answer; a blank tile is not.
 
-Degrade gracefully: with no reachable data sources, still publish a plan
-derived from the instructions alone, with an explicit "no live data" note.
+Do not hand-write HTML or CSS. Do not size, trim or theme anything.
+
+**The grid is page-only, and that is the kit's call, not a tier this template
+picks.** A tile cannot show the shape of a day — every slot has a job, so the
+grid needs the height to say so — and it spends its rows better on the
+priorities the day is built around. Past blocks recede rather than
+disappearing, on the page: a morning that is gone is still why the afternoon
+looks the way it does.
+
+## The context block
 
 Carry a context block (`widget-artifact` § The context block): the full
 carry-over list rather than the capped five, what each priority is waiting
