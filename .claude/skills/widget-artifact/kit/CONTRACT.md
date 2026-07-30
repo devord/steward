@@ -73,6 +73,13 @@ a fair use of it. Two columns need two columns' worth of content, though: if
 every main band comes back empty, the rail **is** the content and renders as one
 stack rather than beside an empty track.
 
+**`pageOnly: true`** keeps a band off tiles entirely — raw page and full view
+only, gated on the tile stamp rather than a width, so a four-column tile at
+1200px still does not get it. For an auditor's band rather than a glancer's: a
+rule trace in evaluation order restates, more slowly, what the verdict and the
+drivers already said, and rendering it on a wide tile put the same figure on
+screen four times. Prose is page-only whether or not you set it.
+
 **`trimFirst: true`** makes this block give way before every other list,
 whatever the reading order. It exists for a bookkeeping band that sits _above_
 the content it serves: trimming is bottom-up, so without it the queue the
