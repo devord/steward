@@ -32,6 +32,53 @@
   },
   "blocks": [
     {
+      "kind": "progress",
+      "label": "Closing on Aug 6",
+      "count": "7 days out",
+      "rails": [
+        {
+          "id": "gate",
+          "label": "Aug 6 gate",
+          "percent": 40,
+          "tick": 68,
+          "verdict": "12d behind",
+          "tone": "attn",
+          "caption": "needs 11.2/wk to hit Aug 6 · landing 3.1/wk → 3.6× current pace"
+        },
+        {
+          "id": "launch",
+          "label": "To launch 2026-09-30",
+          "percent": 27,
+          "tick": 31,
+          "verdict": "on pace",
+          "secondary": true,
+          "caption": "16 landed · 4 in review · on pace"
+        }
+      ],
+      "stages": [
+        {
+          "id": "s1",
+          "label": "Discovery",
+          "state": "done"
+        },
+        {
+          "id": "s2",
+          "label": "Storefront",
+          "state": "done"
+        },
+        {
+          "id": "s3",
+          "label": "Styled & integrations",
+          "state": "now"
+        },
+        {
+          "id": "s4",
+          "label": "QA & launch",
+          "state": "next"
+        }
+      ]
+    },
+    {
       "kind": "queue",
       "label": "Drivers",
       "count": "3 of 7 fired",

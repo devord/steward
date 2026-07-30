@@ -82,7 +82,14 @@ const SAFELIST = [
 ]
 
 /**
- * Every `.tsx` under `src/` that is a component rather than a test.
+ * Every source file under `src/` that is a component rather than a test.
+ *
+ * `.ts` as well as `.tsx`, and that is load-bearing: the tone maps live in
+ * `ui/tone.ts`, so a `.tsx`-only scan compiled every class a component wrote
+ * inline and silently dropped the ones a shared map held. `TONE_FILL.neutral`
+ * shipped as an unstyled `bg-ink` that way — caught by the validator's
+ * class-coverage check, which is exactly the failure it exists for, but the
+ * scan should not have been the thing that caused it.
  *
  * Sorted, so the generated input — and therefore `kit.css` — is byte-stable
  * across machines and filesystem orderings. CI diffs this output.
@@ -91,7 +98,7 @@ function componentSources() {
   return readdirSync(src, { recursive: true, withFileTypes: true })
     .filter(
       (e) =>
-        e.isFile() && e.name.endsWith(".tsx") && !e.name.endsWith(".test.tsx"),
+        e.isFile() && /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name),
     )
     .map((e) => path.join(e.parentPath, e.name))
     .sort()

@@ -928,6 +928,104 @@ describe("the burn-up", () => {
   })
 })
 
+describe("progress rails", () => {
+  const doc = (rails: object[], stages?: object[]): ArtifactDoc =>
+    JSON.parse(
+      JSON.stringify({
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [{ kind: "progress", label: "Closing", rails, stages }],
+      }),
+    )
+
+  it("draws the tick where the calendar says, not where the fill is", () => {
+    // Fill past the tick reads ahead, short of it reads behind — the reader
+    // gets the verdict from the geometry before reading a word.
+    const html = renderArtifact(
+      doc([{ id: "g", label: "gate", percent: 40, tick: 68, tone: "attn" }]),
+      "",
+    )
+    expect(html).toContain("width:40%")
+    expect(html).toContain("calc(68% - 1px)")
+  })
+
+  it("never leaves the mark as the only encoding", () => {
+    // A mark on a bar is not a thing a screen reader can report.
+    const html = renderArtifact(
+      doc([
+        {
+          id: "g",
+          label: "gate",
+          percent: 40,
+          tick: 68,
+          verdict: "12d behind",
+        },
+      ]),
+      "",
+    )
+    expect(html).toMatch(
+      /aria-label="gate: 40% complete, 68% elapsed, 12d behind"/,
+    )
+  })
+
+  it("clamps rather than drawing outside the track", () => {
+    const html = renderArtifact(
+      doc([{ id: "g", label: "g", percent: 140, tick: -20 }]),
+      "",
+    )
+    expect(html).toContain("width:100%")
+    expect(html).toContain("calc(0% - 1px)")
+  })
+
+  it("sheds a whole rail rather than cropping one mid-track", () => {
+    const html = renderArtifact(
+      doc([
+        { id: "a", label: "a", percent: 10 },
+        { id: "b", label: "b", percent: 20, secondary: true },
+      ]),
+      "",
+    )
+    // One list and one unit per rail: half a progress bar is not a shorter
+    // reading of it.
+    expect((html.match(/data-fit-list/g) ?? []).length).toBe(2)
+    expect((html.match(/data-fit-item/g) ?? []).length).toBe(2)
+  })
+
+  it("keeps the tone off the fill", () => {
+    // Tinting the fill too would repaint the whole rail on a judgement the
+    // tick is already making, and spend the tile accent twice.
+    const html = renderArtifact(
+      doc([{ id: "g", label: "g", percent: 40, tick: 68, tone: "bad" }]),
+      "",
+    )
+    expect(html).toContain("bg-orange")
+    expect(html).toContain("bg-red")
+  })
+
+  it("names a stage state in words beside its dot", () => {
+    const html = renderArtifact(
+      doc(
+        [{ id: "g", label: "g", percent: 40 }],
+        [
+          { id: "s1", label: "Discovery", state: "done" },
+          { id: "s2", label: "Build", state: "now" },
+        ],
+      ),
+      "",
+    )
+    expect(html).toContain("(done)")
+    expect(html).toContain("(now)")
+  })
+
+  it("rejects a percent that is not a number", () => {
+    // A non-numeric percent draws a zero-width fill, which reads as
+    // "nothing done yet" rather than as an error.
+    const errs = validateDoc(doc([{ id: "g", label: "g", percent: "40" }]))
+    expect(errs.join(" ")).toContain("percent must be a finite number")
+  })
+})
+
 describe("the context block", () => {
   it("is carried inert, so it costs no layout and no request", () => {
     expect(html).toContain('<script type="text/markdown" id="steward-context">')
