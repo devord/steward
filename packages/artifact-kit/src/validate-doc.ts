@@ -166,6 +166,21 @@ export function validateDoc(doc: unknown): string[] {
           str(r.id, `${rat}.id`)
           str(r.title, `${rat}.title`)
           if (isObj(r.state)) tone(r.state.tone, `${rat}.state.tone`)
+          if (r.face !== undefined) {
+            if (!isObj(r.face)) errors.push(`${rat}.face must be an object`)
+            else {
+              // `name` is required because the avatar derives its initial from
+              // it. Without this check a face carrying only a src rendered as
+              // a thrown "Cannot read properties of undefined" from inside the
+              // minified bundle — the incidental failure this whole function
+              // exists to turn into a named field.
+              str(r.face.name, `${rat}.face.name`)
+              str(r.face.src, `${rat}.face.src`, false)
+              str(r.face.href, `${rat}.face.href`, false)
+            }
+          }
+          if (r.data !== undefined && !isObj(r.data))
+            errors.push(`${rat}.data must be an object of strings`)
           if (r.values !== undefined && !Array.isArray(r.values))
             errors.push(`${rat}.values must be an array`)
           for (const [k, v] of Object.entries(r.values ?? {})) {

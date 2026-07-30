@@ -23,12 +23,17 @@ export interface Face {
  */
 export function Avatar({ face }: { face: Face }) {
   const inline = face.src?.startsWith("data:") ? face.src : undefined
-  const initial = [...face.name.trim()][0]?.toUpperCase() ?? "?"
+  // Belt as well as braces. `validateDoc` requires the name and is what a
+  // routine actually hits, but this component is exported, and a thrown
+  // "Cannot read properties of undefined" from a minified renderer is the
+  // least useful failure in the pipeline.
+  const name = face.name?.trim() || "?"
+  const initial = [...name][0]?.toUpperCase() ?? "?"
   const glyph = (
     <span
       // The name rides `title` so hover answers "whose is this?" with a real
       // name — a column of faces is unreadable otherwise.
-      title={face.name}
+      title={name}
       // 12px, not 10: the floor is a floor even for a glyph-ish initial
       // (widget-standard §6), and the rule lands in the shared stylesheet, so
       // one 10px declaration here failed the contract check on every artifact
@@ -43,7 +48,7 @@ export function Avatar({ face }: { face: Face }) {
           className="absolute inset-0 size-full rounded-full object-cover"
         />
       ) : null}
-      <span className="sr-only">{face.name}</span>
+      <span className="sr-only">{name}</span>
     </span>
   )
   return face.href ? (

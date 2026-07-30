@@ -719,6 +719,51 @@ describe("Avatar", () => {
     )
   })
 
+  it("names a face with no name as a field, not as a stack trace", () => {
+    // Review caught this and it was worse than reported: the validator was
+    // silent and the renderer threw "Cannot read properties of undefined" from
+    // inside the minified bundle — the incidental failure validateDoc exists
+    // to convert into a named field. `face` shipped without any coverage.
+    const errs = validateDoc({
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [
+        {
+          kind: "queue",
+          rows: [
+            { id: "a", title: "a", face: { src: "data:image/png;base64,x" } },
+          ],
+        },
+      ],
+    })
+    expect(errs.join(" ")).toContain("blocks[0].rows[0].face.name is required")
+  })
+
+  it("renders rather than throws if one slips through", () => {
+    // The validator is the gate a routine hits, but the component is exported.
+    // Deleting the field rather than asserting a bad type keeps this honest
+    // about what a malformed emit looks like at runtime.
+    const doc: ArtifactDoc = {
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [
+        {
+          kind: "queue",
+          rows: [
+            { id: "a", title: "a", face: { name: "gone", src: "data:x" } },
+          ],
+        },
+      ],
+    }
+    const block = doc.blocks?.[0]
+    if (block?.kind === "queue" && block.rows?.[0]?.face) {
+      Reflect.deleteProperty(block.rows[0].face, "name")
+    }
+    expect(renderArtifact(doc, "")).toContain("</html>")
+  })
+
   it("carries the name for hover and for screen readers", () => {
     const html = face()
     expect(html).toContain('title="Kelly Ma"')

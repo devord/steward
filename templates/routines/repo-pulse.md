@@ -81,10 +81,12 @@ For each watched repo, via `gh` (preferred) or the GitHub API:
 
    Then resolve a **display name and a face** for each unique author, and
    reuse both on every row by that author: `params.people` registry first,
-   then `gh api users/<login>` for the name, then the initial circle. **Do
-   not fetch an avatar image** — the kit takes a `data:` URI and drops
-   anything else, so a fetched URL is bytes spent on a row that will render
-   an initial anyway.
+   then `gh api users/<login>` for the name. **When both fail, the name is
+   the login** — never empty and never omitted. The name is what the avatar
+   derives its initial from and what hover and a screen reader read, so a
+   face without one is a row that identifies nobody. **Do not fetch an
+   avatar image**: the kit takes a `data:` URI and drops anything else, so a
+   fetched URL is bytes spent on a row that renders an initial anyway.
 
    The registry is the step that matters here. A PR queue is a column of
    faces, and the fetch it used to lead with reaches
