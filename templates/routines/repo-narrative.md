@@ -142,10 +142,10 @@ already gathered, plus a count of everyone else:
   executive who would hold them to it.
 
 Then resolve a **display name and a face** per unique person, and reuse both
-everywhere that person appears. Follow the design language's resolution
-chain unchanged (`widget-artifact` design.md · Avatar · Where the face comes
-from): `params.people` registry first, then `gh api users/<login>` for the
-name, then a best-effort image fetch, then the initial circle.
+everywhere that person appears: `params.people` registry first, then
+`gh api users/<login>` for the name, then the login itself. **Never fetch an
+avatar image** — the kit takes a `data:` URI and drops anything else, so a
+fetched URL is bytes spent on a row that renders an initial regardless.
 
 The name matters twice over here — it is the hover label on a face _and_
 the name this artifact says in prose, per the third-person rule below — so
@@ -225,124 +225,75 @@ render-time enhancer is needed. Name people in the third person by the
 display name resolved above — the same name a face carries on hover, so
 the prose and the rail never disagree about what someone is called.
 
-## Author the artifact
+## Emit
 
-Follow the `widget-artifact` skill for the HTML contract; compose from its
-design language (headings, sections, ledger rows with lead + detail,
-avatars, the stat tier, pills, the now marker, the provenance line). The
-`<h1>` carries the window the title bar can't (`Jul 14 → Jul 28`, mono).
+Write `data.json` and render it with the kit — the shape is documented once in
+`$STEWARD/.claude/skills/widget-artifact/kit/CONTRACT.md`; read it rather than
+inferring from this description. This routine's mapping onto it:
 
-### The face rail
+- **`stat`** — what landed, in the window's own terms: `value` the count,
+  `label` the window (`7 days`). At 340×160 that is the glance.
+- **`stat.note`** — the **bottom line**, and this is the one place it can live
+  where it survives to every tier. It is the first thing in the artifact at
+  every size by construction rather than by remembering.
+- **A `queue` block, "What happened"** — one row per movement behind, at most
+  five, ordered by consequence. `face` is the movement's principal. `title` is
+  the movement named (≤ ~6 words), `detail` its evidence — counts, ticket
+  keys, PR numbers, the repo. `values` carry the other-contributor count as
+  `+N`, and it goes in a column rather than in `detail` because the detail line
+  already carries ticket keys and PR numbers; a count of people dropped among
+  them reads as one more identifier and gets scanned as one.
+- **A `rail: true` `queue` block, "What comes next"** — the forward movements,
+  at most five, each with the person carrying it and its confidence band.
 
-Every movement opens with its principal's face, so both halves read down a
-human spine: _who shipped this_ on the left, _who is carrying this_ on the
-right. Use the design language's avatar component unchanged — an 18px
-round `<img>` from the inlined data URI, wrapped in a link to
-`https://github.com/<login>` (`target="_blank" rel="noopener"`), the link's
-`title` and the img's `alt` both carrying the **display name**, so hover
-answers _who_ with `Daniel Moraes` and never the handle `danielmoraes`.
-Fetch failed → the initial-circle fallback at the same footprint.
+  The two blocks are the window's own shape: what happened and what comes next
+  facing each other at the page tier, meeting at the seam between the columns.
+  Below that tier they stack in reading order, which is also narrative order.
 
-Under the face sits the `+N` of other contributors, 12px mono
-`--color-ink-faint`, rendered only when N ≥ 1. It belongs in the rail
-rather than the detail line because the detail line already carries ticket
-keys and PR numbers; a count of people dropped in among them reads as one
-more identifier and gets scanned as one.
+- **A `queue` block, "At risk"** — what will slip, what waits on a named
+  person, what needs a decision this week. Give the person's `face` here too:
+  the row's whole point is that a named human is the next move, which is where
+  a face is worth the most.
+- **`provenance`** — window bounds, repos read, PRs and issues audited,
+  movements held back, and any source unreachable this run.
+- **`empty`** — no repos configured → a state naming the routine setting to
+  fill in. A window with genuinely no activity is **not** empty: it gets a
+  bottom line saying exactly that, because silence is the finding and padding
+  it with process detail buries it.
 
-**Face and count are one cell, not two tracks.** The rail is a single
-column whose cell stacks the two, and the stack is aligned deliberately:
-the face on the lead's line, the count on the detail's, so the rail keeps
-the row's two-line rhythm instead of introducing a third.
+Do not hand-write HTML or CSS. Do not size, trim or theme anything — the rail,
+the face column, the shared line box and the two-column seam are all the kit's.
 
-Give each item in the stack the row's own **20px line box** rather than
-letting it size to itself. An 18px image and a 12px mono count both sit on
-the text baseline otherwise, which rides the face 1px and the count 2.5px
-above their partners — the ledger's "drifting rather than set" failure at
-exactly the scale that reads as sloppiness without ever looking like a bug
-(`widget-artifact` design.md · One shared line box per row):
+### This is the template where `keep` is right
 
-```css
-.face {
-  display: grid;
-  align-content: start;
-  justify-items: center;
-}
-/* The row's line box, not the content's — this is what puts the face on
-   the lead's centre (measured: 0px off with, 1px above without). */
-.face > * {
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.face .n {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--color-ink-faint);
-}
-```
+Mark the **risk rows** and the "nothing shipped" row `keep`.
 
-The same rule is what makes the initial-circle fallback interchangeable
-with a real avatar: both are normalized to the row's box, so a run where
-half the fetches failed still sets one clean spine.
+That runs against the usual advice, and the difference is the sort. Elsewhere
+the queue is ordered worst-first, so the sort _is_ the pinning and `keep` on
+top of it makes a short tile advertise its calmest rows. Here the order is
+**narrative** — bottom line, then what happened, then what is next, then what
+is at risk — so the bad news sits at the bottom by construction and bottom-up
+trimming reaches it first. Without the pin a short tile trims its way into
+reporting only good news, which is the exact failure `keep` exists for.
 
-**Declare the rail once per half.** The two columns face each other across
-the `now` seam, so they are separate grids and cannot share tracks — each
-side gets its own `max-content` rail at the head of its own template, and
-each sizes to its own faces. Relay it the usual way (`section`, `ul`, `li`
-each `display: grid; grid-template-columns: subgrid`) and hold the
-unplaced-item rule on **both** halves: a heading or a stray block left
-unplaced lands in the rail track, inflates it to its own width, and squeezes
-the `minmax(0, 1fr)` lead column beside it to zero — the failure that reads
-as "the widget broke" rather than as a mistake with an address
-(`widget-artifact` design.md · Ledger rows).
+The test is not "is this important" but "would the sort already have saved
+it". Here it would not.
 
-**A row with no face keeps the track and paints nothing.** An empty rail
-cell is the honest render of a `stated` item, and the reserved width is
-what keeps every lead on one spine instead of stepping in and out by row.
+### Faces come from the registry
 
-Relaying the rail rather than faking it with padding is also what buys the
-hanging indent: on a narrow tile the detail line wraps under the lead, not
-under the face, because the body genuinely occupies its own track.
+`face.src` must be a `data:` URI and the kit drops anything else, so resolve
+the name and the image from `params.people` — never a fetch, which a scheduled
+run cannot make. When the registry has no entry, **the name is the login**:
+never empty, never omitted. It is what the initial comes from and what hover
+and a screen reader read, so a face without one identifies nobody.
 
-The rail rides every tier that renders rows, 2×1 up through the full page.
-It is never on the 1×1 stat tier, which has no rows to attribute.
+A row with no face is fine. The kit keeps the column and paints nothing, which
+is the honest render of a `stated` item and keeps every lead on one spine.
 
-Size behavior:
+Degrade gracefully: a repo that cannot be read gets an `unreachable` note on
+the provenance line and drops out of the story rather than erroring.
 
-- **1×1**: the stat tier — what landed, in mono (`7 shipped`, label `7
-days`) — with the bottom line as its one support line, clamped to two
-  lines. The stat is the glance; the sentence is why anyone would open it.
-- **2×1 / 1×2**: the bottom line in full, then the top movement behind and
-  the nearest committed item ahead, each with its face. Two rows is where a
-  face is cheapest and clearest: the rail costs its width once, and the
-  tile answers _who shipped it_ and _who has it now_ without a word.
-- **2×2**: the bottom line, then the behind ledger, then risks.
-- **Wide tile (3–4 cols)**: the window's own shape — `what happened` and
-  `what comes next` as two columns facing each other, meeting at a **now**
-  seam (the design language's now marker, ink at the divider). Spend the
-  width on the second column, not on longer lines. The two rails cost about
-  28px a side; take it from the detail line's measure, which wraps, and
-  never by dropping evidence. Both columns carry `data-fit-list`: a column
-  with no trimmable list is a floor the fit pass can't get under, and it
-  will trim the other column to nothing while the tile still overflows
-  (`widget-artifact` § fit-to-height).
-- **Full view / raw page**: a page. The bottom line as a lede at the
-  long-form measure (~72ch), then both halves in full with every movement's
-  evidence, then risks, then the provenance line above the footer: window
-  bounds, repos read, PRs and issues audited, movements held back, and any
-  source unreachable this run.
-
-Risk rows and the "nothing shipped" row are load-bearing — mark them
-`data-fit-keep` so a short tile can't trim its way into reporting only good
-news.
-
-Degrade gracefully: a repo that can't be read gets an "unreachable" note in
-the provenance line and drops out of the story rather than erroring. A
-window with no activity behind it gets a bottom line that says exactly
-that — silence is the finding, and padding it with process detail buries
-it. No repos configured → an empty state telling the user to set the
-routine's repositories.
+## The context block
 
 Carry a context block (`widget-artifact` § The context block): every PR,
 issue, and release behind each movement (numbers and titles, so they can be
