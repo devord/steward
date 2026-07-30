@@ -115,6 +115,28 @@ that reuses the board's Sync flow (`dashboardSlug` now optional on
 `?place=<slug>`. No standalone templates page (read-only by ADR-0022,
 already in the picker).
 
+## M8 — Artifacts are compiled, not transcribed ✅ (code)
+
+Implements ADR-0050 (built 2026-07-30). The design language stopped being
+prose an agent imitates and became `packages/artifact-kit/`: routines emit a
+`data.json` against `widget-artifact/kit/CONTRACT.md`, and a committed,
+dependency-free `render.mjs` emits the file. **All 11 routine templates
+migrated**, across the built-ins and both data repos.
+
+The prose layer retired behind them: `design.md` 2,019 → 95 lines (composition
+judgment only), `widget-artifact/SKILL.md` 451 → 141, `validate.mjs` 735 → 263
+with its 30 false warnings per artifact gone, and the three hand-kept
+42–70 KB sample artifacts replaced by picker previews CI renders from archetype
+fixtures. `docs/widget-standard.md`'s full-view width contradiction — two live
+documents disagreeing since 2026-07-14 — resolved to shrink-to-fit with the
+surplus as one trailing right gutter, which is what the kit's `<table>` already
+did.
+
+Still open: the visual-regression gate over the live corpus (ADR-0050 names it
+as the mitigation for injected CSS reaching published artifacts; deferred on
+the strength of the fix-vs-restructure rule, which is a discipline rather than
+a mechanism), and whether a data repo can ship its own kit components.
+
 ## Watch items
 
 - **GitHub API rate limit** (5k/h authed): batch loader fetches, ETags.
@@ -127,5 +149,8 @@ already in the picker).
   `anthropic-beta: experimental-cc-routine-2026-04-01`, token minting
   UI-only); `ANTHROPIC_ROUTINES_BETA` overrides the pinned header when it
   changes (ADR-0016).
-- **Palette duplication**: `@theme` block vs the `widget-artifact` token
-  snippet must stay identical (ADR-0007).
+- ~~**Palette duplication**~~ **retired 2026-07-30 (ADR-0050).** ADR-0007
+  accepted a standing cost — the chrome's `@theme` block and the
+  `widget-artifact` token snippet "must stay identical". There is no second
+  copy now: `scripts/gen-artifact-tokens.ts` derives the kit's palette from the
+  theme registry, CI fails on drift, and the hand-kept snippet is gone.
