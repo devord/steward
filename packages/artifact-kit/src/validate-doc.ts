@@ -117,6 +117,41 @@ export function validateDoc(doc: unknown): string[] {
         if (b.pageOnly !== undefined && typeof b.pageOnly !== "boolean")
           errors.push(`${at}.pageOnly must be a boolean`)
 
+        if (b.kind === "progress") {
+          if (!Array.isArray(b.rails))
+            return void errors.push(`${at}.rails must be an array`)
+          b.rails.forEach((r, j) => {
+            const rat = `${at}.rails[${j}]`
+            if (!isObj(r)) return void errors.push(`${rat} must be an object`)
+            str(r.id, `${rat}.id`)
+            str(r.label, `${rat}.label`)
+            // Clamped at render, but a non-number is a different mistake: it
+            // draws a zero-width fill that reads as "nothing done yet".
+            if (typeof r.percent !== "number" || !Number.isFinite(r.percent))
+              errors.push(`${rat}.percent must be a finite number`)
+            if (
+              r.tick !== undefined &&
+              (typeof r.tick !== "number" || !Number.isFinite(r.tick))
+            )
+              errors.push(`${rat}.tick must be a finite number`)
+            tone(r.tone, `${rat}.tone`)
+            str(r.verdict, `${rat}.verdict`, false)
+            str(r.caption, `${rat}.caption`, false)
+          })
+          if (b.stages === undefined) return
+          if (!Array.isArray(b.stages))
+            return void errors.push(`${at}.stages must be an array`)
+          const STATES = ["done", "now", "next"]
+          return void b.stages.forEach((g, j) => {
+            const gat = `${at}.stages[${j}]`
+            if (!isObj(g)) return void errors.push(`${gat} must be an object`)
+            str(g.id, `${gat}.id`)
+            str(g.label, `${gat}.label`)
+            if (typeof g.state !== "string" || !STATES.includes(g.state))
+              errors.push(`${gat}.state must be one of ${STATES.join(", ")}`)
+          })
+        }
+
         if (b.kind === "series") {
           if (!isObj(b.spec))
             return void errors.push(`${at}.spec must be an object`)
@@ -165,7 +200,9 @@ export function validateDoc(doc: unknown): string[] {
         }
 
         if (b.kind !== "queue")
-          errors.push(`${at}.kind must be "queue", "prose" or "series"`)
+          errors.push(
+            `${at}.kind must be "queue", "prose", "series" or "progress"`,
+          )
 
         // A queue carries either loose rows or labelled groups. Both absent is
         // the shape error worth naming, because the renderer would draw an

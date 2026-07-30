@@ -9,7 +9,9 @@ import {
   type QueueRow,
   type ViewerGroups,
 } from "./components/QueueTable.tsx"
+import { Rail } from "./components/Rail.tsx"
 import { Series, type SeriesSpec } from "./components/Series.tsx"
+import { type Stage, StageStrip } from "./components/StageStrip.tsx"
 import { Section } from "./components/Section.tsx"
 import { StatTier } from "./components/StatTier.tsx"
 import { type Verdict, VerdictBand } from "./components/VerdictBand.tsx"
@@ -67,6 +69,27 @@ export interface QueueBlock extends BlockBase {
 }
 
 /**
+ * A progress band: one or more rails, each a horizon with a mark at where the
+ * calendar says it should be. Optionally a stage strip, which answers *where*
+ * rather than *how far* — the one thing that earns a row beside a rail without
+ * being a second rendering of it.
+ */
+export interface ProgressBlock extends BlockBase {
+  kind: "progress"
+  rails: {
+    id: string
+    label: string
+    percent: number
+    tick?: number
+    verdict?: string
+    tone?: Tone
+    caption?: string
+    secondary?: boolean
+  }[]
+  stages?: Stage[]
+}
+
+/**
  * A chart band. Page only by default, and for the same reason prose is: a
  * four-column tile is 1200px and still not a reading surface, and tiles never
  * scroll, so a chart there either steals the ledger's rows or opens into the
@@ -84,13 +107,15 @@ export interface ProseBlock extends BlockBase {
 }
 
 /** A labelled band of content. */
-export type Block = QueueBlock | ProseBlock | SeriesBlock
+export type Block = QueueBlock | ProseBlock | SeriesBlock | ProgressBlock
 
 /** Whether a band has anything to render — an empty one is never drawn. */
 function filled(b: Block): boolean {
   if (b.kind === "prose") return b.items.length > 0
   // Two points is the floor for a line. One is a dot claiming a trend.
   if (b.kind === "series") return b.spec.lines.some((l) => l.points.length > 1)
+  if (b.kind === "progress")
+    return b.rails.length > 0 || (b.stages ?? []).length > 0
   return (
     (b.rows?.length ?? 0) > 0 || (b.groups ?? []).some((g) => g.rows.length > 0)
   )
@@ -164,6 +189,19 @@ function Band({ block, index }: { block: Block; index: number }) {
         />
       ) : block.kind === "series" ? (
         <Series spec={block.spec} />
+      ) : block.kind === "progress" ? (
+        <div className="flex flex-col gap-3">
+          {block.rails.map((r) => (
+            <Rail key={r.id} {...r} />
+          ))}
+          {/* Gated on height, not width: it costs a whole row, and a short
+              tile spends that row better on the ledger. */}
+          {block.stages?.length ? (
+            <div className="hidden taller:block">
+              <StageStrip stages={block.stages} />
+            </div>
+          ) : null}
+        </div>
       ) : (
         <Prose items={block.items} />
       )}
