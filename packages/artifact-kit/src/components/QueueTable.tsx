@@ -1,6 +1,10 @@
+import { Fragment } from "react"
+
 import { Badge, type BadgeTone } from "../ui/badge.tsx"
 import { cn } from "../ui/cn.ts"
+import { Icon, type IconName } from "../ui/icon.tsx"
 import { type Tone, TONE_TEXT } from "../ui/tone.ts"
+import { Avatar, type Face } from "./Avatar.tsx"
 import { CopyAction } from "./CopyAction.tsx"
 import { Meter } from "./Meter.tsx"
 
@@ -51,6 +55,15 @@ export interface QueueValue {
    */
   delta?: { value: string; direction: "up" | "down" | "flat" }
   /**
+   * Render the value as a glyph, with the word beside it from the page tier
+   * and screen-reader-only below that.
+   *
+   * The word is never dropped, only hidden — a review state carried by shape
+   * alone is a state a screen reader cannot report. Healthy states whisper:
+   * give a passing check no tone and let only the actionable ones take one.
+   */
+  icon?: IconName
+  /**
    * Hover text plus an sr-only phrase, for a qualifier the narrow tiers have
    * no column for. A number whose basis is invisible is an unlabelled mixture
    * of two scales; this is how the basis still travels with it.
@@ -58,8 +71,38 @@ export interface QueueValue {
   title?: string
 }
 
+/**
+ * A labelled run of rows inside one table.
+ *
+ * Groups exist so columns align across the whole ledger rather than per
+ * section. `repo-pulse` states the requirement and the smell: "one grid on
+ * `main`, sections laid in with subgrid, so every state icon and age sits on
+ * the same vertical down the page. A per-list grid gives each section its own
+ * column widths, which is the misaligned-state smell." One `<table>` with
+ * heading rows is how a table says that natively.
+ */
+export interface QueueGroup {
+  id: string
+  label?: string
+  /** Facts that are not rows. Survives even when every row below is trimmed. */
+  count?: string
+  rows: QueueRow[]
+}
+
 export interface QueueRow {
   id: string
+  /** A face for the person this row belongs to, as its leading key. */
+  face?: Face
+  /**
+   * Inert `data-*` the board's viewer-relative enhancer reads — `author`,
+   * `reviewers`. Keys are prefixed, values stringified.
+   *
+   * Viewer-neutral by construction: the published markup carries the
+   * *relationships*, never a resolved "you". Who the viewer is gets settled at
+   * render time, because one file is read by everyone the board is shared
+   * with (ADR-0039).
+   */
+  data?: Record<string, string>
   /** Leading state chip: what kind of thing this row is. */
   state?: { label: string; tone: BadgeTone }
   /** The emphasised lead — what the reader scans down. */
@@ -102,6 +145,8 @@ export interface QueueRow {
  */
 export function QueueTable({
   rows,
+  /** Labelled runs sharing one column set. Takes precedence over `rows`. */
+  groups,
   /** Name the columns at the page tier, where there is room to. */
   showHeader = true,
   /**
@@ -112,10 +157,17 @@ export function QueueTable({
    */
   trimFirst = false,
 }: {
-  rows: QueueRow[]
+  rows?: QueueRow[]
+  groups?: QueueGroup[]
   showHeader?: boolean
   trimFirst?: boolean
 }) {
+  // One ungrouped run is the same shape with the label left off, so everything
+  // below works on `bands` and the two cases never diverge.
+  const bands: QueueGroup[] = groups?.length
+    ? groups.filter((g) => g.rows.length > 0)
+    : [{ id: "all", rows: rows ?? [] }]
+  const allRows = bands.flatMap((g) => g.rows)
   // Columns are a property of the TABLE, not of whichever row happens to be
   // first. Taking them from row 0 meant a later row with a missing value slid
   // its remaining cells left under the wrong headers, and a row without an
@@ -124,18 +176,18 @@ export function QueueTable({
   // it has nothing to say — which is also what the ledger wants: "a row
   // without one leaves the cell empty — no dash, no filler."
   const columns: QueueValue[] = []
-  for (const r of rows) {
+  for (const r of allRows) {
     for (const v of r.values ?? []) {
       if (!columns.some((c) => c.label === v.label)) columns.push(v)
     }
   }
-  const hasAction = rows.some((r) => r.action)
+  const hasAction = allRows.some((r) => r.action)
   // Fixed for every row, so a detail line always spans the full table.
   const columnCount = columns.length + 2 + (hasAction ? 1 : 0)
   // One scale per meter column, taken over the whole table. Scaling each bar
   // to its own row would render every bar full and compare nothing.
   const meterMax = new Map<string, number>()
-  for (const r of rows) {
+  for (const r of allRows) {
     for (const v of r.values ?? []) {
       if (v.meter === undefined) continue
       meterMax.set(v.label, Math.max(meterMax.get(v.label) ?? 0, v.meter))
@@ -175,15 +227,37 @@ export function QueueTable({
           line a single trimmable unit — the injected fit pass hides the
           element carrying [data-fit-item], and hiding a bare <tr> would strand
           its why-line behind. */}
-      {rows.map((r) => (
-        <RowPair
-          key={r.id}
-          row={r}
-          columns={columns}
-          hasAction={hasAction}
-          columnCount={columnCount}
-          meterMax={meterMax}
-        />
+      {bands.map((g) => (
+        <Fragment key={g.id}>
+          {g.label ? (
+            // Carries no fit attributes on purpose, so it is never trimmed.
+            // A group reduced to its heading still reports how many rows are
+            // under it, which is informative; hiding it would say there are
+            // none. Same reasoning the kit already applies to a yield-first
+            // band reduced to its label.
+            <tbody>
+              <tr>
+                <td
+                  colSpan={columnCount}
+                  className="text-ink-dim pt-3 pb-1 font-mono text-xs"
+                >
+                  {g.label}
+                  {g.count ? <span> · {g.count}</span> : null}
+                </td>
+              </tr>
+            </tbody>
+          ) : null}
+          {g.rows.map((r) => (
+            <RowPair
+              key={r.id}
+              row={r}
+              columns={columns}
+              hasAction={hasAction}
+              columnCount={columnCount}
+              meterMax={meterMax}
+            />
+          ))}
+        </Fragment>
       ))}
     </table>
   )
@@ -205,10 +279,20 @@ function RowPair({
   meterMax: Map<string, number>
 }) {
   return (
-    <tbody data-fit-item {...(row.keep ? { "data-fit-keep": "" } : {})}>
+    <tbody
+      data-fit-item
+      {...(row.keep ? { "data-fit-keep": "" } : {})}
+      // Relationships, not a resolved viewer. The enhancer buckets on these at
+      // render time; the published file names nobody.
+      {...Object.fromEntries(
+        Object.entries(row.data ?? {}).map(([k, v]) => [`data-${k}`, v]),
+      )}
+    >
       <tr>
         <td className="py-1 pr-2 align-baseline">
-          {row.state ? (
+          {row.face ? (
+            <Avatar face={row.face} />
+          ) : row.state ? (
             <Badge tone={row.state.tone}>{row.state.label}</Badge>
           ) : null}
         </td>
@@ -259,6 +343,12 @@ function RowPair({
                   label={v.value}
                   tone={v.tone}
                 />
+              ) : v?.icon ? (
+                <span className="inline-flex items-center gap-1">
+                  <Icon name={v.icon} />
+                  <span className="hidden tier-page:inline">{v.value}</span>
+                  <span className="tier-page:hidden sr-only">{v.value}</span>
+                </span>
               ) : (
                 (v?.value ?? "")
               )}

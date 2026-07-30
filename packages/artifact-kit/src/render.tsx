@@ -3,7 +3,11 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { EmptyState } from "./components/EmptyState.tsx"
 import { Prose, type ProseItem } from "./components/Prose.tsx"
 import { ProvenanceLine } from "./components/ProvenanceLine.tsx"
-import { QueueTable, type QueueRow } from "./components/QueueTable.tsx"
+import {
+  type QueueGroup,
+  QueueTable,
+  type QueueRow,
+} from "./components/QueueTable.tsx"
 import { Section } from "./components/Section.tsx"
 import { StatTier } from "./components/StatTier.tsx"
 import { type Verdict, VerdictBand } from "./components/VerdictBand.tsx"
@@ -44,7 +48,12 @@ interface BlockBase {
 
 export interface QueueBlock extends BlockBase {
   kind: "queue"
-  rows: QueueRow[]
+  rows?: QueueRow[]
+  /**
+   * Labelled runs sharing one column set, for a ledger whose sections must
+   * line up with each other. Takes precedence over `rows`.
+   */
+  groups?: QueueGroup[]
   showHeader?: boolean
   /** Yield before every other block — for a bookkeeping band above content. */
   trimFirst?: boolean
@@ -61,7 +70,10 @@ export type Block = QueueBlock | ProseBlock
 
 /** Whether a band has anything to render — an empty one is never drawn. */
 function filled(b: Block): boolean {
-  return b.kind === "queue" ? b.rows.length > 0 : b.items.length > 0
+  if (b.kind === "prose") return b.items.length > 0
+  return (
+    (b.rows?.length ?? 0) > 0 || (b.groups ?? []).some((g) => g.rows.length > 0)
+  )
 }
 
 /**
@@ -125,6 +137,7 @@ function Band({ block, index }: { block: Block; index: number }) {
       {block.kind === "queue" ? (
         <QueueTable
           rows={block.rows}
+          groups={block.groups}
           showHeader={block.showHeader}
           trimFirst={block.trimFirst}
         />

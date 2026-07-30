@@ -132,9 +132,35 @@ export function validateDoc(doc: unknown): string[] {
 
         if (b.kind !== "queue")
           errors.push(`${at}.kind must be "queue" or "prose"`)
-        if (!Array.isArray(b.rows))
-          return void errors.push(`${at}.rows must be an array`)
-        b.rows.forEach((r, j) => {
+
+        // A queue carries either loose rows or labelled groups. Both absent is
+        // the shape error worth naming, because the renderer would draw an
+        // empty table rather than fail.
+        const rows: unknown[] = []
+        if (b.groups !== undefined) {
+          if (!Array.isArray(b.groups))
+            return void errors.push(`${at}.groups must be an array`)
+          for (const [k, g] of b.groups.entries()) {
+            const gat = `${at}.groups[${k}]`
+            if (!isObj(g)) {
+              errors.push(`${gat} must be an object`)
+              continue
+            }
+            str(g.id, `${gat}.id`)
+            str(g.label, `${gat}.label`, false)
+            str(g.count, `${gat}.count`, false)
+            if (!Array.isArray(g.rows)) {
+              errors.push(`${gat}.rows must be an array`)
+              continue
+            }
+            rows.push(...g.rows)
+          }
+        } else if (Array.isArray(b.rows)) {
+          rows.push(...b.rows)
+        } else {
+          return void errors.push(`${at} must have rows or groups`)
+        }
+        rows.forEach((r, j) => {
           const rat = `${at}.rows[${j}]`
           if (!isObj(r)) return void errors.push(`${rat} must be an object`)
           str(r.id, `${rat}.id`)

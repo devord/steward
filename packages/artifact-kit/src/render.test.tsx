@@ -562,6 +562,173 @@ describe("value deltas", () => {
   })
 })
 
+describe("grouped queues", () => {
+  const doc: ArtifactDoc = {
+    slug: "s",
+    generatedAt: "2026-07-30T09:00:00Z",
+    stat: { value: 1, label: "x" },
+    blocks: [
+      {
+        kind: "queue",
+        showHeader: true,
+        groups: [
+          {
+            id: "blocked",
+            label: "Blocked",
+            count: "2",
+            rows: [
+              {
+                id: "p1",
+                title: "#41 fix the thing",
+                values: [{ label: "age", value: "9d" }],
+              },
+            ],
+          },
+          {
+            id: "open",
+            label: "Open",
+            count: "1",
+            rows: [
+              {
+                id: "p2",
+                title: "#44 add the other thing",
+                values: [
+                  { label: "age", value: "2d" },
+                  { label: "ci", value: "passing" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+
+  it("puts every group in one table so the columns line up", () => {
+    // The requirement `repo-pulse` names: one grid, sections laid into it, so
+    // every state icon and age sits on the same vertical. A table per section
+    // gives each its own column widths — the misaligned-state smell.
+    const html = renderArtifact(doc, "")
+    expect((html.match(/<table/g) ?? []).length).toBe(1)
+    expect(html).toContain("Blocked")
+    expect(html).toContain("Open")
+  })
+
+  it("unions columns across groups, not within one", () => {
+    // The `ci` column is named only by the second group's row; the first
+    // group's row still has to occupy it, or its cells slide left.
+    const html = renderArtifact(doc, "")
+    const bodies = [
+      ...html.matchAll(/<tbody[^>]*data-fit-item[\s\S]*?<\/tbody>/g),
+    ]
+    const cells = (b: string) => (b.match(/<td/g) ?? []).length
+    expect(bodies).toHaveLength(2)
+    expect(cells(bodies[0][0])).toBe(cells(bodies[1][0]))
+  })
+
+  it("keeps a group heading untrimmable so a trimmed group still reports", () => {
+    // Reduced to its heading, `Open · 12` still tells the reader there are 12.
+    // Hiding it would say there are none — the same reasoning the kit already
+    // applies to a yield-first band reduced to its label.
+    const html = renderArtifact(doc, "")
+    const heading = html.slice(
+      html.indexOf("Blocked") - 200,
+      html.indexOf("Blocked"),
+    )
+    expect(heading).not.toContain("data-fit-item")
+  })
+
+  it("drops an empty group rather than heading nothing", () => {
+    const html = renderArtifact(
+      {
+        ...doc,
+        blocks: [
+          {
+            kind: "queue",
+            groups: [
+              { id: "a", label: "Has rows", rows: [{ id: "r", title: "r" }] },
+              { id: "b", label: "Empty", rows: [] },
+            ],
+          },
+        ],
+      },
+      "",
+    )
+    expect(html).toContain("Has rows")
+    expect(html).not.toContain("Empty")
+  })
+})
+
+describe("viewer-neutral row data", () => {
+  it("carries relationships, never a resolved viewer", () => {
+    // One file is read by everyone the board is shared with, so "needs your
+    // review" is settled at render time against the signed-in viewer — the
+    // published markup names the author and the reviewers and nobody else.
+    const html = renderArtifact(
+      {
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [
+          {
+            kind: "queue",
+            rows: [
+              {
+                id: "p",
+                title: "#41",
+                data: { author: "kelly", reviewers: "devon sam" },
+              },
+            ],
+          },
+        ],
+      },
+      "",
+    )
+    expect(html).toContain('data-author="kelly"')
+    expect(html).toContain('data-reviewers="devon sam"')
+    expect(html).not.toMatch(/needs your|yours/i)
+  })
+})
+
+describe("Avatar", () => {
+  const face = (src?: string) =>
+    renderArtifact(
+      {
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [
+          {
+            kind: "queue",
+            rows: [{ id: "p", title: "#41", face: { name: "Kelly Ma", src } }],
+          },
+        ],
+      },
+      "",
+    )
+
+  it("drops a remote src rather than emitting a request that cannot succeed", () => {
+    // The sandbox has no network, and neither does a scheduled run — the fetch
+    // that used to lead the resolution chain reached avatars.githubusercontent
+    // .com, so rows degraded to initials on exactly the runs nobody watched.
+    const html = face("https://avatars.githubusercontent.com/u/1")
+    expect(html).not.toContain("avatars.githubusercontent.com")
+    expect(html).toContain("K") // the initial still renders
+  })
+
+  it("keeps a data URI", () => {
+    expect(face("data:image/png;base64,iVBORw0KGgo=")).toContain(
+      "data:image/png",
+    )
+  })
+
+  it("carries the name for hover and for screen readers", () => {
+    const html = face()
+    expect(html).toContain('title="Kelly Ma"')
+    expect(html).toContain("Kelly Ma")
+  })
+})
+
 describe("the context block", () => {
   it("is carried inert, so it costs no layout and no request", () => {
     expect(html).toContain('<script type="text/markdown" id="steward-context">')
