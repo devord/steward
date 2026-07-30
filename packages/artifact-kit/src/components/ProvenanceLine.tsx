@@ -17,7 +17,7 @@ export function ProvenanceLine({
 }) {
   if (facts.length === 0 && !link) return null
   return (
-    <p className="text-ink-faint m-0 hidden font-mono text-xs tier-page:block">
+    <p className="text-ink-dim m-0 hidden font-mono text-xs tier-page:block">
       {facts.join(" · ")}
       {link ? (
         <>

@@ -1,5 +1,6 @@
 import { Badge, type BadgeTone } from "../ui/badge.tsx"
 import { cn } from "../ui/cn.ts"
+import { type Tone, TONE_TEXT } from "../ui/tone.ts"
 import { CopyAction } from "./CopyAction.tsx"
 
 /** Which tier a value column first appears at. */
@@ -18,20 +19,12 @@ const COLUMN_TIER: Record<ColumnTier, string> = {
   page: "hidden tier-page:table-cell",
 }
 
-const VALUE_TONE = {
-  neutral: "text-ink-dim",
-  attn: "text-orange",
-  warn: "text-yellow",
-  bad: "text-red",
-  good: "text-green",
-} as const
-
 export interface QueueValue {
   /** Header word at the page tier, where the columns get named. */
   label: string
   value: string
   from?: ColumnTier
-  tone?: keyof typeof VALUE_TONE
+  tone?: Tone
   /** Right-align — the default for counts and countdowns. */
   numeric?: boolean
   /**
@@ -100,16 +93,31 @@ export function QueueTable({
   showHeader?: boolean
   trimFirst?: boolean
 }) {
-  const columns = rows[0]?.values ?? []
+  // Columns are a property of the TABLE, not of whichever row happens to be
+  // first. Taking them from row 0 meant a later row with a missing value slid
+  // its remaining cells left under the wrong headers, and a row without an
+  // action skipped a cell the header had already reserved. Union the labels in
+  // first-seen order and give every row a cell for every column, blank where
+  // it has nothing to say — which is also what the ledger wants: "a row
+  // without one leaves the cell empty — no dash, no filler."
+  const columns: QueueValue[] = []
+  for (const r of rows) {
+    for (const v of r.values ?? []) {
+      if (!columns.some((c) => c.label === v.label)) columns.push(v)
+    }
+  }
+  const hasAction = rows.some((r) => r.action)
+  // Fixed for every row, so a detail line always spans the full table.
+  const columnCount = columns.length + 2 + (hasAction ? 1 : 0)
   return (
     <table
-      className="w-auto border-collapse font-mono text-xs tabular-nums"
+      className="w-auto border-collapse font-mono text-sm tabular-nums"
       data-fit-list
       {...(trimFirst ? { "data-fit-first": "" } : {})}
     >
       {showHeader && columns.length > 0 ? (
         <thead className="hidden tier-page:table-header-group">
-          <tr className="text-ink-faint">
+          <tr className="text-ink-dim text-xs">
             <th className="pr-3 pb-1 text-left font-normal" />
             <th className="pr-3 pb-1 text-left font-normal">item</th>
             {columns.map((c) => (
@@ -124,7 +132,9 @@ export function QueueTable({
                 {c.label}
               </th>
             ))}
-            <th className="hidden pb-1 tier-detail:table-cell" />
+            {hasAction ? (
+              <th className="hidden pb-1 tier-detail:table-cell" />
+            ) : null}
           </tr>
         </thead>
       ) : null}
@@ -137,16 +147,27 @@ export function QueueTable({
         <RowPair
           key={r.id}
           row={r}
-          // state + title + values, plus the action column when the row has
-          // one — a short colspan leaves the why-line stopping mid-table.
-          columnCount={columns.length + 2 + (r.action ? 1 : 0)}
+          columns={columns}
+          hasAction={hasAction}
+          columnCount={columnCount}
         />
       ))}
     </table>
   )
 }
 
-function RowPair({ row, columnCount }: { row: QueueRow; columnCount: number }) {
+function RowPair({
+  row,
+  columns,
+  hasAction,
+  columnCount,
+}: {
+  row: QueueRow
+  /** The table's column set, so every row lines up with the header. */
+  columns: QueueValue[]
+  hasAction: boolean
+  columnCount: number
+}) {
   return (
     <tbody data-fit-item {...(row.keep ? { "data-fit-keep": "" } : {})}>
       <tr>
@@ -174,24 +195,30 @@ function RowPair({ row, columnCount }: { row: QueueRow; columnCount: number }) {
             row.title
           )}
         </td>
-        {(row.values ?? []).map((v) => (
-          <td
-            key={v.label}
-            className={cn(
-              "py-1 pr-3 align-baseline whitespace-nowrap",
-              v.numeric ? "text-right" : "text-left",
-              VALUE_TONE[v.tone ?? "neutral"],
-              COLUMN_TIER[v.from ?? "always"],
-            )}
-            title={v.title}
-          >
-            {v.value}
-            {v.title ? <span className="sr-only"> ({v.title})</span> : null}
-          </td>
-        ))}
-        {row.action ? (
+        {columns.map((col) => {
+          // Position comes from the table's column list; only the content
+          // comes from the row. A row with nothing for this column still
+          // occupies it, empty.
+          const v = (row.values ?? []).find((x) => x.label === col.label)
+          return (
+            <td
+              key={col.label}
+              className={cn(
+                "py-1 pr-3 align-baseline whitespace-nowrap",
+                col.numeric ? "text-right" : "text-left",
+                TONE_TEXT[v?.tone ?? "neutral"],
+                COLUMN_TIER[col.from ?? "always"],
+              )}
+              title={v?.title}
+            >
+              {v?.value ?? ""}
+              {v?.title ? <span className="sr-only"> ({v.title})</span> : null}
+            </td>
+          )
+        })}
+        {hasAction ? (
           <td className="hidden py-1 text-right align-baseline tier-detail:table-cell">
-            <CopyAction {...row.action} />
+            {row.action ? <CopyAction {...row.action} /> : null}
           </td>
         ) : null}
       </tr>
@@ -202,7 +229,7 @@ function RowPair({ row, columnCount }: { row: QueueRow; columnCount: number }) {
           <td />
           <td
             colSpan={columnCount - 1}
-            className="text-ink-faint max-w-[52ch] pb-2 font-sans text-xs"
+            className="text-ink-dim max-w-[52ch] pb-2 font-sans text-sm"
           >
             {row.detail}
           </td>

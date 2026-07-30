@@ -362,21 +362,59 @@ for (const file of files) {
       errors.push(`anchor without rel="noopener": ${href.slice(0, 60)}`)
   }
 
+  // — Kit class coverage (ADR-0050) —
+  // A precompiled stylesheet cannot know a class a routine invented at run
+  // time, so an off-surface class renders unstyled with no error anywhere.
+  // Checking every class in the markup against the selectors actually present
+  // in the inlined stylesheet turns that silent failure into a publish-time
+  // one — and catches plain typos in kit class names for free.
+  const usesKit = /<meta[^>]+name="steward-kit-version"/i.test(html)
+  if (usesKit) {
+    const styled = new Set()
+    for (const [, sel] of html.matchAll(/\.((?:[\\][^\s]|[A-Za-z0-9_-])+)/g)) {
+      styled.add(sel.replace(/\\/g, ""))
+    }
+    const seen = new Set()
+    for (const [, list] of html.matchAll(/\sclass="([^"]*)"/g)) {
+      for (const cls of list.split(/\s+/)) {
+        if (!cls || seen.has(cls) || styled.has(cls)) continue
+        seen.add(cls)
+        errors.push(
+          `class "${cls}" has no rule in the inlined kit stylesheet — it will ` +
+            "render unstyled (outside the kit's safelisted surface, or a typo)",
+        )
+      }
+    }
+  }
+
   // — Fit-to-height wiring (ADR-0019) —
   const hasFitList = html.includes("data-fit-list")
-  const hasFitScript = html.includes("data-steward-tile")
-  if (hasFitList && !hasFitScript)
+  // A kit-rendered artifact carries no fit script: the board injects one
+  // (ADR-0050). Checking a hand-authored artifact's own copy is exactly the
+  // thing the kit exists to stop needing, so those checks apply only to files
+  // that still carry it.
+  if (!usesKit) {
+    const hasFitScript = html.includes("data-steward-tile")
+    if (hasFitList && !hasFitScript)
+      errors.push(
+        "data-fit-list present but no fit script (data-steward-tile never read)",
+      )
+    // A list trimmed to zero items leaves its <h2> advertising content that is
+    // no longer there. The current snippet collapses the owning section and
+    // marks it; an artifact on the older snippet has no such marker.
+    if (hasFitList && !html.includes("data-fit-collapsed"))
+      warnings.push(
+        "fit script predates the empty-section collapse — a fully trimmed " +
+          "section will render as a heading over a bare `+N more` (SKILL.md)",
+      )
+  } else if (hasFitList && !html.includes("data-fit-item")) {
+    // The kit's counterpart: a list the injected pass can see but with no
+    // trimmable units in it. It will never trim, and the tile clips silently.
     errors.push(
-      "data-fit-list present but no fit script (data-steward-tile never read)",
+      "[data-fit-list] with no [data-fit-item] inside — the injected pass has " +
+        "nothing to trim, so the tile will clip instead of degrading",
     )
-  // A list trimmed to zero items leaves its <h2> advertising content that is
-  // no longer there. The current snippet collapses the owning section and
-  // marks it; an artifact on the older snippet has no such marker.
-  if (hasFitList && !html.includes("data-fit-collapsed"))
-    warnings.push(
-      "fit script predates the empty-section collapse — a fully trimmed " +
-        "section will render as a heading over a bare `+N more` (SKILL.md)",
-    )
+  }
   if (!hasFitList) {
     const longList = [
       ...html.matchAll(/<[ou]l[^>]*>([\s\S]*?)<\/[ou]l>/g),

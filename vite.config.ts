@@ -53,7 +53,8 @@ export default defineConfig({
       // Committed build output of @steward/artifact-kit (ADR-0050). It lives
       // in the skill tree rather than a dist/ because that is how it travels
       // to a routine run, but it is generated and minified all the same.
-      ".claude/skills/widget-artifact/kit/",
+      ".claude/skills/widget-artifact/kit/kit.css",
+      ".claude/skills/widget-artifact/kit/render.mjs",
     ],
     overrides: [
       {
@@ -96,7 +97,8 @@ export default defineConfig({
       // Generated, minified artifact-kit output (ADR-0050). Beyond being
       // pointless to format, running the formatter over the 240 KB minified
       // bundle aborts it outright.
-      ".claude/skills/widget-artifact/kit/**",
+      ".claude/skills/widget-artifact/kit/kit.css",
+      ".claude/skills/widget-artifact/kit/render.mjs",
     ],
   },
   staged: {

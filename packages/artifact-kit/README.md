@@ -6,9 +6,11 @@ a committed renderer emits the file.
 **React here is a build-time authoring language, never a runtime.** Components
 are authored in React + Tailwind and rendered to _static_ HTML by
 `renderToStaticMarkup`; no framework reaches the published artifact. The board
-injects the compiled stylesheet and Alpine at render time, the same seam
-`frameArtifactHtml` already uses for the theme and the mono face
-(ADR-0009/0031).
+injects the compiled stylesheet, the fit pass and the copy behaviour at render
+time — the same seam `frameArtifactHtml` already uses for the theme and the
+mono face (ADR-0009/0031). Alpine has that seam reserved but is **not**
+injected today: nothing emits `x-data` yet, and a framework with no consumer
+is cost without benefit.
 
 ## Why a kit at all
 

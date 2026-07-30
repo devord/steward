@@ -2,6 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import type { ReactNode } from "react"
 
 import { cn } from "./cn.ts"
+import type { Tone } from "./tone.ts"
 
 /**
  * shadcn's Badge, retoned onto the artifact palette. Adopted rather than
@@ -19,20 +20,25 @@ const badge = cva(
   "inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 font-mono text-xs leading-none whitespace-nowrap",
   {
     variants: {
+      // `satisfies Record<Tone, string>` is the point: a tone added to the
+      // shared vocabulary and not here (or vice versa) is a compile error,
+      // not a badge that silently renders unstyled.
       tone: {
         neutral: "border-border-dim bg-bg2 text-ink-dim",
         attn: "border-orange/40 bg-orange/10 text-orange",
         warn: "border-yellow/40 bg-yellow/10 text-yellow",
+        bad: "border-red/40 bg-red/10 text-red",
         good: "border-green/40 bg-green/10 text-green",
         info: "border-blue/40 bg-blue/10 text-blue",
-        bad: "border-red/40 bg-red/10 text-red",
-      },
+      } satisfies Record<Tone, string>,
     },
     defaultVariants: { tone: "neutral" },
   },
 )
 
-export type BadgeTone = NonNullable<VariantProps<typeof badge>["tone"]>
+// Same vocabulary as TONE_TEXT — a Badge fills and borders where a value
+// column only inks, but a tone means the same thing in both.
+export type BadgeTone = Tone
 
 export function Badge({
   tone,

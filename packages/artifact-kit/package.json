@@ -23,7 +23,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "esbuild": "^0.28.0",
+    "esbuild": "catalog:",
     "tailwindcss": "catalog:",
     "vitest": "catalog:"
   }

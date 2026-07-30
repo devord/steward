@@ -52,8 +52,8 @@ export function footerTimestamp(iso: string): string {
  * that quotes markup has to break it up or the block truncates there — taking
  * the rest of the briefing with it, silently, in a file nobody re-reads.
  */
-export function escapeContextBlock(markdown: string): string {
-  return markdown.replace(/<\/script/gi, "<\\/script")
+export function escapeContextBlock(text: string): string {
+  return text.replace(/<\/script/gi, "<\\/script")
 }
 
 export function Shell({
@@ -96,7 +96,7 @@ export function Shell({
         {/* Standalone chrome only. On the board the widget card already shows
             the routine name and freshness, so the frame hides this rather than
             print the identity twice. */}
-        <footer className="text-ink-faint tile:px-2.5 page-only:px-5 flex justify-between pb-2 font-mono text-xs">
+        <footer className="text-ink-dim tile:px-2.5 page-only:px-5 flex justify-between pb-2 font-mono text-xs">
           <span>{slug}</span>
           <span>{footerTimestamp(generatedAt)}</span>
         </footer>
@@ -107,8 +107,10 @@ export function Shell({
             id={b.id}
             // `</script>` inside a JSON string would end the element early;
             // escaping the slash keeps the payload parseable.
+            // Same hazard, same escape as the context block — a `</script`
+            // inside a JSON string would end the element early.
             dangerouslySetInnerHTML={{
-              __html: JSON.stringify(b.data).replace(/<\//g, "<\\/"),
+              __html: escapeContextBlock(JSON.stringify(b.data)),
             }}
           />
         ))}

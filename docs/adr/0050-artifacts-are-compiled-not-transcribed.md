@@ -96,14 +96,23 @@ render or hydrate against a matched tree. It also protects `TILE_GUARD_SCRIPT`,
 which mutates the DOM to hide overflowing rows and which any re-rendering
 component tree would fight.
 
-- **Alpine is injected by the board**, alongside the theme and the font
-  (ADR-0009/0031). Injection rather than inlining gives the degradation for
-  free: the raw file has no Alpine and therefore shows the honest static
-  render — the exact fallback ADR-0039 already specifies — and a runtime
-  upgrade reaches every widget without rerunning a single routine.
+- **Alpine is injected by the board when something needs it**, alongside the
+  theme and the font (ADR-0009/0031). Injection rather than inlining gives the
+  degradation for free: the raw file has no Alpine and therefore shows the
+  honest static render — the exact fallback ADR-0039 already specifies — and a
+  runtime upgrade reaches every widget without rerunning a single routine.
+
+  **Not shipped yet, deliberately.** The first interactive component the kit
+  needed — the copy action — turned out not to require it: a committed kit
+  component can carry plain injected behaviour, and shipping a framework with
+  no consumer is cost without benefit. The seam is the one above; Alpine
+  arrives with the first routine that actually writes `x-data`.
+
 - **The kit provides the interaction floor** as committed, reviewed
   components (toggle groups, scrubbers, filter bars, sort headers,
   expand/collapse), so the common cases are written once rather than per run.
+  Today that floor is one component, the copy action; the rest are added as
+  routines migrate and need them.
 - **Routines may add their own `x-data` on top** when the kit has no
   component for the job, so a routine is never blocked waiting on an app-repo
   PR.
@@ -122,8 +131,8 @@ Two guards on the parts of this that are known to bite:
 - **Alpine expressions live in `<script>`, not in attributes.** Alpine parses
   `x-data` as a single expression, so multi-line bodies get HTML-escaped or
   mis-parsed and fail _silently_ as "Alpine Expression Error". Components
-  register through `Alpine.data()` inside `alpine:init`. The kit's skill
-  states this as a rule and the validator checks it.
+  register through `Alpine.data()` inside `alpine:init`. A rule for the kit's
+  skill, to be enforced by the validator when Alpine actually ships.
 - **Two owners of behaviour is the accepted cost of the escape hatch.**
   Kit-rendered markup is machine-generated and routine-authored Alpine is not,
   so the two are distinguishable by construction: the renderer stamps what it
@@ -133,12 +142,20 @@ Two guards on the parts of this that are known to bite:
 
 ## Consequences
 
-- **A design fix reaches the whole board without rerunning any routine.**
-  Today the standard's own caveat is that "published artifacts only pick up
-  the language when their routine reruns" — which costs a full agent run per
-  widget. With `kit.css` injected the way the theme already is, a fix lands on
-  the next page load. This is the direct answer to artifacts that do not look
-  right.
+- **A design fix reaches every kit-rendered widget without rerunning it.**
+  Today the standard's caveat is that "published artifacts only pick up the
+  language when their routine reruns" — a full agent run per widget. With
+  `kit.css` injected the way the theme already is, a fix lands on the next
+  page load instead.
+
+  **The reach is the migrated set, not the whole board.** Injection is gated
+  on the artifact's kit-version stamp, because `kit.css` opens with Tailwind's
+  preflight — a global reset that would silently relayout every hand-authored
+  artifact already on the branch. So the benefit arrives per widget, as each
+  routine migrates, and the pre-kit corpus keeps rendering exactly as it does
+  now. That is the honest shape of the win: not retroactive, but permanent
+  from each migration onward.
+
 - **`design.md` shrinks from 2,019 lines to roughly 300** — the domain
   vocabulary only. Layout, spacing, type scale and tiers move into the kit,
   where they are code.
