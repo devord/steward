@@ -18,26 +18,38 @@
  *    here is what marks it live.
  */
 export const ARTIFACT_COPY_SCRIPT = `<script data-steward-copy>(function(){
-function write(text){
-  // Synchronous path first — it is the one the sandbox reliably allows.
+// Report only what actually happened. An earlier cut fired the async API and
+// returned true without awaiting it, so a rejected write still said "copied"
+// — and left an unhandled rejection behind in a frame where nobody sees the
+// console. \`done\` is the single place the answer is committed.
+function write(text,done){
+  // Synchronous path first — it is the one the sandbox reliably allows,
+  // and it is the only one that answers within the user gesture.
   var ta=document.createElement("textarea")
   ta.value=text
   ta.setAttribute("readonly","")
   ta.style.cssText="position:fixed;top:-9999px;opacity:0"
   document.body.appendChild(ta)
+  // select() moves focus to the scratch field; hand it back, or the reader
+  // loses their place and the next keystroke goes nowhere.
+  var had=document.activeElement
   ta.select()
   var ok=false
   try{ok=document.execCommand("copy")}catch(e){}
   ta.remove()
-  if(ok)return true
-  // Only then the async API, whose rejection we cannot surface anyway.
+  try{if(had&&had.focus)had.focus()}catch(e){}
+  if(ok)return done(true)
+  // Fall back to the async API and wait for its verdict rather than assume one.
   try{
     if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text)
-      return true
+      navigator.clipboard.writeText(text).then(
+        function(){done(true)},
+        function(){done(false)}
+      )
+      return
     }
   }catch(e){}
-  return false
+  done(false)
 }
 function reveal(){
   var bs=document.querySelectorAll("[data-kit-copy]")
@@ -50,11 +62,16 @@ document.addEventListener("click",function(e){
   e.preventDefault()
   var payload=b.getAttribute("data-kit-copy-payload")||""
   var label=b.getAttribute("data-kit-copy-label")||"copy"
-  var ok=write(payload)
-  b.textContent=ok?"copied":"copy failed"
-  // Restoring the label is what makes a second copy legible as a second
-  // action rather than leaving the row stuck reading "copied".
-  setTimeout(function(){b.textContent=label},1500)
+  write(payload,function(ok){
+    b.textContent=ok?"copied":"copy failed"
+    // Restoring the label is what makes a second copy legible as a second
+    // action rather than leaving the row stuck reading "copied". Cancel any
+    // pending restore first: two copies inside the window would otherwise let
+    // the first timer fire during the second and reset the label early, so the
+    // button reads "copy" while the copy it is reporting on just happened.
+    if(b.__t)clearTimeout(b.__t)
+    b.__t=setTimeout(function(){b.textContent=label;b.__t=0},1500)
+  })
 })
 document.readyState==="loading"
   ?addEventListener("DOMContentLoaded",reveal)

@@ -1,4 +1,5 @@
 import { cn } from "../ui/cn.ts"
+import { type Tone, TONE_TEXT } from "../ui/tone.ts"
 
 /**
  * The 1×1 glance: one number and what it counts.
@@ -18,7 +19,7 @@ export function StatTier({
 }: {
   value: number | string
   label: string
-  tone?: "neutral" | "attn" | "warn" | "bad" | "good"
+  tone?: Tone
   note?: string
 }) {
   return (
@@ -33,22 +34,19 @@ export function StatTier({
           // Not a type-scale step: the glance tier's whole job is this figure,
           // so it is sized against the tile rather than the body copy.
           "tier-detail:text-2xl font-mono text-[2.75rem] leading-none font-semibold tabular-nums",
-          {
-            neutral: "text-ink",
-            attn: "text-orange",
-            warn: "text-yellow",
-            bad: "text-red",
-            good: "text-green",
-          }[tone],
+          // The stat is the glance, so neutral here is full ink rather than
+          // the dimmed secondary the value columns use.
+          tone === "neutral" ? "text-ink" : TONE_TEXT[tone],
         )}
       >
         {value}
       </span>
       <span className="text-ink-dim font-mono text-xs">{label}</span>
-      {/* The floor is 12px (widget-standard §6) — hierarchy is earned with
-          weight and colour, never by shrinking below it. */}
+      {/* Labels sit at the 12px floor; data never does (widget-standard §6).
+          And de-emphasis is spent on size and weight, never a dimmer ink —
+          ink-faint is a glyph role, below AA on all but one theme. */}
       {note ? (
-        <span className="text-ink-faint beyond-glance:block hidden font-mono text-xs">
+        <span className="text-ink-dim beyond-glance:block hidden font-mono text-xs">
           {note}
         </span>
       ) : null}

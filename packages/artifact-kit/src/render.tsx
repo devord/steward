@@ -6,6 +6,7 @@ import { QueueTable, type QueueRow } from "./components/QueueTable.tsx"
 import { Section } from "./components/Section.tsx"
 import { StatTier } from "./components/StatTier.tsx"
 import { Shell } from "./Shell.tsx"
+import type { Tone } from "./ui/tone.ts"
 
 /** A labelled band of content. One variant today; the union is the seam. */
 export type Block = {
@@ -36,7 +37,7 @@ export interface ArtifactDoc {
   stat: {
     value: number | string
     label: string
-    tone?: "neutral" | "attn" | "warn" | "bad" | "good"
+    tone?: Tone
     note?: string
   }
   blocks?: Block[]

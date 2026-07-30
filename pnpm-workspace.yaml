@@ -20,6 +20,9 @@ catalog:
   "@types/react": ^19.2.0
   "@types/react-dom": ^19.2.0
   tailwindcss: ^4.2.0
+  # Bundler for the CLI and the artifact kit; a split range here is the skew
+  # the catalog exists to prevent (and vite 8 wants >=0.27).
+  esbuild: ^0.28.0
 
 # Supply-chain hardening (mirrors devtools' pnpm-workspace.yaml):
 # - `ignoreScripts: true` blocks lifecycle scripts from transitive deps on

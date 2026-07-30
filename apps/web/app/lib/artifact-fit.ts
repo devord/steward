@@ -21,7 +21,11 @@
  * any element, so a table row plus its detail row live in one `<tbody
  * data-fit-item>` and disappear together, which a per-`<tr>` pass could not do.
  */
-const FIT = `(function(){
+/**
+ * The pass as an expression evaluating to `fit()`, for embedding in the tile
+ * guard so it shares that script's observer and lifecycle.
+ */
+export const FIT_FACTORY = `(function(){
   var d = document.documentElement
   function over() {
     return Math.max(d.scrollHeight, document.body.scrollHeight) > d.clientHeight + 1
@@ -51,13 +55,17 @@ const FIT = `(function(){
     // Every re-fit measures from the whole artifact. Without this a tile can
     // only ever shrink: grow the widget back and the rows stay hidden.
     var units = unitsOf(list).filter(function (el) {
-      return !el.hasAttribute("data-fit-keep") && !el.classList.contains("now")
+      return !el.hasAttribute("data-fit-keep")
     })
     units.forEach(function (el) { el.hidden = false })
     return {
       list: list, more: m, units: units, hidden: 0, done: false,
-      // A pinned unit is itself a reason for the section to survive.
-      pinned: list.querySelectorAll("[data-fit-keep], .now").length,
+      // A pinned unit is itself a reason for the section to survive. (The old
+      // snippet also honoured a .now class; the pass runs only for
+      // kit-rendered files, and no kit component emits one. No backticks in
+      // here — this whole function is a template literal, and one would end
+      // it mid-comment.)
+      pinned: list.querySelectorAll("[data-fit-keep]").length,
     }
   }
   function trim(s) {
@@ -129,11 +137,7 @@ const FIT = `(function(){
  */
 export const FIT_STYLE =
   "[data-fit-more]{font:12px var(--font-mono,ui-monospace);" +
-  "color:var(--color-ink-faint,#928374);padding-top:2px}" +
+  // ink-dim, not ink-faint: "+N more" is text, and ink-faint is a glyph
+  // role below AA on all but one theme (DESIGN.md).
+  "color:var(--color-ink-dim,#a89984);padding-top:2px}" +
   "[data-fit-more][hidden]{display:none}"
-
-/**
- * The pass as an expression evaluating to `fit()`, for embedding in the tile
- * guard so it shares that script's observer and lifecycle.
- */
-export const FIT_FACTORY = FIT

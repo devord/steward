@@ -28,7 +28,9 @@ export function Section({
               no fainter, smaller uppercase eyebrow below this. */}
           <h2 className="text-ink-dim m-0 font-mono text-xs font-normal">
             {label}
-            {count ? <span className="text-ink-faint"> · {count}</span> : null}
+            {/* No dimmer tier to reach for — ink-faint is glyph-only — so the
+                separator does the delineating. */}
+            {count ? <span> · {count}</span> : null}
           </h2>
           <hr className="border-border-dim m-0 flex-1 border-t" />
         </div>

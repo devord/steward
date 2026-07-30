@@ -37,7 +37,8 @@
           "action": {
             "payload": "/eng:triage Enforce cart attribution on the checkout extensibility path\n\nThe spec at analytics.md §Attribution requires every checkout event to carry a cart token; app/checkout/events.ts currently emits none (gap). Acceptance: every checkout event carries a cart token, asserted in app/checkout/events.test.ts.\nPossibly related: CORZA-147",
             "label": "copy"
-          }
+          },
+          "href": "https://formfactory.atlassian.net/browse/CORZA-147"
         },
         {
           "id": "g2",

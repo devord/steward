@@ -23,10 +23,15 @@ jobs:
       # freshness discipline ADR-0006 set for the generated skills catalog.
       # `tokens.test.ts` deliberately checks only the structural invariants,
       # leaving the values to this step rather than to a second hand-kept copy.
-      - name: Artifact tokens are generated, never hand-edited
+      - name: Artifact kit output is generated, never hand-edited
         run: |
           node scripts/gen-artifact-tokens.ts
-          git diff --exit-code -- packages/artifact-kit/src/tokens/tokens.css
+          pnpm --filter @steward/artifact-kit build
+          git diff --exit-code -- \
+            packages/artifact-kit/src/tokens/tokens.css \
+            .claude/skills/widget-artifact/tokens.json \
+            .claude/skills/widget-artifact/kit/kit.css \
+            .claude/skills/widget-artifact/kit/render.mjs
       - run: pnpm exec vp check
       - run: pnpm run typecheck
       - run: pnpm run build

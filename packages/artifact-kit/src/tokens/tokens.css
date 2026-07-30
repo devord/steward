@@ -15,8 +15,11 @@
      followed the active theme. */
   --color-*: initial;
 
-  /* The board injects the real face (ADR-0031); the fallback after the comma
-     is what a raw-opened file gets. */
+  /* Only the mono face is injected by the board (ADR-0031) — the fallback
+     after the comma is what a raw-opened file gets. The sans stack is the
+     artifact's own: ADR-0048 moved the *chrome* to one mono face and
+     explicitly declined to re-render artifacts in it, so artifacts keep the
+     two-family mix the contract has always specified. */
   --font-sans: system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
 

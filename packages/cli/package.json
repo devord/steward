@@ -27,7 +27,7 @@
   "devDependencies": {
     "@steward/schema": "workspace:*",
     "@types/node": "catalog:",
-    "esbuild": "^0.25.0",
+    "esbuild": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"
   },
