@@ -68,6 +68,11 @@ regardless, and the kit decides what the split looks like. Without it a wide
 frame runs every band down one narrow ribbon — a shipped run spent 35% of a
 2560px frame that way.
 
+Any band may take the rail, prose included — a short aside beside the ledger is
+a fair use of it. Two columns need two columns' worth of content, though: if
+every main band comes back empty, the rail **is** the content and renders as one
+stack rather than beside an empty track.
+
 **`trimFirst: true`** makes this block give way before every other list,
 whatever the reading order. It exists for a bookkeeping band that sits _above_
 the content it serves: trimming is bottom-up, so without it the queue the

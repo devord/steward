@@ -217,6 +217,53 @@ describe("the page-tier rail", () => {
     expect(renderArtifact(fixture, "")).not.toContain("tier-page:grid")
   })
 
+  it("stacks rather than leaving an empty main column", () => {
+    // Not a corner case: this is `repo-intel`'s quiet week, where no new
+    // signal surfaced and the carried-forward questions are the whole
+    // briefing. Gating the grid on the rail alone put an empty 3fr track
+    // beside them.
+    const html = renderArtifact(
+      {
+        ...base,
+        blocks: [
+          { kind: "queue", label: "Signals", rows: [] },
+          { kind: "queue", label: "Open questions", rail: true, rows: [row] },
+        ],
+      },
+      "",
+    )
+    expect(html).not.toContain("tier-page:grid")
+    // With nothing to sit beside, the rail *is* the content.
+    expect(html).toContain("Open questions")
+    expect(html).not.toContain('<div class="flex flex-col gap-3"></div>')
+  })
+
+  it("lets a prose band take the rail", () => {
+    // Allowed on purpose. `rail` is a claim about rank, and an aside has rank
+    // like any band; the 52ch measure sits comfortably in the 2fr column.
+    // Forbidding it would mean splitting BlockBase and adding a validator rule
+    // for a combination that renders correctly.
+    const html = renderArtifact(
+      {
+        ...base,
+        blocks: [
+          { kind: "queue", label: "Signals", rows: [row] },
+          {
+            kind: "prose",
+            label: "Why this week",
+            rail: true,
+            items: [{ id: "p1", body: "Deploy config moved server-side." }],
+          },
+        ],
+      },
+      "",
+    )
+    expect(html).toContain("tier-page:grid")
+    // Still page-gated, and the gate is on the band so the heading goes too.
+    expect(html).toContain("hidden page-only:flex")
+    expect(html.indexOf("Signals")).toBeLessThan(html.indexOf("Why this week"))
+  })
+
   it("splits main from rail once a band asks", () => {
     const html = renderArtifact(
       {
