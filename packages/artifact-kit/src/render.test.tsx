@@ -283,6 +283,44 @@ describe("the page-tier rail", () => {
   })
 })
 
+describe("page-only bands", () => {
+  const doc = (pageOnly?: boolean): ArtifactDoc => ({
+    slug: "s",
+    generatedAt: "2026-07-30T09:00:00Z",
+    stat: { value: 1, label: "x" },
+    blocks: [
+      {
+        kind: "queue",
+        label: "Trace",
+        pageOnly,
+        rows: [{ id: "a", title: "A1" }],
+      },
+    ],
+  })
+
+  it("gates a queue band on the tile stamp, not a width", () => {
+    // A four-column tile is 1200px and still not an auditor's surface. The
+    // trace restates what the drivers and the reason line already say — on the
+    // wide tile that put the same figure on screen four times.
+    expect(renderArtifact(doc(true), "")).toContain("hidden page-only:flex")
+  })
+
+  it("leaves a queue band on the tile unless it asks", () => {
+    expect(renderArtifact(doc(), "")).not.toContain("page-only:flex")
+    expect(renderArtifact(doc(false), "")).not.toContain("page-only:flex")
+  })
+
+  it("keeps prose page-only without asking", () => {
+    const prose: ArtifactDoc = {
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [{ kind: "prose", items: [{ id: "d", body: "x" }] }],
+    }
+    expect(renderArtifact(prose, "")).toContain("hidden page-only:flex")
+  })
+})
+
 describe("a band's note", () => {
   const doc: ArtifactDoc = {
     slug: "s",

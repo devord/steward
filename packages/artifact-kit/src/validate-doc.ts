@@ -114,6 +114,8 @@ export function validateDoc(doc: unknown): string[] {
         if (b.note !== undefined) str(b.note, `${at}.note`, false)
         if (b.rail !== undefined && typeof b.rail !== "boolean")
           errors.push(`${at}.rail must be a boolean`)
+        if (b.pageOnly !== undefined && typeof b.pageOnly !== "boolean")
+          errors.push(`${at}.pageOnly must be a boolean`)
 
         if (b.kind === "prose") {
           if (!Array.isArray(b.items))

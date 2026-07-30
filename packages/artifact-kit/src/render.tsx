@@ -25,6 +25,19 @@ interface BlockBase {
    * artifact that sets it nowhere emits exactly the markup it did before.
    */
   rail?: boolean
+  /**
+   * Render only on the raw page and the full view, never on a tile however
+   * wide — gated on the tile stamp rather than a width, like prose.
+   *
+   * For an auditor's band rather than a glancer's: `corza-risk`'s rule trace
+   * restates, in evaluation order, facts the tile already carries as drivers
+   * and as the reason line. Rendering it on the wide tile put `12d` on screen
+   * four times. A band that repeats the tile is not a band the tile should
+   * have.
+   *
+   * Prose is page-only whether or not this is set; a queue has to ask.
+   */
+  pageOnly?: boolean
   /** A band-level copy: the whole set as one payload. */
   action?: { payload: string; label?: string }
 }
@@ -103,7 +116,11 @@ function Band({ block, index }: { block: Block; index: number }) {
       // The heading travels with its content. Gating only the paragraphs left
       // "Dives" standing over nothing on every tile — a row spent to say
       // nothing, which is what a collapsible band is for in the first place.
-      className={block.kind === "prose" ? "hidden page-only:flex" : undefined}
+      className={
+        (block.pageOnly ?? block.kind === "prose")
+          ? "hidden page-only:flex"
+          : undefined
+      }
     >
       {block.kind === "queue" ? (
         <QueueTable
