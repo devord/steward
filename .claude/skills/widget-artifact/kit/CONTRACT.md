@@ -127,6 +127,57 @@ the full view and never on a tile, however wide. A four-column tile is 1200px
 and still not a reading surface, and a paragraph is not a trimmable unit: a
 dive cut to `+1 more` is a truncated argument rather than a shorter list.
 
+### `blocks[]` — series
+
+```json
+{
+  "kind": "series",
+  "label": "Burn-up",
+  "spec": {
+    "from": "2026-06-25",
+    "to": "2026-08-06",
+    "today": "2026-07-30",
+    "max": 40,
+    "lines": [
+      {
+        "id": "landed",
+        "label": "16 landed",
+        "role": "hero",
+        "points": [{ "x": "2026-07-01", "y": 4 }]
+      }
+    ]
+  }
+}
+```
+
+A cumulative line chart. **Page only**, like prose, and for the same reason
+plus one: tiles never scroll, so a chart on a tile either steals the ledger's
+rows or opens into the clipped region.
+
+**You name what a line _is_; the kit decides how it looks.** `role` is the
+whole vocabulary:
+
+| role      | what it means                      | how it draws                           |
+| --------- | ---------------------------------- | -------------------------------------- |
+| `hero`    | the series that is the point       | solid, the accent hue, end marker      |
+| `ceiling` | a moving limit                     | stepped, gray — holds until it changed |
+| `target`  | a slope not yet realised           | dashed, ink                            |
+| `ghost`   | the hero at its optimistic ceiling | dotted, the hero's hue quieted         |
+
+There is no `role` for "another identity", on purpose. This is an **emphasis**
+chart — one hue plus gray — so a second identity hue would spend an accent
+budget the rest of the page owns and turn a legible chart into four things
+shouting. Two measures of different scale are two charts, never two axes;
+every line here is the same unit, so that holds by construction.
+
+Identity never rests on colour: four line styles, a direct label at every
+endpoint, and a legend whenever there is more than one line. End labels are
+nudged apart when lines finish close together — the marker stays on the real
+point.
+
+A line needs **two points**. One is a dot claiming a trend, and the band does
+not render.
+
 **`keep` is for rows carrying bad news that would otherwise sink.** Trimming is
 bottom-up, so a repo with zero commits or a check that never ran gets cut
 first, and the tile ends up reporting only good news. But **never use it on a
