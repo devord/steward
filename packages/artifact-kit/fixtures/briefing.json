@@ -1,6 +1,6 @@
 {
-  "slug": "example-intel",
-  "title": "Example ecosystem intelligence",
+  "slug": "example-briefing",
+  "title": "Example briefing",
   "generatedAt": "2026-07-30T09:00:00Z",
   "stat": {
     "value": 5,
@@ -278,6 +278,57 @@
           "title": "Edge worker runtime has gone quiet",
           "body": "Thirty-four days with no commits, after fifty-one consecutive weeks with at least one. The last merged PR was a dependency bump. No deprecation notice, no RFC, no issue explaining it.\n\nSilence is ambiguous and worth saying so: it precedes a rewrite about as often as a wind-down, and we cannot tell which from the outside. What makes it worth flagging now rather than in a month is that our own Edge work is scheduled for Q4 — the cost of being wrong rises after we commit.",
           "meta": "Last commit 2026-06-26 · 34 days quiet"
+        }
+      ]
+    },
+    {
+      "kind": "queue",
+      "label": "Sources read",
+      "pageOnly": true,
+      "showHeader": true,
+      "count": "audit trail",
+      "rows": [
+        {
+          "id": "s1",
+          "title": "acme/webstore",
+          "values": [
+            {
+              "label": "commits",
+              "value": "84"
+            },
+            {
+              "label": "window",
+              "value": "7d"
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "title": "acme/checkout-ext",
+          "values": [
+            {
+              "label": "commits",
+              "value": "37"
+            },
+            {
+              "label": "window",
+              "value": "7d"
+            }
+          ]
+        },
+        {
+          "id": "s3",
+          "title": "acme/edge-runtime",
+          "values": [
+            {
+              "label": "commits",
+              "value": "0"
+            },
+            {
+              "label": "window",
+              "value": "7d"
+            }
+          ]
         }
       ]
     }

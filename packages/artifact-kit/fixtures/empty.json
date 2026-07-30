@@ -1,0 +1,35 @@
+{
+  "slug": "example-empty",
+  "title": "Example empty state",
+  "generatedAt": "2026-07-30T09:00:00Z",
+  "stat": {
+    "value": 0,
+    "label": "to file",
+    "tone": "neutral",
+    "note": "38 pages audited"
+  },
+  "blocks": [
+    { "kind": "queue", "label": "Recommended", "rows": [] },
+    { "kind": "queue", "label": "Carried forward", "rail": true, "rows": [] },
+    { "kind": "prose", "label": "Dives", "items": [] }
+  ],
+  "provenance": [
+    "38 pages audited",
+    "9 features",
+    "8 data",
+    "9 integrations",
+    "11 nfrs"
+  ],
+  "provenanceLink": {
+    "href": "https://example.test/spec",
+    "label": "knowledge base"
+  },
+  "empty": {
+    "headline": "No gaps — the code matches the spec",
+    "detail": "Every capability in the knowledge base has an implementation that matches it. 38 pages audited across features, data, integrations and non-functional requirements."
+  },
+  "context": "## Why this is empty\n\nHaving nothing to report is an outcome, not a failure, and the difference between the two is the whole reason this state is designed rather than blank.\n\nThis run compared 38 pages of specification against the shipped code and found no capability where they disagree. That is a different claim from \"the audit did not run\" and a different claim again from \"the knowledge base is missing\" — each has its own empty state, and collapsing them would let a broken run read as a clean one.\n\n## Ask me about\n\nWhat the audit can and cannot see: it compares written specs to code, so an unwritten expectation produces no finding.\n",
+  "state": [
+    { "id": "example-empty-state", "data": { "audited": 38, "gaps": 0 } }
+  ]
+}

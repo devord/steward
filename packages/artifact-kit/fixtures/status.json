@@ -1,0 +1,282 @@
+{
+  "slug": "example-status",
+  "title": "Example delivery risk",
+  "generatedAt": "2026-07-30T09:00:00Z",
+  "verdict": {
+    "level": "attn",
+    "word": "AMBER",
+    "gate": "Aug 6 gate · 7 days out",
+    "clauses": [
+      {
+        "lead": "Pace gap",
+        "value": "12d",
+        "tail": "on the Aug 6 gate"
+      },
+      {
+        "value": "11 asks",
+        "tail": "due ≤5d"
+      },
+      {
+        "lead": "oldest ask",
+        "value": "41d",
+        "refs": [
+          {
+            "label": "EXAMPLE-64",
+            "href": "https://example.atlassian.net/browse/EXAMPLE-64"
+          }
+        ]
+      }
+    ],
+    "caveat": "Not a full read — launch exposure has no input by design, so RED is reachable only through the breach condition.",
+    "note": "overridden AMBER by the delivery lead, Jul 22 — \"a workaround is in place\" (computed RED · expires Jul 29)"
+  },
+  "blocks": [
+    {
+      "kind": "queue",
+      "label": "Drivers",
+      "count": "3 of 7 fired",
+      "showHeader": true,
+      "rows": [
+        {
+          "id": "a1",
+          "state": {
+            "label": "fired",
+            "tone": "neutral"
+          },
+          "title": "A1 · Gate pace gap",
+          "detail": "Slip against the gate. Threshold: any positive gap.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "12d behind",
+              "delta": {
+                "value": "3d",
+                "direction": "up"
+              }
+            },
+            {
+              "label": "threshold",
+              "value": "> 0d",
+              "from": "detail"
+            }
+          ]
+        },
+        {
+          "id": "a2",
+          "state": {
+            "label": "fired",
+            "tone": "neutral"
+          },
+          "title": "A2 · Asks inside the proximity window",
+          "detail": "Open asks due within 5 days, on the earlier of the two commitments.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "11 asks",
+              "delta": {
+                "value": "2",
+                "direction": "up"
+              }
+            },
+            {
+              "label": "threshold",
+              "value": "≥ 1",
+              "from": "detail"
+            }
+          ]
+        },
+        {
+          "id": "a4",
+          "state": {
+            "label": "fired",
+            "tone": "neutral"
+          },
+          "title": "A4 · Oldest open ask",
+          "detail": "Age off the anchor ladder.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "41d",
+              "delta": {
+                "value": "1d",
+                "direction": "up"
+              }
+            },
+            {
+              "label": "threshold",
+              "value": "> 7d",
+              "from": "detail"
+            }
+          ]
+        },
+        {
+          "id": "a3",
+          "state": {
+            "label": "clear",
+            "tone": "neutral"
+          },
+          "title": "A3 · Breaches past drop-dead",
+          "detail": "No open ask is past its drop-dead date this run.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "0",
+              "delta": {
+                "value": "3",
+                "direction": "down"
+              }
+            },
+            {
+              "label": "threshold",
+              "value": "≥ 1",
+              "from": "detail"
+            }
+          ]
+        },
+        {
+          "id": "r1",
+          "state": {
+            "label": "no input",
+            "tone": "info"
+          },
+          "title": "R1 · Blocking ask past drop-dead",
+          "detail": "Needs a per-ask blocking marker no source carries. Structurally untestable, not merely unmet.",
+          "values": [
+            {
+              "label": "measured",
+              "value": "—",
+              "from": "always"
+            },
+            {
+              "label": "threshold",
+              "value": "≥ 1",
+              "from": "detail"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "queue",
+      "label": "Legs",
+      "rail": true,
+      "showHeader": false,
+      "note": "both legs read this morning",
+      "rows": [
+        {
+          "id": "pace",
+          "state": {
+            "label": "fresh",
+            "tone": "good"
+          },
+          "title": "pace leg",
+          "values": [
+            {
+              "label": "as of",
+              "value": "08:05Z"
+            }
+          ]
+        },
+        {
+          "id": "breach",
+          "state": {
+            "label": "stale",
+            "tone": "warn"
+          },
+          "title": "breach leg",
+          "values": [
+            {
+              "label": "as of",
+              "value": "yesterday"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "queue",
+      "label": "Trace",
+      "pageOnly": true,
+      "showHeader": true,
+      "count": "evaluation order",
+      "rows": [
+        {
+          "id": "t0",
+          "title": "R1 · Blocking item past drop-dead",
+          "values": [
+            {
+              "label": "outcome",
+              "value": "no input"
+            }
+          ]
+        },
+        {
+          "id": "t1",
+          "title": "R2 · Launch exposure",
+          "values": [
+            {
+              "label": "outcome",
+              "value": "no input"
+            }
+          ]
+        },
+        {
+          "id": "t2",
+          "title": "R3 · Breaches gating the milestone",
+          "values": [
+            {
+              "label": "outcome",
+              "value": "clear"
+            }
+          ]
+        },
+        {
+          "id": "t3",
+          "title": "A1 · Gate pace gap",
+          "values": [
+            {
+              "label": "outcome",
+              "value": "FIRED"
+            }
+          ]
+        },
+        {
+          "id": "t4",
+          "title": "A2 · Items inside the proximity window",
+          "values": [
+            {
+              "label": "outcome",
+              "value": "FIRED"
+            }
+          ]
+        },
+        {
+          "id": "t5",
+          "title": "A3 · Breaches past drop-dead",
+          "values": [
+            {
+              "label": "outcome",
+              "value": "clear"
+            }
+          ]
+        },
+        {
+          "id": "t6",
+          "title": "A4 · Oldest open item",
+          "values": [
+            {
+              "label": "outcome",
+              "value": "FIRED"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "provenance": ["2 legs read", "7 conditions", "3 fired", "1 no input"],
+  "empty": {
+    "headline": "Nothing to evaluate",
+    "detail": "Neither leg published a reading this run."
+  },
+  "context": "## Why AMBER and not RED\n\nThe computed colour was RED on the breach condition. A human override moved it to AMBER on the grounds that a workaround is in place. The override expires Jul 29 and is always shown with the computed colour beside it: \"the machine says red, the lead says amber, because Y\" is the useful sentence, and hiding either half breaks it.\n\n## The honest dynamic range\n\nOne RED condition has no live input at all — it needs a per-ask blocking marker no source carries, so it is structurally untestable rather than merely unmet this week. Naming that is the difference between a verdict that was checked and one that could not be.\n\n## Ask me about\n\nWhether the override should be renewed or allowed to lapse to the computed colour, and what it would take to give the dormant condition a real input."
+}

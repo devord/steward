@@ -1,0 +1,78 @@
+{
+  "slug": "example-edge",
+  "title": "Example degenerate shapes",
+  "generatedAt": "2026-07-30T09:00:00Z",
+  "stat": {
+    "value": "—",
+    "label": "unread · nothing could be compared this run",
+    "tone": "neutral",
+    "note": "a stat whose value is not a number"
+  },
+  "blocks": [
+    {
+      "kind": "queue",
+      "label": "Shapes that have broken layout before",
+      "count": "one of each",
+      "showHeader": true,
+      "rows": [
+        {
+          "id": "long",
+          "state": { "label": "very-long-chip-label", "tone": "attn" },
+          "title": "A title long enough to pass the 52ch measure the flexible column caps at, which is where a table stops sizing to content and starts wrapping, and the point at which a mid-row hole used to open up at the page tier",
+          "href": "https://example.test/long",
+          "detail": "A detail line that is also long, because the why-line spans the table by colspan and a short one never exercises that.",
+          "values": [
+            { "label": "n", "value": "1", "numeric": true },
+            { "label": "when", "value": "2026-07-30", "from": "detail" }
+          ]
+        },
+        {
+          "id": "bare",
+          "title": "A row with no state, no detail, no values and no action",
+          "values": []
+        },
+        {
+          "id": "zero",
+          "state": { "label": "none", "tone": "neutral" },
+          "title": "A meter of zero against a column whose max is also zero",
+          "values": [
+            { "label": "n", "value": "0", "meter": 0 },
+            { "label": "when", "value": "—", "from": "detail" }
+          ]
+        },
+        {
+          "id": "wide",
+          "state": { "label": "big", "tone": "bad" },
+          "title": "A four-digit magnitude, which is where a bar and its count compete for the cell",
+          "values": [
+            { "label": "n", "value": "1284", "meter": 1284, "tone": "bad" },
+            { "label": "when", "value": "2026-01-02", "from": "detail" }
+          ],
+          "action": {
+            "payload": "A copy payload containing a literal </script> and a \"quoted\" phrase, so the escaping is exercised by something that renders.",
+            "label": "copy"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "queue",
+      "label": "One row, one group",
+      "rail": true,
+      "showHeader": false,
+      "note": "a note under a band with a single row",
+      "groups": [
+        {
+          "id": "solo",
+          "label": "Solo",
+          "count": "1",
+          "rows": [{ "id": "s1", "title": "The only row in the only group" }]
+        },
+        { "id": "gone", "label": "Dropped — no rows", "rows": [] }
+      ]
+    }
+  ],
+  "provenance": ["one fact"],
+  "empty": { "headline": "Unreachable — this fixture always has rows" },
+  "context": "## What this fixture is for\n\nThe shapes that have broken layout before, gathered where a visual sheet will show them:\n\n- A title past the 52ch cap, which is where the flexible column stops sizing to content.\n- A row carrying nothing but a title — no chip, no values, no action — which still has to occupy every column the table reserved.\n- A meter of zero against a zero column max, the division the bar has to survive.\n- A four-digit magnitude, where the bar and its count compete for one cell.\n- A copy payload containing a literal `</script>`, so the escape is exercised by something that renders rather than only by a unit test.\n- A group with no rows, which should disappear rather than head nothing.\n\n## Ask me about\n\nWhich of these is worth a regression test rather than a fixture.\n"
+}

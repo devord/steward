@@ -1,5 +1,5 @@
 {
-  "slug": "example-gaps",
+  "slug": "example-ledger",
   "generatedAt": "2026-07-30T09:00:00Z",
   "stat": {
     "value": 3,
@@ -8,6 +8,37 @@
     "note": "12 held back"
   },
   "blocks": [
+    {
+      "kind": "queue",
+      "label": "Housekeeping",
+      "count": "2 to tidy",
+      "trimFirst": true,
+      "showHeader": false,
+      "rows": [
+        {
+          "id": "h1",
+          "title": "Two specs disagree about the import cadence",
+          "values": [
+            {
+              "label": "since",
+              "value": "11d",
+              "numeric": true
+            }
+          ]
+        },
+        {
+          "id": "h2",
+          "title": "One capability has no owner recorded",
+          "values": [
+            {
+              "label": "since",
+              "value": "3d",
+              "numeric": true
+            }
+          ]
+        }
+      ]
+    },
     {
       "kind": "queue",
       "label": "Recommended",
@@ -23,6 +54,11 @@
           "title": "Enforce cart attribution on the checkout extensibility path",
           "detail": "Spec at analytics.md §Attribution requires every checkout event to carry a cart token; app/checkout/events.ts emits none.",
           "values": [
+            {
+              "label": "impact",
+              "value": "5",
+              "meter": 5
+            },
             {
               "label": "confidence",
               "value": "high",
@@ -50,6 +86,11 @@
           "detail": "b2b.md §Imports says hourly; jobs/price-import.ts is scheduled daily. Neither side is obviously wrong.",
           "values": [
             {
+              "label": "impact",
+              "value": "3",
+              "meter": 3
+            },
+            {
               "label": "confidence",
               "value": "med",
               "from": "detail"
@@ -74,6 +115,11 @@
           "title": "PLP facet counts are unspecified for empty collections",
           "detail": "storefront.md §Faceting defines counts for populated collections only; app/plp/facets.ts returns null and the UI renders a blank.",
           "values": [
+            {
+              "label": "impact",
+              "value": "1",
+              "meter": 1
+            },
             {
               "label": "confidence",
               "value": "med",
@@ -145,5 +191,6 @@
     "9 integrations",
     "11 nfrs"
   ],
-  "context": "## Where it stands\n\n3 gaps worth filing, 12 held back as low confidence. Two of the three already have a Jira prior; EXAMPLE-412 is a genuine disagreement rather than a missing feature.\n\n## What the tile cropped\n\nEvery held-back finding, with the key it was deduped against:\n\n- Webhook retry backoff — deduped against EXAMPLE-201 (Done). **The ticket is closed and the drift is still live**; that pairing is a process failure, not a code one.\n- Locale fallback for price formatting — EXAMPLE-355, in progress.\n\n## Caveats\n\nThe audit compares written specs to code, so an unwritten expectation produces no finding. \"Drift\" means the two disagree without saying which is wrong.\n\n## Ask me about\n\n- Which of these are process failures rather than honest drift.\n- What would have caught them earlier — a review gate, or a definition-of-done change.\n- Which to file now versus fold into existing work.\n"
+  "context": "## Where it stands\n\n3 gaps worth filing, 12 held back as low confidence. Two of the three already have a Jira prior; EXAMPLE-412 is a genuine disagreement rather than a missing feature.\n\n## What the tile cropped\n\nEvery held-back finding, with the key it was deduped against:\n\n- Webhook retry backoff — deduped against EXAMPLE-201 (Done). **The ticket is closed and the drift is still live**; that pairing is a process failure, not a code one.\n- Locale fallback for price formatting — EXAMPLE-355, in progress.\n\n## Caveats\n\nThe audit compares written specs to code, so an unwritten expectation produces no finding. \"Drift\" means the two disagree without saying which is wrong.\n\n## Ask me about\n\n- Which of these are process failures rather than honest drift.\n- What would have caught them earlier — a review gate, or a definition-of-done change.\n- Which to file now versus fold into existing work.\n",
+  "title": "Example ledger"
 }
