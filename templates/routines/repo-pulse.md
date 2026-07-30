@@ -33,7 +33,7 @@ widget:
       hint: >-
         Optional. A committed JSON map, login to name and 48px data URI,
         for real faces on rows. Needs the repo in the routine's repos list;
-        without it faces fall back to GitHub, then to initials
+        without it every row shows an initial circle
 ---
 
 # Repo pulse
@@ -79,12 +79,12 @@ For each watched repo, via `gh` (preferred) or the GitHub API:
    "mine" / "needs me" judgement is deferred to render time, not
    decided here.
 
-   Then resolve a **display name and a face** for each unique author,
-   and reuse both on every row by that author. Follow the design
-   language's resolution chain unchanged (`widget-artifact` design.md ·
-   Avatar · Where the face comes from): `params.people` registry first,
-   then `gh api users/<login>` for the name, then a best-effort image
-   fetch, then the initial circle.
+   Then resolve a **display name and a face** for each unique author, and
+   reuse both on every row by that author: `params.people` registry first,
+   then `gh api users/<login>` for the name, then the initial circle. **Do
+   not fetch an avatar image** — the kit takes a `data:` URI and drops
+   anything else, so a fetched URL is bytes spent on a row that will render
+   an initial anyway.
 
    The registry is the step that matters here. A PR queue is a column of
    faces, and the fetch it used to lead with reaches
@@ -126,124 +126,125 @@ blocked first) → `Open` (the rest); oldest first within each, since old
 _and_ waiting on you is the emergency. A viewer with no PRs here, or the
 raw page, keeps the neutral render untouched.
 
-- **One repo watched**: PR rows at top level under the section rules
-  above.
-- **Several repos**: per-repo summary rows
-  (`repo · N PRs · K new issues · CI ✓/✗`), PR rows nested under each.
-  The neutral render orders repos by activity; the enhancer moves repos
-  with PRs requesting the viewer to the front and appends `(M need you)`
-  to their summary.
+- **One repo watched**: PR rows grouped by state, per the rules above, and
+  the faceting applies.
+- **Several repos**: the repo becomes the grouping axis, each carrying its
+  own summary (`N PRs · K new issues · CI ✓/✗`), ordered by activity.
+  **The faceting does not apply here** — see Emit: re-bucketing by viewer
+  would flatten the repos away, and which repo a PR belongs to is the thing
+  this shape exists to show.
 
-## Author the artifact
+## Emit
 
-Follow the `widget-artifact` skill for the HTML contract; compose from
-its design language (ledger rows, avatars, pills, dots, links). Every PR
-row also carries the viewer-agnostic data the render-time enhancer buckets
-on: `data-author="<login>"`, `data-reviewers="<space-separated requested
-logins>"`, plus `data-state` and `data-created` for its re-grouping and
-ordering. Row anatomy: a PR is a ledger row with these columns, in
-order:
+Write `data.json` and render it with the kit — the shape is documented once in
+`$STEWARD/.claude/skills/widget-artifact/kit/CONTRACT.md`; read it rather than
+inferring from this description. This routine's mapping onto it:
 
-- **Avatar key**: the author's avatar, wrapped in a link to their
-  GitHub profile (`https://github.com/<login>`, `target="_blank"
-rel="noopener"`), so the picture is the click-through to the person.
-  The design-language avatar component: 18px round `<img>` from the
-  inlined data URI; the link's `title` (and the img's `alt`) carry the
-  author's **display name**, so hover answers _whose PR is this_ with
-  a real name; initial-circle fallback when the fetch failed. Never a
-  `you`/`mine` word on the row, since the section grouping already says
-  it, and a bare pronoun reads as noise.
-- **Title**: `#num display-title` (conventional-commit prefix
-  stripped) as a **link** to the PR (`target="_blank" rel="noopener"`,
-  widget-standard §7), with the raw title in the `title` attribute so
-  the prefix is one hover away. Repo names link to the repo's PR
-  list.
-- **Ticket**: the Jira key in 12px mono, tinted reference-blue
-  (`--color-blue`) so the column scans as "linked, tracked work";
-  when the `jira` param is set, a link to `<jira>/browse/<KEY>`. Empty
-  cell when the title carries no key.
-- **Size**: `+adds −dels` in 12px mono (tabular, U+2212 minus),
-  diff-colored: additions a muted `--color-green`, deletions a muted
-  `--color-red`, each mixed toward `--color-ink` so it reads as the
-  familiar diffstat and stays calm, never the alarm-red of a failing
-  pill.
-- **Review / CI / marker**: three separate columns (the design
-  language's queue table; never several states in one cell, which can't
-  align). **Review** is the state's lucide icon from the shared
-  vocabulary (`check` approved, `circle-x` changes requested, `pencil`
-  draft, and dim the whole draft row; plain `review required` leaves
-  the cell empty): icon-only at tile widths with the word sr-only + in
-  the cell's `title`, icon + 12px mono word from the wide tier up.
-  Healthy states whisper (ink-faint); only actionable states take their
-  tone. **CI** is a compact icon when the PR has checks (`check`
-  passing ink-faint, `circle-x` failing red, `clock` pending ink-dim);
-  empty when it has none. **Marker** is the `needs you` slot (12px mono
-  orange), viewer-relative, added by the enhancer to rows requesting the
-  signed-in viewer — **only in the several-repos shape**, where the
-  sections are per-repo and carry no ownership. In the one-repo shape the
-  enhancer's own `Needs your review` heading already says the queue is
-  the viewer's, so a per-row `needs you` on every row only repeats the
-  header in the accent color; drop the marker _and_ its column there
-  (avatar · title · review · ci · age). Where the column does exist it is
-  never in the published markup, but its column is, so nothing shifts
-  when it lands.
-- **Age** in 12px mono. The enhancer tints it yellow only when the
-  wait is on the viewer (a needs-you row older than 3 days). A big
-  number alone is not an alarm, and the neutral render carries no
-  yellow age.
+- **`stat`** — the open-PR count, `label` `"open PRs"`, `note` carrying the
+  worst CI state and the blocked count (`"2 blocked · CI passing"`).
 
-Columns must align **across the whole artifact, not per section**: one
-grid on `main`, sections and their lists laid in with `subgrid`, so
-every state icon and age sits on the same vertical down the page. A
-per-`<ul>` grid gives each section its own column widths, which is the
-misaligned-state smell. Ticket and size are wide-tier columns: reveal
-them at 3-column widths and up (`min-width: 700px`) and in the full
-view; 1–2-column tiles keep avatar · title · review · ci · age (plus
-the several-repos-only marker column between ci and age).
+  It stays viewer-neutral at every tier. The count a viewer actually wants —
+  how many wait on them — arrives as the first group's heading
+  (`Needs your review · 3`), which is both where they are already looking and
+  the only place it can be honest, since the glance tier is one figure and
+  that figure has to be true for a reader who is not signed in.
 
-**The enhancer.** Embed one self-contained script (widget-artifact's
-person-relative snippet) that runs on `DOMContentLoaded`: read
-`window.__STEWARD_VIEWER__?.login`, and if it matches any row's
-`data-author` or `data-reviewers`, re-bucket the existing `<li>` nodes
-into `Needs your review` / `Yours` / `Open`, swap the section headings
-and counts, re-sort by actionability, apply the needs-you age-yellow
-(and, in the several-repos shape only, the `needs you` markers — see
-Marker above), and rewrite the 1×1 KPI to the viewer's review count.
-Move nodes _within_ the one `main` grid so the subgrid alignment
-survives; don't rebuild the grid. Wrap it in `try`/`catch` and bail on
-no match: the neutral render is the floor. Register it before the
-fit-to-height pass (or re-fit at its end) so fitting measures the
-regrouped DOM.
+- **One `queue` block, grouped.** `groups` are the states in order — `Blocked`
+  → `In review` → `Open` — each with its count. One block, not three: groups
+  share a column set, so every review glyph and age sits on the same vertical
+  down the whole ledger. Three separate blocks would give each its own column
+  widths, which is the misaligned-state smell.
+- **`viewerGroups`** — `{reviewer: "Needs your review", author: "Yours",
+rest: "Open"}`. The board resolves those against the signed-in viewer at
+  render time and re-buckets the rows itself. **Do not write an enhancer**:
+  that behaviour is injected now, and a transcribed copy of it would be the
+  one kind of drift nobody sees — a mis-bucketed queue shows one person
+  another person's work and looks entirely correct doing it.
+- **Rows.** `face` is the author (name plus a `data:` avatar from the
+  `people` registry — a URL is dropped, see below). `data` carries
+  `{author: "<login>", reviewers: "<space-separated logins>"}`, which is what
+  the board buckets on. `title` is `#num display-title` linking to the PR,
+  with the raw title in `title` so the stripped prefix is one hover away.
+  `values`, in order:
 
-Size behavior:
+  | column | from     | notes                                                                                                             |
+  | ------ | -------- | ----------------------------------------------------------------------------------------------------------------- |
+  | ticket | `detail` | the Jira key, `tone: "info"`, linked when `jira` is set                                                           |
+  | size   | `page`   | `+adds −dels`, U+2212 minus                                                                                       |
+  | review | `always` | `icon`: `check` approved · `circle-x` changes requested · `pencil` draft · `clock` review required                |
+  | ci     | `always` | `icon`: `check` passing · `circle-x` failing · `clock` pending; omit the value entirely when the PR has no checks |
+  | age    | `always` | numeric                                                                                                           |
 
-- **1×1**: the neutral render shows the open-PR count plus worst CI
-  state; the enhancer rewrites it to the count needing the viewer's
-  review.
-- **Short tiles** (any width, under ~380px tall, which includes 2×1 and
-  4×2): one ledger only, the actionable group. That is `Blocked` in the
-  neutral render, swapped by the enhancer to `Needs your review` (one
-  repo) or the review-requested repos (several), with the rest trimmed to
-  `+N more`. A short tile answers "what's actionable" (and "what needs
-  me" once personalized), not "show me everything"; hide the lower
-  groups outright rather than collapsing each to a header + `+N more`,
-  which spends the height on empty section chrome. Gate this on the tile
-  stamp so the raw page keeps every group.
-- **Tall tiles** (~380px+): every group, each fit-trimmed from the bottom.
-- **Wide tile / full view**: a real table, the same ledger grid with a
-  12px mono header row (`pr · ticket · size · review · ci · age`),
-  columns aligned by subgrid, hairline-separated rows, state words back
-  beside their icons. Spend width on columns, not longer lines.
+  **Tone only what is actionable.** A passing check and an approval are the
+  healthy states and take no tone — the column reads as texture until
+  something is wrong. The kit renders the glyph with the word beside it at the
+  page tier and screen-reader-only below, so a state is never carried by shape
+  alone.
 
-Degrade gracefully: a repo that can't be read gets an "unreachable" row, not
-an error; no watched repos configured → an empty state telling the user to
-set the routine's repositories.
+- **Several repos** — make the groups the repos rather than the states, with
+  each repo's summary on the group's `count`
+  (`"6 PRs · 2 new issues · CI ✓"`). Order by activity. One repo keeps the
+  state grouping above.
 
-Carry a context block (`widget-artifact` § The context block): every PR the
-tile trimmed to `+N more`, why each blocked one is blocked (failing check,
-requested reviewer, merge conflict), the age outliers, and any repo that
-read as unreachable. Name PR numbers and logins so they can be acted on
-without a lookup. Keep it viewer-neutral like the render — the block is
-copied by whoever is looking, and the run doesn't know who that is. Close
-with `## Ask me about` — what to review first, which PRs have gone stale
+  **Set `viewerGroups` only in the one-repo shape.** The two groupings compete
+  for the same axis: re-bucketing into `Needs your review` / `Yours` / `Open`
+  flattens the repos away, and which repo a PR belongs to is the thing the
+  several-repos shape exists to show. So several repos keep the repo grouping
+  and lose the personalisation, rather than getting a personalisation that
+  destroys their organising idea.
+
+  This is a deliberate reduction from what the widget did before, where a
+  per-row `needs you` marker carried ownership inside repo sections. The
+  injected regrouping does not write per-row markers, and the alternative —
+  reintroducing a routine-authored enhancer to do it — is exactly the
+  transcribed behaviour this migration removes. Worth revisiting as a kit
+  component if the several-repos shape turns out to need it; not worth a
+  hand-written script per run.
+
+- **`provenance`** — `["3 repos watched", "14 open PRs", "2 new issues",
+"default branch passing"]`.
+- **`empty`** — "No open pull requests" when the repos read clean, or a
+  pointer to set the routine's Repositories when none are configured. Two
+  states, not one.
+
+Do not hand-write HTML, CSS or JavaScript. Do not size, trim or theme
+anything.
+
+### The faces come from the registry
+
+`face.src` must be a `data:` URI and the kit **drops anything else**. The
+resolution chain used to lead with a fetch to `avatars.githubusercontent.com`,
+a host a scheduled run cannot reach, so every row degraded to an initial on
+exactly the runs nobody was watching (ADR-0044). Set `params.people` and the
+faces come from a file. An initial circle is the honest fallback; a request
+that cannot succeed is not.
+
+### Ordering is the trim priority
+
+Emit `Blocked` first and the fit pass sheds from the calm end by itself, which
+is what a short tile should do — it answers "what is actionable", not "show me
+everything". **Do not pin rows** to protect the blocked ones: on a set already
+ordered worst-first the order is the pinning, and `keep` on top of it makes a
+short tile advertise the rows it was supposed to shed.
+
+A group trimmed to nothing keeps its heading and its count, so `Open · 7`
+still reports seven where hiding it would say none.
+
+### Degrade gracefully
+
+A repo that cannot be read gets an `unreachable` row rather than an error. No
+watched repos configured → the empty state naming the routine setting to fill
+in.
+
+## The context block
+
+`context` is markdown and stays **viewer-neutral like the render** — the block
+is copied by whoever is looking, and the run does not know who that is.
+
+Spend it on every PR the tile trimmed, why each blocked one is blocked
+(failing check, requested reviewer, merge conflict), the age outliers, and any
+repo that read as unreachable. Name PR numbers and logins so they can be acted
+on without a lookup.
+
+Close with `## Ask me about` — what to review first, which PRs have gone stale
 enough to close, and what a repeatedly-failing check is telling us.
