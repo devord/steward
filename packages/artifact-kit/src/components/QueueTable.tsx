@@ -2,6 +2,7 @@ import { Badge, type BadgeTone } from "../ui/badge.tsx"
 import { cn } from "../ui/cn.ts"
 import { type Tone, TONE_TEXT } from "../ui/tone.ts"
 import { CopyAction } from "./CopyAction.tsx"
+import { Meter } from "./Meter.tsx"
 
 /** Which tier a value column first appears at. */
 export type ColumnTier = "always" | "compact" | "detail" | "page"
@@ -27,6 +28,15 @@ export interface QueueValue {
   tone?: Tone
   /** Right-align — the default for counts and countdowns. */
   numeric?: boolean
+  /**
+   * Render this column as a magnitude bar of `meter` units, with `value` as
+   * its printed count. The scale is the column's own largest magnitude, so
+   * bars compare across rows rather than each filling its own cell.
+   *
+   * A column, not a block: the ledger it belongs to already unions its
+   * columns and gives every row a cell, so a bar needs no separate structure.
+   */
+  meter?: number
   /**
    * Hover text plus an sr-only phrase, for a qualifier the narrow tiers have
    * no column for. A number whose basis is invisible is an unlabelled mixture
@@ -109,6 +119,15 @@ export function QueueTable({
   const hasAction = rows.some((r) => r.action)
   // Fixed for every row, so a detail line always spans the full table.
   const columnCount = columns.length + 2 + (hasAction ? 1 : 0)
+  // One scale per meter column, taken over the whole table. Scaling each bar
+  // to its own row would render every bar full and compare nothing.
+  const meterMax = new Map<string, number>()
+  for (const r of rows) {
+    for (const v of r.values ?? []) {
+      if (v.meter === undefined) continue
+      meterMax.set(v.label, Math.max(meterMax.get(v.label) ?? 0, v.meter))
+    }
+  }
   return (
     <table
       className="w-auto border-collapse font-mono text-sm tabular-nums"
@@ -150,6 +169,7 @@ export function QueueTable({
           columns={columns}
           hasAction={hasAction}
           columnCount={columnCount}
+          meterMax={meterMax}
         />
       ))}
     </table>
@@ -161,12 +181,15 @@ function RowPair({
   columns,
   hasAction,
   columnCount,
+  meterMax,
 }: {
   row: QueueRow
   /** The table's column set, so every row lines up with the header. */
   columns: QueueValue[]
   hasAction: boolean
   columnCount: number
+  /** Column label → the table-wide magnitude every bar in it scales against. */
+  meterMax: Map<string, number>
 }) {
   return (
     <tbody data-fit-item {...(row.keep ? { "data-fit-keep": "" } : {})}>
@@ -206,12 +229,26 @@ function RowPair({
               className={cn(
                 "py-1 pr-3 align-baseline whitespace-nowrap",
                 col.numeric ? "text-right" : "text-left",
-                TONE_TEXT[v?.tone ?? "neutral"],
+                // On a meter the tone paints the bar, so the count stays ink:
+                // tinting both spends one signal twice and makes a long orange
+                // bar shout in two registers.
+                TONE_TEXT[
+                  v?.meter !== undefined ? "neutral" : (v?.tone ?? "neutral")
+                ],
                 COLUMN_TIER[col.from ?? "always"],
               )}
               title={v?.title}
             >
-              {v?.value ?? ""}
+              {v?.meter !== undefined ? (
+                <Meter
+                  value={v.meter}
+                  max={meterMax.get(col.label) ?? 0}
+                  label={v.value}
+                  tone={v.tone}
+                />
+              ) : (
+                (v?.value ?? "")
+              )}
               {v?.title ? <span className="sr-only"> ({v.title})</span> : null}
             </td>
           )

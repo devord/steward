@@ -1,0 +1,211 @@
+{
+  "slug": "ui-figma-drifts",
+  "title": "Figma UI drifts",
+  "generatedAt": "2026-07-30T09:00:00Z",
+  "stat": {
+    "value": 14,
+    "label": "drifts",
+    "tone": "attn",
+    "note": "6 of 23 components"
+  },
+  "blocks": [
+    {
+      "kind": "queue",
+      "label": "Drifting",
+      "count": "6 of 23 components",
+      "showHeader": true,
+      "rows": [
+        {
+          "id": "button",
+          "state": {
+            "label": "variant",
+            "tone": "neutral"
+          },
+          "title": "Button",
+          "href": "https://www.figma.com/design/AbC123/Core?node-id=41-208",
+          "detail": "Figma carries size=xs and tone=danger; the code union has neither. Design moved last.",
+          "values": [
+            {
+              "label": "drift",
+              "value": "5",
+              "meter": 5,
+              "tone": "attn"
+            },
+            {
+              "label": "figma",
+              "value": "2026-07-24",
+              "from": "detail"
+            },
+            {
+              "label": "code",
+              "value": "2026-05-02",
+              "from": "page"
+            }
+          ],
+          "action": {
+            "payload": "Add size=xs and tone=danger to Button's variant union in app/components/ui/button.tsx, matching Figma node 41-208.",
+            "label": "copy fix"
+          }
+        },
+        {
+          "id": "badge",
+          "state": {
+            "label": "variant",
+            "tone": "neutral"
+          },
+          "title": "Badge",
+          "href": "https://www.figma.com/design/AbC123/Core?node-id=41-311",
+          "detail": "Code ships tone=info; Figma has no such variant. Code moved last — this one belongs in Figma.",
+          "values": [
+            {
+              "label": "drift",
+              "value": "3",
+              "meter": 3,
+              "tone": "attn"
+            },
+            {
+              "label": "figma",
+              "value": "2026-03-11",
+              "from": "detail"
+            },
+            {
+              "label": "code",
+              "value": "2026-07-19",
+              "from": "page"
+            }
+          ],
+          "action": {
+            "payload": "Add a tone=info variant to Badge in Figma node 41-311 to match app/components/ui/badge.tsx.",
+            "label": "copy fix"
+          }
+        },
+        {
+          "id": "input",
+          "state": {
+            "label": "prop",
+            "tone": "neutral"
+          },
+          "title": "Input",
+          "href": "https://www.figma.com/design/AbC123/Core?node-id=52-14",
+          "detail": "Figma's state=readonly has no code equivalent; code's invalid has no Figma frame.",
+          "values": [
+            {
+              "label": "drift",
+              "value": "3",
+              "meter": 3,
+              "tone": "attn"
+            },
+            {
+              "label": "figma",
+              "value": "2026-07-02",
+              "from": "detail"
+            },
+            {
+              "label": "code",
+              "value": "2026-06-28",
+              "from": "page"
+            }
+          ]
+        },
+        {
+          "id": "tabs",
+          "state": {
+            "label": "variant",
+            "tone": "neutral"
+          },
+          "title": "Tabs",
+          "href": "https://www.figma.com/design/AbC123/Core?node-id=77-902",
+          "detail": "orientation=vertical exists in Figma only.",
+          "values": [
+            {
+              "label": "drift",
+              "value": "2",
+              "meter": 2,
+              "tone": "attn"
+            },
+            {
+              "label": "figma",
+              "value": "2026-07-28",
+              "from": "detail"
+            },
+            {
+              "label": "code",
+              "value": "2026-01-15",
+              "from": "page"
+            }
+          ]
+        },
+        {
+          "id": "avatar",
+          "state": {
+            "label": "prop",
+            "tone": "neutral"
+          },
+          "title": "Avatar",
+          "href": "https://www.figma.com/design/AbC123/Core?node-id=19-77",
+          "detail": "size=2xl in code, absent from the Figma matrix.",
+          "values": [
+            {
+              "label": "drift",
+              "value": "1",
+              "meter": 1,
+              "tone": "attn"
+            },
+            {
+              "label": "figma",
+              "value": "2026-02-20",
+              "from": "detail"
+            },
+            {
+              "label": "code",
+              "value": "2026-07-29",
+              "from": "page"
+            }
+          ]
+        },
+        {
+          "id": "tooltip",
+          "state": {
+            "label": "unread",
+            "tone": "info"
+          },
+          "title": "Tooltip",
+          "href": "https://www.figma.com/design/AbC123/Core?node-id=88-4",
+          "detail": "Figma returned 429 for this node — counted as unread, not as clean.",
+          "values": [
+            {
+              "label": "drift",
+              "value": "—",
+              "meter": 0
+            },
+            {
+              "label": "figma",
+              "value": "pending",
+              "from": "detail"
+            },
+            {
+              "label": "code",
+              "value": "2026-06-06",
+              "from": "page"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "provenance": [
+    "23 components analyzed",
+    "6 with drift",
+    "4 matrices moved this run",
+    "1 re-fetch pending"
+  ],
+  "provenanceLink": {
+    "href": "https://www.figma.com/design/AbC123/Core",
+    "label": "Core library"
+  },
+  "empty": {
+    "headline": "No drift — every connected component matches its Figma variants",
+    "detail": "23 components compared against their live variant matrices."
+  },
+  "context": "## What the tile could not hold\n\nEvery finding, with the design value against the code value and which side moved last.\n\n- **Button** (node 41-208) — Figma carries `size=xs` and `tone=danger`; the code union in `app/components/ui/button.tsx` has neither. `figmaChangedAt` 2026-07-24 is later than `codeTouchedAt` 2026-05-02, so the design moved and the fix belongs in code.\n- **Badge** (node 41-311) — the reverse: code shipped `tone=info` on 2026-07-19 and Figma has no such variant. Fix belongs in Figma.\n- **Input** (node 52-14) — drift in both directions, dates four days apart. Neither side is clearly authoritative; needs a human call.\n\n## Read as unread, not clean\n\n**Tooltip** (node 88-4) returned HTTP 429 and is pending re-fetch. It sorts last because it has no drift count, so a short tile trims it — the fact travels on the provenance line instead (`1 re-fetch pending`), which is where a boundary marker belongs. Its absence from the drift count is unmeasured, not verified.\n\n## Limits\n\nThe comparison is variant-matrix only: prop *names* and their value sets. It does not read defaults, does not compare visual output, and cannot see a component whose `.figma.tsx` pair is missing entirely — 23 components were connected, and the library holds more.\n\n## Ask me about\n\nWhich drifts mean the design moved versus the code drifted, which are worth fixing now, and whether a repeating drift points at a token or a component that should be restructured."
+}
