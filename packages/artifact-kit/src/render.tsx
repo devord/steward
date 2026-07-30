@@ -7,6 +7,7 @@ import {
   type QueueGroup,
   QueueTable,
   type QueueRow,
+  type ViewerGroups,
 } from "./components/QueueTable.tsx"
 import { Section } from "./components/Section.tsx"
 import { StatTier } from "./components/StatTier.tsx"
@@ -54,6 +55,11 @@ export interface QueueBlock extends BlockBase {
    * line up with each other. Takes precedence over `rows`.
    */
   groups?: QueueGroup[]
+  /**
+   * Opt into the board's viewer-faceted regrouping, by naming the three
+   * buckets. Rows supply the relationships via `data`.
+   */
+  viewerGroups?: ViewerGroups
   showHeader?: boolean
   /** Yield before every other block — for a bookkeeping band above content. */
   trimFirst?: boolean
@@ -138,6 +144,7 @@ function Band({ block, index }: { block: Block; index: number }) {
         <QueueTable
           rows={block.rows}
           groups={block.groups}
+          viewerGroups={block.viewerGroups}
           showHeader={block.showHeader}
           trimFirst={block.trimFirst}
         />

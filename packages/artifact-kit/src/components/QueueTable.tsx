@@ -81,6 +81,23 @@ export interface QueueValue {
  * column widths, which is the misaligned-state smell." One `<table>` with
  * heading rows is how a table says that natively.
  */
+/**
+ * Labels for the viewer-faceted regrouping the board applies at render time.
+ *
+ * Declaring the *labels* here and the *relationships* on each row keeps the
+ * published file viewer-neutral: it says who authored and who was asked, never
+ * who is reading. The board resolves "you" against the signed-in viewer, so one
+ * file serves everyone the board is shared with (ADR-0039).
+ */
+export interface ViewerGroups {
+  /** Rows whose `data-reviewers` contains the viewer. */
+  reviewer: string
+  /** Rows whose `data-author` is the viewer. */
+  author: string
+  /** Everything else. */
+  rest: string
+}
+
 export interface QueueGroup {
   id: string
   label?: string
@@ -147,6 +164,8 @@ export function QueueTable({
   rows,
   /** Labelled runs sharing one column set. Takes precedence over `rows`. */
   groups,
+  /** Opt into the board's viewer-faceted regrouping. See ViewerGroups. */
+  viewerGroups,
   /** Name the columns at the page tier, where there is room to. */
   showHeader = true,
   /**
@@ -159,6 +178,7 @@ export function QueueTable({
 }: {
   rows?: QueueRow[]
   groups?: QueueGroup[]
+  viewerGroups?: ViewerGroups
   showHeader?: boolean
   trimFirst?: boolean
 }) {
@@ -198,6 +218,12 @@ export function QueueTable({
       className="w-auto border-collapse font-mono text-sm tabular-nums"
       data-fit-list
       {...(trimFirst ? { "data-fit-first": "" } : {})}
+      // Inert until the board injects a viewer. A raw-opened file carries the
+      // attribute and no behaviour, which is the neutral render — the floor
+      // ADR-0039 specifies, not a degraded state.
+      {...(viewerGroups
+        ? { "data-kit-viewer-groups": JSON.stringify(viewerGroups) }
+        : {})}
     >
       {showHeader && columns.length > 0 ? (
         <thead className="hidden tier-page:table-header-group">

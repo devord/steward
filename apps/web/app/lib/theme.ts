@@ -30,6 +30,7 @@
 
 import { z } from "zod"
 
+import { ARTIFACT_BUCKET_SCRIPT } from "./artifact-bucket.ts"
 import { ARTIFACT_COPY_SCRIPT } from "./artifact-copy.ts"
 import { FIT_FACTORY, FIT_STYLE } from "./artifact-fit.ts"
 
@@ -1111,6 +1112,10 @@ export function frameArtifactHtml(
     // Kit-only: the buttons it drives exist only in kit-rendered markup, and
     // they ship hidden until this reveals them.
     (usesArtifactKit(html) ? ARTIFACT_COPY_SCRIPT : "") +
+    // After the viewer object above, which it reads, and before the tile guard
+    // below, whose MutationObserver picks the regrouping up as the signal to
+    // re-fit. Kit-only and viewer-only: without both it is inert.
+    (viewer && usesArtifactKit(html) ? ARTIFACT_BUCKET_SCRIPT : "") +
     (view === "tile"
       ? TILE_GUARD_STYLE +
         tileGuardScript(usesArtifactKit(html)) +
