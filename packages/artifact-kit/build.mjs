@@ -14,7 +14,13 @@
  * matters because that environment cannot be assumed to reach npm.
  */
 import { execFileSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, statSync, writeFileSync } from "node:fs"
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -75,13 +81,57 @@ const SAFELIST = [
   `${TIERS}truncate`,
 ]
 
+/**
+ * Every `.tsx` under `src/` that is a component rather than a test.
+ *
+ * Sorted, so the generated input — and therefore `kit.css` — is byte-stable
+ * across machines and filesystem orderings. CI diffs this output.
+ */
+function componentSources() {
+  return readdirSync(src, { recursive: true, withFileTypes: true })
+    .filter(
+      (e) =>
+        e.isFile() && e.name.endsWith(".tsx") && !e.name.endsWith(".test.tsx"),
+    )
+    .map((e) => path.join(e.parentPath, e.name))
+    .sort()
+}
+
 const input = [
-  '@import "tailwindcss";',
+  // `source(none)` disables Tailwind's automatic detection, which otherwise
+  // walks the package root and scans EVERYTHING — fixtures and tests included —
+  // no matter what `@source` says, because explicit sources add to the auto set
+  // rather than replacing it.
+  //
+  // That was live and silently wrong: `kit.css` is inlined into every artifact
+  // and injected into every frame, and it was carrying classes named only in
+  // assertions, plus any English word in a fixture's prose that happens to
+  // collide with a utility name. The word "shrinking" in one fixture's briefing
+  // shipped a real `.shrink` rule to every widget on the board.
+  //
+  // It also made the output a function of test and fixture *prose*, so CI's
+  // "generated, never hand-edited" check failed whenever either changed without
+  // a rebuild. Measured: `@source not` does not help, in either ordering, with
+  // absolute or relative globs — the include wins.
+  '@import "tailwindcss" source(none);',
   `@import "${path.join(src, "tokens", "tokens.css")}";`,
   `@import "${path.join(src, "tiers", "tiers.css")}";`,
-  // Components only. Scanning the whole tree would pull class strings out of
-  // test fixtures and ship them to every artifact.
-  `@source "${src}/**/*.tsx";`,
+  // Components only, enumerated file by file.
+  //
+  // This used to be `@source "${src}/**/*.tsx"`, which also matches
+  // `render.test.tsx` — so every class named in an assertion was compiled into
+  // a stylesheet that is inlined into every artifact AND injected into every
+  // frame. Verified by probe: a `rotate-45` written only in a test reached
+  // kit.css. It also made the build effectively non-deterministic, because
+  // editing a test's expected class strings changed the output, and CI's
+  // "generated, never hand-edited" check then failed for anyone who edited a
+  // test without rebuilding.
+  //
+  // `@source not` does not fix it — an explicit `@source` include wins over
+  // the negation (measured, both orderings, absolute and relative globs). So
+  // the list is built here instead, where "which files are components" is a
+  // decision rather than a glob's side effect.
+  ...componentSources().map((f) => `@source "${f}";`),
   ...SAFELIST.map((s) => `@source inline("${s}");`),
 ].join("\n")
 

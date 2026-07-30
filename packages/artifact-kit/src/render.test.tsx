@@ -435,6 +435,42 @@ describe("the verdict band", () => {
     expect((p.match(/data-fit-item/g) ?? []).length).toBe(1)
   })
 
+  it("checks the shape of a clause's refs", () => {
+    const errs = validateDoc({
+      ...base,
+      verdict: {
+        level: "attn",
+        word: "AMBER",
+        clauses: [{ value: "12d", refs: [{ href: "https://example.test" }] }],
+      },
+    })
+    expect(errs.join(" ")).toContain("verdict.clauses[0].refs[0].label")
+  })
+
+  it("checks a value's delta", () => {
+    const doc = (delta: unknown) => ({
+      ...base,
+      stat: { value: 1, label: "x" },
+      blocks: [
+        {
+          kind: "queue",
+          rows: [
+            {
+              id: "a",
+              title: "a",
+              values: [{ label: "l", value: "v", delta }],
+            },
+          ],
+        },
+      ],
+    })
+    expect(
+      validateDoc(doc({ value: "3d", direction: "sideways" })).join(" "),
+    ).toContain("delta.direction must be one of up, down, flat")
+    expect(validateDoc(doc("3d")).join(" ")).toContain("delta must be")
+    expect(validateDoc(doc({ value: "3d", direction: "up" }))).toEqual([])
+  })
+
   it("refuses a doc that sets both stat and verdict", () => {
     // Two hero figures at the glance is two glances.
     expect(

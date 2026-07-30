@@ -2,6 +2,9 @@ import { TONES } from "./ui/tone.ts"
 
 const TONE_NAMES: ReadonlySet<string> = new Set(TONES)
 
+/** Mirrors DELTA_MARK in QueueTable — an unknown direction renders nothing. */
+const DIRECTIONS = ["up", "down", "flat"]
+
 /**
  * Check a routine's `data.json` before rendering it.
  *
@@ -89,6 +92,15 @@ export function validateDoc(doc: unknown): string[] {
           str(c.value, `${cat}.value`)
           str(c.lead, `${cat}.lead`, false)
           str(c.tail, `${cat}.tail`, false)
+          if (c.refs === undefined) return
+          if (!Array.isArray(c.refs))
+            return void errors.push(`${cat}.refs must be an array`)
+          c.refs.forEach((r, k) => {
+            const rf = `${cat}.refs[${k}]`
+            if (!isObj(r)) return void errors.push(`${rf} must be an object`)
+            str(r.label, `${rf}.label`)
+            str(r.href, `${rf}.href`, false)
+          })
         })
     }
   }
@@ -129,7 +141,23 @@ export function validateDoc(doc: unknown): string[] {
           if (r.values !== undefined && !Array.isArray(r.values))
             errors.push(`${rat}.values must be an array`)
           for (const [k, v] of Object.entries(r.values ?? {})) {
-            if (isObj(v)) tone(v.tone, `${rat}.values[${k}].tone`)
+            if (!isObj(v)) continue
+            const vat = `${rat}.values[${k}]`
+            tone(v.tone, `${vat}.tone`)
+            // A meter that is not a number renders a bar of width NaN%, which
+            // the browser drops — a silently absent bar rather than an error.
+            if (v.meter !== undefined && typeof v.meter !== "number")
+              errors.push(`${vat}.meter must be a number`)
+            if (v.delta === undefined) continue
+            if (!isObj(v.delta)) {
+              errors.push(`${vat}.delta must be { value, direction }`)
+              continue
+            }
+            str(v.delta.value, `${vat}.delta.value`)
+            if (!DIRECTIONS.includes(String(v.delta.direction)))
+              errors.push(
+                `${vat}.delta.direction must be one of ${DIRECTIONS.join(", ")}`,
+              )
           }
         })
       })
