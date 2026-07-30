@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import { escapeContextBlock, footerTimestamp } from "./Shell.tsx"
 import { type ArtifactDoc, renderArtifact } from "./render.tsx"
+import type { SeriesSpec } from "./components/Series.tsx"
 import type { Verdict } from "./components/VerdictBand.tsx"
 import { validateDoc } from "./validate-doc.ts"
 
@@ -768,6 +769,162 @@ describe("Avatar", () => {
     const html = face()
     expect(html).toContain('title="Kelly Ma"')
     expect(html).toContain("Kelly Ma")
+  })
+})
+
+describe("the burn-up", () => {
+  const chart = (lines: SeriesSpec["lines"], max = 40): ArtifactDoc => ({
+    slug: "s",
+    generatedAt: "2026-07-30T09:00:00Z",
+    stat: { value: 1, label: "x" },
+    blocks: [
+      {
+        kind: "series",
+        label: "Burn-up",
+        spec: { from: "2026-07-01", to: "2026-08-01", max, lines },
+      },
+    ],
+  })
+  const hero: SeriesSpec["lines"][number] = {
+    id: "landed",
+    label: "16 landed",
+    role: "hero",
+    points: [
+      { x: "2026-07-01", y: 4 },
+      { x: "2026-07-30", y: 16 },
+    ],
+  }
+
+  it("is page-only without asking", () => {
+    // A four-column tile is 1200px and still not a reading surface, and tiles
+    // never scroll — a chart there steals the ledger's rows or opens into the
+    // clipped region.
+    expect(renderArtifact(chart([hero]), "")).toContain("hidden page-only:flex")
+  })
+
+  it("draws a ceiling as steps, not a slope", () => {
+    // A membership count holds until the next recorded change. Interpolating
+    // draws a gradual scope change that never happened.
+    const html = renderArtifact(
+      chart([
+        {
+          id: "scope",
+          label: "40 scope",
+          role: "ceiling",
+          points: [
+            { x: "2026-07-01", y: 32 },
+            { x: "2026-07-30", y: 40 },
+          ],
+        },
+      ]),
+      "",
+    )
+    const d = /<path d="([^"]+)"/.exec(html)?.[1] ?? ""
+    // Two segments per step: across at the old value, then up.
+    expect((d.match(/L/g) ?? []).length).toBe(2)
+  })
+
+  it("separates end labels that would collide", () => {
+    // The ghost line sits just above the hero by definition, so overlapping
+    // labels are the normal case rather than the unlucky one.
+    const html = renderArtifact(
+      chart([
+        hero,
+        {
+          id: "inflight",
+          label: "+1 in review",
+          role: "ghost",
+          points: [
+            { x: "2026-07-01", y: 5 },
+            { x: "2026-07-30", y: 17 },
+          ],
+        },
+      ]),
+      "",
+    )
+    const ys = [
+      ...html.matchAll(
+        /<text x="[\d.]+" y="([\d.]+)"[^>]*>[^<]*(?:landed|review)/g,
+      ),
+    ].map((m) => Number(m[1]))
+    expect(ys).toHaveLength(2)
+    expect(Math.abs(ys[0] - ys[1])).toBeGreaterThanOrEqual(14)
+  })
+
+  it("anchors the marker to the point, never to the nudged label", () => {
+    // The label moves to stay legible; the dot must not, or the chart reports
+    // a value it did not plot.
+    const html = renderArtifact(chart([hero]), "")
+    const cy = Number(/<circle cx="[\d.]+" cy="([\d.]+)"/.exec(html)?.[1])
+    // y=16 of 40 over a 220px plot inset 12 from the top: 232 - 16/40*220.
+    expect(cy).toBeCloseTo(232 - (16 / 40) * 220, 1)
+  })
+
+  it("carries a legend for two lines and none for one", () => {
+    // A single series needs no legend box — the band label names it.
+    expect(renderArtifact(chart([hero]), "")).not.toContain("<figcaption")
+    expect(
+      renderArtifact(chart([hero, { ...hero, id: "b", role: "target" }]), ""),
+    ).toContain("<figcaption")
+  })
+
+  it("draws nothing for a line that is a single dot", () => {
+    // One point is not a trend, and a band that renders one is a chart making
+    // a claim from a single observation.
+    const html = renderArtifact(
+      { ...chart([{ ...hero, points: [{ x: "2026-07-01", y: 4 }] }]) },
+      "",
+    )
+    expect(html).not.toContain("Burn-up")
+  })
+
+  it("names a bad point rather than dropping the line", () => {
+    // A non-numeric y plots as NaN, which SVG discards silently — the line
+    // just stops mid-chart with no error anywhere.
+    const errs = validateDoc({
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [
+        {
+          kind: "series",
+          spec: {
+            from: "2026-07-01",
+            to: "2026-08-01",
+            lines: [
+              {
+                id: "a",
+                label: "a",
+                role: "hero",
+                points: [{ x: "2026-07-01", y: "4" }],
+              },
+            ],
+          },
+        },
+      ],
+    })
+    expect(errs.join(" ")).toContain("points[0].y must be a finite number")
+  })
+
+  it("rejects a role the kit has no encoding for", () => {
+    const errs = validateDoc({
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [
+        {
+          kind: "series",
+          spec: {
+            from: "2026-07-01",
+            to: "2026-08-01",
+            lines: [{ id: "a", label: "a", role: "secondary", points: [] }],
+          },
+        },
+      ],
+    })
+    expect(errs.join(" ")).toContain(
+      "role must be one of hero, ceiling, target, ghost",
+    )
   })
 })
 

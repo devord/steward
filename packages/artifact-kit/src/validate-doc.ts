@@ -117,6 +117,40 @@ export function validateDoc(doc: unknown): string[] {
         if (b.pageOnly !== undefined && typeof b.pageOnly !== "boolean")
           errors.push(`${at}.pageOnly must be a boolean`)
 
+        if (b.kind === "series") {
+          if (!isObj(b.spec))
+            return void errors.push(`${at}.spec must be an object`)
+          const sp = b.spec
+          str(sp.from, `${at}.spec.from`)
+          str(sp.to, `${at}.spec.to`)
+          str(sp.today, `${at}.spec.today`, false)
+          if (sp.max !== undefined && typeof sp.max !== "number")
+            errors.push(`${at}.spec.max must be a number`)
+          if (!Array.isArray(sp.lines))
+            return void errors.push(`${at}.spec.lines must be an array`)
+          const ROLES = ["hero", "ceiling", "target", "ghost"]
+          return void sp.lines.forEach((l, j) => {
+            const lat = `${at}.spec.lines[${j}]`
+            if (!isObj(l)) return void errors.push(`${lat} must be an object`)
+            str(l.id, `${lat}.id`)
+            str(l.label, `${lat}.label`)
+            if (typeof l.role !== "string" || !ROLES.includes(l.role))
+              errors.push(`${lat}.role must be one of ${ROLES.join(", ")}`)
+            if (!Array.isArray(l.points))
+              return void errors.push(`${lat}.points must be an array`)
+            l.points.forEach((pt, k) => {
+              const pat = `${lat}.points[${k}]`
+              if (!isObj(pt))
+                return void errors.push(`${pat} must be an object`)
+              str(pt.x, `${pat}.x`)
+              // A non-numeric y plots as NaN, which SVG drops silently — the
+              // line simply stops, mid-chart, with no error anywhere.
+              if (typeof pt.y !== "number" || !Number.isFinite(pt.y))
+                errors.push(`${pat}.y must be a finite number`)
+            })
+          })
+        }
+
         if (b.kind === "prose") {
           if (!Array.isArray(b.items))
             return void errors.push(`${at}.items must be an array`)
@@ -131,7 +165,7 @@ export function validateDoc(doc: unknown): string[] {
         }
 
         if (b.kind !== "queue")
-          errors.push(`${at}.kind must be "queue" or "prose"`)
+          errors.push(`${at}.kind must be "queue", "prose" or "series"`)
 
         // A queue carries either loose rows or labelled groups. Both absent is
         // the shape error worth naming, because the renderer would draw an

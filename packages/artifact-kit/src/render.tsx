@@ -9,6 +9,7 @@ import {
   type QueueRow,
   type ViewerGroups,
 } from "./components/QueueTable.tsx"
+import { Series, type SeriesSpec } from "./components/Series.tsx"
 import { Section } from "./components/Section.tsx"
 import { StatTier } from "./components/StatTier.tsx"
 import { type Verdict, VerdictBand } from "./components/VerdictBand.tsx"
@@ -65,6 +66,17 @@ export interface QueueBlock extends BlockBase {
   trimFirst?: boolean
 }
 
+/**
+ * A chart band. Page only by default, and for the same reason prose is: a
+ * four-column tile is 1200px and still not a reading surface, and tiles never
+ * scroll, so a chart there either steals the ledger's rows or opens into the
+ * clipped region.
+ */
+export interface SeriesBlock extends BlockBase {
+  kind: "series"
+  spec: SeriesSpec
+}
+
 /** Long-form bands — the dives under a briefing's headlines. Page only. */
 export interface ProseBlock extends BlockBase {
   kind: "prose"
@@ -72,11 +84,13 @@ export interface ProseBlock extends BlockBase {
 }
 
 /** A labelled band of content. */
-export type Block = QueueBlock | ProseBlock
+export type Block = QueueBlock | ProseBlock | SeriesBlock
 
 /** Whether a band has anything to render — an empty one is never drawn. */
 function filled(b: Block): boolean {
   if (b.kind === "prose") return b.items.length > 0
+  // Two points is the floor for a line. One is a dot claiming a trend.
+  if (b.kind === "series") return b.spec.lines.some((l) => l.points.length > 1)
   return (
     (b.rows?.length ?? 0) > 0 || (b.groups ?? []).some((g) => g.rows.length > 0)
   )
@@ -135,7 +149,7 @@ function Band({ block, index }: { block: Block; index: number }) {
       // "Dives" standing over nothing on every tile — a row spent to say
       // nothing, which is what a collapsible band is for in the first place.
       className={
-        (block.pageOnly ?? block.kind === "prose")
+        (block.pageOnly ?? (block.kind === "prose" || block.kind === "series"))
           ? "hidden page-only:flex"
           : undefined
       }
@@ -148,6 +162,8 @@ function Band({ block, index }: { block: Block; index: number }) {
           showHeader={block.showHeader}
           trimFirst={block.trimFirst}
         />
+      ) : block.kind === "series" ? (
+        <Series spec={block.spec} />
       ) : (
         <Prose items={block.items} />
       )}
