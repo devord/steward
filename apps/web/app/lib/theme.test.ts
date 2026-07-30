@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
 
 import {
+  artifactKitStyle,
   coercePrefs,
   DEFAULT_APPEARANCE,
   DEFAULT_DARK_THEME,
@@ -267,6 +268,65 @@ describe("frameArtifactHtml", () => {
     expect(frameArtifactHtml(doc, "gruvbox-light")).toContain(
       "color-scheme:light",
     )
+  })
+
+  describe("the artifact kit stylesheet (ADR-0050)", () => {
+    const KIT = artifactKitStyle("body{--kit:1}")
+    const kitDoc =
+      '<html><head><meta name="steward-kit-version" content="1.0.0"></head>' +
+      "<body>hi</body></html>"
+
+    it("injects into an artifact that opted in", () => {
+      // This is what lets a design fix reach an artifact published months ago
+      // — the alternative is a full agent run per widget.
+      const framed = frameArtifactHtml(
+        kitDoc,
+        DEFAULT_THEME,
+        "tile",
+        "",
+        undefined,
+        KIT,
+      )
+      expect(framed).toContain("data-steward-kit")
+      expect(framed).toContain("body{--kit:1}")
+    })
+
+    it("leaves a legacy artifact completely untouched", () => {
+      // kit.css opens with Tailwind's preflight — a global reset. Applied to
+      // the hand-authored artifacts already on the branch it silently
+      // relayouts them: zeroed body margin alone dropped one under the
+      // paint-signal height threshold, so its loading veil never lifted. A
+      // legacy file picks the kit up when its routine migrates, not before.
+      const framed = frameArtifactHtml(
+        doc,
+        DEFAULT_THEME,
+        "tile",
+        "",
+        undefined,
+        KIT,
+      )
+      expect(framed).not.toContain("data-steward-kit")
+      expect(framed).not.toContain("body{--kit:1}")
+    })
+
+    it("ranks below the frame's own corrections", () => {
+      // The footer hide, the tile flush repaint and the theme override all
+      // have to outrank the kit, so they are appended after it.
+      const framed = frameArtifactHtml(
+        kitDoc,
+        DEFAULT_THEME,
+        "tile",
+        "",
+        undefined,
+        KIT,
+      )
+      expect(framed.indexOf("data-steward-kit")).toBeLessThan(
+        framed.indexOf("data-steward-embed"),
+      )
+      expect(framed.indexOf("data-steward-kit")).toBeLessThan(
+        framed.indexOf("data-steward-theme"),
+      )
+    })
   })
 
   it("guards tile overflow by default: no scrolling, stamp, fade", () => {

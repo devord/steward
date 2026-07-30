@@ -50,6 +50,10 @@ export default defineConfig({
       "**/coverage/",
       // Transient harness worktree copies of the repo — never lint them.
       "**/.claude/worktrees/",
+      // Committed build output of @steward/artifact-kit (ADR-0050). It lives
+      // in the skill tree rather than a dist/ because that is how it travels
+      // to a routine run, but it is generated and minified all the same.
+      ".claude/skills/widget-artifact/kit/",
     ],
     overrides: [
       {
@@ -89,6 +93,10 @@ export default defineConfig({
       "**/CHANGELOG.md",
       ".claude/skills/react-router/**",
       "**/.claude/worktrees/**",
+      // Generated, minified artifact-kit output (ADR-0050). Beyond being
+      // pointless to format, running the formatter over the 240 KB minified
+      // bundle aborts it outright.
+      ".claude/skills/widget-artifact/kit/**",
     ],
   },
   staged: {

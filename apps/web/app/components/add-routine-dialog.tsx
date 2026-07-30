@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
+import { ARTIFACT_KIT_STYLE } from "../lib/artifact-kit.ts"
 import {
   CONNECTOR_CATALOG,
   connectorKey,
@@ -1526,7 +1527,15 @@ function TemplatePreview({ html, name }: { html: string; name: string }) {
   const t = useT()
   const theme = useResolvedTheme()
   const framed = useMemo(
-    () => frameArtifactHtml(html, theme, "tile", ARTIFACT_FONT_STYLE),
+    () =>
+      frameArtifactHtml(
+        html,
+        theme,
+        "tile",
+        ARTIFACT_FONT_STYLE,
+        undefined,
+        ARTIFACT_KIT_STYLE,
+      ),
     [html, theme],
   )
   // Picking a row near the bottom of a long list opens the preview below the

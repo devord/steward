@@ -1,0 +1,64 @@
+/* The tier system (ADR-0050).
+ *
+ * An artifact is one file that has to read as a 340x160 glance, a mid tile, and
+ * a near-fullscreen page. Because the iframe *is* the widget, plain `@media`
+ * already measures the widget — no container queries, no resize observer, no
+ * JS. What was missing is that every artifact hand-rolled these queries, 7-14
+ * of them per file. Naming them once turns a transcription into a mechanism.
+ *
+ * Deliberately NOT container queries at the root: a height container query
+ * needs `container-type: size`, which applies size containment and makes the
+ * element ignore its children's height — destroying the `scrollHeight` signal
+ * the fit pass reads to detect overflow. `@container` belongs inside
+ * components rendered at variable widths, never on the artifact root.
+ */
+
+/* Width tiers, aligned to the grid's cell sizes (widget-standard §2). */
+@custom-variant tier-compact (@media (min-width: 341px));
+@custom-variant tier-detail (@media (min-width: 701px));
+@custom-variant tier-page (@media (min-width: 900px));
+
+/* Height tiers. Tailwind's stock `screens` are width-only, which is why every
+   artifact hand-wrote these — a one-row tile is a different design from a
+   two-row tile at the same width. */
+@custom-variant tall (@media (min-height: 161px));
+@custom-variant taller (@media (min-height: 400px));
+
+/* OR-tiers: "bigger than a glance in EITHER dimension". Both are live in the
+   published corpus today (corza-gated).
+ *
+ * These MUST use the block form. Measured against Tailwind 4.3.3:
+ *
+ *   inline   @custom-variant roomy (@media (min-width: 480px), (min-height: 400px));
+ *            → emits `.roomy\:flex (min-height: 400px) { ... }` — a selector
+ *              with a stray media condition welded onto it. Invalid CSS, so
+ *              the browser discards that branch and only the width applies.
+ *              No build error, no warning.
+ *   block    (below) → emits the rule once per condition. Correct.
+ *
+ * The arbitrary form `[@media(min-width:480px),(min-height:400px)]:flex` does
+ * compile correctly, but naming the tier is the whole point: a routine should
+ * say what it means, and the union stays defined in one place. */
+@custom-variant beyond-glance {
+  @media (min-width: 341px) {
+    @slot;
+  }
+  @media (min-height: 161px) {
+    @slot;
+  }
+}
+@custom-variant roomy {
+  @media (min-width: 480px) {
+    @slot;
+  }
+  @media (min-height: 400px) {
+    @slot;
+  }
+}
+
+/* The board stamps `data-steward-tile` on <html> and clips overflow
+   (ADR-0019); the raw page and the full-view lightbox carry no stamp. Width
+   alone cannot tell a wide tile from the full view, which is why ADR-0027
+   gated "page generosity" on the stamp rather than on a breakpoint. */
+@custom-variant tile (:root[data-steward-tile] &);
+@custom-variant page-only (:root:not([data-steward-tile]) &);

@@ -10,6 +10,7 @@ import { frameArtifactHtml } from "../lib/theme.ts"
 import { agoParts } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
 import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
+import { ARTIFACT_KIT_STYLE } from "../lib/artifact-kit.ts"
 import { SandboxedArtifact, useArtifactEscape } from "./artifact-frame.tsx"
 
 /** One version's fetch state — the resource route body, or where it is in the
@@ -151,7 +152,14 @@ function Pane({
   const framed = useMemo(
     () =>
       pane.state.status === "ok" && pane.state.html != null
-        ? frameArtifactHtml(pane.state.html, theme, "full", ARTIFACT_FONT_STYLE)
+        ? frameArtifactHtml(
+            pane.state.html,
+            theme,
+            "full",
+            ARTIFACT_FONT_STYLE,
+            undefined,
+            ARTIFACT_KIT_STYLE,
+          )
         : null,
     [pane.state, theme],
   )

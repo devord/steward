@@ -20,6 +20,7 @@ import os from "node:os"
 import path from "node:path"
 import {
   artifactFontStyle,
+  artifactKitStyle,
   frameArtifactHtml,
   themeNames,
   themes,
@@ -37,6 +38,18 @@ const ARTIFACT_FONT_STYLE = artifactFontStyle(
         import.meta.url,
       ),
     ).toString("base64"),
+)
+
+// The board injects the kit stylesheet into every frame (ADR-0050), so a
+// sheet that skipped it would render the artifact against whatever CSS it was
+// published with — which is exactly the drift the injection exists to hide.
+// Read from disk for the same reason as the font: plain Node has no Vite
+// `?raw`.
+const ARTIFACT_KIT_STYLE = artifactKitStyle(
+  readFileSync(
+    new URL("../.claude/skills/widget-artifact/kit/kit.css", import.meta.url),
+    "utf8",
+  ),
 )
 
 const CHROME =
@@ -93,7 +106,14 @@ mkdirSync(tmpDir, { recursive: true })
 for (const themeName of sheetThemes) {
   const t = themes[themeName]
   const cells = SIZES.map(({ label, w, h, view }) => {
-    const framed = frameArtifactHtml(html, themeName, view, ARTIFACT_FONT_STYLE)
+    const framed = frameArtifactHtml(
+      html,
+      themeName,
+      view,
+      ARTIFACT_FONT_STYLE,
+      undefined,
+      ARTIFACT_KIT_STYLE,
+    )
     return (
       `<div><p>${label} — ${w}×${h}</p>` +
       `<iframe sandbox="allow-scripts" srcdoc="${escAttr(framed)}"` +

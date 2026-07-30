@@ -17,6 +17,16 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The kit's palette is derived from the theme registry (ADR-0050), so a
+      # palette change must not be able to land in the chrome while artifacts
+      # keep painting the old hexes. Regenerate and fail on drift — the same
+      # freshness discipline ADR-0006 set for the generated skills catalog.
+      # `tokens.test.ts` deliberately checks only the structural invariants,
+      # leaving the values to this step rather than to a second hand-kept copy.
+      - name: Artifact tokens are generated, never hand-edited
+        run: |
+          node scripts/gen-artifact-tokens.ts
+          git diff --exit-code -- packages/artifact-kit/src/tokens/tokens.css
       - run: pnpm exec vp check
       - run: pnpm run typecheck
       - run: pnpm run build

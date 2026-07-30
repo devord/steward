@@ -9,26 +9,19 @@
 
 import { readFileSync } from "node:fs"
 
-// Must stay identical to the token snippet in SKILL.md (ADR-0007).
-const TOKENS = {
-  "--color-bg": "#1d2021",
-  "--color-bg1": "#282828",
-  "--color-bg2": "#32302f",
-  "--color-bg3": "#3c3836",
-  "--color-border": "#504945",
-  "--color-border-dim": "#3c3836",
-  "--color-ink": "#ebdbb2",
-  "--color-ink-dim": "#a89984",
-  "--color-ink-faint": "#928374",
-  "--color-orange": "#fe8019",
-  "--color-orange-deep": "#d65d0e",
-  "--color-yellow": "#fabd2f",
-  "--color-green": "#b8bb26",
-  "--color-aqua": "#8ec07c",
-  "--color-blue": "#83a598",
-  "--color-purple": "#d3869b",
-  "--color-red": "#fb4934",
-}
+// Generated from the theme registry by scripts/gen-artifact-tokens.ts, and
+// CI-checked for drift. It used to be hardcoded here, and it fell behind:
+// this table still held classic gruvbox (#ebdbb2, #fabd2f) long after the
+// registry was retranscribed to gruvbox-material (ADR-0048). The failure ran
+// backwards — a correctly-themed artifact was rejected at the publish gate
+// while stale ones sailed through, so published files kept painting the old
+// palette in every raw view and dry-run preview.
+//
+// Plain JSON, read at startup: this runs as bare `node` in routine
+// environments with no node_modules, so it cannot import the registry itself.
+const TOKENS = JSON.parse(
+  readFileSync(new URL("../tokens.json", import.meta.url), "utf8"),
+)
 
 // Split a selector list on its top-level commas: `:is(a, b) > c` is one
 // selector, not two.
@@ -304,7 +297,10 @@ for (const file of files) {
 
   // — Theme tokens (hard requirement 3) —
   for (const [name, value] of Object.entries(TOKENS)) {
-    const decl = new RegExp(`${name}\\s*:\\s*([^;]+);`)
+    // Stop at `}` as well as `;`. Minified CSS drops the final semicolon of a
+    // rule, so a `[^;]+` capture ran straight through the closing brace and
+    // reported the drift as `#ea6962}}@layer base{...`.
+    const decl = new RegExp(`${name}\\s*:\\s*([^;}]+)[;}]`)
     const m = html.match(decl)
     if (!m) errors.push(`missing token ${name}`)
     else if (m[1].trim().toLowerCase() !== value)
