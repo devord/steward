@@ -322,6 +322,21 @@ appears in the same commit. The pair's strength is
 `shared / min(commits_a, commits_b)` as a percent — normalizing by the
 quieter module, so a busy module doesn't read as coupled to everything.
 
+**A pair needs at least 3 shared commits to qualify.** The ratio on its own
+is not evidence: two modules that each changed twice in the window and once
+together score 50%, and a single co-edit between two quiet modules scores
+100%. Both take the same `+8` as a pair that has moved together twenty
+times, and on a real repo they swamp it — one run measured 212 of its 222
+qualifying pairs resting on one or two shared commits, several sitting at
+the capped `+25`. Below the floor a pair is not weak evidence to be shaded
+lighter; it is a coincidence the window is too short to tell apart from a
+pattern, so it does not qualify at all.
+
+Exactly 3, for the same reason the file threshold below is exactly 15: a
+floor the next run resolves differently is not a floor. State the count of
+pairs dropped by it in provenance — a run whose coupling signal goes quiet
+has to say whether the codebase improved or the floor caught it.
+
 Ignore any commit touching **more than 15 files** — exactly 15, not a
 judgement about size. A repo-wide rename or a formatting sweep couples
 everything to everything and is not evidence of anything, and a threshold
@@ -335,14 +350,14 @@ Additive **named** penalties, so the number always has a stated cause and
 a row can show its own arithmetic. Defaults (override via
 `params.weights`; they must sum to 100):
 
-| penalty              | max | fires on                                                     |
-| -------------------- | --- | ------------------------------------------------------------ |
-| `hidden coupling`    | 25  | 8 per pair that co-changes ≥40% with **no** import between   |
-| `no test seam`       | 20  | scaled by `1 − tested share` of the module's source files    |
-| `wide interface`     | 15  | exports-per-file above the repo median, scaled to 2× median  |
-| `churn`              | 15  | the module's churn percentile within the repo                |
-| `stated-rule breach` | 15  | 8 per distinct rule in `params.rules` breached               |
-| `single author`      | 10  | 10 at one author in the window, 5 at two, 0 at three or more |
+| penalty              | max | fires on                                                         |
+| -------------------- | --- | ---------------------------------------------------------------- |
+| `hidden coupling`    | 25  | 8 per pair: ≥40% co-change over ≥3 shared commits, **no** import |
+| `no test seam`       | 20  | scaled by `1 − tested share` of the module's source files        |
+| `wide interface`     | 15  | exports-per-file above the repo median, scaled to 2× median      |
+| `churn`              | 15  | the module's churn percentile within the repo                    |
+| `stated-rule breach` | 15  | 8 per distinct rule in `params.rules` breached                   |
+| `single author`      | 10  | 10 at one author in the window, 5 at two, 0 at three or more     |
 
 **Every penalty is clamped to its own max**: `min(raw, max)`, always. The
 two per-item penalties overrun trivially — four hidden couplings raise 32
@@ -543,7 +558,8 @@ author · 28% tested · in 61 / out 12`), and `values` carrying the score as a
   pointing at.
 - **`provenance`** — repo and window, resolved roots, roots dropped and why,
   module and file counts, which signal layers were available, weights version,
-  history points, commits ignored as sweeps, and the proxy caveat.
+  history points, commits ignored as sweeps, pairs dropped below the
+  shared-commit floor, and the proxy caveat.
 - **`empty`** — no repo configured → a state naming the routine setting. A repo
   with no history in the window is **not** empty: the bottom line says exactly
   that.
