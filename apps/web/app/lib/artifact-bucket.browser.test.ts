@@ -126,6 +126,49 @@ describe("the viewer regrouping", () => {
     ])
   })
 
+  it("regroups a table that already has state groups", async () => {
+    // The published render groups by state, so the regrouping has to replace
+    // several headings rather than one. Verifying rather than assuming: review
+    // flagged this as unsupported.
+    const iframe = document.createElement("iframe")
+    iframe.style.cssText = "width:900px;height:600px;border:0"
+    iframe.setAttribute("sandbox", "allow-scripts allow-same-origin")
+    iframe.srcdoc = frameArtifactHtml(
+      "<html><head>" +
+        '<meta name="steward-kit-version" content="1.0.0">' +
+        "</head><body>" +
+        `<table data-fit-list data-kit-viewer-groups='${GROUPS}'>` +
+        `<tbody><tr><td colspan="1" class="head">Blocked · 1</td></tr></tbody>` +
+        row("pr-a", "ada", "brun") +
+        `<tbody><tr><td colspan="1" class="head">In review · 1</td></tr></tbody>` +
+        row("pr-b", "brun", "ada") +
+        `<tbody><tr><td colspan="1" class="head">Open · 1</td></tr></tbody>` +
+        row("pr-c", "cai", "") +
+        "</table></body></html>",
+      DEFAULT_THEME,
+      "full",
+      "",
+      { login: "ada" },
+    )
+    document.body.appendChild(iframe)
+    frames.push(iframe)
+    await new Promise((r) => {
+      iframe.addEventListener("load", r, { once: true })
+    })
+    const doc = iframe.contentDocument
+    if (!doc) throw new Error("no iframe document")
+    await new Promise((r) => setTimeout(r, 120))
+
+    // All three state headings replaced by the three viewer buckets, and every
+    // row still present exactly once.
+    expect(heads(doc)).toEqual([
+      "Needs your review · 1",
+      "Yours · 1",
+      "Open · 1",
+    ])
+    expect(order(doc)).toEqual(["pr-b", "pr-a", "pr-c"])
+  })
+
   it("ships no regrouping behaviour without a viewer", () => {
     // The bucket labels DO travel in the published file, as an inert attribute
     // — they are the routine's vocabulary, and the board should not hold one
