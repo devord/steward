@@ -7,10 +7,7 @@ import type { Verdict } from "./components/VerdictBand.tsx"
 import { validateDoc } from "./validate-doc.ts"
 
 const fixture: ArtifactDoc = JSON.parse(
-  readFileSync(
-    new URL("../fixtures/ticket-gaps.json", import.meta.url),
-    "utf8",
-  ),
+  readFileSync(new URL("../fixtures/ledger.json", import.meta.url), "utf8"),
 )
 const html = renderArtifact(fixture, ":root{--x:1}")
 

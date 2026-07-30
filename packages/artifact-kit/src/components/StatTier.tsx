@@ -47,6 +47,12 @@ export function StatTier({
           ink-faint is a glyph role, below AA on all but one theme. */}
       {note ? (
         <span className="text-ink-dim beyond-glance:block hidden font-mono text-xs">
+          {/* From the detail tier the stat lays out in a row, and the label and
+              the note butt together into one apparent sentence — "0 to file 38
+              pages audited". Stacked tiers get their separation from the line
+              break; the inline one has to say it. Same separator the section
+              heading uses for the same job. */}
+          <span className="hidden tier-detail:inline">· </span>
           {note}
         </span>
       ) : null}

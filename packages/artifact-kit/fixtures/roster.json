@@ -1,6 +1,6 @@
 {
-  "slug": "example-pulse",
-  "title": "Example repo pulse",
+  "slug": "example-roster",
+  "title": "Example roster",
   "generatedAt": "2026-07-30T09:00:00Z",
   "stat": {
     "value": 7,
@@ -24,7 +24,10 @@
                 "name": "Ada Okafor",
                 "href": "https://example.test/ada"
               },
-              "data": { "author": "ada", "reviewers": "brun cai" },
+              "data": {
+                "author": "ada",
+                "reviewers": "brun cai"
+              },
               "title": "#41 tighten the cart attribution path",
               "href": "https://example.test/pr/41",
               "detail": "Changes requested 3 days ago; the failing check is the integration suite.",
@@ -35,7 +38,11 @@
                   "tone": "info",
                   "from": "detail"
                 },
-                { "label": "size", "value": "+218 −41", "from": "page" },
+                {
+                  "label": "size",
+                  "value": "+218 −41",
+                  "from": "page"
+                },
                 {
                   "label": "review",
                   "value": "changes requested",
@@ -48,7 +55,11 @@
                   "icon": "circle-x",
                   "tone": "bad"
                 },
-                { "label": "age", "value": "9d", "numeric": true }
+                {
+                  "label": "age",
+                  "value": "9d",
+                  "numeric": true
+                }
               ]
             },
             {
@@ -57,7 +68,10 @@
                 "name": "Brun Silva",
                 "href": "https://example.test/brun"
               },
-              "data": { "author": "brun", "reviewers": "ada" },
+              "data": {
+                "author": "brun",
+                "reviewers": "ada"
+              },
               "title": "#38 split the price-import scheduler",
               "href": "https://example.test/pr/38",
               "detail": "Approved, but the default-branch check has been red since Tuesday.",
@@ -68,15 +82,27 @@
                   "tone": "info",
                   "from": "detail"
                 },
-                { "label": "size", "value": "+96 −302", "from": "page" },
-                { "label": "review", "value": "approved", "icon": "check" },
+                {
+                  "label": "size",
+                  "value": "+96 −302",
+                  "from": "page"
+                },
+                {
+                  "label": "review",
+                  "value": "approved",
+                  "icon": "check"
+                },
                 {
                   "label": "ci",
                   "value": "failing",
                   "icon": "circle-x",
                   "tone": "bad"
                 },
-                { "label": "age", "value": "12d", "numeric": true }
+                {
+                  "label": "age",
+                  "value": "12d",
+                  "numeric": true
+                }
               ]
             }
           ]
@@ -92,7 +118,10 @@
                 "name": "Cai Nguyen",
                 "href": "https://example.test/cai"
               },
-              "data": { "author": "cai", "reviewers": "ada devi" },
+              "data": {
+                "author": "cai",
+                "reviewers": "ada devi"
+              },
               "title": "#44 add empty-collection facet counts",
               "href": "https://example.test/pr/44",
               "values": [
@@ -102,14 +131,26 @@
                   "tone": "info",
                   "from": "detail"
                 },
-                { "label": "size", "value": "+61 −4", "from": "page" },
+                {
+                  "label": "size",
+                  "value": "+61 −4",
+                  "from": "page"
+                },
                 {
                   "label": "review",
                   "value": "review required",
                   "icon": "clock"
                 },
-                { "label": "ci", "value": "pending", "icon": "clock" },
-                { "label": "age", "value": "2d", "numeric": true }
+                {
+                  "label": "ci",
+                  "value": "pending",
+                  "icon": "clock"
+                },
+                {
+                  "label": "age",
+                  "value": "2d",
+                  "numeric": true
+                }
               ]
             },
             {
@@ -118,18 +159,33 @@
                 "name": "Devi Rao",
                 "href": "https://example.test/devi"
               },
-              "data": { "author": "devi", "reviewers": "cai" },
+              "data": {
+                "author": "devi",
+                "reviewers": "cai"
+              },
               "title": "#45 drop the unused locale fallback",
               "href": "https://example.test/pr/45",
               "values": [
-                { "label": "size", "value": "+3 −77", "from": "page" },
+                {
+                  "label": "size",
+                  "value": "+3 −77",
+                  "from": "page"
+                },
                 {
                   "label": "review",
                   "value": "review required",
                   "icon": "clock"
                 },
-                { "label": "ci", "value": "passing", "icon": "check" },
-                { "label": "age", "value": "1d", "numeric": true }
+                {
+                  "label": "ci",
+                  "value": "passing",
+                  "icon": "check"
+                },
+                {
+                  "label": "age",
+                  "value": "1d",
+                  "numeric": true
+                }
               ]
             }
           ]
@@ -145,19 +201,43 @@
                 "name": "Ada Okafor",
                 "href": "https://example.test/ada"
               },
-              "data": { "author": "ada", "reviewers": "" },
+              "data": {
+                "author": "ada",
+                "reviewers": ""
+              },
               "title": "#46 spike: worker runtime swap",
               "href": "https://example.test/pr/46",
               "values": [
-                { "label": "size", "value": "+412 −8", "from": "page" },
-                { "label": "review", "value": "draft", "icon": "pencil" },
-                { "label": "ci", "value": "passing", "icon": "check" },
-                { "label": "age", "value": "4d", "numeric": true }
+                {
+                  "label": "size",
+                  "value": "+412 −8",
+                  "from": "page"
+                },
+                {
+                  "label": "review",
+                  "value": "draft",
+                  "icon": "pencil"
+                },
+                {
+                  "label": "ci",
+                  "value": "passing",
+                  "icon": "check"
+                },
+                {
+                  "label": "age",
+                  "value": "4d",
+                  "numeric": true
+                }
               ]
             }
           ]
         }
-      ]
+      ],
+      "viewerGroups": {
+        "reviewer": "Needs your review",
+        "author": "Yours",
+        "rest": "Open"
+      }
     }
   ],
   "provenance": [
