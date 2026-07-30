@@ -1,11 +1,30 @@
 #!/usr/bin/env node
-// Artifact contract validator (widget-standard + the widget-artifact
-// skill). Checks the deterministic half of the contract; composition
-// (hierarchy, density, alignment) stays with design.md and the author.
+// Artifact contract validator (widget-standard + the widget-artifact skill).
 //
 //   node validate.mjs <artifact.html> [...more.html]
 //
 // Exit 1 when any file has errors; warnings alone exit 0.
+//
+// **What this checks changed shape with ADR-0050.** When artifacts were
+// hand-authored, the validator was the only thing standing between a model
+// improvising 900 lines of CSS and the artifacts branch, so it re-derived the
+// contract from the output: palette drift, type floors, media-query grammar,
+// subgrid ancestry, unplaced grid items. Roughly 500 lines of selector parsing
+// and tree walking existed to catch mistakes that were possible only because a
+// person or a model wrote the markup by hand.
+//
+// The kit removed the hand. Every artifact is `render.mjs` over a `data.json`;
+// the stylesheet is generated output CI byte-checks against the theme registry,
+// and the input document is checked field by field before it renders
+// (`validate-doc.ts`). So those checks stopped catching anything and started
+// costing something — 30 warnings per artifact, every one of them Tailwind's
+// own `color-mix` fallbacks, which is how a validator teaches its readers to
+// stop reading it.
+//
+// What is left is the part the kit does *not* determine: whether the stamp
+// says the kit rendered this at all, and whether the content the routine
+// supplied is honest. A check belongs here now only if a correct kit render can
+// still fail it.
 
 import { readFileSync } from "node:fs"
 
@@ -23,153 +42,6 @@ const TOKENS = JSON.parse(
   readFileSync(new URL("../tokens.json", import.meta.url), "utf8"),
 )
 
-// Split a selector list on its top-level commas: `:is(a, b) > c` is one
-// selector, not two.
-function splitSelectorList(sel) {
-  const out = []
-  let depth = 0
-  let start = 0
-  for (let i = 0; i < sel.length; i++) {
-    const c = sel[i]
-    if (c === "(" || c === "[") depth++
-    else if (c === ")" || c === "]") depth--
-    else if (c === "," && depth === 0) {
-      out.push(sel.slice(start, i))
-      start = i + 1
-    }
-  }
-  out.push(sel.slice(start))
-  return out.map((s) => s.trim()).filter(Boolean)
-}
-
-// Break a complex selector into compounds, each carrying the combinator that
-// precedes it. The last one is the subject — the element the rule paints —
-// and the rest are the ancestry it demands. Combinators nested inside
-// :is()/:not() belong to that function, not to this selector.
-function parseSelector(sel) {
-  const parts = []
-  let depth = 0
-  let buf = ""
-  let combinator = " "
-  for (const c of sel) {
-    if (c === "(" || c === "[") depth++
-    else if (c === ")" || c === "]") depth--
-    if (depth === 0 && /[\s>+~]/.test(c)) {
-      if (buf) {
-        parts.push({ combinator, compound: buf })
-        buf = ""
-        combinator = " "
-      }
-      if (/[>+~]/.test(c)) combinator = c
-      continue
-    }
-    buf += c
-  }
-  if (buf) parts.push({ combinator, compound: buf })
-  return parts
-}
-
-// Expand `:is(...)` / `:where(...)` into the alternatives they stand for, so
-// `main > :is(h1, .stat)` becomes `main > h1` and `main > .stat`. The matcher
-// below waves pseudo-classes through, which is right for state (`:hover`
-// proves nothing about static markup) and wrong for these two: they carry
-// real element names, so waving them through lets a rule that places two
-// children claim to place *every* child. Specificity is not modelled — no
-// check here asks which rule wins, only which elements a rule can reach.
-function expandSelector(sel) {
-  let out = [sel]
-  for (let pass = 0; pass < 4; pass++) {
-    let changed = false
-    const next = []
-    for (const one of out) {
-      const at = one.match(/:(?:is|where)\(/)
-      if (!at) {
-        next.push(one)
-        continue
-      }
-      const open = at.index + at[0].length - 1
-      let depth = 0
-      let close = -1
-      for (let i = open; i < one.length; i++) {
-        if (one[i] === "(") depth++
-        else if (one[i] === ")" && --depth === 0) {
-          close = i
-          break
-        }
-      }
-      if (close < 0) {
-        next.push(one)
-        continue
-      }
-      changed = true
-      const head = one.slice(0, at.index)
-      const tail = one.slice(close + 1)
-      for (const alt of splitSelectorList(one.slice(open + 1, close)))
-        next.push(head + alt + tail)
-    }
-    out = next
-    if (!changed) break
-  }
-  return out
-}
-
-// Does a compound describe this element? Verify what the tag states outright
-// (name, id, classes, plain attributes) and let everything else — pseudo
-// classes, :is(), functional selectors — pass. A permissive match costs a
-// missed error; a strict one invents errors against valid artifacts.
-const COMPOUND_TOKEN =
-  /::?[\w-]+(?:\([^)]*\))?|\[[^\]]*\]|[#.][-\w]+|[-\w]+|\*/g
-function compoundMatches(compound, el) {
-  for (const [token] of compound.matchAll(COMPOUND_TOKEN)) {
-    if (token === "*" || token.startsWith(":")) continue
-    if (token.startsWith(".")) {
-      if (!el.classes.includes(token.slice(1))) return false
-    } else if (token.startsWith("#")) {
-      if (el.id !== token.slice(1)) return false
-    } else if (token.startsWith("[")) {
-      const m = token.match(/^\[\s*([-\w]+)\s*(?:([~|^$*]?=)\s*"?([^"\]]*)"?)?/)
-      if (!m) continue
-      const value = el.attrs[m[1].toLowerCase()]
-      // The board stamps <html> at render time (the tile marker, the theme),
-      // so an attribute missing there statically proves nothing.
-      if (value === undefined) {
-        if (el.tag === "html") continue
-        return false
-      }
-      // Only plain equality is worth verifying; the fuzzy operators would
-      // need the real matching rules to stay honest.
-      if (m[2] === "=" && value !== m[3]) return false
-    } else if (token.toLowerCase() !== el.tag) return false
-  }
-  return true
-}
-
-// Does this selector paint the last element of `chain` (its open ancestors,
-// outermost first)? Matched right to left, the way a browser does it, so
-// `.workstreams li` is not allowed to claim every <li> in the document.
-// Sibling combinators pass unchecked: the walk tracks ancestry, not siblings.
-function selectorMatches(parts, chain) {
-  const subject = chain.length - 1
-  if (!compoundMatches(parts[parts.length - 1].compound, chain[subject]))
-    return false
-  const ancestry = (i, at) => {
-    if (i < 0) return true
-    const { combinator } = parts[i + 1]
-    if (combinator === "+" || combinator === "~") return ancestry(i - 1, at)
-    if (combinator === ">")
-      return (
-        at > 0 &&
-        compoundMatches(parts[i].compound, chain[at - 1]) &&
-        ancestry(i - 1, at - 1)
-      )
-    for (let p = at - 1; p >= 0; p--)
-      if (compoundMatches(parts[i].compound, chain[p]) && ancestry(i - 1, p))
-        return true
-    return false
-  }
-  return ancestry(parts.length - 2, subject)
-}
-
 // Strip a block's common leading indentation — the same pass the board runs
 // on the context block (apps/web/app/lib/artifact-context.ts).
 function dedent(text) {
@@ -182,40 +54,6 @@ function dedent(text) {
   if (!Number.isFinite(min) || min === 0) return text
   return lines.map((l) => (l.trim() === "" ? l : l.slice(min))).join("\n")
 }
-
-function describe(el) {
-  return `<${el.tag}${el.id ? "#" + el.id : ""}${
-    el.classes.length ? "." + el.classes[0] : ""
-  }>`
-}
-
-// Split a track list into its tracks. Line names are not tracks, and a
-// function's inner spaces (`minmax(0, 1fr)`) do not separate anything.
-function trackList(value) {
-  const out = []
-  let depth = 0
-  let named = false
-  let buf = ""
-  for (const c of value) {
-    if (c === "[") named = true
-    else if (c === "]") named = false
-    if (named || c === "]") continue
-    if (c === "(") depth++
-    else if (c === ")") depth--
-    if (depth === 0 && /\s/.test(c)) {
-      if (buf) out.push(buf)
-      buf = ""
-      continue
-    }
-    buf += c
-  }
-  if (buf) out.push(buf)
-  return out
-}
-
-// A track sized by its contents, as opposed to one that absorbs slack. These
-// are what make an unplaced item destructive rather than merely untidy.
-const CONTENT_TRACK = /^(?:max-content|min-content|auto|fit-content\(.*\))$/
 
 const files = process.argv.slice(2)
 if (files.length === 0) {
@@ -271,7 +109,37 @@ for (const file of files) {
       )
   }
 
+  // — The kit stamp (ADR-0050) —
+  // This is the check every other one now leans on. Artifacts are compiled,
+  // not transcribed: `Shell` stamps the version it rendered with, so a file
+  // without the stamp was not produced by the kit — and nothing below is
+  // entitled to assume the tokens, the tiers, the footer or the fit wiring
+  // are the kit's. It is also what the board gates `kit.css` injection on
+  // (`usesArtifactKit`, theme.ts), so an unstamped file silently opts out of
+  // every design fix that ships after it.
+  //
+  // Presence and shape, and deliberately not compatibility: the kit sitting
+  // beside this validator is the one that just rendered the file, so a major
+  // check here would only ever compare something with itself. Noticing that an
+  // artifact published months ago has fallen a major behind is the board's job,
+  // at injection time, where the two versions genuinely differ.
+  const kitStamp = html.match(
+    /<meta[^>]+name="steward-kit-version"[^>]+content="([^"]*)"/i,
+  )
+  if (!kitStamp) {
+    errors.push(
+      "no <meta name=steward-kit-version> — this artifact was not rendered by " +
+        "the kit. Emit a data.json and run render.mjs (ADR-0050); a " +
+        "hand-authored file also never receives an injected kit.css fix",
+    )
+  } else if (!/^\d+\.\d+\.\d+$/.test(kitStamp[1])) {
+    errors.push(`steward-kit-version is not semver: "${kitStamp[1]}"`)
+  }
+
   // — Self-containment (hard requirement 1) —
+  // The one check the kit cannot make impossible: every URL in the document
+  // arrives from the routine's own data — a face's `src`, a row's `href`, a
+  // provenance link — so the kit will faithfully render whatever it is given.
   // Resource loads are banned; <a href> links out are the one sanctioned
   // external reference (widget-standard §7).
   for (const [, tag, attrs] of html.matchAll(/<(\w+)((?:[^>"]|"[^"]*")*)>/g)) {
@@ -295,81 +163,20 @@ for (const file of files) {
     if (html.includes(api)) errors.push(`network API in script: ${api}`)
   }
 
-  // — Theme tokens (hard requirement 3) —
-  for (const [name, value] of Object.entries(TOKENS)) {
-    // Stop at `}` as well as `;`. Minified CSS drops the final semicolon of a
-    // rule, so a `[^;]+` capture ran straight through the closing brace and
-    // reported the drift as `#ea6962}}@layer base{...`.
-    const decl = new RegExp(`${name}\\s*:\\s*([^;}]+)[;}]`)
-    const m = html.match(decl)
-    if (!m) errors.push(`missing token ${name}`)
-    else if (m[1].trim().toLowerCase() !== value)
-      errors.push(`token drift: ${name} is ${m[1].trim()}, expected ${value}`)
-  }
-  if (!/color-scheme\s*:\s*dark/.test(html))
-    errors.push("missing color-scheme: dark")
-  if (!/--font-mono\s*:\s*"Geist Mono Variable"/.test(html))
-    errors.push('--font-mono must lead with "Geist Mono Variable" (ADR-0031)')
-
-  // — Generation time (hard requirement 4) —
-  const meta = html.match(
-    /<meta\s+(?:name="widget-generated-at"\s+content="([^"]+)"|content="([^"]+)"\s+name="widget-generated-at")/,
-  )
-  const stamp = meta && (meta[1] || meta[2])
-  if (!stamp) errors.push("missing <meta name=widget-generated-at>")
-  else if (
-    Number.isNaN(Date.parse(stamp)) ||
-    !/^\d{4}-\d{2}-\d{2}T/.test(stamp)
-  )
-    errors.push(`widget-generated-at is not ISO-8601: ${stamp}`)
-  if (!/<footer[\s>]/.test(html))
-    errors.push("missing <footer> (standalone chrome)")
-
-  // — Type floors (widget-standard §6) —
-  for (const [m, n] of html.matchAll(/font-size\s*:\s*(\d+(?:\.\d+)?)px/g)) {
-    if (Number(n) < 12)
-      errors.push(`font-size below the 12px floor: ${m.trim()}`)
-  }
-
-  // — Media query grammar —
-  // `not (…)` must negate the whole prelude: `not (…) and (…)` is not
-  // parseable, the browser reads it as not-all, and every rule gated on it
-  // silently never applies (content that "displays almost nothing").
-  for (const [, prelude] of html.matchAll(/@media([^{]+)\{/g)) {
-    const p = prelude.trim()
-    if (!/^not\s*\(/.test(p)) continue
-    let depth = 0
-    let i = p.indexOf("(")
-    for (; i < p.length; i++) {
-      if (p[i] === "(") depth++
-      else if (p[i] === ")" && --depth === 0) break
-    }
-    if (p.slice(i + 1).trim())
-      errors.push(
-        `invalid media query "${p.slice(0, 70)}" — \`not (…)\` must negate ` +
-          "the whole query (wrap the full condition in one group); as " +
-          "written it parses as not-all and the rule never applies",
-      )
-  }
-
-  // — Links (widget-standard §7) —
-  for (const [tag] of html.matchAll(/<a\s(?:[^>"]|"[^"]*")*>/g)) {
-    const href = tag.match(/\bhref\s*=\s*"([^"]*)"/)?.[1]
-    if (!href || href.startsWith("#")) continue
-    if (!/\btarget\s*=\s*"_blank"/.test(tag))
-      errors.push(`anchor without target="_blank": ${href.slice(0, 60)}`)
-    if (!/\brel\s*=\s*"[^"]*noopener/.test(tag))
-      errors.push(`anchor without rel="noopener": ${href.slice(0, 60)}`)
-  }
-
-  // — Kit class coverage (ADR-0050) —
-  // A precompiled stylesheet cannot know a class a routine invented at run
-  // time, so an off-surface class renders unstyled with no error anywhere.
-  // Checking every class in the markup against the selectors actually present
-  // in the inlined stylesheet turns that silent failure into a publish-time
-  // one — and catches plain typos in kit class names for free.
-  const usesKit = /<meta[^>]+name="steward-kit-version"/i.test(html)
-  if (usesKit) {
+  // The two checks below read the document as kit output, so they are worth
+  // nothing without the stamp — and worse than nothing with it missing: a
+  // hand-authored file has no "inlined kit stylesheet" to be absent from, and
+  // would report every class it carries. One clear error about the stamp beats
+  // two hundred consequences of it.
+  if (kitStamp) {
+    // — Kit class coverage (ADR-0050) —
+    // A precompiled stylesheet cannot know a class a routine invented at run
+    // time, so an off-surface class renders unstyled with no error anywhere.
+    // Checking every class in the markup against the selectors actually present
+    // in the inlined stylesheet turns that silent failure into a publish-time
+    // one — and catches plain typos in kit class names for free. It has already
+    // caught a real one: `TONE_FILL.neutral` shipped as an unstyled `bg-ink`
+    // when the build's source scan missed the `.ts` map holding it.
     const styled = new Set()
     for (const [, sel] of html.matchAll(/\.((?:[\\][^\s]|[A-Za-z0-9_-])+)/g)) {
       styled.add(sel.replace(/\\/g, ""))
@@ -385,51 +192,54 @@ for (const file of files) {
         )
       }
     }
-  }
 
-  // — Fit-to-height wiring (ADR-0019) —
-  const hasFitList = html.includes("data-fit-list")
-  // A kit-rendered artifact carries no fit script: the board injects one
-  // (ADR-0050). Checking a hand-authored artifact's own copy is exactly the
-  // thing the kit exists to stop needing, so those checks apply only to files
-  // that still carry it.
-  if (!usesKit) {
-    const hasFitScript = html.includes("data-steward-tile")
-    if (hasFitList && !hasFitScript)
+    // — Fit-to-height wiring (ADR-0019) —
+    // The board injects the fit pass, so an artifact carries no copy of it.
+    // What it must carry is something for that pass to trim: a band rendered as
+    // one indivisible unit has no `[data-fit-item]` inside, and a tile then
+    // *crops* it instead of shortening it. Hit three times during the migration
+    // — the verdict band, the rails, and very nearly the day grid — which is
+    // why it is an error rather than a warning.
+    if (html.includes("data-fit-list") && !html.includes("data-fit-item")) {
       errors.push(
-        "data-fit-list present but no fit script (data-steward-tile never read)",
+        "[data-fit-list] with no [data-fit-item] inside — the injected pass " +
+          "has nothing to trim, so the tile will clip instead of degrading",
       )
-    // A list trimmed to zero items leaves its <h2> advertising content that is
-    // no longer there. The current snippet collapses the owning section and
-    // marks it; an artifact on the older snippet has no such marker.
-    if (hasFitList && !html.includes("data-fit-collapsed"))
-      warnings.push(
-        "fit script predates the empty-section collapse — a fully trimmed " +
-          "section will render as a heading over a bare `+N more` (SKILL.md)",
-      )
-  } else if (hasFitList && !html.includes("data-fit-item")) {
-    // The kit's counterpart: a list the injected pass can see but with no
-    // trimmable units in it. It will never trim, and the tile clips silently.
-    errors.push(
-      "[data-fit-list] with no [data-fit-item] inside — the injected pass has " +
-        "nothing to trim, so the tile will clip instead of degrading",
-    )
-  }
-  if (!hasFitList) {
-    const longList = [
-      ...html.matchAll(/<[ou]l[^>]*>([\s\S]*?)<\/[ou]l>/g),
-    ].some(([, body]) => (body.match(/<li[\s>]/g) || []).length > 6)
-    if (longList)
-      warnings.push(
-        "a list has >6 items but no [data-fit-list] — tiles may clip silently",
-      )
+    }
   }
 
-  // — Document outline & person-relative smells —
-  if (!/<h1[\s>]/.test(html))
-    warnings.push(
-      "no <h1> — sections need a root, even visually hidden (design.md Heading)",
-    )
+  // — Palette discipline, in the one place a routine can still paint —
+  // The stylesheet itself is not scanned any more, and dropping that is the
+  // single biggest change here. It reported 30 warnings on every artifact, and
+  // every one was Tailwind's own machinery: `#0000` for transparent, palette
+  // hexes carrying an alpha suffix (`#7daea34d` is --color-blue at 30%), and
+  // the precomputed `color-mix` fallbacks that sit inside `@supports` guards
+  // (`#98531a` is orange blended toward bg1). No kit component contains a hex
+  // literal — verified — so the check could only ever fire on generated CSS
+  // that CI already diffs against the registry. Thirty false warnings do not
+  // make a file safer; they make the two real ones invisible.
+  //
+  // An inline `style=` is different: nothing the kit emits uses one for colour,
+  // so a hex here came from routine-authored markup through the Alpine escape
+  // hatch. That is precisely where an invented colour would land, and it would
+  // survive the board's theme override at a fixed value while everything around
+  // it followed the viewer's theme.
+  const canonical = new Set(Object.values(TOKENS))
+  for (const [, style] of html.matchAll(/\sstyle="([^"]*)"/g)) {
+    for (const [hex] of style.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
+      if (!canonical.has(hex.toLowerCase()))
+        warnings.push(
+          `non-palette hex in an inline style: ${hex} — paint via ` +
+            "var(--color-*), or the board's theme override cannot reach it",
+        )
+    }
+  }
+
+  // — Person-relative content (ADR-0039) —
+  // "You" is resolved when the artifact is rendered, not when it is built,
+  // because one file is shown to everyone who can see the board. The kit
+  // resolves the viewer for its ledgers, but the words in `title`, a row's
+  // `detail`, a prose `body` and the briefing are the routine's own.
   const visible = html
     .replace(/<script[\s\S]*?<\/script>/g, " ")
     .replace(/<style[\s\S]*?<\/style>/g, " ")
@@ -438,288 +248,6 @@ for (const file of files) {
     warnings.push(
       'static text says "you/your(s)" — person-relative content is render-time (ADR-0039)',
     )
-
-  // The CSS itself: inside the <style> tags, comments removed. Both are text
-  // a rule-splitting regex would otherwise hand back as part of a selector —
-  // a comment sitting above `main {` reads as ancestry `main` never has.
-  const styles = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
-    .map((m) => m[1].replace(/\/\*[\s\S]*?\*\//g, " "))
-    .join("\n")
-
-  // Markup with the script and style islands cut out, for the checks that
-  // are structural questions about the element tree rather than about CSS.
-  const VOID = new Set(["meta", "link", "br", "img", "input", "hr", "source"])
-  const markup = html
-    .replace(/<script[\s\S]*?<\/script>/g, "")
-    .replace(/<style[\s\S]*?<\/style>/g, "")
-
-  // — Section rhythm (design.md · Section · Rhythm) —
-  // Sections must breathe more than the rows inside them, and the separation
-  // is a `gap` on every element that stacks sections. A `gap` reaches only its
-  // direct children, so a column wrapper that forgets one drops its sections
-  // flush against the row above while `main { gap }` still sits there looking
-  // healthy. That is a structural question — which element stacks the
-  // sections, and does it declare a gap — so answer it structurally.
-  {
-    // Selectors that declare a gap, reduced to the classes they name.
-    const gapped = new Set()
-    let mainHasGap = false
-    for (const [, sel, body] of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      if (!/(?:^|[\s;{])(?:row-)?gap\s*:/.test(body)) continue
-      if (/(?:^|[\s,>+~])main\b/.test(sel)) mainHasGap = true
-      for (const [, cls] of sel.matchAll(/\.([\w-]+)/g)) gapped.add(cls)
-    }
-
-    // Walk the markup, tracking which element directly holds each <section>.
-    const stack = []
-    for (const [, close, name, attrs] of markup.matchAll(
-      /<(\/)?([a-zA-Z][\w-]*)((?:[^>"]|"[^"]*")*)>/g,
-    )) {
-      const el = name.toLowerCase()
-      if (close) {
-        for (let i = stack.length - 1; i >= 0; i--)
-          if (stack[i].tag === el) {
-            const [done] = stack.splice(i)
-            // Only a container holding two or more sections owes a rhythm.
-            if (done && done.sections > 1 && !done.ok)
-              warnings.push(
-                `<${done.tag}${done.cls ? "." + done.cls.split(/\s+/)[0] : ""}> ` +
-                  `stacks ${done.sections} sections but declares no gap — ` +
-                  "`main`'s gap stops at its own children, so these labels sit " +
-                  "flush (design.md · Section · Rhythm: mark it `.stack`)",
-              )
-            break
-          }
-        continue
-      }
-      if (VOID.has(el) || /\/\s*$/.test(attrs)) continue
-      const cls = attrs.match(/\bclass\s*=\s*"([^"]*)"/)?.[1] || ""
-      const classes = cls.split(/\s+/).filter(Boolean)
-      const isSection = el === "section" || classes.includes("section")
-      if (isSection && stack.length) stack[stack.length - 1].sections++
-      stack.push({
-        tag: el,
-        cls,
-        sections: 0,
-        ok: (el === "main" && mainHasGap) || classes.some((c) => gapped.has(c)),
-      })
-    }
-  }
-
-  // — Subgrid chain (design.md · Ledger rows) —
-  // `subgrid` inherits the parent grid's tracks, so it needs a parent grid to
-  // inherit from: on an element whose parent is not a grid container it
-  // computes to `none`, and the row silently collapses to one column with
-  // every cell stacked on its own line. The trap is a wrapper — a <section>
-  // between the `main` grid and the list that relays the label and the
-  // hairline but was never made a grid itself. Nothing about the CSS looks
-  // wrong, and a sibling that happens to sit directly under `main` still
-  // aligns perfectly, which is what makes it read as a rendering glitch.
-  {
-    const gridMakers = []
-    const subgridUsers = []
-    for (const [, sel, body] of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      const makesGrid = /(?:^|[\s;{])display\s*:\s*(?:inline-)?grid\b/.test(
-        body,
-      )
-      const usesSubgrid =
-        /(?:^|[\s;{])grid-template(?:-columns|-rows|-areas)?\s*:[^;]*\bsubgrid\b/.test(
-          body,
-        )
-      if (!makesGrid && !usesSubgrid) continue
-      for (const one of splitSelectorList(sel)) {
-        // An at-rule prelude names no element (@media wrappers never reach
-        // here — their braces nest — but @font-face-shaped ones do).
-        if (one.startsWith("@")) continue
-        const parts = parseSelector(one)
-        if (!parts.length) continue
-        if (makesGrid) gridMakers.push(parts)
-        if (usesSubgrid) subgridUsers.push({ parts, source: one })
-      }
-    }
-
-    // One entry per broken (selector, parent) pair: a list of 40 rows would
-    // otherwise report the same missing rule 40 times.
-    const broken = new Map()
-    const stack = []
-    for (const [, close, name, attrs] of markup.matchAll(
-      /<(\/)?([a-zA-Z][\w-]*)((?:[^>"]|"[^"]*")*)>/g,
-    )) {
-      const tag = name.toLowerCase()
-      if (close) {
-        for (let i = stack.length - 1; i >= 0; i--)
-          if (stack[i].tag === tag) {
-            stack.splice(i)
-            break
-          }
-        continue
-      }
-      if (VOID.has(tag) || /\/\s*$/.test(attrs)) continue
-      const el = { tag, id: "", classes: [], attrs: {} }
-      for (const [, attr, value] of attrs.matchAll(
-        /\b([-\w:]+)\s*=\s*"([^"]*)"/g,
-      ))
-        el.attrs[attr.toLowerCase()] = value
-      el.id = el.attrs.id || ""
-      el.classes = (el.attrs.class || "").split(/\s+/).filter(Boolean)
-
-      const chain = [...stack, el]
-      const parent = stack[stack.length - 1]
-      const used = subgridUsers.find(({ parts }) =>
-        selectorMatches(parts, chain),
-      )
-      if (used) {
-        const relayed =
-          parent && gridMakers.some((parts) => selectorMatches(parts, stack))
-        if (!relayed) {
-          const where = parent ? describe(parent) : "the document root"
-          const key = used.source + " " + where
-          const seen = broken.get(key)
-          if (seen) seen.count++
-          else broken.set(key, { used: used.source, where, count: 1 })
-        }
-      }
-      stack.push(el)
-    }
-
-    for (const { used, where, count } of broken.values()) {
-      errors.push(
-        `subgrid on \`${used}\` but its parent ${where} is not a grid` +
-          (count > 1 ? ` (${count} elements)` : "") +
-          " — subgrid outside a grid computes to `none`, so the row collapses " +
-          "to one column and every cell stacks; give the parent " +
-          "`display: grid; grid-template-columns: subgrid` so it relays the " +
-          "tracks (design.md · Ledger rows)",
-      )
-    }
-  }
-
-  // — Unplaced items in a content-sized shell (design.md · Everything that
-  //   is not a cell must be told to span) —
-  // Moving the row grid up to `main` turns every block under it into a grid
-  // *item*, and an unplaced item lands in track 1 and sizes it. Where track 1
-  // is content-sized and a later track takes the slack — the queue-table and
-  // ledger shells, `max-content minmax(0, 1fr) …` — that is not a nudge but a
-  // collapse: the stray block's max-content width becomes the width of the
-  // avatar/marker rail, and the `1fr` body column it stole from goes to zero,
-  // so every title vanishes and the trailing cells slide off the edge. The
-  // CSS reads fine at every line, which is why it surfaces as "the widget
-  // broke" rather than as a mistake anyone can point at. The provenance line
-  // is the usual culprit: it is authored as a sibling of `main` in the
-  // samples, and moving it inside is a one-line edit with no visible warning.
-  {
-    const shells = []
-    const placed = []
-    const relays = []
-    for (const [, sel, body] of styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      const template = body.match(
-        /(?:^|[\s;{])grid-template-columns\s*:\s*([^;}]+)/,
-      )?.[1]
-      // A subgrid parent inherits its tracks, so track 1 is not knowable here;
-      // its children are cells, which are placed by the row rule in any case.
-      const isShell =
-        template &&
-        !/\bsubgrid\b/.test(template) &&
-        !/\brepeat\(/.test(template) &&
-        trackList(template).length > 1 &&
-        CONTENT_TRACK.test(trackList(template)[0])
-      const isRelay = template && /\bsubgrid\b/.test(template)
-      // Anything that answers "which column?" excuses the item, as does
-      // leaving the flow altogether.
-      const isPlaced =
-        /(?:^|[\s;{])grid-(?:column|area)(?:-start)?\s*:/.test(body) ||
-        /(?:^|[\s;{])display\s*:\s*contents\b/.test(body) ||
-        /(?:^|[\s;{])position\s*:\s*(?:absolute|fixed)\b/.test(body)
-      if (!isShell && !isPlaced && !isRelay) continue
-      for (const one of splitSelectorList(sel).flatMap(expandSelector)) {
-        if (one.startsWith("@")) continue
-        const parts = parseSelector(one)
-        if (!parts.length) continue
-        if (isShell) shells.push(parts)
-        if (isPlaced) placed.push(parts)
-        if (isRelay) relays.push(parts)
-      }
-    }
-
-    // Only a shell that *relays* its tracks is in scope. A content-first grid
-    // whose own children are its cells — a ruler beside its list, in
-    // `max-content 1fr` — is auto-placement working as designed, and every
-    // child would read as a violation. The bug needs the other shape: tracks
-    // published up at `main` for subgridded rows far below, where the
-    // shell's own children are blocks that were never cells at all.
-    if (shells.length && relays.length) {
-      const stray = new Map()
-      const relayed = new Set()
-      const stack = []
-      for (const [, close, name, attrs] of markup.matchAll(
-        /<(\/)?([a-zA-Z][\w-]*)((?:[^>"]|"[^"]*")*)>/g,
-      )) {
-        const tag = name.toLowerCase()
-        if (close) {
-          for (let i = stack.length - 1; i >= 0; i--)
-            if (stack[i].tag === tag) {
-              stack.splice(i)
-              break
-            }
-          continue
-        }
-        if (VOID.has(tag) || /\/\s*$/.test(attrs)) continue
-        const el = { tag, id: "", classes: [], attrs: {} }
-        for (const [, attr, value] of attrs.matchAll(
-          /\b([-\w:]+)\s*=\s*"([^"]*)"/g,
-        ))
-          el.attrs[attr.toLowerCase()] = value
-        el.id = el.attrs.id || ""
-        el.classes = (el.attrs.class || "").split(/\s+/).filter(Boolean)
-
-        const chain = [...stack, el]
-        // Any subgrid descendant proves the nearest enclosing shell publishes
-        // its tracks downward rather than spending them on its own children.
-        if (relays.some((parts) => selectorMatches(parts, chain)))
-          for (let i = stack.length - 1; i >= 0; i--)
-            if (stack[i].shell !== undefined) {
-              relayed.add(stack[i].shell)
-              break
-            }
-
-        const parent = stack[stack.length - 1]
-        const shell = parent && parent.shell
-        if (shell !== undefined) {
-          if (!placed.some((parts) => selectorMatches(parts, chain))) {
-            const key = shell + " " + describe(el)
-            const seen = stray.get(key)
-            if (seen) seen.count++
-            else stray.set(key, { shell, parent, el, count: 1 })
-          }
-        }
-        if (shells.some((parts) => selectorMatches(parts, chain)))
-          el.shell = chain.map(describe).join(" ")
-        stack.push(el)
-      }
-
-      for (const { shell, parent, el, count } of stray.values()) {
-        if (!relayed.has(shell)) continue
-        errors.push(
-          `${describe(el)} is a direct child of the ${describe(parent)} grid ` +
-            `but is never placed` +
-            (count > 1 ? ` (${count} elements)` : "") +
-            " — an unplaced item lands in track 1, and that track is " +
-            "content-sized, so it inflates to this block's width and starves " +
-            "the flexible column beside it (titles collapse to zero, trailing " +
-            "cells slide off the tile). Give it `grid-column: 1 / -1`, or " +
-            "author it as a sibling of the grid (design.md · Everything that " +
-            "is not a cell must be told to span)",
-        )
-      }
-    }
-  }
-
-  // — Palette discipline (tokens only) —
-  const canonical = new Set(Object.values(TOKENS))
-  for (const [hex] of styles.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
-    if (!canonical.has(hex.toLowerCase()))
-      warnings.push(`non-palette hex in CSS: ${hex} — paint via var(--color-*)`)
-  }
 
   const tag = files.length > 1 ? `${file}: ` : ""
   for (const e of errors) console.log(`${tag}error: ${e}`)
