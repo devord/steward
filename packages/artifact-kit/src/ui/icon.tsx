@@ -48,6 +48,30 @@ const ICONS = {
     ["circle", { cx: "12", cy: "12", r: "10" }],
     ["path", { d: "M12 6v6l4 2" }],
   ],
+
+  // Review and check states. Healthy states whisper — a passing check is a
+  // bare `check`, not a filled green circle, so the column reads as texture
+  // until something is actually wrong.
+  check: [["path", { d: "M20 6 9 17l-5-5" }]],
+  "circle-x": [
+    ["circle", { cx: "12", cy: "12", r: "10" }],
+    ["path", { d: "m15 9-6 6" }],
+    ["path", { d: "m9 9 6 6" }],
+  ],
+  pencil: [
+    [
+      "path",
+      {
+        d: "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z",
+      },
+    ],
+    ["path", { d: "m15 5 4 4" }],
+  ],
+  info: [
+    ["circle", { cx: "12", cy: "12", r: "10" }],
+    ["path", { d: "M12 16v-4" }],
+    ["path", { d: "M12 8h.01" }],
+  ],
 } satisfies Record<string, Shape[]>
 
 export type IconName = keyof typeof ICONS

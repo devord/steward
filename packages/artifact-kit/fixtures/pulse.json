@@ -1,0 +1,178 @@
+{
+  "slug": "example-pulse",
+  "title": "Example repo pulse",
+  "generatedAt": "2026-07-30T09:00:00Z",
+  "stat": {
+    "value": 7,
+    "label": "open PRs",
+    "tone": "attn",
+    "note": "2 blocked · CI passing"
+  },
+  "blocks": [
+    {
+      "kind": "queue",
+      "showHeader": true,
+      "groups": [
+        {
+          "id": "blocked",
+          "label": "Blocked",
+          "count": "2",
+          "rows": [
+            {
+              "id": "pr41",
+              "face": {
+                "name": "Ada Okafor",
+                "href": "https://example.test/ada"
+              },
+              "data": { "author": "ada", "reviewers": "brun cai" },
+              "title": "#41 tighten the cart attribution path",
+              "href": "https://example.test/pr/41",
+              "detail": "Changes requested 3 days ago; the failing check is the integration suite.",
+              "values": [
+                {
+                  "label": "ticket",
+                  "value": "EXAMPLE-147",
+                  "tone": "info",
+                  "from": "detail"
+                },
+                { "label": "size", "value": "+218 −41", "from": "page" },
+                {
+                  "label": "review",
+                  "value": "changes requested",
+                  "icon": "circle-x",
+                  "tone": "bad"
+                },
+                {
+                  "label": "ci",
+                  "value": "failing",
+                  "icon": "circle-x",
+                  "tone": "bad"
+                },
+                { "label": "age", "value": "9d", "numeric": true }
+              ]
+            },
+            {
+              "id": "pr38",
+              "face": {
+                "name": "Brun Silva",
+                "href": "https://example.test/brun"
+              },
+              "data": { "author": "brun", "reviewers": "ada" },
+              "title": "#38 split the price-import scheduler",
+              "href": "https://example.test/pr/38",
+              "detail": "Approved, but the default-branch check has been red since Tuesday.",
+              "values": [
+                {
+                  "label": "ticket",
+                  "value": "EXAMPLE-412",
+                  "tone": "info",
+                  "from": "detail"
+                },
+                { "label": "size", "value": "+96 −302", "from": "page" },
+                { "label": "review", "value": "approved", "icon": "check" },
+                {
+                  "label": "ci",
+                  "value": "failing",
+                  "icon": "circle-x",
+                  "tone": "bad"
+                },
+                { "label": "age", "value": "12d", "numeric": true }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "in-review",
+          "label": "In review",
+          "count": "3",
+          "rows": [
+            {
+              "id": "pr44",
+              "face": {
+                "name": "Cai Nguyen",
+                "href": "https://example.test/cai"
+              },
+              "data": { "author": "cai", "reviewers": "ada devi" },
+              "title": "#44 add empty-collection facet counts",
+              "href": "https://example.test/pr/44",
+              "values": [
+                {
+                  "label": "ticket",
+                  "value": "EXAMPLE-388",
+                  "tone": "info",
+                  "from": "detail"
+                },
+                { "label": "size", "value": "+61 −4", "from": "page" },
+                {
+                  "label": "review",
+                  "value": "review required",
+                  "icon": "clock"
+                },
+                { "label": "ci", "value": "pending", "icon": "clock" },
+                { "label": "age", "value": "2d", "numeric": true }
+              ]
+            },
+            {
+              "id": "pr45",
+              "face": {
+                "name": "Devi Rao",
+                "href": "https://example.test/devi"
+              },
+              "data": { "author": "devi", "reviewers": "cai" },
+              "title": "#45 drop the unused locale fallback",
+              "href": "https://example.test/pr/45",
+              "values": [
+                { "label": "size", "value": "+3 −77", "from": "page" },
+                {
+                  "label": "review",
+                  "value": "review required",
+                  "icon": "clock"
+                },
+                { "label": "ci", "value": "passing", "icon": "check" },
+                { "label": "age", "value": "1d", "numeric": true }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "open",
+          "label": "Open",
+          "count": "2",
+          "rows": [
+            {
+              "id": "pr46",
+              "face": {
+                "name": "Ada Okafor",
+                "href": "https://example.test/ada"
+              },
+              "data": { "author": "ada", "reviewers": "" },
+              "title": "#46 spike: worker runtime swap",
+              "href": "https://example.test/pr/46",
+              "values": [
+                { "label": "size", "value": "+412 −8", "from": "page" },
+                { "label": "review", "value": "draft", "icon": "pencil" },
+                { "label": "ci", "value": "passing", "icon": "check" },
+                { "label": "age", "value": "4d", "numeric": true }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "provenance": [
+    "1 repo watched",
+    "7 open PRs",
+    "2 new issues",
+    "default branch passing"
+  ],
+  "provenanceLink": {
+    "href": "https://example.test/pulls",
+    "label": "all PRs"
+  },
+  "empty": {
+    "headline": "No open pull requests",
+    "detail": "Nothing waiting on review across the watched repos."
+  },
+  "context": "## What the tile trimmed\n\nEvery PR beyond the visible rows, with why each blocked one is blocked.\n\n- **#41** — the integration suite fails on the cart-token assertion; a reviewer has requested changes.\n- **#38** — approved, but the default branch has been red since Tuesday, so the merge is gated on the check rather than on a person.\n\n## Age outliers\n\n#38 at 12 days is the oldest thing in the queue and the only one blocked on something nobody owns.\n\n## Ask me about\n\nWhat to review first, which PRs have gone stale enough to close, and what a repeatedly-failing check is telling us.\n"
+}
