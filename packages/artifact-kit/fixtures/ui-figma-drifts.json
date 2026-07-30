@@ -22,7 +22,7 @@
             "tone": "neutral"
           },
           "title": "Button",
-          "href": "https://www.figma.com/design/AbC123/Core?node-id=41-208",
+          "href": "https://www.figma.com/design/EXAMPLE1/Core?node-id=41-208",
           "detail": "Figma carries size=xs and tone=danger; the code union has neither. Design moved last.",
           "values": [
             {
@@ -54,7 +54,7 @@
             "tone": "neutral"
           },
           "title": "Badge",
-          "href": "https://www.figma.com/design/AbC123/Core?node-id=41-311",
+          "href": "https://www.figma.com/design/EXAMPLE1/Core?node-id=41-311",
           "detail": "Code ships tone=info; Figma has no such variant. Code moved last — this one belongs in Figma.",
           "values": [
             {
@@ -86,7 +86,7 @@
             "tone": "neutral"
           },
           "title": "Input",
-          "href": "https://www.figma.com/design/AbC123/Core?node-id=52-14",
+          "href": "https://www.figma.com/design/EXAMPLE1/Core?node-id=52-14",
           "detail": "Figma's state=readonly has no code equivalent; code's invalid has no Figma frame.",
           "values": [
             {
@@ -114,7 +114,7 @@
             "tone": "neutral"
           },
           "title": "Tabs",
-          "href": "https://www.figma.com/design/AbC123/Core?node-id=77-902",
+          "href": "https://www.figma.com/design/EXAMPLE1/Core?node-id=77-902",
           "detail": "orientation=vertical exists in Figma only.",
           "values": [
             {
@@ -142,7 +142,7 @@
             "tone": "neutral"
           },
           "title": "Avatar",
-          "href": "https://www.figma.com/design/AbC123/Core?node-id=19-77",
+          "href": "https://www.figma.com/design/EXAMPLE1/Core?node-id=19-77",
           "detail": "size=2xl in code, absent from the Figma matrix.",
           "values": [
             {
@@ -170,7 +170,7 @@
             "tone": "info"
           },
           "title": "Tooltip",
-          "href": "https://www.figma.com/design/AbC123/Core?node-id=88-4",
+          "href": "https://www.figma.com/design/EXAMPLE1/Core?node-id=88-4",
           "detail": "Figma returned 429 for this node — counted as unread, not as clean.",
           "values": [
             {
@@ -200,7 +200,7 @@
     "1 re-fetch pending"
   ],
   "provenanceLink": {
-    "href": "https://www.figma.com/design/AbC123/Core",
+    "href": "https://www.figma.com/design/EXAMPLE1/Core",
     "label": "Core library"
   },
   "empty": {
