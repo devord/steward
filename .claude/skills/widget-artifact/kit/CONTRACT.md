@@ -204,3 +204,30 @@ advertise exactly the rows with no urgency.
 - A `context` block **richer than the render** — what the tile cropped, the
   caveats, the run's own limits — closing with `## Ask me about`.
 - Deciding which columns matter enough to appear early.
+
+### `blocks[]` — progress and the day
+
+```json
+{ "kind": "progress", "rails": [{ "id": "gate", "label": "Aug 6 gate", "percent": 40, "tick": 68, "verdict": "12d behind", "tone": "attn", "caption": "needs 11.2/wk" }],
+  "stages": [{ "id": "a", "label": "Discovery", "state": "done" }] }
+
+{ "kind": "day", "spec": { "from": "08:00", "to": "18:00", "now": "13:20",
+  "blocks": [{ "id": "b1", "start": "09:00", "end": "11:00", "type": "deep", "label": "Deep — attribution", "note": "goal: merged" }] } }
+```
+
+**A rail's `tick` is the verdict drawn.** Put it where the calendar says the
+fill should have reached: past it reads ahead, short of it reads behind, so the
+judgement arrives from geometry before a word does. The tick takes the `tone`;
+the fill never does. `secondary: true` is a quieter second horizon.
+
+**A stage strip answers _where_**, which no rail does — rails answer _how far_.
+That is the only thing that earns it a row beside one. The kit gates it on
+height itself.
+
+**The day grid places blocks by their real times**, so an unplanned hour
+renders as a gap rather than closing up. Blocks whose end is past `now` recede
+rather than disappearing: a morning that is gone is still why the afternoon
+looks as it does. `type` is `deep` `meeting` `shallow` `personal` `free`, and
+`deep` takes the accent because those are the blocks hardest to get back.
+
+Both are **page-only** by default.

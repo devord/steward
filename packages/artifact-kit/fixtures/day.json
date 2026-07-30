@@ -1,0 +1,175 @@
+{
+  "slug": "example-day",
+  "title": "Example daily plan",
+  "generatedAt": "2026-07-30T09:00:00Z",
+  "stat": {
+    "value": "2 of 3",
+    "label": "priorities done",
+    "note": "3 deep blocks left · 4.5h deep · 2h meetings"
+  },
+  "blocks": [
+    {
+      "kind": "queue",
+      "label": "Top priorities",
+      "showHeader": false,
+      "rows": [
+        {
+          "id": "p1",
+          "state": {
+            "label": "done",
+            "tone": "good"
+          },
+          "title": "Land the attribution spike",
+          "detail": "EXAMPLE-141 — unblocks three streams."
+        },
+        {
+          "id": "p2",
+          "state": {
+            "label": "now",
+            "tone": "attn"
+          },
+          "title": "Review the scheduler split",
+          "detail": "EXAMPLE-412 — waiting on Brun since Monday."
+        },
+        {
+          "id": "p3",
+          "state": {
+            "label": "next",
+            "tone": "neutral"
+          },
+          "title": "Draft the Aug 6 gate note",
+          "detail": "No ticket — needed before Thursday's sync."
+        }
+      ]
+    },
+    {
+      "kind": "day",
+      "label": "Today",
+      "spec": {
+        "from": "08:00",
+        "to": "18:00",
+        "now": "13:20",
+        "blocks": [
+          {
+            "id": "b1",
+            "start": "08:00",
+            "end": "08:30",
+            "type": "personal",
+            "label": "Gym"
+          },
+          {
+            "id": "b2",
+            "start": "08:30",
+            "end": "09:00",
+            "type": "shallow",
+            "label": "Shallow — inbox and review queue"
+          },
+          {
+            "id": "b3",
+            "start": "09:00",
+            "end": "11:00",
+            "type": "deep",
+            "label": "Deep — Corza: attribution spike",
+            "note": "goal: EXAMPLE-141 merged, cart token asserted"
+          },
+          {
+            "id": "b4",
+            "start": "11:00",
+            "end": "11:30",
+            "type": "meeting",
+            "label": "Standup",
+            "note": "was: Corza sync — declined"
+          },
+          {
+            "id": "b5",
+            "start": "11:30",
+            "end": "12:30",
+            "type": "free",
+            "label": "Free — buffer for the spike overrunning"
+          },
+          {
+            "id": "b6",
+            "start": "12:30",
+            "end": "13:00",
+            "type": "personal",
+            "label": "Lunch"
+          },
+          {
+            "id": "b7",
+            "start": "13:00",
+            "end": "15:00",
+            "type": "deep",
+            "label": "Deep — Corza: scheduler review",
+            "note": "goal: EXAMPLE-412 reviewed and either approved or sent back"
+          },
+          {
+            "id": "b8",
+            "start": "15:00",
+            "end": "16:00",
+            "type": "meeting",
+            "label": "Client — Aug 6 gate walkthrough"
+          },
+          {
+            "id": "b9",
+            "start": "16:00",
+            "end": "17:30",
+            "type": "deep",
+            "label": "Deep — Corza: gate note",
+            "note": "goal: a draft Duncan can read without a call"
+          },
+          {
+            "id": "b10",
+            "start": "17:30",
+            "end": "18:00",
+            "type": "shallow",
+            "label": "Shutdown",
+            "note": "goal: queues clear, tomorrow planned"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "queue",
+      "label": "Carry-overs",
+      "rail": true,
+      "showHeader": false,
+      "rows": [
+        {
+          "id": "c1",
+          "title": "Reply to the vendor security questionnaire",
+          "values": [
+            {
+              "label": "since",
+              "value": "3d",
+              "numeric": true
+            }
+          ]
+        },
+        {
+          "id": "c2",
+          "title": "Read the runtime migration RFC",
+          "values": [
+            {
+              "label": "since",
+              "value": "6d",
+              "numeric": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "provenance": [
+    "10h planned",
+    "4.5h deep",
+    "2h meetings",
+    "1h shallow",
+    "1h free",
+    "2 carry-overs"
+  ],
+  "empty": {
+    "headline": "No plan yet",
+    "detail": "No calendar, tracker or instructions were reachable this run."
+  },
+  "context": "## What the grid could not hold\n\nEvery carry-over, and what each block is waiting on.\n\n## Ask me about\n\nResequencing the day, and what to drop when the blocks do not fit."
+}

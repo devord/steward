@@ -12,6 +12,7 @@ import {
 import { Rail } from "./components/Rail.tsx"
 import { Series, type SeriesSpec } from "./components/Series.tsx"
 import { type Stage, StageStrip } from "./components/StageStrip.tsx"
+import { type DaySpec, TimeGrid } from "./components/TimeGrid.tsx"
 import { Section } from "./components/Section.tsx"
 import { StatTier } from "./components/StatTier.tsx"
 import { type Verdict, VerdictBand } from "./components/VerdictBand.tsx"
@@ -69,6 +70,17 @@ export interface QueueBlock extends BlockBase {
 }
 
 /**
+ * The day as a time grid. Page-tall by default for the same reason prose is:
+ * every slot has a job, so the grid needs the height to say so, and a tile
+ * that cannot show the shape of a day is better spending its rows on the
+ * priorities the day is built around.
+ */
+export interface DayBlock extends BlockBase {
+  kind: "day"
+  spec: DaySpec
+}
+
+/**
  * A progress band: one or more rails, each a horizon with a mark at where the
  * calendar says it should be. Optionally a stage strip, which answers *where*
  * rather than *how far* — the one thing that earns a row beside a rail without
@@ -107,7 +119,12 @@ export interface ProseBlock extends BlockBase {
 }
 
 /** A labelled band of content. */
-export type Block = QueueBlock | ProseBlock | SeriesBlock | ProgressBlock
+export type Block =
+  | QueueBlock
+  | ProseBlock
+  | SeriesBlock
+  | ProgressBlock
+  | DayBlock
 
 /** Whether a band has anything to render — an empty one is never drawn. */
 function filled(b: Block): boolean {
@@ -116,6 +133,7 @@ function filled(b: Block): boolean {
   if (b.kind === "series") return b.spec.lines.some((l) => l.points.length > 1)
   if (b.kind === "progress")
     return b.rails.length > 0 || (b.stages ?? []).length > 0
+  if (b.kind === "day") return b.spec.blocks.length > 0
   return (
     (b.rows?.length ?? 0) > 0 || (b.groups ?? []).some((g) => g.rows.length > 0)
   )
@@ -174,7 +192,10 @@ function Band({ block, index }: { block: Block; index: number }) {
       // "Dives" standing over nothing on every tile — a row spent to say
       // nothing, which is what a collapsible band is for in the first place.
       className={
-        (block.pageOnly ?? (block.kind === "prose" || block.kind === "series"))
+        (block.pageOnly ??
+        (block.kind === "prose" ||
+          block.kind === "series" ||
+          block.kind === "day"))
           ? "hidden page-only:flex"
           : undefined
       }
@@ -189,6 +210,8 @@ function Band({ block, index }: { block: Block; index: number }) {
         />
       ) : block.kind === "series" ? (
         <Series spec={block.spec} />
+      ) : block.kind === "day" ? (
+        <TimeGrid spec={block.spec} />
       ) : block.kind === "progress" ? (
         <div className="flex flex-col gap-3">
           {block.rails.map((r) => (
