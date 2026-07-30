@@ -30,6 +30,9 @@
 
 import { z } from "zod"
 
+import { ARTIFACT_COPY_SCRIPT } from "./artifact-copy.ts"
+import { FIT_FACTORY, FIT_STYLE } from "./artifact-fit.ts"
+
 /** A theme's perceptual mode — drives `color-scheme` and the `.dark` class. */
 export type ThemeMode = "dark" | "light"
 
@@ -835,28 +838,47 @@ export function themeStylesheet(): string {
  * chrome painting the new one. Overriding unconditionally costs a few hundred
  * bytes of srcdoc and makes the registry authoritative for artifacts too.
  */
+/**
+ * The artifact token contract: every CSS custom property a published artifact
+ * may paint with, paired with the registry role it takes.
+ *
+ * This list is the contract in both directions. {@link artifactThemeStyle}
+ * overrides exactly these names at render time, and `@steward/artifact-kit`
+ * generates its Tailwind palette from exactly these names (ADR-0050) — so a
+ * kit utility always resolves to a variable the board is going to re-point.
+ * A color the kit used but this list omitted would paint correctly in the raw
+ * file and then refuse to follow the active theme on the board, which is the
+ * failure ADR-0009 exists to prevent.
+ *
+ * Note `borderStrong` is deliberately absent: it bounds fill-less *controls*
+ * (WCAG 1.4.11), and artifacts have none. `accent`/`accentDeep` keep the
+ * historical `orange` slot names the published corpus already paints with.
+ */
+export const ARTIFACT_TOKENS = [
+  ["--color-bg", "bg"],
+  ["--color-bg1", "bg1"],
+  ["--color-bg2", "bg2"],
+  ["--color-bg3", "bg3"],
+  ["--color-border", "border"],
+  ["--color-border-dim", "borderDim"],
+  ["--color-ink", "ink"],
+  ["--color-ink-dim", "inkDim"],
+  ["--color-ink-faint", "inkFaint"],
+  ["--color-orange", "accent"],
+  ["--color-orange-deep", "accentDeep"],
+  ["--color-yellow", "yellow"],
+  ["--color-green", "green"],
+  ["--color-aqua", "aqua"],
+  ["--color-blue", "blue"],
+  ["--color-purple", "purple"],
+  ["--color-red", "red"],
+] as const satisfies ReadonlyArray<readonly [string, keyof ThemeTokens]>
+
 export function artifactThemeStyle(name: ThemeName): string {
-  const { tokens: t, mode } = themes[name]
-  const pairs: [string, string][] = [
-    ["--color-bg", t.bg],
-    ["--color-bg1", t.bg1],
-    ["--color-bg2", t.bg2],
-    ["--color-bg3", t.bg3],
-    ["--color-border", t.border],
-    ["--color-border-dim", t.borderDim],
-    ["--color-ink", t.ink],
-    ["--color-ink-dim", t.inkDim],
-    ["--color-ink-faint", t.inkFaint],
-    ["--color-orange", t.accent],
-    ["--color-orange-deep", t.accentDeep],
-    ["--color-yellow", t.yellow],
-    ["--color-green", t.green],
-    ["--color-aqua", t.aqua],
-    ["--color-blue", t.blue],
-    ["--color-purple", t.purple],
-    ["--color-red", t.red],
-  ]
-  const vars = pairs.map(([k, v]) => `${k}:${v} !important`).join(";")
+  const { tokens, mode } = themes[name]
+  const vars = ARTIFACT_TOKENS.map(
+    ([cssVar, role]) => `${cssVar}:${tokens[role]} !important`,
+  ).join(";")
   return `<style data-steward-theme>:root{${vars};color-scheme:${mode}}</style>`
 }
 
@@ -914,6 +936,7 @@ const TILE_GUARD_STYLE =
   "#steward-tile-fade{position:fixed;left:0;right:0;bottom:0;height:32px;" +
   "pointer-events:none;opacity:0;transition:opacity .15s;" +
   "background:linear-gradient(transparent,var(--color-bg,#282828))}" +
+  FIT_STYLE +
   "</style>"
 
 /**
@@ -932,28 +955,56 @@ const TILE_FLUSH_STYLE =
   "html,body{background:var(--color-bg,#282828) !important}" +
   "</style>"
 
-const TILE_GUARD_SCRIPT =
-  "<script data-steward-tile-guard>(function(){" +
-  'var d=document.documentElement;d.setAttribute("data-steward-tile","");' +
-  "function init(){" +
-  'var f=document.createElement("div");f.id="steward-tile-fade";' +
-  "document.body.appendChild(f);" +
-  // The card veils the iframe until the artifact has *content*, not merely a
-  // parsed document — an artifact that builds its DOM after load would
-  // otherwise unveil as a flush-bg void. The sandbox has an opaque origin, so
-  // this posts (targetOrigin "*", payload carries nothing sensitive) once the
-  // body has real height; widget-card matches on e.source.
-  "var posted=false;" +
-  "var ready=function(){if(!posted&&document.body.scrollHeight>24){posted=true;" +
-  'try{parent.postMessage({type:"steward:tile-painted"},"*")}catch(e){}}};' +
-  // Overflow must be read off <body>: html/body pin overflow:hidden, so the
-  // clipped region belongs to body and never surfaces on documentElement.
-  "var check=function(){ready();f.style.opacity=" +
-  'Math.max(d.scrollHeight,document.body.scrollHeight)>d.clientHeight+1?"1":"0"};' +
-  "new ResizeObserver(check).observe(document.body);" +
-  'addEventListener("resize",check);check()}' +
-  'document.readyState==="loading"?addEventListener("DOMContentLoaded",init):init()' +
-  "})()</script>"
+/**
+ * @param withFit run the injected fit-to-height pass (ADR-0050). Only for
+ * kit-rendered artifacts: a legacy file carries its own transcribed copy, and
+ * two passes trimming the same `[data-fit-list]` would fight each other.
+ */
+function tileGuardScript(withFit: boolean): string {
+  return `<script data-steward-tile-guard>(function(){
+var d=document.documentElement;d.setAttribute("data-steward-tile","");
+var fit=${withFit ? FIT_FACTORY : "function(){}"};
+function init(){
+var f=document.createElement("div");f.id="steward-tile-fade";
+document.body.appendChild(f);
+// The card veils the iframe until the artifact has *content*, not merely a
+// parsed document — an artifact that builds its DOM after load would
+// otherwise unveil as a flush-bg void. The sandbox has an opaque origin, so
+// this posts (targetOrigin "*", payload carries nothing sensitive) once the
+// body has real height; widget-card matches on e.source.
+var posted=false;
+var ready=function(){if(!posted&&document.body.scrollHeight>24){posted=true;
+try{parent.postMessage({type:"steward:tile-painted"},"*")}catch(e){}}};
+var ro,mo,busy=false;
+// Overflow must be read off <body>: html/body pin overflow:hidden, so the
+// clipped region belongs to body and never surfaces on documentElement.
+var check=function(){
+if(busy)return;busy=true;
+// The pass mutates the DOM, so both observers are stopped across it —
+// otherwise our own writes re-enter as fresh records and it never settles.
+if(ro)ro.disconnect();if(mo)mo.disconnect();
+try{fit()}catch(e){}
+if(mo){mo.takeRecords();mo.observe(document.body,{childList:true,subtree:true,characterData:true})}
+if(ro)ro.observe(document.body);
+busy=false;
+ready();
+f.style.opacity=Math.max(d.scrollHeight,document.body.scrollHeight)>d.clientHeight+1?"1":"0"};
+ro=new ResizeObserver(check);ro.observe(document.body);
+// A ResizeObserver alone is not enough once a tile is interactive: body pins
+// overflow:hidden, so content growing past the fold changes scrollHeight
+// without changing the border box the observer watches. A sort or filter
+// click would silently overflow — the exact crop ADR-0019 forbids. Watching
+// the subtree catches the mutation itself.
+mo=new MutationObserver(check);
+mo.observe(document.body,{childList:true,subtree:true,characterData:true});
+addEventListener("resize",check);
+// The injected mono lands after DOMContentLoaded and grows every row a
+// little (ADR-0031); fitting only once would measure fallback metrics.
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(check);
+check()}
+document.readyState==="loading"?addEventListener("DOMContentLoaded",init):init()
+})()</script>`
+}
 
 /**
  * Chrome-side @font-face for the artifact mono (ADR-0031). Artifacts lead
@@ -971,6 +1022,45 @@ export function artifactFontStyle(woff2DataUri: string): string {
     "font-style:normal;font-weight:100 900;font-display:block;" +
     `src:url(${woff2DataUri}) format("woff2")}</style>`
   )
+}
+
+/**
+ * The artifact kit's stylesheet, wrapped for injection (ADR-0050).
+ *
+ * A kit-rendered artifact already inlines the version it was compiled against
+ * — it has to, or a raw-opened file is unstyled. Appending the *current* one
+ * over it is what makes a design fix reach the existing board: before this,
+ * the standard's own caveat was that "published artifacts only pick up the
+ * language when their routine reruns", which costs a full agent run per
+ * widget. Now it costs a page load.
+ *
+ * Takes the CSS as a parameter for the same reason `artifactFontStyle` does:
+ * this module runs under plain Node for `scripts/artifact-sheet.ts`, which
+ * cannot resolve the Vite `?raw` import that reads it (see artifact-kit.ts).
+ */
+export function artifactKitStyle(css: string): string {
+  return `<style data-steward-kit>${css}</style>`
+}
+
+/**
+ * Did this artifact opt into the kit? Only kit-rendered files carry the
+ * version stamp `Shell` writes.
+ *
+ * The injection is gated on this, and the gate is not a nicety. `kit.css`
+ * opens with Tailwind's preflight — a global reset that zeroes body margin,
+ * restyles headings and lists, and so on. Applied to the artifacts already on
+ * the `artifacts` branch, which were hand-authored years of design decisions
+ * ago against no reset at all, it silently relayouts every one of them. It was
+ * caught here by a widget-card test: preflight dropped a small artifact's
+ * `scrollHeight` under the paint-signal threshold and the loading veil never
+ * lifted.
+ *
+ * Gating also makes the compatibility story honest. A legacy artifact renders
+ * exactly as it always did, and picks up the kit only when its routine is
+ * migrated and republishes with the stamp.
+ */
+export function usesArtifactKit(html: string): boolean {
+  return /<meta[^>]+name="steward-kit-version"/i.test(html)
 }
 
 /** Where a framed artifact renders: a board cell, or the full-view lightbox. */
@@ -1005,15 +1095,26 @@ export function frameArtifactHtml(
   view: ArtifactView = "tile",
   fontStyle = "",
   viewer?: ArtifactViewer,
+  kitStyle = "",
 ): string {
   return (
     html +
+    // Only for artifacts that opted in — see usesArtifactKit. First among the
+    // appended blocks, so everything the frame asserts below (the footer hide,
+    // the tile flush repaint, the theme override) still outranks it: the kit
+    // is the artifact's own language, these are the frame's corrections to it.
+    (usesArtifactKit(html) ? kitStyle : "") +
     EMBED_FRAME_STYLE +
     LINK_GUARD_SCRIPT +
     fontStyle +
     (viewer ? artifactViewerScript(viewer) : "") +
+    // Kit-only: the buttons it drives exist only in kit-rendered markup, and
+    // they ship hidden until this reveals them.
+    (usesArtifactKit(html) ? ARTIFACT_COPY_SCRIPT : "") +
     (view === "tile"
-      ? TILE_GUARD_STYLE + TILE_GUARD_SCRIPT + TILE_FLUSH_STYLE
+      ? TILE_GUARD_STYLE +
+        tileGuardScript(usesArtifactKit(html)) +
+        TILE_FLUSH_STYLE
       : "") +
     artifactThemeStyle(name)
   )

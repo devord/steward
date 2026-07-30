@@ -11,6 +11,15 @@ catalog:
   vitest: ^4.0.0
   yaml: ^2.8.0
   zod: ^4.4.0
+  # Shared by the web chrome and @steward/artifact-kit. The kit authors
+  # artifacts in React and compiles them with Tailwind, so a version skew
+  # between the two would mean the chrome and the artifacts it frames are
+  # built against different renderers and different utility semantics.
+  react: ^19.2.0
+  react-dom: ^19.2.0
+  "@types/react": ^19.2.0
+  "@types/react-dom": ^19.2.0
+  tailwindcss: ^4.2.0
 
 # Supply-chain hardening (mirrors devtools' pnpm-workspace.yaml):
 # - `ignoreScripts: true` blocks lifecycle scripts from transitive deps on

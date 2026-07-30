@@ -1,0 +1,144 @@
+{
+  "slug": "corza-gaps",
+  "generatedAt": "2026-07-30T09:00:00Z",
+  "stat": {
+    "value": 3,
+    "label": "to file",
+    "tone": "attn",
+    "note": "12 held back"
+  },
+  "blocks": [
+    {
+      "kind": "queue",
+      "label": "Recommended",
+      "count": "12 held back",
+      "showHeader": true,
+      "rows": [
+        {
+          "id": "g1",
+          "state": {
+            "label": "gap",
+            "tone": "attn"
+          },
+          "title": "Enforce cart attribution on the checkout extensibility path",
+          "detail": "Spec at analytics.md §Attribution requires every checkout event to carry a cart token; app/checkout/events.ts emits none.",
+          "values": [
+            {
+              "label": "confidence",
+              "value": "high",
+              "from": "detail"
+            },
+            {
+              "label": "jira",
+              "value": "CORZA-147",
+              "from": "page"
+            }
+          ],
+          "action": {
+            "payload": "/eng:triage Enforce cart attribution on the checkout extensibility path\n\nThe spec at analytics.md §Attribution requires every checkout event to carry a cart token; app/checkout/events.ts currently emits none (gap). Acceptance: every checkout event carries a cart token, asserted in app/checkout/events.test.ts.\nPossibly related: CORZA-147",
+            "label": "copy"
+          }
+        },
+        {
+          "id": "g2",
+          "state": {
+            "label": "drift",
+            "tone": "warn"
+          },
+          "title": "B2B price list import cadence disagrees with the spec",
+          "detail": "b2b.md §Imports says hourly; jobs/price-import.ts is scheduled daily. Neither side is obviously wrong.",
+          "values": [
+            {
+              "label": "confidence",
+              "value": "med",
+              "from": "detail"
+            },
+            {
+              "label": "jira",
+              "value": "CORZA-412",
+              "from": "page"
+            }
+          ],
+          "action": {
+            "payload": "/eng:triage Reconcile B2B price list import cadence with the spec\n\nb2b.md §Imports says hourly; jobs/price-import.ts is scheduled daily (drift). Neither side is obviously wrong — decide which is authoritative, then change the other.\nPossibly related: CORZA-412",
+            "label": "copy"
+          }
+        },
+        {
+          "id": "g3",
+          "state": {
+            "label": "gap",
+            "tone": "attn"
+          },
+          "title": "PLP facet counts are unspecified for empty collections",
+          "detail": "storefront.md §Faceting defines counts for populated collections only; app/plp/facets.ts returns null and the UI renders a blank.",
+          "values": [
+            {
+              "label": "confidence",
+              "value": "med",
+              "from": "detail"
+            },
+            {
+              "label": "jira",
+              "value": "—",
+              "from": "page"
+            }
+          ],
+          "action": {
+            "payload": "/eng:triage Define PLP facet counts for empty collections\n\nstorefront.md §Faceting defines counts for populated collections only; app/plp/facets.ts returns null and the UI renders a blank (gap). Acceptance: empty collections render a zero count.",
+            "label": "copy"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "queue",
+      "label": "Ready now",
+      "showHeader": false,
+      "rows": [
+        {
+          "id": "r1",
+          "title": "Add cart token to checkout events",
+          "values": [
+            {
+              "label": "key",
+              "value": "CORZA-147",
+              "from": "detail"
+            },
+            {
+              "label": "status",
+              "value": "Ready for Agent",
+              "from": "detail",
+              "tone": "good"
+            }
+          ]
+        },
+        {
+          "id": "r2",
+          "title": "Document empty-collection facet behaviour",
+          "values": [
+            {
+              "label": "key",
+              "value": "CORZA-388",
+              "from": "detail"
+            },
+            {
+              "label": "status",
+              "value": "Ready for Dev",
+              "from": "detail",
+              "tone": "good"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "provenance": [
+    "38 kb pages audited",
+    "9 features",
+    "8 data",
+    "9 integrations",
+    "11 nfrs"
+  ],
+  "context": "## Where it stands\n\n3 gaps worth filing, 12 held back as low confidence. Two of the three already have a Jira prior; CORZA-412 is a genuine disagreement rather than a missing feature.\n\n## What the tile cropped\n\nEvery held-back finding, with the key it was deduped against:\n\n- Webhook retry backoff — deduped against CORZA-201 (Done). **The ticket is closed and the drift is still live**; that pairing is a process failure, not a code one.\n- Locale fallback for price formatting — CORZA-355, in progress.\n\n## Caveats\n\nThe audit compares written specs to code, so an unwritten expectation produces no finding. \"Drift\" means the two disagree without saying which is wrong.\n\n## Ask me about\n\n- Which of these are process failures rather than honest drift.\n- What would have caught them earlier — a review gate, or a definition-of-done change.\n- Which to file now versus fold into existing work.\n"
+}

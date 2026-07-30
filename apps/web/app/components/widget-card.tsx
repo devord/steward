@@ -47,6 +47,7 @@ import {
   widgetStatus,
 } from "../lib/routine-status.ts"
 import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
+import { ARTIFACT_KIT_STYLE } from "../lib/artifact-kit.ts"
 import { frameArtifactHtml } from "../lib/theme.ts"
 import { agoParts } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
@@ -163,6 +164,7 @@ export function WidgetCard({
             "tile",
             ARTIFACT_FONT_STYLE,
             login ? { login } : undefined,
+            ARTIFACT_KIT_STYLE,
           )
         : null,
     [artifact?.html, theme, login],
@@ -178,6 +180,7 @@ export function WidgetCard({
             "full",
             ARTIFACT_FONT_STYLE,
             login ? { login } : undefined,
+            ARTIFACT_KIT_STYLE,
           )
         : null,
     [artifact?.html, theme, login],

@@ -19,8 +19,9 @@ export default defineConfig({
   },
   // Two test projects on a node-vs-browser axis. `unit` covers pure logic
   // and server loaders (GitHub mocked with MSW); `browser` runs
-  // *.browser.test.tsx in real Chromium — the grid drag math needs real
-  // layout (getBoundingClientRect), which jsdom cannot provide.
+  // *.browser.test.{ts,tsx} in real Chromium — the grid drag math needs real
+  // layout (getBoundingClientRect), which jsdom cannot provide, and the
+  // artifact fit pass needs a real iframe it can measure and mutate.
   test: {
     projects: [
       {
@@ -28,7 +29,10 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "node",
+          // `.browser.` files belong to the other project — a browser
+          // test need not contain JSX, so match on the infix, not .tsx.
           include: ["app/**/*.test.ts"],
+          exclude: ["app/**/*.browser.test.ts"],
           setupFiles: ["./app/mocks/setup-node.ts"],
         },
       },
@@ -36,7 +40,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "browser",
-          include: ["app/**/*.browser.test.tsx"],
+          include: ["app/**/*.browser.test.{ts,tsx}"],
           browser: {
             enabled: true,
             provider: playwright(),
