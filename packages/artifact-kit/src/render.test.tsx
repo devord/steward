@@ -124,6 +124,73 @@ describe("QueueTable columns", () => {
   })
 })
 
+describe("Meter columns", () => {
+  const doc = (values: number[]): ArtifactDoc => ({
+    slug: "s",
+    generatedAt: "2026-07-30T09:00:00Z",
+    stat: { value: 1, label: "x" },
+    blocks: [
+      {
+        kind: "queue",
+        rows: values.map((n, i) => ({
+          id: `r${i}`,
+          title: `row ${i}`,
+          values: [{ label: "drift", value: String(n), meter: n }],
+        })),
+      },
+    ],
+  })
+  const widths = (html: string) =>
+    [...html.matchAll(/style="width:([\d.]+)%"/g)].map((m) => Number(m[1]))
+
+  it("scales every bar against the column max, not its own row", () => {
+    // The failure this prevents: per-row normalisation renders every bar full,
+    // so the column compares nothing and the reader has to fall back to the
+    // numbers the bar exists to replace.
+    expect(widths(renderArtifact(doc([10, 5, 1]), ""))).toEqual([100, 50, 10])
+  })
+
+  it("keeps one scale across rows the fit pass may later hide", () => {
+    // The max is a property of the table, so a trimmed tile does not silently
+    // rescale the bars that survive.
+    const html = renderArtifact(doc([8, 4]), "")
+    expect(widths(html)).toEqual([100, 50])
+  })
+
+  it("renders an empty bar rather than dividing by zero", () => {
+    // A section where nothing happened is a real state: every bar empty, the
+    // counts still readable.
+    expect(widths(renderArtifact(doc([0, 0]), ""))).toEqual([0, 0])
+  })
+
+  it("prints the count beside the bar", () => {
+    expect(renderArtifact(doc([7]), "")).toContain(">7<")
+  })
+
+  it("paints the bar with the tone and leaves the count in ink", () => {
+    // Tinting both spends one signal twice. The cell keeps the neutral text
+    // class; only the fill takes the tone.
+    const toned: ArtifactDoc = {
+      ...doc([3]),
+      blocks: [
+        {
+          kind: "queue",
+          rows: [
+            {
+              id: "a",
+              title: "a",
+              values: [{ label: "drift", value: "3", meter: 3, tone: "attn" }],
+            },
+          ],
+        },
+      ],
+    }
+    const html = renderArtifact(toned, "")
+    expect(html).toContain("bg-orange")
+    expect(html).not.toContain("text-orange")
+  })
+})
+
 describe("the context block", () => {
   it("is carried inert, so it costs no layout and no request", () => {
     expect(html).toContain('<script type="text/markdown" id="steward-context">')
