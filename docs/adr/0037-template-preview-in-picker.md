@@ -24,6 +24,16 @@ like; only the data is an example, so the card captions it as one.
   (ADR-0027); they _are_ the sample renders, so the picker reuses them
   rather than keeping a second copy that could drift. Inlined into the app
   bundle at build time (`import.meta.glob`), same as the built-in templates.
+
+  **Superseded in placement, not in intent, by ADR-0050.** The path and the
+  keyed-by-basename rule stand; what changed is who writes the file. The
+  archetypes stopped being hand-authored when the design language became a
+  kit, so a preview is now `render.mjs` over an archetype fixture, generated
+  by `scripts/gen-template-previews.ts` and drift-checked in CI. The "no
+  second copy that could drift" argument survives that move intact — it gets
+  stronger, because the preview is now made by the same command a routine
+  runs rather than by a person imitating it.
+
 - **Repo/team** — `templates/routines/<id>.sample.html`, a sibling of the
   template markdown. Discovery already lists the repo tree to find
   `templates/routines/<id>.md`; a sample sibling in that same listing costs
@@ -65,13 +75,16 @@ a11y fault.
 - Repo templates gain a documented convention for shipping a preview
   (widget standard, data-repo README). It's optional; the picker degrades to
   the description-only card it shows today.
-- Sample HTML rides the streamed picker payload. For the two built-ins
-  that's ~80 kB raw (well-compressed), consistent with the board already
-  streaming every widget's artifact. If the sample set grows large enough to
-  matter, moving the fetch behind an on-open resource route is a contained
-  follow-up — the `sample` field is the only coupling.
-- The samples now have two readers — the `artifact-sheet` design harness and
-  the picker — so a change to one is seen by the other. That's the point:
-  the picture the picker shows is the archetype the design language defines.
+- Sample HTML rides the streamed picker payload. For the four built-ins that
+  ship one it is ~180 kB raw, and it compresses far better than that reads:
+  every preview inlines the same `kit.css`, so the bulk of the payload is one
+  string repeated four times. Consistent with the board already streaming
+  every widget's artifact. If the sample set grows large enough to matter,
+  moving the fetch behind an on-open resource route is a contained follow-up —
+  the `sample` field is the only coupling.
+- The previews and the `artifact-sheet` design harness now read the same
+  **fixtures** rather than the same files. That is a strengthening of the
+  original point: the picture the picker shows is not merely consistent with
+  the archetype, it is generated from it.
 - The templates ledger (ADR-0029) receives `sample` on `DiscoveredTemplate`
   but doesn't render it yet; a ledger-row preview is a natural follow-up.

@@ -11,8 +11,13 @@
  *   node scripts/artifact-sheet.ts <artifact.html> [--theme <name>]... [--out <dir>]
  *
  * Defaults: gruvbox-dark + gruvbox-light sheets, written next to the
- * artifact as <name>-<theme>.png. Iterate on docs/samples/* with this
- * before touching the widget-artifact skill's design language.
+ * artifact as <name>-<theme>.png.
+ *
+ * This is the **primary visual gate** on a kit change (ADR-0050): render a
+ * fixture through `render.mjs` and put the sheet in front of a human. Nearly
+ * every layout defect the kit has shipped was found this way rather than by a
+ * test — a stranded heading, a cropped band, a tile advertising its calmest
+ * rows. A blank tier is usually a flaky capture; re-run before believing it.
  */
 import { execFileSync } from "node:child_process"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
