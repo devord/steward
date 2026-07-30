@@ -128,7 +128,13 @@ function Document({ doc }: { doc: ArtifactDoc }) {
           dimension. */}
       <div className="beyond-glance:flex hidden flex-col gap-3">
         {blocks.length ? (
-          rail.length ? (
+          // Both columns have to have something. Gating on the rail alone left
+          // an empty 3fr track beside the content whenever every main band came
+          // back empty — which is not a corner case but `repo-intel`'s quiet
+          // week, where no new signal surfaced and the carried-forward
+          // questions are the whole briefing. With nothing to sit beside, the
+          // rail is just the content, and content renders as one stack.
+          rail.length && main.length ? (
             // Two columns at the page tier, one stack below it. A wide frame
             // running five bands down a narrow ribbon on the left is the
             // failure this exists to prevent — a shipped run spent 35% of a
@@ -146,7 +152,7 @@ function Document({ doc }: { doc: ArtifactDoc }) {
               </div>
             </div>
           ) : (
-            bands(main)
+            bands(main.length ? main : rail)
           )
         ) : doc.empty ? (
           <EmptyState {...doc.empty} />
