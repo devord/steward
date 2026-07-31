@@ -27,8 +27,10 @@ greyscale. That retranscription is also why the **gruvbox pair is the
 fresh-install default again** (ADR-0051): root.tsx stamps `data-theme` with
 the dark slot at SSR, so the no-JS fallback and browser-chrome colors
 (`theme-color`, the manifest) match what a new viewer resolves to (ADR-0046
-amendment). The **identity stays Flexoki** — the mark never followed the
-active theme, so it never followed the default either. The dashboard
+amendment). The **identity is gruvbox too** (ADR-0052): the mark still never
+follows the _active_ theme, but a fixed badge drawn from a palette the product
+no longer defaults to was simply off-key, so it moved with the default and
+then stopped. The dashboard
 injects the active theme into artifact iframes at render time, for every
 theme including the anchor, so a file published against an older row still
 paints the current one — the anchor is an _authoring_ default, not a pin on
@@ -268,27 +270,62 @@ trapezoids read as basic at hero size. The knot is the same block that ends
 the wordmark, so the knot is ink.
 
 The mark wears a **fixed identity**: it never follows the active theme. One
-light colorway and one dark colorway, both drawn from the Flexoki rows of
-the registry, keyed on the mode class alone. Flexoki was the fresh-install
-default when the mark took it (ADR-0046); the default moved back to gruvbox
-(ADR-0051) and the identity did not follow, which is the whole point of a
-fixed one. Dark: `#da702c`→`#bc5215` fold wings, `#cecdc3` knot, on a
-`#1c1b1a`→`#100f0f` tile with a `#403e3c` border. Light: `#bc5215`→`#9d4310`
-wings, `#100f0f` knot, `#fffcf0`→`#f2f0e5` tile, `#b7b5ac` border. The
-single source is `MARK_IDENTITY` in `lib/theme.ts` (built from the
-`flexoki-*` registry entries, so the no-invented-colors law holds);
+light colorway and one dark colorway, both drawn from the **gruvbox** rows of
+the registry, keyed on the mode class alone. It took Flexoki when Flexoki was
+the fresh-install default (ADR-0046); the default moved back to gruvbox
+(ADR-0051) and for a while the identity did not follow, on the reasoning that
+not following is what "fixed" means. ADR-0052 corrected that: fixed means
+independent of the _viewer's_ chosen theme, not of the product's own palette,
+and a badge from a palette we no longer default to is simply off-key on the
+one surface nobody can re-theme. Dark: `#fe8019`→`#d65d0e` fold wings,
+`#d4be98` knot, on a `#32302f`→`#1b1b1b` tile with a `#5a524c` border. Light:
+`#d65d0e`→`#af3a03` wings, `#282828` knot, `#fbf1c7`→`#f2e5bc` tile, `#bdae93`
+border. The single source is `MARK_IDENTITY` in `lib/theme.ts` (built from the
+`gruvbox-*` registry entries, so the no-invented-colors law holds);
 `themeStylesheet()` emits it as `--mark-*` vars on `:root`/`.dark`, outside
 every `[data-theme]` block, so no theme can re-color the tie.
-`theme.test.ts` holds the identity wings and knot to ≥3:1 on every theme's
-page and sidebar surfaces.
 
-Depth is **material, not decorative** (terminal-calm bans gradient glass).
-Each wing carries a fold gradient — brighter at the flared tip
-(`--mark-wing-tip`), deeper where the fabric gathers at the knot
-(`--mark-wing-fold`) — and, at display sizes, four fold creases radiate
-from under the knot toward the wing corners (thin black strokes at 0.14,
-sub-pixel noise below ~32px so chrome sizes omit them). The knot stays
+The knot takes the strongest neutral each colorway allows — gruvbox-dark
+`ink` on the dark tie, gruvbox-dark `bg` on the light one. Both alternatives
+were rendered at 16px and rejected there: the paper tones (`#fbf1c7`,
+`#ebdbb2`) glared into a white pill on the dark tile, and gruvbox-light's own
+`ink` (`#654735`) muddied straight into the wings.
+
+Depth is **material, not decorative** (terminal-calm bans gradient glass), and
+the mark only spends it where it has earned it:
+
+> **The gradient is a privilege of owning the ground.**
+
+On the **chip** the mark supplies its own tile, so each wing carries a fold
+gradient — brighter at the flared tip (`--mark-wing-tip`), deeper where the
+fabric gathers at the knot (`--mark-wing-fold`) — measured against that tile.
+As the **bare glyph** it sits on a surface it does not own, so it goes flat and
+deep instead (`--mark-wing-flat`). That token is not tidiness: the light
+gradient's bright stop reads 2.72:1 on tokyo-night-light's page, under the
+WCAG graphics floor, and dulling the gradient everywhere would have paid for a
+surface the gradient never sits on. `theme.test.ts` holds the two halves
+separately — the flat wing and knot ≥3:1 on every theme's page and sidebar,
+the gradient stops ≥3:1 on the chip's own tile. Floor across the 42 ground
+trials: 4.30:1.
+
+Fold creases and the tile bevel are **not drawn**. Both were tried at every
+weight that read as material, and every one of them also read as damage — a
+scratch across the cloth, a white bar floating above the tile. The knot stays
 solid ink; a gradient there would muddy it.
+
+**The geometry is generated, not transcribed** (ADR-0052). It lives once in
+`apps/web/app/lib/mark.ts` as six named ratios on a 64-unit tile — bow 44×22
+(2:1), knot 10×14 (5:7), waist 8, tuck 6, notch 2.6, corner 1.8 — with the
+left wing derived and the right mirrored, so symmetry is a property of the
+construction. Three of those ratios were set by a failing test rather than by
+eye: the waist pinches to 8 because at 11 the silhouette broke into two lobes
+under blur; the tuck crosses 2 past centre so the wings overlap into one
+continuous mass instead of two shapes leaning on a third; the notch is 2.6
+because deeper rounds each wing into its own blob. Run
+`node scripts/gen-brand.ts` to re-emit every static mirror and the `brand/`
+kit, then `zsh scripts/render-icons.sh` for the rasters. CI regenerates and
+fails on drift, so the six hand-synced copies this section used to warn about
+cannot come back.
 
 Symmetric and solid, the mark holds one geometry at every size, from the
 16px favicon to the landing hero. Several mirrors must stay geometrically in
@@ -303,28 +340,30 @@ vanishes or punches a hole in the sidebar; glyph-only is the mark-in-chrome
 treatment everywhere else (GitHub, Linear, Vercel). **On display surfaces**
 (the landing hero, browser tab, OS launcher, social card, README lockup)
 the mark wears the **product-icon chip**: the top-lit identity tile, a
-bevel highlight, a crisp full border, the fold creases, and the tie's
-contact shadow. The chip is what holds contrast on any ground; the bare
-glyph floated on pale and gray tab strips. `favicon.svg` swaps the chip's
-light/dark identity sets with a `prefers-color-scheme` block (flat fills,
-since the fold is invisible at 16px); the `.ico` and OS launcher icons
-can't media-query, so they bake the dark identity chip. Launcher sources
-live at `scripts/icon.svg` (rounded, for apple-touch + `icon-{192,512}`)
-and `scripts/icon-maskable.svg` (full-bleed dark, bow inside the ~80% safe
-zone); regenerate every raster with `scripts/render-icons.sh` — the recipe
-can't live in the SVG comments (XML comments may not contain the double
-hyphens CLI flags are made of), and ImageMagick's SVG delegate is not
-faithful to the gradients and filters, so the script renders through
-headless Chrome. Static SVGs carry explicit `width`/`height` (favicon
-renderers assume 300×150 and crop without them).
+crisp full border, and the tie's contact shadow. The chip is what holds
+contrast on any ground; the bare glyph floated on pale and gray tab strips.
+`favicon.svg` swaps the chip's light/dark identity sets with a
+`prefers-color-scheme` block (flat fills, since the fold is invisible at
+16px); the `.ico` and OS launcher icons can't media-query, so they bake the
+dark identity chip. Launcher sources live at `scripts/icon.svg` (rounded, for
+apple-touch + `icon-{192,512}`) and `scripts/icon-maskable.svg` (full-bleed
+dark, bow inside the ~80% safe zone). Every one of those files is **emitted by
+`node scripts/gen-brand.ts`** — edit `lib/mark.ts`, never the SVG. Then
+`zsh scripts/render-icons.sh` for the rasters: the recipe can't live in the SVG
+comments (XML comments may not contain the double hyphens CLI flags are made
+of), and ImageMagick's SVG delegate is not faithful to the gradients and
+filters, so the script renders through headless Chrome. Static SVGs carry
+explicit `width`/`height` (favicon renderers assume 300×150 and crop without
+them).
 
 - `apps/web/app/components/logo.tsx`: `Logo` (mark) and `Wordmark`
   (mark + mono name lockup, scales with font size) for in-app use; both
   consume the fixed `--mark-*` identity vars, so only the mode changes the
   tie. `useId` keeps the gradient/filter ids unique across the
-  header/rail/account-bar instances. Default is the bare glyph; the landing
-  hero passes `display` for the chip (tile, bevel, border, creases, contact
-  shadow) with a `.logo-tile` drop-shadow so it sits on the page. The chip
+  header/rail/account-bar instances. Default is the bare glyph, flat-filled;
+  the landing hero passes `display` for the chip (tile, border, contact
+  shadow, and the fold gradient it has earned) with a `.logo-tile` drop-shadow
+  so it sits on the page. The chip
   is a still object — the old caret-blink (`live`) is retired; motion
   belongs to the board, where it means something.
   **The chrome brand is one size, `text-base` (16px), and `Wordmark` carries
@@ -352,7 +391,10 @@ renderers assume 300×150 and crop without them).
   scaled to ~0.82 so it survives a circle/squircle crop): the PWA/Android
   adaptive icon, so launchers build a real adaptive tile instead of masking
   apple-touch into a flat squircle. Linked from `root.tsx`;
-  `theme_color`/`background_color` are the identity dark `#100f0f`.
+  `theme_color`/`background_color` are `#282828` — the **default dark
+  theme's** canvas, not the identity tile. The browser and launcher chrome
+  frame the app, so they match what the app paints; the mark is the only
+  thing that stays fixed.
 - `apps/web/public/wordmark-{dark,light}.svg`: the identity chip + `Steward`
   lockup for the README, swapped by `prefers-color-scheme` in a
   `<picture>`. Mirrored to each data repo's `.github/` (built-in template +
@@ -363,10 +405,19 @@ renderers assume 300×150 and crop without them).
   so live text would render in the viewer's system mono instead of the
   brand face.
 - `apps/web/public/og.png`: 1200×630 (@2x) social card in the light
-  identity palette (flexoki-light); OG/Twitter meta lives in the home
+  identity palette (gruvbox-light); OG/Twitter meta lives in the home
   route's `meta`. One fixed image for every viewer, since OG previews can't
   theme-switch. Source is `scripts/og-card.html` (fonts resolve from the
   installed fontsource packages); rendered by `render-icons.sh`.
+
+- `brand/`: the distributable kit — mark, icon and wordmark in both
+  colorways plus `auto` (self-swapping) and one-colour cuts, SVG masters with
+  PNG beside them, and `brand/README.md` carrying the clear-space, minimum-size
+  and don't rules. Generated like everything else; `brand/palette/identity.json`
+  is the identity in machine-readable form. The one-colour cut is the **solid
+  silhouette**, not a knockout: the knot is 14 tall and the waist it covers is
+  only 8, so punching it out severs the mark into two disconnected wedges. At
+  one ink the knot simply stops being drawn and the pinch carries the read.
 
 The wordmark text is `foreground` ink, mono, capitalized **`Steward`**; the
 mark's wings carry the identity orange. (The logotype was lowercase

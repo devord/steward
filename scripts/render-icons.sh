@@ -4,10 +4,14 @@
 # renderer — ImageMagick's SVG delegate is not faithful to the gradients
 # and filters) and ImageMagick (`magick`, for the .ico pack only).
 #
+# Run `node scripts/gen-brand.ts` FIRST: every SVG below is generated from
+# apps/web/app/lib/mark.ts, and this script only rasterises them.
+#
 #   scripts/icon.svg          -> apple-touch-icon.png (180), icon-{192,512}.png
 #   scripts/icon-maskable.svg -> icon-maskable-512.png
 #   scripts/og-card.html      -> og.png (1200x630 @2x)
 #   scripts/icon.svg          -> favicon.ico (16/32/48, dark identity chip)
+#   brand/**/*.svg            -> brand/**/png/*.png (the distributable kit)
 set -euo pipefail
 
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
@@ -49,4 +53,30 @@ for S in 16 32 48; do
 done
 magick "$TMP/fav-16.png" "$TMP/fav-32.png" "$TMP/fav-48.png" "$PUB/favicon.ico"
 
-echo "rendered: apple-touch-icon, icon-192, icon-512, icon-maskable-512, og.png, favicon.ico"
+# The distributable kit: PNG alongside every SVG, on transparent, at the sizes
+# people actually paste into slides, stores and READMEs. Everything here is a
+# convenience copy — the SVG next to it is the master.
+render_kit() { # render_kit <dir> <basename> <aspect-h> <sizes...>
+  local dir="$1" base="$2" ratio="$3"; shift 3
+  mkdir -p "brand/$dir/png"
+  for W in "$@"; do
+    local H=$(( W * ratio / 100 ))
+    "$CHROME" --headless --disable-gpu --hide-scrollbars \
+      --force-device-scale-factor=1 --window-size="$W,$H" \
+      --default-background-color=00000000 \
+      --screenshot="brand/$dir/png/$base-$W.png" \
+      "file://$PWD/brand/$dir/$base.svg" 2>/dev/null
+  done
+}
+
+for MODE in light dark; do
+  render_kit mark "steward-mark-$MODE" 54 256 512 1024          # 48x26 glyph crop
+  render_kit icon "steward-icon-$MODE" 100 128 256 512 1024     # square chip
+  render_kit wordmark "steward-wordmark-$MODE" 21 600 1200      # 300x64 lockup
+done
+for INK in black white; do
+  render_kit mark "steward-mark-$INK" 54 512
+  render_kit wordmark "steward-wordmark-$INK" 21 1200
+done
+
+echo "rendered: apple-touch-icon, icon-192, icon-512, icon-maskable-512, og.png, favicon.ico, brand kit PNGs"

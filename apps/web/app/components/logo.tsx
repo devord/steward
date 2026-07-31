@@ -1,54 +1,45 @@
 import { useId } from "react"
 
+import {
+  CHIP_RADIUS,
+  CHIP_VIEWBOX,
+  GLYPH_VIEWBOX,
+  KNOT,
+  WING_GRADIENT,
+  WING_L,
+  WING_R,
+} from "~/lib/mark"
 import { cn } from "~/lib/utils"
-
-// The one geometry, shared by the tie, its contact shadow, and every static
-// mirror (favicon, launcher icons, wordmark lockups — keep in sync,
-// DESIGN.md § Mark). Butterfly cut: each wing's long edges bow gently
-// outward where the fabric puffs, the outer corners round off, and the
-// outer edge folds back in a shallow notch toward the knot — the silhouette
-// of a tied bow, not two chevrons. Wings tuck ~2 under the knot (drawn
-// last) so the fills never show a background hairline between the shapes.
-const WING_L =
-  "M28 28.2 C21.8 25 15.8 22 13 20.9 Q10 19.6 10 22.8 L10 25.4 C10.3 28.2 12.2 30.6 14.7 32 C12.2 33.4 10.3 35.8 10 38.6 L10 41.2 Q10 44.4 13 43.1 C15.8 42 21.8 39 28 35.8 Z"
-const WING_R =
-  "M36 28.2 C42.2 25 48.2 22 51 20.9 Q54 19.6 54 22.8 L54 25.4 C53.7 28.2 51.8 30.6 49.3 32 C51.8 33.4 53.7 35.8 54 38.6 L54 41.2 Q54 44.4 51 43.1 C48.2 42 42.2 39 36 35.8 Z"
-// The knot cinches: its vertical sides bow inward where the wrap gathers
-// the fabric, instead of the old plain rounded rectangle.
-const KNOT =
-  "M28.7 24 L35.3 24 Q38.5 24 38.35 27.2 C37.6 29.3 37.6 34.7 38.35 36.8 Q38.5 40 35.3 40 L28.7 40 Q25.5 40 25.65 36.8 C26.4 34.7 26.4 29.3 25.65 27.2 Q25.5 24 28.7 24 Z"
-// Fold creases radiating from under the knot toward each wing's outer
-// corners — the gathered-fabric detail. Display sizes only: at chrome
-// sizes (~20px) they are sub-pixel noise.
-const CREASES = [
-  "M26.5 29.3 C22.5 27.6 18.5 26 15.5 24.8",
-  "M26.5 34.7 C22.5 36.4 18.5 38 15.5 39.2",
-  "M37.5 29.3 C41.5 27.6 45.5 26 48.5 24.8",
-  "M37.5 34.7 C41.5 36.4 45.5 38 48.5 39.2",
-]
 
 /**
  * The Steward mark: the bow tie — the butler's uniform in three shapes,
- * formal service without the food dome. The mark wears a **fixed
- * identity** (DESIGN.md § Mark): one light and one dark colorway from the
- * Flexoki rows, keyed on the mode class alone, never on the active theme —
- * the `--mark-*` vars are emitted by themeStylesheet() outside every
- * `[data-theme]` block. The knot is the ink block that ends the wordmark.
- * One geometry at every size; it reads from 16px favicons to the landing
- * hero, and the static mirrors in public/ and scripts/ must keep it in
- * sync.
+ * formal service without the food dome.
  *
- * Depth is material, not decorative (terminal-calm bans gradient glass):
- * each wing carries a fold gradient — brighter at the flared tip, deeper
- * where the fabric gathers at the knot — so the tie reads as a tied
- * object. The knot stays solid ink. In chrome the mark is the bare glyph
- * (fold wings, ink knot, no tile), which is what mark-in-chrome looks like
- * elsewhere (GitHub, Linear, Vercel).
+ * The geometry lives in `~/lib/mark` and nothing else defines it. Every
+ * static mirror (favicon, launcher icons, wordmark lockups, the whole
+ * `brand/` kit) is generated from that same module by
+ * `node scripts/gen-brand.ts`, so this component and the files on disk can no
+ * longer drift the way six hand-synced copies of the path data did.
  *
- * `display` poses the mark as the product icon: a chip — top-lit tile, a
- * bevel highlight, a crisp full border, the tie's own contact shadow, and
- * the fold creases. The chip is what holds contrast on any surface; it
- * survives only in display contexts (hero sizes; it mushes below ~32px).
+ * The mark wears a **fixed identity** (DESIGN.md § Mark, ADR-0052): one
+ * light and one dark colorway from the gruvbox rows, keyed on the mode class
+ * alone, never on the active theme — `--mark-*` is emitted by
+ * `themeStylesheet()` outside every `[data-theme]` block.
+ *
+ * Depth is material, not decorative (terminal-calm bans gradient glass), and
+ * the mark only spends it where it has earned it:
+ *
+ * > **The gradient is a privilege of owning the ground.**
+ *
+ * `display` poses the mark as the product-icon chip — it brings its own
+ * top-lit tile, so each wing carries the fold gradient (bright at the flared
+ * tip, deep where the cloth gathers at the knot) measured against that tile.
+ * The default bare glyph sits on whatever surface chrome hands it, so it goes
+ * flat and deep instead: one honest tone that clears 3:1 on every theme's
+ * page and sidebar. Which is also why there is no tile behind the chrome mark
+ * — a tile there either vanishes into the sidebar or punches a hole in it,
+ * and glyph-only is what mark-in-chrome looks like everywhere else (GitHub,
+ * Linear, Vercel).
  */
 export function Logo({
   className,
@@ -69,40 +60,31 @@ export function Logo({
 
   return (
     <svg
-      // The glyph's ink spans x 10–54, y ≈19.6–43.4; the bare-glyph crop
-      // frames it tight (center y stays 32) so the tie fills its box
-      // instead of floating in the tile's old padding.
-      viewBox={display ? "0 0 64 64" : "8 17.5 48 29"}
+      viewBox={display ? CHIP_VIEWBOX : GLYPH_VIEWBOX}
       aria-hidden
       className={cn("shrink-0", display && "logo-tile", className)}
     >
-      <defs>
-        <linearGradient
-          id={wingL}
-          gradientUnits="userSpaceOnUse"
-          x1="10"
-          y1="30"
-          x2="28"
-          y2="34"
-        >
-          <stop offset="0" stopColor="var(--mark-wing-tip)" />
-          <stop offset="0.55" stopColor="var(--mark-wing-tip)" />
-          <stop offset="1" stopColor="var(--mark-wing-fold)" />
-        </linearGradient>
-        <linearGradient
-          id={wingR}
-          gradientUnits="userSpaceOnUse"
-          x1="54"
-          y1="30"
-          x2="36"
-          y2="34"
-        >
-          <stop offset="0" stopColor="var(--mark-wing-tip)" />
-          <stop offset="0.55" stopColor="var(--mark-wing-tip)" />
-          <stop offset="1" stopColor="var(--mark-wing-fold)" />
-        </linearGradient>
-        {display && (
-          <>
+      {display && (
+        <>
+          <defs>
+            <linearGradient
+              id={wingL}
+              gradientUnits="userSpaceOnUse"
+              {...WING_GRADIENT.left}
+            >
+              <stop offset="0" stopColor="var(--mark-wing-tip)" />
+              <stop offset="0.55" stopColor="var(--mark-wing-tip)" />
+              <stop offset="1" stopColor="var(--mark-wing-fold)" />
+            </linearGradient>
+            <linearGradient
+              id={wingR}
+              gradientUnits="userSpaceOnUse"
+              {...WING_GRADIENT.right}
+            >
+              <stop offset="0" stopColor="var(--mark-wing-tip)" />
+              <stop offset="0.55" stopColor="var(--mark-wing-tip)" />
+              <stop offset="1" stopColor="var(--mark-wing-fold)" />
+            </linearGradient>
             <linearGradient
               id={tile}
               gradientUnits="userSpaceOnUse"
@@ -115,43 +97,27 @@ export function Logo({
               <stop offset="1" stopColor="var(--mark-tile-bottom)" />
             </linearGradient>
             <clipPath id={clip}>
-              <rect width="64" height="64" rx="14" />
+              <rect width="64" height="64" rx={CHIP_RADIUS} />
             </clipPath>
             <filter id={shadow} x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="1" />
+              <feGaussianBlur stdDeviation="0.85" />
             </filter>
-          </>
-        )}
-      </defs>
+          </defs>
 
-      {display && (
-        <>
-          <rect width="64" height="64" rx="14" fill={`url(#${tile})`} />
-          {/* Bevel: the chip's top-lit edge highlight. */}
-          <path
-            d="M14 2 H50"
-            fill="none"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-            style={{ stroke: "var(--mark-tile-bevel)" }}
-          />
           <rect
-            x="0.75"
-            y="0.75"
-            width="62.5"
-            height="62.5"
-            rx="13.25"
-            fill="none"
-            strokeWidth="1.5"
-            style={{ stroke: "var(--mark-tile-border)" }}
+            width="64"
+            height="64"
+            rx={CHIP_RADIUS}
+            fill={`url(#${tile})`}
           />
           {/* Contact shadow: the tie's own silhouette, blurred and nudged
-              down, clipped to the tile — the bow sits on the surface. */}
+              down, clipped to the tile — so the bow sits on the surface
+              instead of being painted into it. */}
           <g
             clipPath={`url(#${clip})`}
             filter={`url(#${shadow})`}
-            opacity="0.3"
-            transform="translate(0 1.3)"
+            opacity="0.24"
+            transform="translate(0 1)"
           >
             <path d={WING_L} fill="#000" />
             <path d={WING_R} fill="#000" />
@@ -160,21 +126,28 @@ export function Logo({
         </>
       )}
 
-      <path d={WING_L} fill={`url(#${wingL})`} />
-      <path d={WING_R} fill={`url(#${wingR})`} />
-      {display &&
-        CREASES.map((d) => (
-          <path
-            key={d}
-            d={d}
-            fill="none"
-            stroke="#000"
-            strokeOpacity="0.14"
-            strokeWidth="1"
-            strokeLinecap="round"
-          />
-        ))}
+      <path
+        d={WING_L}
+        fill={display ? `url(#${wingL})` : "var(--mark-wing-flat)"}
+      />
+      <path
+        d={WING_R}
+        fill={display ? `url(#${wingR})` : "var(--mark-wing-flat)"}
+      />
       <path d={KNOT} fill="var(--mark-knot)" />
+
+      {display && (
+        <rect
+          x="0.55"
+          y="0.55"
+          width="62.9"
+          height="62.9"
+          rx={CHIP_RADIUS - 0.55}
+          fill="none"
+          strokeWidth="1"
+          style={{ stroke: "var(--mark-tile-border)" }}
+        />
+      )}
     </svg>
   )
 }

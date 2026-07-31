@@ -44,6 +44,31 @@ jobs:
             echo "$drift"
             exit 1
           fi
+      # The identity is one geometry with many mirrors (ADR-0052): the React
+      # component, the favicon, the launcher sources, both wordmarks and the
+      # whole brand kit are renders of apps/web/app/lib/mark.ts. They used to
+      # be six hand-synced copies of the same path data; this step is what
+      # replaced "keep in sync" as a comment with a check.
+      #
+      # SVG only. The PNGs beside them are rendered through headless Chrome
+      # (ImageMagick's SVG delegate is not faithful to the gradients and
+      # filters), which is not available here — `scripts/render-icons.sh`
+      # stays a local step.
+      - name: Identity assets are generated, never hand-edited
+        run: |
+          node scripts/gen-brand.ts
+          drift="$(git status --porcelain --untracked-files=all -- \
+            brand ':(exclude)brand/*/png' \
+            apps/web/public/favicon.svg \
+            apps/web/public/wordmark-light.svg \
+            apps/web/public/wordmark-dark.svg \
+            templates/data-repo/.github \
+            scripts/icon.svg scripts/icon-maskable.svg)"
+          if [ -n "$drift" ]; then
+            echo "identity assets are stale — re-run node scripts/gen-brand.ts"
+            echo "$drift"
+            exit 1
+          fi
       - run: pnpm exec vp check
       - run: pnpm run typecheck
       - run: pnpm run build

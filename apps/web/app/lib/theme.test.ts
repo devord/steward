@@ -452,17 +452,21 @@ describe("every theme clears the contrast floors", () => {
         )
       }
     })
-    it(`${name}: the identity mark ≥ 3:1 on page and sidebar`, () => {
-      // The bow tie wears a fixed identity (DESIGN.md § Mark): one light
-      // and one dark colorway keyed on mode, never on the theme. So every
-      // theme must carry the *identity* wings and knot past the WCAG
-      // graphics floor on the surfaces the glyph sits on — the landing
-      // page (bg) and the sidebar (bg1) — including the fold end of the
-      // wing gradient, which is the darker stop.
+    it(`${name}: the bare glyph ≥ 3:1 on page and sidebar`, () => {
+      // The bow tie wears a fixed identity (DESIGN.md § Mark, ADR-0052): one
+      // light and one dark colorway keyed on mode, never on the theme. In
+      // chrome it is the bare glyph, sitting directly on a surface it does
+      // not own — the landing page (bg) and the sidebar (bg1) — so the flat
+      // wing and the knot must clear the WCAG graphics floor on every theme.
+      //
+      // It is `wingFlat` that is held here, not the gradient stops. That is
+      // the whole reason the flat tone exists: the light gradient's bright
+      // end reads 2.72:1 on tokyo-night-light's page, and rather than dull
+      // the gradient everywhere to satisfy a surface it never sits on, the
+      // mark goes flat and deep whenever it does not bring its own ground.
       const mark = MARK_IDENTITY[theme.mode]
       for (const surface of [t.bg, t.bg1]) {
-        expect(contrast(mark.wingTip, surface)).toBeGreaterThanOrEqual(3)
-        expect(contrast(mark.wingFold, surface)).toBeGreaterThanOrEqual(3)
+        expect(contrast(mark.wingFlat, surface)).toBeGreaterThanOrEqual(3)
         expect(contrast(mark.knot, surface)).toBeGreaterThanOrEqual(3)
       }
     })
@@ -505,6 +509,27 @@ describe("every theme clears the contrast floors", () => {
       // The surface hierarchy is the product ("widgets glow, chrome
       // recedes"): a card must sit visibly off the page in every theme.
       expect(contrast(t.bg, t.bg1)).toBeGreaterThanOrEqual(1.05)
+    })
+  }
+
+  // The other half of the mark's contract. The bare glyph is held against
+  // every theme's surfaces above; the chip is held against the only ground it
+  // ever sits on — the tile it brings with it. That is what buys the gradient
+  // its range, so it is measured rather than assumed (ADR-0052).
+  for (const mode of ["light", "dark"] as const) {
+    it(`${mode} chip: the fold gradient ≥ 3:1 on its own tile`, () => {
+      const m = MARK_IDENTITY[mode]
+      // Worst case per stop: the tip lands over the tile's lighter top, the
+      // gather over its darker bottom.
+      expect(contrast(m.wingTip, m.tileTop)).toBeGreaterThanOrEqual(3)
+      expect(contrast(m.wingFold, m.tileBottom)).toBeGreaterThanOrEqual(3)
+      expect(contrast(m.knot, m.tileBottom)).toBeGreaterThanOrEqual(3)
+    })
+    it(`${mode} chip: the border separates the tile from a like surface`, () => {
+      // The chip's edge is the whole reason it can be dropped on any ground;
+      // if the border vanishes into its own tile, the icon has no silhouette.
+      const m = MARK_IDENTITY[mode]
+      expect(contrast(m.tileBorder, m.tileTop)).toBeGreaterThanOrEqual(1.5)
     })
   }
 })

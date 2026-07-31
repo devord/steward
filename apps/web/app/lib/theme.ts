@@ -768,33 +768,54 @@ function declarations(theme: Theme): string {
 }
 
 /**
- * The mark's fixed identity (DESIGN.md § Mark). The bow tie stopped
- * following the active theme: one light colorway and one dark colorway,
- * keyed on mode alone, drawn from the Flexoki rows above so the registry
- * stays the single source of every hex. `bevel` is the chip's top-lit
- * highlight — a white stroke that must stay faint on the dark tile and
- * strong on the light one.
+ * The mark's fixed identity (DESIGN.md § Mark, ADR-0052). The bow tie does
+ * not follow the active theme: one light colorway and one dark colorway,
+ * keyed on mode alone, drawn from the **gruvbox** rows above so the registry
+ * stays the single source of every hex.
+ *
+ * `wingFlat` is the whole point of the pair, and it exists because of a
+ * measurement. The light gradient's bright end (`accentDeep`, #d65d0e) reads
+ * 2.72:1 on the palest ground the product ships — tokyo-night-light's page —
+ * which is under the WCAG graphics floor. Rather than dull the gradient
+ * everywhere to satisfy the one surface it never actually sits on, the mark
+ * splits by whether it brought its own ground:
+ *
+ * > **The gradient is a privilege of owning the ground.**
+ *
+ * On the chip the mark supplies its own tile, so the fold gradient is
+ * measured against `tileTop`/`tileBottom` and runs at full range. As the bare
+ * glyph in chrome it sits on a foreign surface, so it goes flat and deep —
+ * `wingFlat` — which clears 3:1 on every theme's page and sidebar with room
+ * to spare. `theme.test.ts` holds both halves of that contract.
+ *
+ * The knot takes the strongest neutral each colourway allows: gruvbox-dark
+ * `ink` on the dark tie, gruvbox-dark `bg` on the light one. Tested at 16px
+ * against the alternatives — the paper tones glared into a white pill, and
+ * gruvbox-light `ink` (#654735) muddied straight into the wings.
+ *
+ * There is no `tileBevel`: the chip's top-lit tile gradient is the highlight,
+ * and a white stroke over it read as a bar floating above the surface.
  */
-const flexokiLight = themes["flexoki-light"].tokens
-const flexokiDark = themes["flexoki-dark"].tokens
+const gruvboxLight = themes["gruvbox-light"].tokens
+const gruvboxDark = themes["gruvbox-dark"].tokens
 export const MARK_IDENTITY = {
   light: {
-    wingTip: flexokiLight.accent,
-    wingFold: flexokiLight.accentDeep,
-    knot: flexokiLight.ink,
-    tileTop: flexokiLight.bg1,
-    tileBottom: flexokiLight.bg,
-    tileBorder: flexokiLight.border,
-    tileBevel: "rgb(255 255 255 / 0.7)",
+    wingTip: gruvboxLight.accentDeep,
+    wingFold: gruvboxLight.accent,
+    wingFlat: gruvboxLight.accent,
+    knot: gruvboxDark.bg,
+    tileTop: gruvboxLight.bg,
+    tileBottom: gruvboxLight.bg1,
+    tileBorder: gruvboxLight.border,
   },
   dark: {
-    wingTip: flexokiDark.accent,
-    wingFold: flexokiDark.accentDeep,
-    knot: flexokiDark.ink,
-    tileTop: flexokiDark.bg1,
-    tileBottom: flexokiDark.bg,
-    tileBorder: flexokiDark.border,
-    tileBevel: "rgb(255 255 255 / 0.06)",
+    wingTip: gruvboxDark.accent,
+    wingFold: gruvboxDark.accentDeep,
+    wingFlat: gruvboxDark.accent,
+    knot: gruvboxDark.ink,
+    tileTop: gruvboxDark.bg2,
+    tileBottom: gruvboxDark.bg1,
+    tileBorder: gruvboxDark.border,
   },
 } as const satisfies Record<ThemeMode, Record<string, string>>
 
@@ -803,11 +824,11 @@ function markDeclarations(mode: ThemeMode): string {
   return [
     `--mark-wing-tip:${m.wingTip}`,
     `--mark-wing-fold:${m.wingFold}`,
+    `--mark-wing-flat:${m.wingFlat}`,
     `--mark-knot:${m.knot}`,
     `--mark-tile-top:${m.tileTop}`,
     `--mark-tile-bottom:${m.tileBottom}`,
     `--mark-tile-border:${m.tileBorder}`,
-    `--mark-tile-bevel:${m.tileBevel}`,
   ].join(";")
 }
 
