@@ -15,7 +15,7 @@ defaulting to `cloud`.
 - **`local`** — the only host that can read local data, and it inherits the
   machine's `gh` auth and local MCP servers. `routines:sync` grows a local
   half: for each `host: local` routine with a `schedule:` it writes a
-  launchd agent (`~/Library/LaunchAgents/co.formfactory.bulletin.<slug>.plist`,
+  launchd agent (`~/Library/LaunchAgents/co.formfactory.steward.<slug>.plist`,
   `StartCalendarInterval`) that fires the identical pointer prompt via
   headless `claude -p`. Same reconciliation discipline as the cloud half:
   the YAML is the source of truth, orphaned plists are deleted.

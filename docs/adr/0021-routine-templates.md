@@ -14,7 +14,7 @@ plugin, and `repo-pulse` polluting every interactive session's skill
 list.
 
 ADR-0020 removed the reason for the arrangement. ADR-0014 kept content
-out of the bulletin repo because content coupled _team-specific_ reports
+out of the steward repo because content coupled _team-specific_ reports
 to the product; with params, the team-specific part (which repos, which
 focus) lives in `routines.yaml`, and what remains in the file is a
 generic, parameterized report definition — platform, like a default
@@ -39,7 +39,7 @@ of ADR-0015/0020), body = the authoring procedure. A template lives at
 ADR-0014's readership rule survives — a template lives in the narrowest
 repo all its users can read — minus the plugins tier, whose only remaining
 occupant was "shared but not generic", an empty set for a single-team
-deployment. The `bulletin` plugin in the plugins repo is deleted.
+deployment. The `steward` plugin in the plugins repo is deleted.
 
 **The YAML field renames with the concept**: `template: repo-pulse`,
 with no legacy `skill:` alias — a UI that says "template" over a YAML
@@ -52,7 +52,7 @@ template-or-instructions refine loudly.
 **Resolution moves from Claude Code to the dispatcher** (reversing
 ADR-0014's "resolution stays Claude Code's job" for content): given
 `template:`, `run-routine` reads `templates/routines/<id>.md` from the
-data repo checkout first (private/team), then from the bulletin checkout
+data repo checkout first (private/team), then from the steward checkout
 (the repo the dispatcher itself lives in — always present: attached as a
 cloud source per ADR-0018's base, `--add-dir`'d locally per ADR-0014).
 Found: follow the body with the routine's `instructions` and `params`.
@@ -68,22 +68,22 @@ best-effort, exactly as ADR-0013 always allowed.
   skills in interactive sessions.
 - **Keep them skills, rename only the UI.** The word and the YAML field
   diverge, and every plugin problem above stays.
-- **Move them into bulletin as `.claude/skills/`.** Same repo win, but
-  they'd register in every session from a bulletin checkout, and the
+- **Move them into steward as `.claude/skills/`.** Same repo win, but
+  they'd register in every session from a steward checkout, and the
   UI/mechanism mismatch remains.
 - **Name them "routines".** Collides with the scheduled instance — "add a
   routine, pick a routine" is circular; instantiation needs its own word.
 
 ## Consequences
 
-- `BULLETIN_PLUGINS_REPO` is removed; discovery reads the board's data
+- `STEWARD_PLUGINS_REPO` is removed; discovery reads the board's data
   repo plus the bundled built-ins. Picker badges become
   Built-in / Team / Private; a data-repo template shadows a same-named
   built-in.
 - ADR-0018's `repos:` no longer needs the plugins repo; existing routines
   get the extra trimmed on the next `routines:sync --apply`.
 - Migrations outside this repo, done atomically with this change: delete
-  the `bulletin` plugin from the plugins marketplace; move personal/team
+  the `steward` plugin from the plugins marketplace; move personal/team
   data-repo skills to `templates/routines/`; rewrite `skill:` →
   `template:` in every routines.yaml by hand. No transition machinery —
   the fleet is small enough to migrate in one sitting.

@@ -20,8 +20,6 @@ ADR-0010, ADR-0017):
 - Either form starting with **"Dry-run"** instead of "Run" is a dry run
   (ADR-0017). **Decide this first**: dry mode changes step 1 (local tree
   only, no remotes) and step 3 (no plugin install/clone). See § Dry runs.
-- Legacy: "Run the bulletin routine …" (the pre-rename phrase, ADR-0024)
-  still dispatches here during migration; treat it identically.
 
 The prompt is deliberately stable; everything that can change lives in the
 data repo's YAML.

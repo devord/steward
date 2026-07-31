@@ -8,7 +8,7 @@ the registry is a topic search run with the viewer's token
 (`repos.server.ts`). Search scoping IS the sharing model: results are
 exactly the tagged repos the token can read, so granting someone read
 access on GitHub is the whole act of sharing a dashboard, and revoking it
-is the whole act of unsharing. `BULLETIN_TEAM_REPO` is gone; "the team
+is the whole act of unsharing. `STEWARD_TEAM_REPO` is gone; "the team
 repo" is just one shared repo among N (it may live in any org, and
 different repos may be shared with entirely different circles).
 
@@ -43,11 +43,11 @@ ADR-0010's `runner:` rule generalizes: a repo is **shared** iff it is not
 the viewer's home repo; in a shared repo `routines:sync` enacts only
 entries whose `runner` matches the signed-in login. Pointer prompts now
 **always** carry the repo clause (amending ADR-0005's personal form) —
-_"Run the bulletin routine `<slug>` in `<owner/repo>` — follow the
+_"Run the steward routine `<slug>` in `<owner/repo>` — follow the
 run-routine skill."_ — because with N repos an unclaused prompt is
 ambiguous; the dispatcher still accepts legacy unclaused prompts as
 home-repo runs. Cloud resource names carry the owner for shared repos
-(`bulletin-<owner>-<slug>`) so two repos' slugs can't collide on one
+(`steward-<owner>-<slug>`) so two repos' slugs can't collide on one
 Claude account; orphan cleanup keys off the prompt's repo clause, as
 before.
 

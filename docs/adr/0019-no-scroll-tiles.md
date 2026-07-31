@@ -19,10 +19,10 @@ Decision, in three layers:
   every tier. A list that doesn't fit degrades to fewer items plus a
   visible `+N more` line. The `widget-artifact` skill carries a reference
   fit-to-height snippet (scripts are already in the sandbox contract,
-  ADR-0002); artifacts gate it on `html[data-bulletin-tile]` so the raw
+  ADR-0002); artifacts gate it on `html[data-steward-tile]` so the raw
   page and the full view keep every row.
 - **Platform guard** (`frameArtifactHtml`, tile view): the frame pins
-  `overflow: hidden` inside the tile iframe, stamps `data-bulletin-tile`
+  `overflow: hidden` inside the tile iframe, stamps `data-steward-tile`
   on the artifact's `<html>`, and injects a bottom fade that appears only
   while content still overflows — a non-compliant artifact degrades to
   _visibly_ truncated ("there's more — expand"), never ambiguously cropped.
@@ -51,5 +51,5 @@ Decision, in three layers:
   with the fade until their routine reruns with the updated skill.
 - The tile guard is embed-only injection, same path as the footer hide;
   raw artifact views are untouched.
-- `data-bulletin-tile` becomes contract surface: artifacts may key CSS or
+- `data-steward-tile` becomes contract surface: artifacts may key CSS or
   JS on it, so renaming it is a breaking change to the standard.

@@ -72,7 +72,7 @@ judgment the stateless app cannot and should not fake with a form.
 - Schema: `template: z.string().min(1)` required; refine deleted; a
   routines file with a template-less entry fails parse loudly.
 - Dispatcher §3 collapses to one path: resolve
-  `templates/routines/<template>.md` (data repo → bulletin checkout),
+  `templates/routines/<template>.md` (data repo → steward checkout),
   follow it, hard-fail if absent.
 - Migration: both live data repos already name templates on every
   routine; the data-repo seed's prompt-only example gains
