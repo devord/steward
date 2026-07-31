@@ -15,6 +15,26 @@ standing request for what this widget should show each run, and use
 whatever the run environment reaches (connected tools, attached repos,
 the previous artifact on the `artifacts` branch) to fulfill it.
 
+## Compose
+
+**Reach for a primitive before gathering by hand** (ADR-0053). Each one
+hands back a concise reading, and a file when the rows outgrow it:
+
+| primitive          | for                                                   |
+| ------------------ | ----------------------------------------------------- |
+| `/github-prs`      | what is open now — state, CI, reviewers, age          |
+| `/github-history`  | what moved over a window, and what is committed ahead |
+| `/jira-issues`     | a ticket query, normalized and tallied                |
+| `/repo-modules`    | a codebase's module census and entropy score          |
+| `/people-registry` | logins or account ids to names and faces              |
+| `/prior-run`       | this routine's own last publish                       |
+| `/slack-post`      | announcing a finding in a channel                     |
+
+Skills this environment carries from elsewhere compose the same way — they
+return prose, which is the whole interface. Gather by hand only for what
+none of them covers, and say so in the run: a shape the roster cannot
+reach is worth knowing about.
+
 ## Emit
 
 Write `data.json` and render it with the kit. The shape is documented once

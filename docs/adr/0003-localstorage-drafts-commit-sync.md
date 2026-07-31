@@ -14,7 +14,7 @@ and the persist actions.
 - **Open PR** — an opt-in toggle: create `dash/config-<timestamp>`, commit,
   open a PR. For users who want review or run branch protection.
 - **Download files / copy patch** — the "apply locally, then PR myself"
-  escape hatch. A real `bulletin apply` CLI is deliberately deferred until
+  escape hatch. A real `steward apply` CLI is deliberately deferred until
   the download proves annoying.
 
 ## Consequences

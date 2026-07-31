@@ -31,7 +31,7 @@ Mechanics:
   color may exist that isn't in the registry.
 - The preference is Flow's appearance model: `mode` (`system`/`light`/
   `dark`) plus a light-slot and a dark-slot theme, stored as JSON in
-  `localStorage["bulletin-appearance"]`. A tiny blocking script stamps
+  `localStorage["steward-appearance"]`. A tiny blocking script stamps
   `data-theme` and the `.dark` class before first paint — no flash; SSR
   markup carries the default and `suppressHydrationWarning` absorbs the
   re-stamp.
@@ -74,7 +74,7 @@ hydration (srcdoc swap — local, no network).
 English and Português (Brasil), dictionaries in `apps/web/app/locales/`
 (flat typed keys; `en.ts` defines the set, other locales must fill it).
 The locale must be server-visible — SSR renders translated markup and
-`<html lang>` — so it travels as a plain cookie (`bulletin_locale`, one
+`<html lang>` — so it travels as a plain cookie (`steward_locale`, one
 year), negotiated cookie → `Accept-Language` → `en`. The settings action
 sets the cookie; the root loader revalidates and the whole app re-renders.
 Not the auth session cookie: language must work anonymously too.

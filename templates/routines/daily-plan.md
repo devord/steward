@@ -19,126 +19,75 @@ widget:
 
 # Daily plan
 
-Author today's working plan as a widget artifact. You are invoked by the
-`run-routine` dispatcher with the routine's `instructions` from
-`data/routines.yaml`. Treat those as the owner's standing guidance (which
-projects matter, what to ignore, tone).
-
-A daily plan has **one subject**, the person it is for, and the board it
-lands on may be shared, so it is read by people who are not that person
-(widget-standard "Person-relative content", ADR-0039). **Name the owner in
-the third person; never write "you."** Title the artifact
-`<Owner>'s Daily Plan` and phrase throughout as "Daniel has 3 deep blocks
-left," not "you have." Resolve the owner's display name once, from the
-richest source reachable this run: a connected calendar/account's own
-identity, else `gh api user -q .name` (falling back to the login), else a
-name the `instructions` state. If nothing resolves, title it plainly
-`Daily Plan` and stay third-person ("today's plan"), never inventing a
-name.
-
-## Gather
-
-Collect, in order of usefulness, whatever is reachable from this
-environment, skipping silently anything that isn't:
-
-1. Today's calendar events (if a calendar tool is connected).
-2. Open tasks/issues assigned to the owner in connected trackers, the
-   actionable items a single day is planned around. Exclude epics,
-   projects, and milestones at the source (e.g. Jira `issuetype not in
-(Epic)`) so their keys never enter context: they group work, they are
-   not a day's work. The exclusion is total. An epic must not appear
-   _anywhere_ in the plan (see Compose), only the concrete child tasks
-   under it.
-3. Yesterday's plan (previous artifact at `w/<slug>/index.html` on the
-   `artifacts` branch, if it exists), where anything unfinished becomes a
-   carry-over. Read it for data only; never reuse its markup or CSS
-   (`run-routine` § 4).
+One person's day, planned. It has **one subject** and lands on a board others
+read, so **name the owner in the third person and never write "you"**
+(ADR-0039): "Daniel has 3 deep blocks left." Title it `<Owner>'s Daily Plan`,
+resolving the name from the richest source this run reaches — a connected
+account's own identity, else `gh api user -q .name`, else what `instructions:`
+state. Nothing resolves → plainly `Daily Plan`, still third person, never an
+invented name.
 
 ## Compose
 
-- **Top priorities**: at most 3, one line each. A short imperative
-  **lead** (what to do, ≤ ~6 words) followed by the ticket key and the
-  evidence as **detail** — a row's `title` and its `detail`, never one
-  undifferentiated sentence. Derive from instructions + gathered data;
-  when in doubt, prefer what the instructions emphasize.
-- **Time blocks**: a full time-block plan (Cal Newport style), where every
-  30-minute slot from day start to shutdown has a job, snapped to
-  :00/:30. The day span comes from the day itself: the working hours the
-  instructions state, else today's calendar (start at or before the
-  first commitment, end at the workday's close). Build it in order:
-  1. Place the fixed commitments: calendar events and personal blocks
-     (gym, meals, family). Declined/cancelled events are not blocks.
-     When their slot is reallocated, say so in the new block's note
-     (`was: Corza sync — declined`).
-  2. Give the largest remaining gaps to **deep blocks** executing the
-     top priorities, 90m–2h each, earliest gaps first. Put a one-line
-     `goal:` note on each (what done looks like by the block's end). Name
-     the concrete task the block advances, never the epic it rolls up to.
-     Epics stay out of labels and goal notes just as they stay out of the
-     item lists.
-  3. **Label every work block `Type — Project: task`**, concise (≤ ~6
-     words after the colon): the label is the block's name on the grid,
-     the `goal:` note is its detail, so ticket enumerations go in the note,
-     never the label. The project is the tracker's project (or what the
-     instructions call it); it is what per-project totals sum, so spell it
-     consistently across blocks. Personal and free blocks carry no
-     project.
-  4. Batch the shallow work (review queues, replies, small carry-overs)
-     into named 30–60m blocks, and end the day with a 30m **shutdown**
-     block (clear queues, plan tomorrow).
-  5. Whatever remains is a **free** block: honest slack, labeled with
-     what it buffers.
-     Block types are deep / meeting / shallow / personal / free, and the
-     kit owns what each looks like — say what a block is _for_ and it
-     follows.
-- **Day totals**: sum deep / meetings / shallow / free hours, and the
-  hours per project from the work blocks' `Type — Project: task` labels.
-  Those are the two process metrics the totals lines render (by type, by
-  project).
-- **Carry-overs**: unfinished items from the previous plan, max 5.
+1. **Today's calendar events**, if a calendar connector is attached.
+2. **`/jira-issues`** for what is assigned to the owner and still open,
+   excluding types that group work — `issuetype not in (Epic)` — at the query,
+   so their keys never enter context. The exclusion is total: an epic must not
+   appear anywhere in the plan, only the concrete tasks under it.
+3. **`/prior-run`** — yesterday's plan, whose unfinished items are today's
+   carry-overs.
 
-## Emit
+`instructions:` are the owner's standing guidance: which projects matter, what
+to ignore, tone. Skip silently whatever this environment cannot reach.
 
-Write `data.json` and render it with the kit — the shape is documented once in
-`$STEWARD/.claude/skills/widget-artifact/kit/CONTRACT.md`; read it rather than
-inferring from this description. This routine's mapping onto it:
+## Present
 
-- **`stat`** — priorities done over planned (`2 of 3`), `label` `"priorities
+Write `data.json` per `$STEWARD/.claude/skills/widget-artifact/kit/CONTRACT.md`
+and render it with the kit.
+
+**Build the day in this order**, snapped to :00/:30, spanning the working hours
+`instructions:` state or the day the calendar shows:
+
+1. **Fixed commitments** — calendar events and personal blocks. A declined or
+   cancelled event is not a block; when its slot is reallocated, say so in the
+   new block's note (`was: Corza sync — declined`).
+2. **Deep blocks** into the largest remaining gaps, 90m–2h, earliest first, each
+   executing a top priority with a one-line `goal:` note saying what done looks
+   like. Name the concrete task, never the epic.
+3. **Label every work block `Type — Project: task`**, ≤ ~6 words after the
+   colon. The label is the block's name on the grid and the `goal:` note is its
+   detail, so ticket enumerations go in the note. Spell the project
+   consistently — it is what the per-project totals sum.
+4. **Batch the shallow work** into named 30–60m blocks, and end with a 30m
+   **shutdown**.
+5. **Whatever remains is `free`** — honest slack, labelled with what it buffers.
+
+Then:
+
+- **`stat`** — priorities done over planned (`2 of 3`), label `"priorities
 done"`, `note` what is left and the day's shape (`3 deep blocks left · 4.5h
-deep · 2h meetings`). At 340×160 that is the whole plan, and it is the one
-  number the owner checks against the day.
-- **A `queue` block, "Top priorities"** — at most 3. `state` is `done` / `now`
-  / `next`, `title` the imperative lead (≤ ~6 words), `detail` the ticket key
-  and the evidence. Never one undifferentiated sentence.
-- **A `day` block** — `from` and `to` are the day's own span, `now` the run
-  time, and one entry per 30-minute-snapped block with its `type`, its `label`
-  (`Type — Project: task`) and its `goal:` as the `note`. The kit places blocks
-  by their real times, recedes the ones already past, draws the now line, and
-  puts the note beside the block where there is width. **Do not lay out the
-  grid** — that is the whole of what it does.
+deep · 2h meetings`). At 340×160 that is the whole plan.
+- **A `queue` block, "Top priorities"** — at most 3. `state` is `done` / `now` /
+  `next`, `title` the imperative lead (≤ ~6 words), `detail` the ticket key and
+  the evidence. Never one undifferentiated sentence.
+- **A `day` block** — the day's span, `now` the run time, one entry per block
+  with its `type` (`deep` / `meeting` / `shallow` / `personal` / `free`), its
+  label and its `goal:` as the `note`. **Do not lay out the grid** — placing
+  blocks by their real times, receding what is past and drawing the now line is
+  the whole of what the kit does here.
 - **A `rail: true` `queue` block, "Carry-overs"** — at most 5, with how long
   each has been waiting.
-- **`provenance`** — the day's totals, decomposed: hours planned, and the
-  by-type and by-project sums the work blocks' labels produce. Those are the
-  two process metrics, and the provenance line is where a countable fact goes.
+- **`provenance`** — hours planned, and the by-type and by-project sums the
+  block labels produce. Those are the two process metrics.
 - **`empty`** — nothing reachable → a designed state naming what could not be
-  read, with the plan still derived from the instructions alone where they
-  carry enough. A plan with no live data is a real answer; a blank tile is not.
-
-Do not hand-write HTML or CSS. Do not size, trim or theme anything.
-
-**The grid is page-only, and that is the kit's call, not a tier this template
-picks.** A tile cannot show the shape of a day — every slot has a job, so the
-grid needs the height to say so — and it spends its rows better on the
-priorities the day is built around. Past blocks recede rather than
-disappearing, on the page: a morning that is gone is still why the afternoon
-looks the way it does.
+  read, with the plan still derived from `instructions:` where they carry
+  enough. A plan with no live data is a real answer; a blank tile is not.
 
 ## The context block
 
-Carry a context block (`widget-artifact` § The context block): the full
-carry-over list rather than the capped five, what each priority is waiting
-on, the conflicts and overruns the grid could only show as geometry, and
-which sources were unreachable this run. Close with `## Ask me about` —
-resequencing the day, what to drop when the blocks don't fit, and what a
-carry-over keeps slipping past.
+The full carry-over list rather than the capped five, what each priority is
+waiting on, the conflicts and overruns the grid could only show as geometry,
+and which sources were unreachable.
+
+Close with `## Ask me about` — resequencing the day, what to drop when the
+blocks don't fit, and what a carry-over keeps slipping past.

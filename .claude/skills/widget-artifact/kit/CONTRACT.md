@@ -311,6 +311,39 @@ orphaned row of it. A tier is a viewport, not a crop.
   caveats, the run's own limits — closing with `## Ask me about`.
 - Deciding which columns matter enough to appear early.
 
+### `blocks[]` — matrix
+
+```json
+{
+  "kind": "matrix",
+  "label": "Co-change",
+  "spec": {
+    "labels": ["cart", "checkout", "lib"],
+    "cells": [{ "a": 0, "b": 1, "value": 0.62 }],
+    "marks": [{ "a": 0, "b": 1, "label": "no import" }]
+  }
+}
+```
+
+Co-change as a field: which pairs move together, and how hard. `a` and `b` are
+**indices into `labels`**, not names — an index outside the set silently
+addresses no cell, so the pair just does not appear and the field reads
+sparser than the data is. Emit one triangle; the kit mirrors it.
+
+**Magnitude is the only thing the fill encodes**, so it takes one sequential
+ramp — never a rainbow, which would claim each pair is a different _kind_ of
+thing rather than a different amount of one. **The diagonal is blank, not
+zero**: a module co-changes with itself on every commit, and drawing that puts
+the darkest cells on the one axis carrying no information.
+
+**A named pair gets a ring, not a hotter colour** — `marks` is for the pairs
+worth saying out loud. Spending the fill on significance as well as magnitude
+makes two claims in one channel, and a reader cannot tell which one a dark cell
+is making.
+
+Cap the labels yourself: a field is unreadable past a dozen or so rows, and the
+count you held back belongs on the block's `count`.
+
 ### `blocks[]` — progress and the day
 
 ```json

@@ -7,7 +7,7 @@ edits cloud state — invisible to version control. We minimize what lives in
 the cloud to pure metadata:
 
 - The cloud routine's **prompt is a stable one-liner**, created once and
-  never edited: _"Run the bulletin routine `<slug>` — follow the
+  never edited: _"Run the steward routine `<slug>` — follow the
   `run-routine` skill."_
 - The **`run-routine` skill** (shared repo) is the dispatcher: resolve
   `<slug>` in the data repo's `data/routines.yaml`, execute that routine's

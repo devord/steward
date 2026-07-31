@@ -20,9 +20,9 @@ Vercel) and keep auth in three resource routes: `/auth/login`,
 | ------------------------------------------- | ----------------------------------------------- |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | the OAuth app                                   |
 | `SESSION_SECRET`                            | cookie encryption                               |
-| `BULLETIN_SHARED_REPO`                      | `owner/name` of this repo (catalog + contracts) |
-| `BULLETIN_DATA_REPO_TEMPLATE`               | `owner/name` of the data-repo template          |
-| `BULLETIN_DATA_REPO_PREFIX`                 | default `bulletin-data-`                        |
+| `STEWARD_SHARED_REPO`                       | `owner/name` of this repo (catalog + contracts) |
+| `STEWARD_DATA_REPO_TEMPLATE`                | `owner/name` of the data-repo template          |
+| `STEWARD_DATA_REPO_PREFIX`                  | default `steward-data-`                         |
 
 The data repo resolves at sign-in as `<login>/<prefix><login>`; if missing,
 the app offers the first-run "create your dashboard repo" wizard
