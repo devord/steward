@@ -36,8 +36,11 @@ the empty state. **Never hand-write HTML or CSS for a kit-rendered routine.**
 
 At 340×160 this _is_ the artifact; a tier is a viewport, not a crop. From the
 detail tier up the kit steps it down to a header KPI so the ledger gets the
-height. `tone` is one of `neutral` `attn` `warn` `bad` `good` — conventionally
-`neutral` at zero and `attn` above it.
+height. `tone` is one of `neutral` `attn` `warn` `bad` `good` `info` —
+conventionally `neutral` at zero and `attn` above it. `info` is the blue step,
+outside the hot ramp entirely: it is for a state that is _notable but not
+graded_, like a signal that has gone cold or a condition with no input, where
+any of the other five would imply a severity the value does not carry.
 
 ### `verdict` — the glance, when it is a judgement
 
@@ -266,12 +269,27 @@ point.
 A line needs **two points**. One is a dot claiming a trend, and the band does
 not render.
 
-**`keep` is for rows carrying bad news that would otherwise sink.** Trimming is
-bottom-up, so a repo with zero commits or a check that never ran gets cut
-first, and the tile ends up reporting only good news. But **never use it on a
-queue already sorted by badness** — there the sort _is_ the pinning, the calm
-rows are at the bottom by construction, and pinning them makes the tile
-advertise exactly the rows with no urgency.
+**`keep` is for rows carrying bad news that would otherwise sink**, and it is
+the most over-used field in this contract. Trimming is bottom-up, so a check
+that never ran gets cut first and the tile ends up reporting only good news.
+Two questions have to come back the right way before you reach for it, and each
+one has killed a real widget:
+
+1. **Would the sort already have saved it?** On a queue sorted worst-first the
+   sort _is_ the pinning — the calm rows are at the bottom by construction, and
+   pinning them makes the tile advertise exactly the rows with no urgency. Fix
+   the order instead; the ordering was the actual defect every time this came up.
+2. **Does the pin cost a band above it?** A pinned row makes its whole band
+   un-collapsible, so the fit pass takes the height out of the band _above_
+   instead. Measured: pinning the one quiet repo in a trailing "Activity" band
+   collapsed the entire "Signals" band above it at the four-column tile height,
+   and the widget reported one idle repo and none of its findings.
+
+The second question is the one that surprises people, because the pin looks
+locally correct — the quiet row genuinely sorts last, exactly where trimming
+starts. Losing it is usually the right trade: a row survives on the tiers that
+carry its band, and a tier with no room for the band is not entitled to one
+orphaned row of it. A tier is a viewport, not a crop.
 
 ## What the kit does for you
 

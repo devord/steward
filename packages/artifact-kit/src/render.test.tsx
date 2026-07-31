@@ -560,6 +560,42 @@ describe("value deltas", () => {
   })
 })
 
+describe("a pinned row", () => {
+  it("reaches the injected fit pass as data-fit-keep", () => {
+    // No fixture pins a row any more — the two that did were both wrong, and
+    // pinning a trailing band's quiet row collapsed the band above it. The
+    // field is still real and still reachable, so it is pinned here instead,
+    // where asserting it does not also publish a preview that misuses it.
+    const html = renderArtifact(
+      {
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [
+          {
+            kind: "queue",
+            rows: [
+              { id: "a", title: "Ordinary" },
+              { id: "b", title: "Load-bearing", keep: true },
+            ],
+          },
+        ],
+      },
+      "",
+    )
+    // The pin rides the row's own <tbody> — the same element carrying
+    // `data-fit-item`, because the trimmable unit and the pinnable one have to
+    // be the same thing for the pass to honour one against the other.
+    const unit = (title: string) =>
+      html.slice(
+        html.lastIndexOf("<tbody", html.indexOf(title)),
+        html.indexOf(title),
+      )
+    expect(unit("Load-bearing")).toContain("data-fit-keep")
+    expect(unit("Ordinary")).not.toContain("data-fit-keep")
+  })
+})
+
 describe("grouped queues", () => {
   const doc: ArtifactDoc = {
     slug: "s",
