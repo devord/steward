@@ -19,24 +19,47 @@ PUB="apps/web/public"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-render() { # render <source-url> <size> <out.png> [extra chrome args...]
-  local url="$1" size="$2" out="$3"; shift 3
+# Chrome renders an SVG *document* at its own intrinsic width/height and does
+# NOT scale it to the window: screenshot a 64-unit chip at --window-size=512
+# and you get a 64px mark in the corner of a 512px sheet of nothing. Every SVG
+# here is sized for its own job (64 for the chip, 300x64 for the lockup), so
+# rasters go through a shim that sizes the image to the exact pixel box. Raster
+# size is then independent of intrinsic size, which is the only reason the kit
+# can ship one master at many resolutions.
+render_svg() { # render_svg <svg-rel-path> <w> <h> <out.png>
+  local svg="$1" w="$2" h="$3" out="$4"
+  local shim="$TMP/shim-$w-$h-${svg:t:r}.html"
+  printf '<!doctype html><meta charset=utf-8><style>html,body{margin:0;padding:0;background:transparent}img{display:block;width:%spx;height:%spx}</style><img src="file://%s/%s">' \
+    "$w" "$h" "$PWD" "$svg" > "$shim"
   "$CHROME" --headless --disable-gpu --hide-scrollbars \
-    --force-device-scale-factor=1 --window-size="$size" \
-    "$@" --screenshot="$out" "$url" 2>/dev/null
+    --force-device-scale-factor=1 --window-size="$w,$h" \
+    --default-background-color=00000000 --virtual-time-budget=4000 \
+    --screenshot="$out" "file://$shim" 2>/dev/null
+
+  # Guard the exact failure this shim exists to prevent. Rendering the SVG
+  # directly put the artwork at intrinsic size in the top-left corner and left
+  # the rest transparent — a 64px mark marooned on a 512px sheet — and every
+  # file was still the right *canvas* size, so nothing downstream noticed.
+  # Ink narrower than half the canvas means the scaling silently stopped
+  # working again.
+  local ink=${$(magick "$out" -trim -format '%w' info: 2>/dev/null):-0}
+  if (( ink * 2 < w )); then
+    echo "render-icons: $out is ${ink}px of ink on a ${w}px canvas — the SVG did not scale" >&2
+    exit 1
+  fi
 }
 
 # Launcher chips: rounded on transparent; iOS/Android re-mask.
 for S in 180 192 512; do
-  render "file://$PWD/scripts/icon.svg" "$S,$S" "$TMP/icon-$S.png" \
-    --default-background-color=00000000
+  render_svg scripts/icon.svg "$S" "$S" "$TMP/icon-$S.png"
 done
 cp "$TMP/icon-180.png" "$PUB/apple-touch-icon.png"
 cp "$TMP/icon-192.png" "$PUB/icon-192.png"
 cp "$TMP/icon-512.png" "$PUB/icon-512.png"
 
-# The maskable adaptive icon: full-bleed, opaque.
-render "file://$PWD/scripts/icon-maskable.svg" "512,512" "$PUB/icon-maskable-512.png"
+# The maskable adaptive icon: full-bleed, opaque (the SVG paints its own tile
+# edge to edge, so the transparent default never shows).
+render_svg scripts/icon-maskable.svg 512 512 "$PUB/icon-maskable-512.png"
 
 # The social card (@2x). virtual-time budget lets the webfonts settle.
 "$CHROME" --headless --disable-gpu --hide-scrollbars \
@@ -56,27 +79,26 @@ magick "$TMP/fav-16.png" "$TMP/fav-32.png" "$TMP/fav-48.png" "$PUB/favicon.ico"
 # The distributable kit: PNG alongside every SVG, on transparent, at the sizes
 # people actually paste into slides, stores and READMEs. Everything here is a
 # convenience copy — the SVG next to it is the master.
-render_kit() { # render_kit <dir> <basename> <aspect-h> <sizes...>
-  local dir="$1" base="$2" ratio="$3"; shift 3
+#
+# Height is derived from the master's own aspect (rounded, not truncated), so a
+# 1024-wide mark is exactly as tall as the artwork and never letterboxed.
+render_kit() { # render_kit <dir> <basename> <intrinsic-w> <intrinsic-h> <widths...>
+  local dir="$1" base="$2" iw="$3" ih="$4"; shift 4
   mkdir -p "brand/$dir/png"
   for W in "$@"; do
-    local H=$(( W * ratio / 100 ))
-    "$CHROME" --headless --disable-gpu --hide-scrollbars \
-      --force-device-scale-factor=1 --window-size="$W,$H" \
-      --default-background-color=00000000 \
-      --screenshot="brand/$dir/png/$base-$W.png" \
-      "file://$PWD/brand/$dir/$base.svg" 2>/dev/null
+    render_svg "brand/$dir/$base.svg" "$W" "$(( (W * ih + iw / 2) / iw ))" \
+      "brand/$dir/png/$base-$W.png"
   done
 }
 
 for MODE in light dark; do
-  render_kit mark "steward-mark-$MODE" 54 256 512 1024          # 48x26 glyph crop
-  render_kit icon "steward-icon-$MODE" 100 128 256 512 1024     # square chip
-  render_kit wordmark "steward-wordmark-$MODE" 21 600 1200      # 300x64 lockup
+  render_kit mark "steward-mark-$MODE" 48 26 256 512 1024
+  render_kit icon "steward-icon-$MODE" 64 64 128 256 512 1024
+  render_kit wordmark "steward-wordmark-$MODE" 300 64 600 1200
 done
 for INK in black white; do
-  render_kit mark "steward-mark-$INK" 54 512
-  render_kit wordmark "steward-wordmark-$INK" 21 1200
+  render_kit mark "steward-mark-$INK" 48 26 512
+  render_kit wordmark "steward-wordmark-$INK" 300 64 1200
 done
 
 echo "rendered: apple-touch-icon, icon-192, icon-512, icon-maskable-512, og.png, favicon.ico, brand kit PNGs"
