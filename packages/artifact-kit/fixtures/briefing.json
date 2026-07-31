@@ -84,7 +84,6 @@
             "tone": "info"
           },
           "title": "Edge worker runtime has gone quiet",
-          "keep": true,
           "detail": "No commits in 34 days after a year of weekly releases. Silence here is the finding — it precedes a rewrite or a wind-down.",
           "values": [
             {
@@ -144,7 +143,6 @@
         {
           "id": "a4",
           "title": "edge-runtime",
-          "keep": true,
           "values": [
             {
               "label": "commits",
