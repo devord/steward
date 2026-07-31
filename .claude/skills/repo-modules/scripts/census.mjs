@@ -82,14 +82,15 @@ const lines = (text) =>
     .filter(Boolean)
 const isSource = (p) => SOURCE.test(p) && !NOISE.test(p)
 const isTest = (p) => TEST.test(p)
+// `**` crosses directory separators, `*` does not. Both are matched in one
+// pass so neither rewrite can land inside the other's output — the two-pass
+// version needed a placeholder character to keep them apart.
 const globToRe = (glob) =>
   new RegExp(
     `^${glob
       .trim()
       .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-      .replace(/\*\*/g, "\0")
-      .replace(/\*/g, "[^/]*")
-      .replace(/\0/g, ".*")}`,
+      .replace(/\*\*|\*/g, (m) => (m === "**" ? ".*" : "[^/]*"))}`,
   )
 
 // ── roots ────────────────────────────────────────────────────────────────────
