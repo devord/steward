@@ -138,11 +138,11 @@ Device pixels at 1×. A feature either survives here or is not drawn — held by
 | `bowH`   | 28    | 7.00px      | 9.33px       |
 | `waist`  | 10    | 2.50px      | 3.33px       |
 | `cross`  | 4     | 1.00px      | 1.33px       |
-| `notch`  | 5     | 1.25px      | 1.67px       |
+| `notch`  | 4     | 1.00px      | 1.33px       |
 | `corner` | 4     | 1.00px      | 1.33px       |
 
 The bow covers **88% × 44%** of the tile at an aspect of
-2.00:1, and the chip turns it 12°.
+2.00:1, and the chip turns it 4°.
 
 <!-- /gen:mark-facts -->
 

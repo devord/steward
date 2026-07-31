@@ -128,7 +128,12 @@ export const MARK_RATIOS: MarkRatios = {
   bowH: 28,
   waist: 10,
   cross: 4,
-  notch: 5,
+  // 4.0, not 5. The size gate wants ≥1 device pixel at 16px, which is 4 units
+  // exactly — and DESIGN.md's own prior art says a notch past ~4.6 rounds each
+  // wing into its own lobe. At 5 it does: invisible at 16px, where the bite is
+  // 1.25px, and at hero scale the silhouette reads as a bone rather than a
+  // bow. The window between the two constraints is [4.0, 4.6); take the floor.
+  notch: 4,
   corner: 4,
   sweep: 0.488,
   puff: 0.609,
@@ -138,11 +143,34 @@ export const MARK_RATIOS: MarkRatios = {
 /**
  * The chip's bow is turned, because a bow tie is worn rather than laid flat.
  *
- * Twelve degrees: enough to read as tied by a person, not so much that the
- * silhouette loses its horizon at 16px. Only the chip turns — the bare glyph
- * in chrome sits on a text baseline next to a word and has to stay level.
+ * **Four degrees, not twelve.** Twelve was chosen by eye and never tested
+ * against anything, and it was the only number in the mark that could not
+ * point at a measurement — which turned out to matter: held still against 0°,
+ * 4° and 8° at 96 and 160px, the tilt is what decides whether the chip reads
+ * as a bow tie or as a bone. The bow is symmetric by construction and the tile
+ * is square; past about 4° the rotation fights both, the left tip lifts, and
+ * the silhouette turns into a fish. At 16px none of this is visible, which is
+ * why it survived every sheet until one was rendered large.
+ *
+ * Zero is the cleanest read of the four. Four keeps the jaunt the tilt was for
+ * and still reads, so it is the one that costs nothing.
+ *
+ * Only the chip turns — the bare glyph in chrome sits on a text baseline next
+ * to a word and has to stay level.
  */
-export const CHIP_TILT = 12
+export const CHIP_TILT = 4
+
+/**
+ * How much the bow is scaled down inside the chip.
+ *
+ * At full size and turned 12°, the bow's corners reach ~62.3 of the tile's 64
+ * units — inside the squircle by about a unit, which is not a margin, it is a
+ * near miss. It also leaves the chip with no air at all, against a kit rule
+ * that asks for ten units of clear space on every side including its own
+ * container. At 0.86 the bow spans ~52 units rotated, so the tile keeps ~6
+ * units of ground around it and the mark reads as placed rather than crammed.
+ */
+export const CHIP_INSET = 0.86
 
 /**
  * A cubic whose two control points sit `d` off its chord bows out by exactly
