@@ -46,9 +46,15 @@ transparent backgrounds, at the sizes people actually paste into things.
 ## Rules
 
 **Clear space** — keep **10 units of the mark's own 64-unit tile** free on all
-four sides, roughly one sixth of the chip's width. Nothing sits closer than
-that, including the edge of its own container. (This used to be stated as "one
-knot width". There is no knot.)
+four sides of whatever you place, roughly one sixth of the chip's width.
+Nothing sits closer than that, including the edge of its own container. (This
+used to be stated as "one knot width". There is no knot.)
+
+Inside the chip that ground is already drawn: the bow is inset so the tile
+keeps ~8 units around it on the long axis — see the measurements below. The
+inset is part of the artwork, not padding you can recover by scaling the bow
+up, and the maskable icon insets further still because a launcher only shows
+the middle 80%.
 
 **Minimum size** — the chip is validated to **16 device pixels** and the bare
 glyph to **20 device pixels wide**. Device pixels at 1×, not CSS pixels on a
@@ -68,8 +74,8 @@ into the sidebar or punches a hole in it.
 ### Don't
 
 - Don't recolour it to match a page, a theme, or a client's palette.
-- Don't add effects — no shadow, glow, outline, bevel, or extra rotation. The
-  chip's 12° is part of the mark; a second rotation is not.
+- Don't add effects — no shadow, glow, outline, bevel, or rotation. **The bow
+  is level in every framing**, and a tilt someone adds back is not the mark.
 - Don't put a border on the chip. It doesn't need one, and at 16px a hairline
   is a quarter of a pixel.
 - Don't stretch, condense, or re-space the lockup. Scale it as a whole.
@@ -141,8 +147,24 @@ Device pixels at 1×. A feature either survives here or is not drawn — held by
 | `notch`  | 4     | 1.00px      | 1.33px       |
 | `corner` | 4     | 1.00px      | 1.33px       |
 
-The bow covers **88% × 44%** of the tile at an aspect of
-2.00:1, and the chip turns it 4°.
+### How the chip places it
+
+The bow is 56 × 28 units at an aspect of 2.00:1 — 88% × 44% of the tile if it
+were drawn at full size, which is a near miss rather than a margin. **Every**
+chip insets it, through one function, to the same share of whatever the viewer
+actually sees:
+
+|               | scale              | bow spans | of the visible tile | ground per side |
+| ------------- | ------------------ | --------- | ------------------- | --------------- |
+| chip          | `CHIP_INSET` 0.86  | 48.2u     | 75%                 | 7.9u            |
+| maskable icon | `MASK_INSET` 0.688 | 38.5u     | 75%                 | 6.3u            |
+
+The maskable column measures against the safe zone — the middle 80% a launcher
+is guaranteed to show — which is why its scale is `CHIP_INSET` times that and
+not a number of its own. The two shares match by construction.
+
+The bow is **level in every framing** (`CHIP_TILT` 0°): it is symmetric by
+construction and the tile is square, so a rotation fights both.
 
 <!-- /gen:mark-facts -->
 

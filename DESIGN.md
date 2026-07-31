@@ -314,7 +314,10 @@ in the sidebar, and glyph-only is the mark-in-chrome treatment everywhere else
 **On display surfaces** — the browser tab, the OS launcher, the social card,
 the README lockup, the landing hero — the mark wears the **product-icon chip**:
 the identity drenched across a superellipse tile with the bow **cut out of it**
-in paper, turned 12°, because a bow tie is worn rather than laid flat.
+in paper, level, and inset so the tile keeps ground around it. Both the level
+and the inset are one function, `chipTransform` — the app's chip used to
+compose its own placement and every generated chip composed a different one, so
+the mark had visible air on the landing page and none in the browser tab.
 
 - **The chip is one colourway in both modes.** Drenched and mode-keyed it
   produced a polarity flip — deep tile with a pale bow in light, bright tile
@@ -402,8 +405,24 @@ Device pixels at 1×. A feature either survives here or is not drawn — held by
 | `notch`  | 4     | 1.00px      | 1.33px       |
 | `corner` | 4     | 1.00px      | 1.33px       |
 
-The bow covers **88% × 44%** of the tile at an aspect of
-2.00:1, and the chip turns it 4°.
+### How the chip places it
+
+The bow is 56 × 28 units at an aspect of 2.00:1 — 88% × 44% of the tile if it
+were drawn at full size, which is a near miss rather than a margin. **Every**
+chip insets it, through one function, to the same share of whatever the viewer
+actually sees:
+
+|               | scale              | bow spans | of the visible tile | ground per side |
+| ------------- | ------------------ | --------- | ------------------- | --------------- |
+| chip          | `CHIP_INSET` 0.86  | 48.2u     | 75%                 | 7.9u            |
+| maskable icon | `MASK_INSET` 0.688 | 38.5u     | 75%                 | 6.3u            |
+
+The maskable column measures against the safe zone — the middle 80% a launcher
+is guaranteed to show — which is why its scale is `CHIP_INSET` times that and
+not a number of its own. The two shares match by construction.
+
+The bow is **level in every framing** (`CHIP_TILT` 0°): it is symmetric by
+construction and the tile is square, so a rotation fights both.
 
 <!-- /gen:mark-facts -->
 
@@ -415,8 +434,9 @@ are different questions and this mark has already answered them differently
 once (ADR-0054).
 
 - `apps/web/app/lib/mark.ts`: the ratios, the wing construction, the
-  superellipse, the tilt, the declared minimums, and `drawnFeatures` — which is
-  what the size gate reads.
+  superellipse, `chipTransform` (how every chip places the bow on its tile),
+  the declared minimums, and `drawnFeatures` — which is what the size gate
+  reads.
 - `apps/web/app/components/logo.tsx`: `Logo` (both framings) and `Wordmark`
   (mark + mono name lockup, scales with font size). The glyph consumes
   `--mark-wing-flat`, which is mode-keyed; the chip consumes `--chip-*`, which
@@ -431,8 +451,11 @@ once (ADR-0054).
 - `apps/web/public/apple-touch-icon.png` (180) + `icon-{192,512}.png`: the chip,
   rendered from `scripts/icon.svg`.
 - `apps/web/public/manifest.webmanifest` + `icon-maskable-512.png`: from
-  `scripts/icon-maskable.svg`, full-bleed with the bow scaled to ~0.82 so it
-  survives a circle or squircle crop. `theme_color`/`background_color` are
+  `scripts/icon-maskable.svg`, full-bleed with the bow at `MASK_INSET` — the
+  chip's inset times the 80% safe zone — so it holds the same share of what the
+  launcher shows as the chip holds of its tile. It was a hand-typed `0.82`,
+  which is the chip's inset applied to a tile 20% of which is about to be
+  cropped away, and it put the bow's tips against the mask. `theme_color`/`background_color` are
   `#282828` — the **default dark theme's** canvas, not the identity tile. The
   launcher chrome frames the app, so it matches what the app paints.
 - `apps/web/public/wordmark-{dark,light}.svg`: the chip + `Steward` lockup for

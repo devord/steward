@@ -1,12 +1,19 @@
+import { readFile } from "node:fs/promises"
+
 import { describe, expect, it } from "vitest"
 
 import {
   buildMark,
+  CHIP_INSET,
+  chipTransform,
+  CHIP_TILT,
   drawnFeatures,
   MARK_MINIMUM,
   MARK_RATIOS,
   MARK_SPAN,
   markSpan,
+  MASK_INSET,
+  MASK_SAFE,
   squirclePath,
 } from "./mark.ts"
 
@@ -107,5 +114,68 @@ describe("the mark survives its declared minimum", () => {
     // superellipse sits further out than a circle inscribed in the square.
     const corner = d.match(/M ([\d.]+) ([\d.]+)/)
     expect(Number(corner?.[1])).toBeGreaterThan(63)
+  })
+})
+
+/**
+ * The mark's **placement** contract, the third thing neither of the other two
+ * could see.
+ *
+ * `mark.test.ts` held every drawn feature above a device pixel and
+ * `theme.test.ts` held every boundary above 3:1, and between them the mark
+ * still shipped three different chips: the app's inset to `CHIP_INSET`, the
+ * favicon and launcher icons at full size, the maskable at a hand-typed 0.82
+ * that ignored the crop it was named for. Both suites were green, because
+ * neither asks where the bow sits on its tile — a whole-shape property, and
+ * the one a person notices first.
+ */
+describe("every chip places the bow the same way", () => {
+  /** Half the bow's span after a given inset, in tile units. */
+  const reach = (inset: number) => (MARK_RATIOS.bowW * inset) / 2
+
+  it("the bow is level: the tile is square and the bow is symmetric", () => {
+    expect(CHIP_TILT).toBe(0)
+    expect(chipTransform()).not.toMatch(/rotate/)
+  })
+
+  it("the chip keeps real ground around the bow, not a near miss", () => {
+    // At full size the bow reaches 28 of 32 units — four units of clearance,
+    // which at the declared 16px minimum is one device pixel. That is the
+    // "margin" the shipped favicon had.
+    expect(MARK_SPAN.chip / 2 - reach(1)).toBe(4)
+    // Inset, it keeps enough ground to read as placed. Below ~6 units the tile
+    // stops being ground and becomes an outline around the bow.
+    expect(MARK_SPAN.chip / 2 - reach(CHIP_INSET)).toBeGreaterThanOrEqual(6)
+  })
+
+  it("the maskable bow holds the same share of what a launcher shows", () => {
+    // The defect this constant exists to prevent: `CHIP_INSET` applied to a
+    // full-bleed tile, 20% of which the launcher is about to crop, leaves the
+    // bow filling ~90% of the safe zone. Measuring the share rather than the
+    // scale is what keeps the two framings in step through a redraw.
+    const safe = (MARK_SPAN.chip * MASK_SAFE) / 2
+    expect(reach(MASK_INSET) / safe).toBeCloseTo(reach(CHIP_INSET) / 32, 3)
+    expect(reach(MASK_INSET)).toBeLessThan(safe)
+  })
+
+  it("every shipped chip is the same drawing", async () => {
+    // The generator and the component composed their own placements for a
+    // year, so the landing page's chip and the browser tab's were different
+    // objects built from the same geometry. Assert on the artefacts, since
+    // that is where they diverged — a constant both files import proves
+    // nothing about whether either one used it.
+    const chips = [
+      "../../public/favicon.svg",
+      "../../../../brand/icon/steward-icon.svg",
+    ]
+    for (const rel of chips) {
+      const svg = await readFile(new URL(rel, import.meta.url), "utf8")
+      expect(svg, rel).toContain(`transform="${chipTransform()}"`)
+    }
+    const maskable = await readFile(
+      new URL("../../../../scripts/icon-maskable.svg", import.meta.url),
+      "utf8",
+    )
+    expect(maskable).toContain(`transform="${chipTransform(MASK_INSET)}"`)
   })
 })

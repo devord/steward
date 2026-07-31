@@ -141,36 +141,58 @@ export const MARK_RATIOS: MarkRatios = {
 }
 
 /**
- * The chip's bow is turned, because a bow tie is worn rather than laid flat.
+ * The chip's bow is **level**, like every other framing of it.
  *
- * **Four degrees, not twelve.** Twelve was chosen by eye and never tested
- * against anything, and it was the only number in the mark that could not
- * point at a measurement — which turned out to matter: held still against 0°,
- * 4° and 8° at 96 and 160px, the tilt is what decides whether the chip reads
- * as a bow tie or as a bone. The bow is symmetric by construction and the tile
- * is square; past about 4° the rotation fights both, the left tip lifts, and
- * the silhouette turns into a fish. At 16px none of this is visible, which is
- * why it survived every sheet until one was rendered large.
+ * The tilt went 12° → 4° → 0, and each step was the same discovery made at a
+ * larger size: the bow is symmetric by construction and the tile is square, so
+ * any rotation fights both. Twelve turned the silhouette into a fish. Four was
+ * the point where the fight stopped being visible — not the point where it
+ * stopped. ADR-0053's own amendment already recorded the finding and then
+ * declined to act on it: *"Zero is the cleanest read of the four."*
  *
- * Zero is the cleanest read of the four. Four keeps the jaunt the tilt was for
- * and still reads, so it is the one that costs nothing.
+ * What the tilt was for — a bow tie is worn rather than laid flat — is a
+ * property of the object, not something the drawing has to mime. It costs the
+ * chip its only asymmetry, and it costs the launcher icon a shape whose tips
+ * meet the mask at an angle. Level, the mark is the same object at every
+ * framing and every size, which is the whole of what an identity is for.
  *
- * Only the chip turns — the bare glyph in chrome sits on a text baseline next
- * to a word and has to stay level.
+ * Kept as a named constant rather than deleted: `mark-sheet.ts` varies it to
+ * re-ask the question, and a zero that can be pointed at is a decision, while
+ * an absent rotation is an omission.
  */
-export const CHIP_TILT = 4
+export const CHIP_TILT = 0
 
 /**
  * How much the bow is scaled down inside the chip.
  *
- * At full size and turned 12°, the bow's corners reach ~62.3 of the tile's 64
- * units — inside the squircle by about a unit, which is not a margin, it is a
- * near miss. It also leaves the chip with no air at all, against a kit rule
- * that asks for ten units of clear space on every side including its own
- * container. At 0.86 the bow spans ~52 units rotated, so the tile keeps ~6
- * units of ground around it and the mark reads as placed rather than crammed.
+ * The bow is 56 units on a 64-unit tile. Drawn at full size it reaches within
+ * two units of the edge, which is not a margin — it is a near miss, and it
+ * leaves the chip with no air at all, against a kit rule that asks for clear
+ * space on every side including the mark's own container. At 0.86 the bow
+ * spans ~48 units, the tile keeps ~8 units of ground around it, and the mark
+ * reads as placed rather than crammed.
+ *
+ * This applies to **every** chip. It used to be applied by `logo.tsx` alone,
+ * so the app's own hero chip was inset and every generated one — favicon,
+ * launcher icons, both wordmark lockups, the whole `brand/` kit — was not.
+ * That is the defect `chipTransform` exists to make impossible: one placement,
+ * not a constant plus the discipline to remember it.
  */
 export const CHIP_INSET = 0.86
+
+/**
+ * The share of a maskable icon's canvas a launcher is guaranteed to show.
+ *
+ * The maskable spec reserves the middle 80%; everything outside it belongs to
+ * whatever shape the launcher feels like cropping to. So the full-bleed icon's
+ * bow has to be scaled by the safe zone *as well as* by `CHIP_INSET`, or it
+ * keeps its size while the tile around it visibly shrinks — which is exactly
+ * how the shipped Android icon ended up with its tips against the mask.
+ */
+export const MASK_SAFE = 0.8
+
+/** The bow's scale inside the maskable icon: the chip's inset, masked. */
+export const MASK_INSET = CHIP_INSET * MASK_SAFE
 
 /**
  * A cubic whose two control points sit `d` off its chord bows out by exactly
@@ -186,6 +208,36 @@ const C = MARK_TILE / 2
 function n(v: number): string {
   const r = Math.round(v * 100) / 100
   return String(r === 0 ? 0 : r)
+}
+
+/**
+ * How a chip places the bow on its tile: turned by `CHIP_TILT`, then scaled
+ * about the tile's centre.
+ *
+ * The one thing every chip has to agree on, and the one thing they did not.
+ * `logo.tsx` composed rotate + inset inline; `gen-brand.ts` composed rotate
+ * alone for the standard chip and rotate + a hand-typed `0.82` for the
+ * maskable. Three placements, one of which shipped to the landing page and two
+ * of which shipped everywhere else — so the mark had visibly more air in the
+ * app than in the browser tab or on a home screen, which is the report that
+ * produced this function.
+ *
+ * Emits nothing for a rotation of zero and nothing for a scale of one, so the
+ * generated SVGs carry no identity transforms.
+ */
+export function chipTransform(scale: number = CHIP_INSET): string {
+  const parts: string[] = []
+  if (CHIP_TILT) parts.push(`rotate(${n(CHIP_TILT)} ${n(C)} ${n(C)})`)
+  if (scale !== 1) {
+    // Three decimals, not `n`'s two: `MASK_INSET` is a product rather than a
+    // typed-in number, and rounding it to 0.69 would leave the generated
+    // measurements describing a chip half a percent away from the shipped one.
+    const s = String(Math.round(scale * 1000) / 1000)
+    parts.push(
+      `translate(${n(C)} ${n(C)}) scale(${s}) translate(${n(-C)} ${n(-C)})`,
+    )
+  }
+  return parts.join(" ")
 }
 
 type Pt = [number, number]

@@ -1,8 +1,7 @@
 import { useId } from "react"
 
 import {
-  CHIP_INSET,
-  CHIP_TILT,
+  chipTransform,
   CHIP_VIEWBOX,
   GLYPH_VIEWBOX,
   squirclePath,
@@ -35,9 +34,12 @@ const TILE = squirclePath()
  *   the header hands it, level, sized to the text beside it. Mode-keyed, since
  *   it is the one framing sitting on a surface it does not own.
  * - **On display surfaces** (`display`), the product-icon chip: a superellipse
- *   tile drenched in the identity, with the bow **cut out of it** in paper and
- *   turned 12°, because a bow tie is worn rather than laid flat. One colourway
- *   in both modes — a saturated object has no reason to follow the page.
+ *   tile drenched in the identity, with the bow **cut out of it** in paper,
+ *   level, and inset so the tile keeps ground around it. One colourway in both
+ *   modes — a saturated object has no reason to follow the page. The placement
+ *   comes from `chipTransform`, which every other chip in the repo is now
+ *   generated through; it used to be composed here and nowhere else, which is
+ *   why this chip had air and the favicon did not.
  *
  * The chip carries no border. It had one only because the old tile sat within
  * a hair of the page tone; at 16px that hairline was a quarter of a device
@@ -87,20 +89,17 @@ export function Logo({
           <stop offset="0" stopColor="var(--chip-tile-top)" />
           <stop offset="1" stopColor="var(--chip-tile-deep)" />
         </linearGradient>
-        {/* The cut cannot leave the material. Turned, the bow's corners reach
-            ~62.3 of the tile's 64 units, and anything past the tile is paper
+        {/* The cut cannot leave the material: anything past the tile is paper
             drawn on a paper page — invisible, so the tip reads as sliced off
-            rather than as overflowing. Clipping is the guarantee; CHIP_INSET
-            is what stops it ever being needed. */}
+            rather than as overflowing. Clipping is the guarantee; the inset in
+            chipTransform is what stops it ever being needed. */}
         <clipPath id={tileClip}>
           <path d={TILE} />
         </clipPath>
       </defs>
       <path d={TILE} fill={`url(#${tile})`} />
       <g clipPath={`url(#${tileClip})`}>
-        <g
-          transform={`rotate(${CHIP_TILT} 32 32) translate(32 32) scale(${CHIP_INSET}) translate(-32 -32)`}
-        >
+        <g transform={chipTransform()}>
           <path d={WING_L} fill="var(--chip-bow)" />
           <path d={WING_R} fill="var(--chip-bow)" />
         </g>
