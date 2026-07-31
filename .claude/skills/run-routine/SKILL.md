@@ -91,6 +91,40 @@ recognize is ignored, not an error.
 While executing, keep the routine's `slug` authoritative: the artifact
 path is derived from it, never from the template name.
 
+### The run directory
+
+Open one before you follow the body, and export it — every **primitive**
+the template composes writes beneath it, so a run's whole trace lands in
+one folder:
+
+```bash
+export RUN_DIR="${TMPDIR:-/tmp}/steward/run/$SLUG-$(date -u +%Y%m%dT%H%M%SZ)"
+mkdir -p "$RUN_DIR"
+```
+
+Dry runs use the same directory, which is the point: when a widget comes
+out wrong, `$RUN_DIR` holds each primitive's reading and payload beside
+the `data.json` they produced, so you can see which step was already
+wrong before the render was.
+
+### Composing primitives (ADR-0053)
+
+A template body names the primitives it composes — _"Run the
+`/github-prs` skill over `params.repos`"_ — and then says how to present
+what comes back. Invoke each one by name and read its **reading**: a
+short markdown report, naming a file under `$RUN_DIR` when the payload is
+bigger than prose can carry honestly.
+
+- **Follow the reading, not your memory of the source.** A primitive owns
+  its own gather and derivation; re-deriving a figure it already reported
+  is how two widgets end up publishing different answers to one question.
+- **A primitive that fails is a degraded run, not a dead one.** Take what
+  the others returned, publish, and put what was unreachable on the
+  provenance line. The template's `empty` state covers the case where
+  nothing came back at all.
+- **A named primitive that doesn't resolve is a hard fail**, same as a
+  missing template: report the name and stop. Don't improvise its job.
+
 ## 4. Author and publish
 
 Whatever the content source, the artifact MUST follow the
