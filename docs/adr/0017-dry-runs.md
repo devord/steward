@@ -12,25 +12,25 @@ changes exactly two behaviors:
   it in the browser** instead of committing to the `artifacts` branch.
   Nothing is pushed; the live widget never sees a test run.
 
-The ergonomic wrapper is a launcher script in the bulletin repo, next to
-`routines-sync.ts` (this is the M5 backlog's "`bulletin apply` CLI",
+The ergonomic wrapper is a launcher script in the steward repo, next to
+`routines-sync.ts` (this is the M5 backlog's "`steward apply` CLI",
 arrived with a real justification):
 
 ```
 pnpm routine <slug>              # interactive manual run → publishes
 pnpm routine <slug> --dry        # dry run → local file, opened in browser
-pnpm routine <slug> --repo Form-Factory/bulletin-data-team
+pnpm routine <slug> --repo Form-Factory/steward-data-team
 ```
 
 It stays dumb on purpose: resolve the data-repo checkout (sibling
 directory by convention, env/flag override), compose the pointer prompt —
 with the dry clause when `--dry` — and exec **interactive** `claude` (not
-`-p`) in the data-repo cwd with `--add-dir <bulletin checkout>` (the cwd
+`-p`) in the data-repo cwd with `--add-dir <steward checkout>` (the cwd
 alone can't resolve the contract skills, ADR-0014), so interactive skills
 can ask their questions and dry runs land in front of your eyes. All real
 logic stays in the contract skills; the script is prompt assembly + cwd +
 exec. The app's "copy command" button copies the raw `claude "…"`
-one-liner — run it from a bulletin checkout, where the contract skills
+one-liner — run it from a steward checkout, where the contract skills
 resolve (ADR-0014); a machine with local routines has one, since
 routines:sync enacted them from it.
 

@@ -4,7 +4,7 @@ The redirect flow (ADR-0004) is bound to a single callback URL: a classic
 GitHub OAuth app accepts exactly one authorization callback, and GitHub
 matches the `redirect_uri` host against it exactly — no wildcards. Every
 Vercel preview deploy gets its own subdomain
-(`bulletin-git-<branch>-<team>.vercel.app`), so no preview can ever complete
+(`steward-git-<branch>-<team>.vercel.app`), so no preview can ever complete
 the redirect dance. Reviewers couldn't sign in to test a branch.
 
 GitHub's **device flow** uses no `redirect_uri` at all, so it works on any

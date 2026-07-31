@@ -1,10 +1,10 @@
 # GitHub repos as the database — one shared, one private per user
 
-Bulletin needs to store routine definitions, dashboard layouts, and published
+Steward needs to store routine definitions, dashboard layouts, and published
 artifacts for multiple users, where artifacts (billing hours, daily plans)
 must be private to their owner. We chose **no database**: GitHub repos hold
 everything, split into one shared product repo and one private data repo per
-user (`bulletin-data-<login>`, generated from a template).
+user (`steward-data-<login>`, generated from a template).
 
 GitHub has **no per-path read permissions** — anyone with read access to a
 repo sees every file on every branch — so privacy must come from repo
@@ -27,7 +27,7 @@ read my private repo.
 
 ## Consequences
 
-- The data repo is resolved by **naming convention** (`<login>/bulletin-data-<login>`),
+- The data repo is resolved by **naming convention** (`<login>/steward-data-<login>`),
   so no user→repo mapping needs storing; an override can live in the session
   cookie. A first-run wizard creates it via the generate-from-template API.
 - Routine definitions and dashboard layout are private too (they leak what

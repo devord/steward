@@ -9,7 +9,7 @@ the routine, left both to whatever that session happened to carry — the one
 repo it was scoped to, and the runner's entire account connector set.
 
 The result was wrong in both directions at once. Every synced routine came
-out with a single source repo (the bulletin app repo) and **all** the
+out with a single source repo (the steward app repo) and **all** the
 account's connectors. A run needs the opposite shape: usually two or three
 specific repos, and only the one or two connectors its skill actually uses.
 
@@ -17,7 +17,7 @@ Concretely, a cloud session **reaches only the repos attached as its
 sources** — cross-owner adds are refused at runtime, so a run can't lazily
 clone what it's missing. Every run therefore needs, up front:
 
-- the **contract repo** (`Form-Factory/bulletin`) — where run-routine,
+- the **contract repo** (`Form-Factory/steward`) — where run-routine,
   widget-artifact, and publish-widget live, so the pointer prompt resolves;
 - the **data repo** — `routines.yaml` and any private `.claude/skills/`;
 - the **plugin repo** for a `skill:` that resolves to a plugin skill

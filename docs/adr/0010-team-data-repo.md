@@ -1,13 +1,13 @@
 # Team dashboards: one org data repo, shared routine pool, N layouts
 
-> **Superseded by ADR-0023**: the single `BULLETIN_TEAM_REPO` became N
+> **Superseded by ADR-0023**: the single `STEWARD_TEAM_REPO` became N
 > topic-discovered data repos; the runner rule and per-repo layouts
 > described here carry over, generalized.
 
-Personal dashboards stay one-per-user in `<login>/bulletin-data-<login>`
+Personal dashboards stay one-per-user in `<login>/steward-data-<login>`
 (ADR-0001). Team dashboards add exactly one new place for state: a single
-**org-owned team data repo** (env `BULLETIN_TEAM_REPO`, e.g.
-`Form-Factory/bulletin-data-team`), with the same two-branch layout as a
+**org-owned team data repo** (env `STEWARD_TEAM_REPO`, e.g.
+`Form-Factory/steward-data-team`), with the same two-branch layout as a
 personal data repo. GitHub org permissions are the only access control —
 anyone who can read the repo sees every team routine, layout, and artifact,
 exactly the "collaborators see everything" posture ADR-0001 already takes.
@@ -26,7 +26,7 @@ Inside any data repo (personal and team alike):
 
 Routes: `/` = personal `main`, `/d/<slug>` = other personal boards,
 `/team/<slug>` = team boards, `/team` = index/bootstrap. The server always
-derives the repo from the session login or `BULLETIN_TEAM_REPO` — never
+derives the repo from the session login or `STEWARD_TEAM_REPO` — never
 from client input. Creating/deleting a dashboard commits its layout file
 directly (there is nothing to draft before the route can render); widget
 edits keep the draft → sync flow (ADR-0003), whose stale-SHA 409 now also
@@ -36,10 +36,10 @@ Schedules stay per-user (ADR-0005) — there is no team credential. A team
 routine carries a `runner:` field (a GitHub login); that person's Claude
 account owns its schedule, and `routines:sync` in the team repo enacts only
 entries whose `runner` matches the signed-in `gh` login. Team pointer
-prompts carry the repo — _"Run the bulletin routine `<slug>` in
+prompts carry the repo — _"Run the steward routine `<slug>` in
 `<owner/repo>` — follow the run-routine skill."_ — so the dispatcher clones
 the right repo; personal prompts are unchanged (no clause = personal).
-Cloud names are `bulletin-team-<slug>` vs personal `bulletin-<slug>`, but
+Cloud names are `steward-team-<slug>` vs personal `steward-<slug>`, but
 orphan cleanup matches on the prompt's repo clause, not the name, so
 personal syncs can never delete team schedules (and vice versa). A personal
 routine slugged `team-x` would collide in name with a team routine `x` —
