@@ -583,16 +583,23 @@ describe("a pinned row", () => {
       },
       "",
     )
-    // The pin rides the row's own <tbody> — the same element carrying
+    // The pin rides the row's own <tbody> — the *same* element carrying
     // `data-fit-item`, because the trimmable unit and the pinnable one have to
-    // be the same thing for the pass to honour one against the other.
+    // be the same thing for the pass to honour one against the other. Both are
+    // asserted on one slice: a pin on some other element would still satisfy a
+    // document-wide search while being invisible to the pass that reads it.
     const unit = (title: string) =>
       html.slice(
         html.lastIndexOf("<tbody", html.indexOf(title)),
         html.indexOf(title),
       )
-    expect(unit("Load-bearing")).toContain("data-fit-keep")
-    expect(unit("Ordinary")).not.toContain("data-fit-keep")
+    const pinned = unit("Load-bearing")
+    expect(pinned).toContain('data-fit-item="true"')
+    expect(pinned).toContain('data-fit-keep=""')
+    // Still trimmable, just not pinned — the pass needs both kinds of unit.
+    const ordinary = unit("Ordinary")
+    expect(ordinary).toContain('data-fit-item="true"')
+    expect(ordinary).not.toContain("data-fit-keep")
   })
 })
 
