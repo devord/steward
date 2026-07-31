@@ -281,11 +281,8 @@ const doc = derive(raw, {
   jira: typeof opts.jira === "string" ? opts.jira : null,
 })
 
-// Every repo unreachable with no rows is not a queue to report — say so and fail.
-if (doc.counts.unreachable === doc.counts.repos) {
-  die("every repo was unreachable — nothing to report")
-}
-
+// Every repo unreachable is a degraded reading, not a failure: the caller still
+// gets zero rows and the unreachable names for its provenance line (ADR-0053).
 const file = join(String(outDir), "prs.json")
 mkdirSync(String(outDir), { recursive: true })
 writeFileSync(file, `${JSON.stringify(doc, null, 2)}\n`)

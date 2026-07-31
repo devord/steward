@@ -98,9 +98,15 @@ the template composes writes beneath it, so a run's whole trace lands in
 one folder:
 
 ```bash
-export RUN_DIR="${TMPDIR:-/tmp}/steward/run/$SLUG-$(date -u +%Y%m%dT%H%M%SZ)"
-mkdir -p "$RUN_DIR"
+slug=<the routine slug you resolved above>   # substitute it; nothing exports it
+root="${TMPDIR:-/tmp}/steward/run"
+mkdir -p "$root"
+export RUN_DIR="$(mktemp -d "$root/$slug-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")"
 ```
+
+Write the slug in literally. `mktemp` supplies the rest: two runs of the
+same routine in one second would otherwise share a folder and overwrite
+each other's primitives.
 
 Dry runs use the same directory, which is the point: when a widget comes
 out wrong, `$RUN_DIR` holds each primitive's reading and payload beside

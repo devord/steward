@@ -19,8 +19,10 @@ Read when relevant:
 - `docs/widget-standard.md`: the artifact contract, for authoring or
   rendering widgets.
 - `docs/roadmap.md`: milestone status.
-- Skills: only the contract skills live here (`run-routine`,
-  `widget-artifact`, `publish-widget`). Content is **routine templates**:
+- Skills: the contract skills (`run-routine`, `widget-artifact`,
+  `publish-widget`) plus the generic **primitives** templates compose
+  (ADR-0053, amending ADR-0014); client-specific primitives live in the
+  data repo that owns their subject. Content is **routine templates**:
   `templates/routines/<id>.md` here (built-in) or in a data repo
   (team/private), discovered via their `widget:` frontmatter
   (ADR-0015/0021). `.claude/skills/react-router` is vendored; don't edit.

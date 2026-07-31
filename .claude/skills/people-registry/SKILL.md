@@ -52,14 +52,31 @@ like it worked (ADR-0045).
 
 ## 3. Fall back, in order
 
-For a subject the map does not carry:
+For a subject the map does not carry, the ladder depends on what the subject
+**is** — the two identity spaces do not share a lookup.
 
-1. `gh api users/<login> --jq .name` for a name only, when `gh` is reachable.
-2. **The login itself.**
+**A commit-shaped subject** (a login):
+
+1. `gh api users/<login> --jq .name`, when `gh` is reachable and the name
+   comes back non-empty — `source: github`. An account with no name set
+   answers with an empty string, which is a miss, not a name.
+2. **The login itself** — `source: login`.
+
+**A ticket-shaped subject** (an accountId):
+
+1. The `displayName` the ticket already carried, when the caller passed one
+   — `source: jira`. It is the same string Jira renders, so a row labelled
+   with it matches the board it came from.
+2. **The accountId itself** — `source: accountId`.
+
+Never spend a `gh api users/<accountId>` on this subject: an accountId is not
+a login, so the call resolves to nothing or, worse, to some unrelated GitHub
+user who happens to own that handle.
 
 The name is never empty and never omitted — it is what the monogram takes its
 initial from and what hover and a screen reader read, so a face with no name
-is a row identifying nobody.
+is a row identifying nobody. An accountId is an ugly label; it is still a
+label that identifies one specific person, which a blank does not.
 
 **Do not fetch an avatar image.** Every path — `avatar_url`, the `.png`
 redirect — ends at `avatars.githubusercontent.com`, which a scheduled run
@@ -72,7 +89,7 @@ fallback; a request that cannot succeed is not.
 ```
 ## people-registry — 9 of 12 resolved
 
-Faces: 9 · names only: 2 · login only: 1
+Faces: 9 · names only: 2 · handle only: 1
 Unresolved: @ci-bot (no entry), @newhire (no entry, no gh)
 Map: Form-Factory/people:data/avatars-48.json
 
@@ -80,6 +97,8 @@ Full map: $RUN_DIR/people-registry/people.json
 ```
 
 Write the joined result to `$RUN_DIR/people-registry/people.json` — subject key
-to `{ name, src, source }`, where `source` is `registry` | `github` | `login`.
+to `{ name, src, source }`, where `source` is `registry` | `github` | `jira` |
+`login` | `accountId`: the map, a `gh` lookup, the ticket's own display name,
+or the subject's own handle in either space.
 The count of unresolved subjects belongs in the reading: a caller's provenance
 line should be able to say how many faces are real.
