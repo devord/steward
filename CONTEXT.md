@@ -141,8 +141,9 @@ output, never authored)
 A parameterized routine definition the wizard instantiates: a plain
 markdown file at `templates/routines/<id>.md`, with frontmatter (`name`,
 `description`, the `widget:` block: artifact line, sizes, schedule,
-params, suggested connectors), body = the authoring procedure the
-dispatcher follows (ADR-0021, replacing content skills). Lives in the
+params, suggested connectors), body = which **primitives** to compose and
+how to present their **readings** (ADR-0021/0053). It says what to say,
+never how to gather it or how the document is structured. Lives in the
 narrowest repo all its users can read: this repo (**built-in**, shipped
 in the app bundle), the team data repo (**team**), or a personal data
 repo (**private**). The picker discovers data-repo templates live via
@@ -151,7 +152,35 @@ appear (deliberately so for the `custom` built-in, whose input is the
 wizard's prompt field); a data-repo template shadows a same-named built-in.
 Templates are authored in Claude Code sessions, never in the app. The
 app's writable surface stays routines.yaml + layouts (ADR-0022).
-_Avoid_: skill (that's the contract tier), recipe, preset, blueprint
+_Avoid_: skill (a template composes skills; it is not one), recipe,
+preset, blueprint
+
+**Skill**:
+A unit of agent behaviour shipped as a Claude Code skill. Two roles,
+split by who invokes (ADR-0053):
+
+- **contract** — the platform mechanics every run passes through:
+  `run-routine`, `widget-artifact`, `publish-widget`. They version with
+  the app and the widget standard.
+- **primitive** — a composable piece of routine work (gather, judge, or
+  act) a **routine template** pulls in by name. Model-invoked, because a
+  user-invoked skill cannot be reached by another skill. Hands back a
+  **reading** and stops there: presentation is the template's job.
+  Generic ones ship in this repo; client-specific ones live in the data
+  repo that owns their subject (ADR-0014, amended).
+
+A primitive serving one routine today is still a primitive — arity is not
+nature.
+_Avoid_: capability, helper, plugin, content skill (ADR-0021's retired
+tier), routine skill (collides with **Routine**)
+
+**Reading**:
+What a **primitive** hands back: a concise markdown report, ending the
+skill's run. When the payload outgrows honest prose it also names a file
+beneath `$RUN_DIR` holding every row. Text is the interface and the file
+is an optimization it points at — which is what lets a template compose
+skills nobody here wrote, since their output is prose too.
+_Avoid_: result, output, payload (that's the file), return value
 
 **Param**:
 An input a template declares in its `widget:` frontmatter (`key`,
@@ -191,10 +220,11 @@ no CDN, no external host (ADR-0002).
 
 **Dispatcher** (`run-routine` skill):
 The single entry point every run goes through: resolve the slug in
-`data/routines.yaml`, execute that routine's template (hard-failing on a
-bad reference, ADR-0021/0022) with its `instructions` and `params`,
-enforce the widget standard, publish. Keeps the cloud routine's prompt
-down to one stable line (ADR-0005).
+`data/routines.yaml`, open a `$RUN_DIR` for the run's readings and
+payloads, execute that routine's template (hard-failing on a bad
+reference, ADR-0021/0022) with its `instructions` and `params`, enforce
+the widget standard, publish. Keeps the cloud routine's prompt down to
+one stable line (ADR-0005).
 
 ## How a widget stays fresh
 
@@ -202,8 +232,9 @@ down to one stable line (ADR-0005).
    clicks Update (the app fires the runner's API trigger server-side), or
    someone runs the routine in a terminal (`pnpm routine <slug>`). Every
    path is the same pointer prompt (ADR-0005/0012/0016).
-2. `run-routine` reads `data/routines.yaml`, follows the routine's
-   template or prompt, and authors the artifact per the widget standard.
+2. `run-routine` reads `data/routines.yaml` and follows the routine's
+   template: it composes the **primitives** the template names, presents
+   their **readings** as a `data.json`, and renders it with the kit.
 3. `publish-widget` commits it to `w/<slug>/index.html` on the `artifacts`
    branch and pushes.
 4. The dashboard (authed with the viewer's GitHub token) fetches the file via
