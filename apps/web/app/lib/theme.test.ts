@@ -10,6 +10,8 @@ import {
   DEFAULT_LIGHT_THEME,
   DEFAULT_THEME,
   familyForTheme,
+  CHIP_IDENTITY,
+  LOGOTYPE_INK,
   MARK_IDENTITY,
   resolveTheme,
   frameArtifactHtml,
@@ -453,21 +455,40 @@ describe("every theme clears the contrast floors", () => {
       }
     })
     it(`${name}: the bare glyph ≥ 3:1 on page and sidebar`, () => {
-      // The bow tie wears a fixed identity (DESIGN.md § Mark, ADR-0052): one
-      // light and one dark colorway keyed on mode, never on the theme. In
-      // chrome it is the bare glyph, sitting directly on a surface it does
-      // not own — the landing page (bg) and the sidebar (bg1) — so the flat
-      // wing and the knot must clear the WCAG graphics floor on every theme.
+      // In chrome the mark is the bare glyph, sitting directly on a surface
+      // it does not own — the landing page (bg) and the sidebar (bg1). It is
+      // one shape, so this is the *only* boundary it has.
       //
-      // It is `wingFlat` that is held here, not the gradient stops. That is
-      // the whole reason the flat tone exists: the light gradient's bright
-      // end reads 2.72:1 on tokyo-night-light's page, and rather than dull
-      // the gradient everywhere to satisfy a surface it never sits on, the
-      // mark goes flat and deep whenever it does not bring its own ground.
+      // That is the point of ADR-0053. What used to be held here was every
+      // ink against its background, which is a different set from every
+      // boundary a viewer can see, and the difference shipped a mark nobody
+      // could read: wing-on-page and knot-on-page both passed at a 4.30:1
+      // floor while wing-against-knot — the edge that made the shape a bow
+      // rather than a lozenge — was measured by nothing and sat at 2.41:1
+      // light, 1.40:1 dark. Rather than hold the interior edge, the mark no
+      // longer has one.
       const mark = MARK_IDENTITY[theme.mode]
       for (const surface of [t.bg, t.bg1]) {
         expect(contrast(mark.wingFlat, surface)).toBeGreaterThanOrEqual(3)
-        expect(contrast(mark.knot, surface)).toBeGreaterThanOrEqual(3)
+      }
+    })
+    it(`${name}: the chip's tile keeps an edge on page and sidebar`, () => {
+      // The chip carries no border. It had one only because the old tile sat
+      // within a hair of the page tone, and at 16px that `stroke-width: 1` on
+      // a 64-unit tile was a quarter of a device pixel — a feature that never
+      // rendered on the surface it existed for.
+      //
+      // Drenched, the tile holds its own edge, but neither gradient stop does
+      // it alone: `tileTop` clears every dark ground and reads 2.72 on a pale
+      // one, `tileDeep` clears every light ground and reads 2.41 on a dark
+      // one. They fail on opposite surfaces, and the gradient runs diagonally
+      // so both reach the perimeter — so what is held is that **at least one
+      // stop** clears on each ground. That is the load the diagonal carries.
+      const { tileTop, tileDeep } = CHIP_IDENTITY
+      for (const surface of [t.bg, t.bg1]) {
+        expect(
+          Math.max(contrast(tileTop, surface), contrast(tileDeep, surface)),
+        ).toBeGreaterThanOrEqual(3)
       }
     })
     it(`${name}: primary button label ≥ 4.5:1, fill and ring ≥ 3:1`, () => {
@@ -513,23 +534,38 @@ describe("every theme clears the contrast floors", () => {
   }
 
   // The other half of the mark's contract. The bare glyph is held against
-  // every theme's surfaces above; the chip is held against the only ground it
-  // ever sits on — the tile it brings with it. That is what buys the gradient
-  // its range, so it is measured rather than assumed (ADR-0052).
-  for (const mode of ["light", "dark"] as const) {
-    it(`${mode} chip: the fold gradient ≥ 3:1 on its own tile`, () => {
-      const m = MARK_IDENTITY[mode]
-      // Worst case per stop: the tip lands over the tile's lighter top, the
-      // gather over its darker bottom.
-      expect(contrast(m.wingTip, m.tileTop)).toBeGreaterThanOrEqual(3)
-      expect(contrast(m.wingFold, m.tileBottom)).toBeGreaterThanOrEqual(3)
-      expect(contrast(m.knot, m.tileBottom)).toBeGreaterThanOrEqual(3)
-    })
-    it(`${mode} chip: the border separates the tile from a like surface`, () => {
-      // The chip's edge is the whole reason it can be dropped on any ground;
-      // if the border vanishes into its own tile, the icon has no silhouette.
-      const m = MARK_IDENTITY[mode]
-      expect(contrast(m.tileBorder, m.tileTop)).toBeGreaterThanOrEqual(1.5)
-    })
-  }
+  // every theme's surfaces above; the chip is held here, once, because it is
+  // one colourway in both modes (ADR-0053).
+  it("the chip's bow ≥ 3:1 against the whole tile gradient", () => {
+    // The bow is a hole cut in the ember, so this is the chip's only interior
+    // boundary — and unlike the knot's, it is one the geometry can satisfy,
+    // because paper against ember is a real difference at both stops rather
+    // than two mid-tones sharing a hue.
+    const { tileTop, tileDeep, bow } = CHIP_IDENTITY
+    expect(contrast(bow, tileTop)).toBeGreaterThanOrEqual(3)
+    expect(contrast(bow, tileDeep)).toBeGreaterThanOrEqual(3)
+  })
+
+  it("the chip holds a real tab strip, light and dark", () => {
+    // The surfaces the favicon actually lands on, which are not Steward's:
+    // Chrome's two tab strips and GitHub's two page backgrounds. Held because
+    // the chip is a distributed object — it goes places the theme registry
+    // has no opinion about, and "it works in our own app" is not the claim
+    // a favicon needs to make.
+    const { tileTop, tileDeep } = CHIP_IDENTITY
+    for (const strip of ["#dee1e6", "#202124", "#ffffff", "#0d1117"]) {
+      expect(
+        Math.max(contrast(tileTop, strip), contrast(tileDeep, strip)),
+      ).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it("the logotype does not borrow the mark's ink", () => {
+    // It used to be filled with the knot's colour, on the reasoning that the
+    // knot and the word were the same block of ink. True while the knot was
+    // dark; a silent trap the moment it moved. Each lockup's word must clear
+    // the ground that lockup is for.
+    expect(contrast(LOGOTYPE_INK.light, "#ffffff")).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(LOGOTYPE_INK.dark, "#0d1117")).toBeGreaterThanOrEqual(4.5)
+  })
 })

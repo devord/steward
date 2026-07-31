@@ -798,37 +798,66 @@ function declarations(theme: Theme): string {
  */
 const gruvboxLight = themes["gruvbox-light"].tokens
 const gruvboxDark = themes["gruvbox-dark"].tokens
+
+/**
+ * The bare glyph, in chrome. Keyed on mode, because this is the one framing
+ * that sits directly on a surface it does not own and has to clear it.
+ */
 export const MARK_IDENTITY = {
-  light: {
-    wingTip: gruvboxLight.accentDeep,
-    wingFold: gruvboxLight.accent,
-    wingFlat: gruvboxLight.accent,
-    knot: gruvboxDark.bg,
-    tileTop: gruvboxLight.bg,
-    tileBottom: gruvboxLight.bg1,
-    tileBorder: gruvboxLight.border,
-  },
-  dark: {
-    wingTip: gruvboxDark.accent,
-    wingFold: gruvboxDark.accentDeep,
-    wingFlat: gruvboxDark.accent,
-    knot: gruvboxDark.ink,
-    tileTop: gruvboxDark.bg2,
-    tileBottom: gruvboxDark.bg1,
-    tileBorder: gruvboxDark.border,
-  },
+  light: { wingFlat: gruvboxLight.accent },
+  dark: { wingFlat: gruvboxDark.accent },
 } as const satisfies Record<ThemeMode, Record<string, string>>
 
+/**
+ * The product-icon chip — **one colourway, both modes** (ADR-0053).
+ *
+ * The chip used to swap with the viewer's mode like the glyph does, and
+ * drenched that produced a polarity flip: a deep tile with a pale bow in
+ * light, a bright tile with a near-black bow in dark. Figure and ground trade
+ * places on an OS setting, which reads as two logos rather than one, and it
+ * handed light mode the muddy version and dark mode the vivid one.
+ *
+ * A drenched chip is a saturated **object**, not a surface. It is not
+ * borrowing the page's tone, so it has no reason to follow the page's mode —
+ * and the `.ico` and the maskable launcher icon could never media-query
+ * anyway, so a single colourway makes the exception the rule.
+ *
+ * The bow is a hole: `bow` is the paper showing through the ember.
+ */
+export const CHIP_IDENTITY = {
+  tileTop: gruvboxLight.accentDeep,
+  tileDeep: gruvboxLight.accent,
+  bow: gruvboxLight.bg,
+} as const
+
+/**
+ * The logotype's ink in the static lockups, which cannot inherit `foreground`
+ * from a page they are pasted into.
+ *
+ * Its own token rather than a borrow. It used to be filled with the mark's
+ * knot colour on the reasoning that the knot and the word were the same block
+ * of ink — true while the knot was dark, and a trap the moment it wasn't: the
+ * knot went to paper and the dark lockup would have rendered near-black on
+ * near-black. Two things that happen to match are not one thing.
+ */
+export const LOGOTYPE_INK = {
+  light: gruvboxDark.bg,
+  dark: gruvboxDark.ink,
+} as const satisfies Record<ThemeMode, string>
+
+/**
+ * Only the bare glyph's ink is mode-keyed. The chip's three tones ride on
+ * `:root` alone via `chipDeclarations`, because the chip is one colourway.
+ */
 function markDeclarations(mode: ThemeMode): string {
-  const m = MARK_IDENTITY[mode]
+  return `--mark-wing-flat:${MARK_IDENTITY[mode].wingFlat}`
+}
+
+function chipDeclarations(): string {
   return [
-    `--mark-wing-tip:${m.wingTip}`,
-    `--mark-wing-fold:${m.wingFold}`,
-    `--mark-wing-flat:${m.wingFlat}`,
-    `--mark-knot:${m.knot}`,
-    `--mark-tile-top:${m.tileTop}`,
-    `--mark-tile-bottom:${m.tileBottom}`,
-    `--mark-tile-border:${m.tileBorder}`,
+    `--chip-tile-top:${CHIP_IDENTITY.tileTop}`,
+    `--chip-tile-deep:${CHIP_IDENTITY.tileDeep}`,
+    `--chip-bow:${CHIP_IDENTITY.bow}`,
   ].join(";")
 }
 
@@ -847,7 +876,7 @@ export function themeStylesheet(): string {
   return [
     `:root{${declarations(themes[DEFAULT_THEME])}}`,
     ...blocks,
-    `:root{${markDeclarations("light")}}`,
+    `:root{${markDeclarations("light")};${chipDeclarations()}}`,
     `.dark{${markDeclarations("dark")}}`,
   ].join("\n")
 }

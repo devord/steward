@@ -9,82 +9,347 @@
  *
  * ## The construction
  *
- * Six ratios on a 64-unit tile. Nothing here is eyeballed — the left wing is
- * derived and the right is its mirror, so symmetry is a property of the
- * construction rather than something to check for.
+ * Ratios on a 64-unit tile, in `MARK_RATIOS`, built into path data by
+ * `buildMark`. Nothing here is eyeballed — the left wing is derived and the
+ * right is its mirror, so symmetry is a property of the construction rather
+ * than something to check for.
  *
- * | ratio |            | why                                            |
- * | ----- | ---------- | ---------------------------------------------- |
- * | bow   | 44 × 22    | exactly 2:1                                    |
- * | knot  | 10 × 14    | 5:7, and the smallest of the three shapes      |
- * | waist | 8 / 22     | the pinch; this is what makes it read as a bow |
- * | tuck  | 6          | wings cross 2 past centre, under the knot      |
- * | notch | 2.6        | the butterfly bite in the outer edge           |
- * | field | 44 / 64    | the tie's share of the tile                    |
+ * This module used to *describe* six ratios in this comment while holding
+ * three literal path strings underneath, which meant the numbers could not be
+ * measured, varied or tested — only re-typed. They are data now, and the two
+ * gates in `theme.test.ts` read them directly (ADR-0053).
  *
- * Three of those were set by failures, not taste, and they are the reason the
- * mark survives its own test sheet:
+ * | ratio       |         | why                                             |
+ * | ----------- | ------- | ----------------------------------------------- |
+ * | bow         | 56 × 28 | exactly 2:1, and 88% × 44% of the tile          |
+ * | waist       | 10 / 28 | the pinch; this is what makes it read as a bow  |
+ * | cross       | 4       | each wing runs 4 past centre, so the two overlap |
+ * | notch       | 5       | the butterfly bite in the outer edge            |
+ * | corner      | 4       | the flared tip's rounding                       |
+ * | sweep, puff | —       | where the top edge's control sits, as fractions |
+ * | notchSpread | 6.5     | how far apart the notch's two controls sit      |
+ * | field       | 56 / 64 | the tie's share of the tile — derived, not set  |
  *
- * - **waist 8, not 11.** Held at half the tip height the silhouette broke
- *   into two lobes under blur — a dog bone, not a bow.
- * - **tuck 6, not 2.** At 2 the wings only reached the knot's edges, so the
- *   mark was two shapes leaning on a third to hide the seam between them —
- *   and any antialiasing seam, any half-pixel of rounding, showed the
- *   background straight through the middle. Crossing 2 units past centre
- *   makes the wings overlap each other, so the silhouette is one continuous
- *   mass and the knot is laid on top of solid cloth rather than plugging a
- *   gap. It is also why the one-colour cut can simply drop the knot.
- * - **notch 2.6, not 4.6.** Any deeper and each wing rounds off into its own
- *   separate blob.
+ * `sweep`, `puff` and `notchSpread` carried no name until the construction
+ * became data: they were digits inside `"M 33 28 Q 22.65 23.74 …"` and nothing
+ * could see them, let alone test them.
+ *
+ * Every length here clears one device pixel at the declared minimum
+ * (`MARK_MINIMUM`), which is what `mark.test.ts` holds. The previous cut did
+ * not: its `notch` was 0.65px on the favicon, its `corner` 0.45px and its
+ * `cinch` 0.17px — three named ratios, two of them chosen by a failing test,
+ * that at the size people actually see the mark were drawing nothing at all.
  *
  * Neither fold creases nor a tile bevel are drawn. Both were tried at every
  * weight that read as material and every one of them also read as damage — a
- * scratch across the cloth, a white bar floating over the tile. The wing's
- * fold gradient carries the material alone, and one less trick survives one
- * more surface.
+ * scratch across the cloth, a white bar floating over the tile.
  */
 
 /** The tile the mark is constructed on. Every number below is in these units. */
 export const MARK_TILE = 64
 
-/** Corner radius of the product-icon chip (0.219 × tile — the squircle). */
-export const CHIP_RADIUS = 14
+/** The air the glyph crop leaves around the ink, per side. */
+const GLYPH_AIR = 2
 
 /**
- * The bare glyph's tight crop: the ink spans x 10–54, y 21–43, and this frames
- * it with two units of air, keeping the centre on y=32 so the tie sits on the
- * line-box centre next to the wordmark.
+ * The bare glyph's tight crop: the bow's own bounding box plus `GLYPH_AIR` on
+ * every side, centred on the tile so the tie sits on the line-box centre next
+ * to the wordmark.
+ *
+ * Derived rather than written down. As a literal (`"8 19 48 26"`) it was
+ * correct only for a 44×22 bow, and silently cropped any other — which is a
+ * trap for exactly the redraw this file is built to allow.
  */
-export const GLYPH_VIEWBOX = "8 19 48 26"
+export function glyphViewBox(r: MarkRatios = MARK_RATIOS): string {
+  const w = r.bowW + 2 * GLYPH_AIR
+  const h = r.bowH + 2 * GLYPH_AIR
+  return `${MARK_TILE / 2 - w / 2} ${MARK_TILE / 2 - h / 2} ${w} ${h}`
+}
 
 /** The chip's crop — the full tile. */
 export const CHIP_VIEWBOX = "0 0 64 64"
 
-export const WING_L =
-  "M 33 28 Q 22.65 23.74 11.8 21 Q 10 21 10 22.8 C 13.47 25.5 13.47 38.5 10 41.2 Q 10 43 11.8 43 Q 22.65 40.26 33 36 Z"
-
-export const WING_R =
-  "M 31 28 Q 41.35 23.74 52.2 21 Q 54 21 54 22.8 C 50.53 25.5 50.53 38.5 54 41.2 Q 54 43 52.2 43 Q 41.35 40.26 31 36 Z"
-
-export const KNOT =
-  "M 29.4 25 L 34.6 25 Q 37 25 37 27.4 C 36.07 29.6 36.07 34.4 37 36.6 Q 37 39 34.6 39 L 29.4 39 Q 27 39 27 36.6 C 27.93 34.4 27.93 29.6 27 27.4 Q 27 25 29.4 25 Z"
+/** Every number the bow is built from, in tile units (or as a fraction). */
+export type MarkRatios = {
+  /** The bow's full span, tip to tip. */
+  bowW: number
+  /** The bow's height at the flared tips. */
+  bowH: number
+  /** The pinch at the centre — what makes the silhouette read as a bow. */
+  waist: number
+  /** How far each wing reaches past the tile's centre, so the two overlap. */
+  cross: number
+  /** Depth of the butterfly bite in the outer edge. */
+  notch: number
+  /** Rounding at the flared tip's two corners. */
+  corner: number
+  /** Where the top edge's control sits along the tip-to-waist run, 0–1. */
+  sweep: number
+  /** How far that control lifts from the waist toward the tip, 0–1. */
+  puff: number
+  /** How far apart the notch's two controls sit, either side of centre. */
+  notchSpread: number
+}
 
 /**
- * Wings first, knot last. The wings overlap each other at the centre, and the
- * knot laps that seam — drawn in this order the fills never show a background
- * hairline between the shapes.
+ * The bow.
+ *
+ * **There is no knot** (ADR-0053). The mark was three shapes for a year and
+ * the third one was the whole problem: a 10×14 block whose only job was to be
+ * a different colour from the cloth it lay on, at a size where that boundary
+ * was 4px wide and 1.40:1. Every attempt to save it made it worse — opening
+ * the waist to 59% turned the bow into a slab with a letterbox slot, and
+ * bunching the cloth behind it turned it into a belt buckle.
+ *
+ * Dropping it does not solve that problem, it deletes it: with one shape
+ * there is no interior edge to hold at 3:1, no feature to keep above a pixel,
+ * and nothing to measure clearance for. The waist pinch carries the read on
+ * its own — which `gen-brand.ts` had already argued for the one-colour cut,
+ * in as many words: *"the knot is a colour relationship, not a shape the
+ * outline depends on. At one ink it simply stops being drawn, and nothing is
+ * lost."* That was true at every ink, not just one.
+ *
+ * Gone with it: `knotW`, `knotH`, `knotCorner`, `cinch`, and the `gather` /
+ * `pinchGap` pair that existed only to enclose it. `tuck` is now `cross`,
+ * measured from the centre rather than from the knot's edge, because there is
+ * no knot's edge.
+ *
+ * `field` is not here either: the tie's share of the tile is
+ * `bowW / MARK_TILE`, a consequence of the bow's span rather than a knob of
+ * its own. Naming it separately would let the two disagree.
  */
-export const MARK_PATHS = [WING_L, WING_R, KNOT] as const
+export const MARK_RATIOS: MarkRatios = {
+  // 56×28 holds the 2:1 the bow has always been while covering 88% × 44% of
+  // the tile, against 69% × 34% before. A 2:1 shape in a square can never use
+  // more than half of it, which is why the icon read as small next to other
+  // products' — and why the tile, not the bow, is where the rest of the
+  // presence had to come from.
+  bowW: 56,
+  bowH: 28,
+  waist: 10,
+  cross: 4,
+  notch: 5,
+  corner: 4,
+  sweep: 0.488,
+  puff: 0.609,
+  notchSpread: 6.5,
+}
 
 /**
- * The fold gradient's axis, per wing: it runs from the flared tip down into
- * the gather at the knot, so the cloth is brightest where it catches the light
- * and deepest where it bunches.
+ * The chip's bow is turned, because a bow tie is worn rather than laid flat.
+ *
+ * Twelve degrees: enough to read as tied by a person, not so much that the
+ * silhouette loses its horizon at 16px. Only the chip turns — the bare glyph
+ * in chrome sits on a text baseline next to a word and has to stay level.
  */
-export const WING_GRADIENT = {
-  left: { x1: 10, y1: 27, x2: 33, y2: 36 },
-  right: { x1: 54, y1: 27, x2: 31, y2: 36 },
+export const CHIP_TILT = 12
+
+/**
+ * A cubic whose two control points sit `d` off its chord bows out by exactly
+ * ¾·d at the midpoint, so a depth anyone can name (`notch`, `cinch`) converts
+ * to a control offset by 4/3. Without this the depths in `MARK_RATIOS` would
+ * be control offsets — numbers that mean nothing to the eye measuring them.
+ */
+const CTL = 4 / 3
+
+const C = MARK_TILE / 2
+
+/** Two decimals, and no `-0`: the form the path data has always been in. */
+function n(v: number): string {
+  const r = Math.round(v * 100) / 100
+  return String(r === 0 ? 0 : r)
+}
+
+type Pt = [number, number]
+type Quad = { p0: Pt; p1: Pt; p2: Pt }
+
+/** Where a wing's key x-positions land, for a given side. */
+function wingAnchors(r: MarkRatios, dir: 1 | -1) {
+  const outer = C - (dir * r.bowW) / 2
+  // The inner edge runs `cross` units past the tile's centre, so the two
+  // wings overlap each other and the silhouette is one continuous mass rather
+  // than two shapes meeting on a seam. At the old overlap of two units the
+  // join was half a pixel at 16px and any antialiasing showed the ground
+  // through the middle; eight units is two pixels there.
+  const inner = C + dir * r.cross
+  const cornerX = outer + dir * r.corner
+  return { outer, inner, cornerX }
+}
+
+/**
+ * The wing's top edge, inner end first.
+ *
+ * One quadratic: from the waist at the centre out to the flared tip. It was
+ * briefly four, to bunch cloth behind a knot that no longer exists.
+ */
+function topEdge(r: MarkRatios, dir: 1 | -1): Quad[] {
+  const { inner, cornerX } = wingAnchors(r, dir)
+  const puffY = r.waist / 2 + r.puff * (r.bowH / 2 - r.waist / 2)
+  return [
+    {
+      p0: [inner, C - r.waist / 2],
+      p1: [inner - dir * r.sweep * Math.abs(cornerX - inner), C - puffY],
+      p2: [cornerX, C - r.bowH / 2],
+    },
+  ]
+}
+
+/**
+ * One wing. `dir` is 1 for the left and −1 for the right, which is the whole
+ * of the mirroring — there is no second copy of this to keep in step.
+ */
+function wingPath(r: MarkRatios, dir: 1 | -1): string {
+  const { outer, cornerX } = wingAnchors(r, dir)
+  const yTop = C - r.bowH / 2
+  const yBot = C + r.bowH / 2
+  const notchX = outer + dir * r.notch * CTL
+  const top = topEdge(r, dir)
+  // The bottom edge is the top one reflected through the tile's centre line,
+  // walked back inward.
+  const flip = (p: Pt): Pt => [p[0], 2 * C - p[1]]
+  const bottom = [...top]
+    .reverse()
+    .map((q) => ({ p0: flip(q.p2), p1: flip(q.p1), p2: flip(q.p0) }))
+  const draw = (q: Quad) =>
+    `Q ${n(q.p1[0])} ${n(q.p1[1])} ${n(q.p2[0])} ${n(q.p2[1])}`
+  return [
+    `M ${n(top[0].p0[0])} ${n(top[0].p0[1])}`,
+    ...top.map(draw),
+    `Q ${n(outer)} ${n(yTop)} ${n(outer)} ${n(yTop + r.corner)}`,
+    `C ${n(notchX)} ${n(C - r.notchSpread)} ${n(notchX)} ${n(C + r.notchSpread)} ${n(outer)} ${n(yBot - r.corner)}`,
+    `Q ${n(outer)} ${n(yBot)} ${n(cornerX)} ${n(yBot)}`,
+    ...bottom.map(draw),
+    "Z",
+  ].join(" ")
+}
+
+/**
+ * The two wings for a given set of ratios.
+ *
+ * Taking ratios as an argument rather than reading the constant is what makes
+ * a proof sheet possible: `scripts/mark-sheet.ts` renders several cuts side by
+ * side by calling this with each, so a redraw is judged against real pixels
+ * instead of described in prose (ADR-0054).
+ */
+export function buildMark(r: MarkRatios = MARK_RATIOS): {
+  wingL: string
+  wingR: string
+} {
+  return { wingL: wingPath(r, 1), wingR: wingPath(r, -1) }
+}
+
+/**
+ * The chip's tile as a **superellipse** — the continuous-curvature squircle.
+ *
+ * A rect's `rx` draws a circular arc, which meets the straight edge at a
+ * curvature discontinuity: the corner starts turning all at once, and the eye
+ * reads the join even when it cannot name it. Every platform icon grid uses a
+ * continuous curve instead, and it is most of what separates a tile that looks
+ * drawn from one that looks defaulted. `n = 5` sits near Apple's.
+ *
+ * Emitted as a sampled polyline rather than a Bézier fit: the tile is
+ * generated into static SVGs anyway, the sampling error at 128 steps is far
+ * under a device pixel at any size the mark ships at, and a polyline cannot
+ * drift from the curve it approximates the way a hand-fitted control point
+ * can.
+ */
+export function squirclePath(
+  size: number = MARK_TILE,
+  exp = 5,
+  steps = 128,
+): string {
+  const a = size / 2
+  const pts: string[] = []
+  for (let i = 0; i < steps; i++) {
+    const t = (i / steps) * 2 * Math.PI
+    const ct = Math.cos(t)
+    const st = Math.sin(t)
+    pts.push(
+      `${i ? "L" : "M"} ${n(a + a * Math.sign(ct) * Math.abs(ct) ** (2 / exp))} ${n(a + a * Math.sign(st) * Math.abs(st) ** (2 / exp))}`,
+    )
+  }
+  return `${pts.join(" ")} Z`
+}
+
+/**
+ * The smallest size each framing is declared to survive, in **device** pixels
+ * at 1×, measured across the framing's own viewBox width.
+ *
+ * Device pixels, not CSS pixels: a floor that assumes a 2× display is not a
+ * floor. The `.ico` frames are packed at 16, Windows at 100% and every
+ * external monitor render there, and that is where the fine work disappears.
+ */
+export const MARK_MINIMUM = { chip: 16, glyph: 20 } as const
+
+/**
+ * Units across, per framing — the chip shows the whole tile, the glyph crops
+ * to the bow. This is the divisor that turns a declared minimum into pixels
+ * per unit, and it is why the two framings have different floors: at 16px the
+ * chip spends a third of its width on tile around the bow, so its units are
+ * smaller than the glyph's at 20px.
+ */
+export function markSpan(
+  framing: "chip" | "glyph",
+  r: MarkRatios = MARK_RATIOS,
+): number {
+  return framing === "chip" ? MARK_TILE : r.bowW + 2 * GLYPH_AIR
+}
+
+export const MARK_SPAN = {
+  chip: markSpan("chip"),
+  glyph: markSpan("glyph"),
 } as const
+
+/**
+ * The drawn features a viewer can lose, in tile units.
+ *
+ * `sweep` and `puff` are absent because they are fractions positioning a
+ * control point, and `notchSpread` because it places one rather than sizing
+ * anything — none of the three is a thing on screen with a width. Everything
+ * that *is* has to survive `MARK_MINIMUM` (ADR-0053).
+ */
+export function drawnFeatures(
+  r: MarkRatios = MARK_RATIOS,
+): Record<string, number> {
+  return {
+    bowW: r.bowW,
+    bowH: r.bowH,
+    waist: r.waist,
+    cross: r.cross,
+    notch: r.notch,
+    corner: r.corner,
+  }
+}
+
+const MARK = buildMark()
+
+/** The shipped glyph crop. Callers rendering another cut want `glyphViewBox`. */
+export const GLYPH_VIEWBOX = glyphViewBox()
+
+export const WING_L = MARK.wingL
+export const WING_R = MARK.wingR
+
+/**
+ * The two wings, which overlap each other at the centre by `2 × cross`.
+ *
+ * They carry the same fill everywhere the mark is drawn, so the overlap is
+ * invisible and the silhouette is one mass. There is no third path: the knot
+ * is not drawn (ADR-0053).
+ */
+export const MARK_PATHS = [WING_L, WING_R] as const
+
+/**
+ * The chip's tile gradient axis — top-left to bottom-right across the tile.
+ *
+ * The diagonal is not a style choice. The two stops fail on opposite grounds:
+ * `#d65d0e` clears 3:1 on every dark surface and drops to 2.72 on a pale one,
+ * `#af3a03` clears every light surface and drops to 2.41 on a dark one. Run
+ * diagonally, both stops touch the perimeter, so on all 32 grounds measured —
+ * Steward's 14 themes twice over, plus Chrome's and GitHub's light and dark
+ * chrome — at least one part of the tile's edge always clears the floor. That
+ * is what lets the chip drop its border.
+ */
+export const TILE_GRADIENT = { x1: 6, y1: 0, x2: 58, y2: 64 } as const
 
 /**
  * The logotype: "Steward" set in Geist Mono 600 at 40px, tracking −1, and

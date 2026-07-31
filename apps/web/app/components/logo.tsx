@@ -1,153 +1,95 @@
 import { useId } from "react"
 
 import {
-  CHIP_RADIUS,
+  CHIP_TILT,
   CHIP_VIEWBOX,
   GLYPH_VIEWBOX,
-  KNOT,
-  WING_GRADIENT,
+  squirclePath,
+  TILE_GRADIENT,
   WING_L,
   WING_R,
 } from "~/lib/mark"
 import { cn } from "~/lib/utils"
 
+/** Sampled once: the tile outline is the same on every chip ever drawn. */
+const TILE = squirclePath()
+
 /**
- * The Steward mark: the bow tie — the butler's uniform in three shapes,
- * formal service without the food dome.
+ * The Steward mark: the bow tie — the butler's uniform, one shape.
  *
- * The geometry lives in `~/lib/mark` and nothing else defines it. Every
- * static mirror (favicon, launcher icons, wordmark lockups, the whole
- * `brand/` kit) is generated from that same module by
- * `node scripts/gen-brand.ts`, so this component and the files on disk can no
- * longer drift the way six hand-synced copies of the path data did.
+ * The geometry lives in `~/lib/mark` and nothing else defines it. Every static
+ * mirror (favicon, launcher icons, wordmark lockups, the whole `brand/` kit)
+ * is generated from that same module by `node scripts/gen-brand.ts`.
  *
- * The mark wears a **fixed identity** (DESIGN.md § Mark, ADR-0052): one
- * light and one dark colorway from the gruvbox rows, keyed on the mode class
- * alone, never on the active theme — `--mark-*` is emitted by
- * `themeStylesheet()` outside every `[data-theme]` block.
+ * **There is no knot** (ADR-0053). It was a third shape whose only job was to
+ * be a different colour from the cloth it lay on, and at 16px that boundary
+ * measured 1.40:1 — while every contrast test in the suite passed, because
+ * they all measured ink against *ground* and none measured ink against ink.
+ * The waist pinch carries the read instead.
  *
- * Depth is material, not decorative (terminal-calm bans gradient glass), and
- * the mark only spends it where it has earned it:
+ * Two framings, and they are now genuinely different objects rather than the
+ * same drawing with and without a tile:
  *
- * > **The gradient is a privilege of owning the ground.**
+ * - **In chrome**, the bare glyph: flat ember on whatever surface the rail or
+ *   the header hands it, level, sized to the text beside it. Mode-keyed, since
+ *   it is the one framing sitting on a surface it does not own.
+ * - **On display surfaces** (`display`), the product-icon chip: a superellipse
+ *   tile drenched in the identity, with the bow **cut out of it** in paper and
+ *   turned 12°, because a bow tie is worn rather than laid flat. One colourway
+ *   in both modes — a saturated object has no reason to follow the page.
  *
- * `display` poses the mark as the product-icon chip — it brings its own
- * top-lit tile, so each wing carries the fold gradient (bright at the flared
- * tip, deep where the cloth gathers at the knot) measured against that tile.
- * The default bare glyph sits on whatever surface chrome hands it, so it goes
- * flat and deep instead: one honest tone that clears 3:1 on every theme's
- * page and sidebar. Which is also why there is no tile behind the chrome mark
- * — a tile there either vanishes into the sidebar or punches a hole in it,
- * and glyph-only is what mark-in-chrome looks like everywhere else (GitHub,
- * Linear, Vercel).
+ * The chip carries no border. It had one only because the old tile sat within
+ * a hair of the page tone; at 16px that hairline was a quarter of a device
+ * pixel and had never once rendered. The drenched tile clears every ground on
+ * its own — see `TILE_GRADIENT` for why the diagonal is load-bearing.
  */
 export function Logo({
   className,
   display,
 }: {
   className?: string
-  /** Hero sizes only: the framed product-icon chip (mush below ~32px). */
+  /** Hero sizes and app icons: the framed product-icon chip. */
   display?: boolean
 }) {
-  // Collision-safe ids: the wordmark renders in the header, rail, and
-  // account bar at once, so shared gradient/filter ids would cross-wire.
+  // Collision-safe id: the wordmark renders in the header, rail and account
+  // bar at once, so a shared gradient id would cross-wire them.
   const id = useId()
-  const wingL = `${id}-wl`
-  const wingR = `${id}-wr`
-  const tile = `${id}-tile`
-  const shadow = `${id}-cs`
-  const clip = `${id}-cc`
+  const tile = `${id}-t`
+
+  if (!display) {
+    return (
+      <svg
+        viewBox={GLYPH_VIEWBOX}
+        aria-hidden
+        className={cn("shrink-0", className)}
+      >
+        <path d={WING_L} fill="var(--mark-wing-flat)" />
+        <path d={WING_R} fill="var(--mark-wing-flat)" />
+      </svg>
+    )
+  }
 
   return (
     <svg
-      viewBox={display ? CHIP_VIEWBOX : GLYPH_VIEWBOX}
+      viewBox={CHIP_VIEWBOX}
       aria-hidden
-      className={cn("shrink-0", display && "logo-tile", className)}
+      className={cn("shrink-0 logo-tile", className)}
     >
-      {display && (
-        <>
-          <defs>
-            <linearGradient
-              id={wingL}
-              gradientUnits="userSpaceOnUse"
-              {...WING_GRADIENT.left}
-            >
-              <stop offset="0" stopColor="var(--mark-wing-tip)" />
-              <stop offset="0.55" stopColor="var(--mark-wing-tip)" />
-              <stop offset="1" stopColor="var(--mark-wing-fold)" />
-            </linearGradient>
-            <linearGradient
-              id={wingR}
-              gradientUnits="userSpaceOnUse"
-              {...WING_GRADIENT.right}
-            >
-              <stop offset="0" stopColor="var(--mark-wing-tip)" />
-              <stop offset="0.55" stopColor="var(--mark-wing-tip)" />
-              <stop offset="1" stopColor="var(--mark-wing-fold)" />
-            </linearGradient>
-            <linearGradient
-              id={tile}
-              gradientUnits="userSpaceOnUse"
-              x1="32"
-              y1="0"
-              x2="32"
-              y2="64"
-            >
-              <stop offset="0" stopColor="var(--mark-tile-top)" />
-              <stop offset="1" stopColor="var(--mark-tile-bottom)" />
-            </linearGradient>
-            <clipPath id={clip}>
-              <rect width="64" height="64" rx={CHIP_RADIUS} />
-            </clipPath>
-            <filter id={shadow} x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="0.85" />
-            </filter>
-          </defs>
-
-          <rect
-            width="64"
-            height="64"
-            rx={CHIP_RADIUS}
-            fill={`url(#${tile})`}
-          />
-          {/* Contact shadow: the tie's own silhouette, blurred and nudged
-              down, clipped to the tile — so the bow sits on the surface
-              instead of being painted into it. */}
-          <g
-            clipPath={`url(#${clip})`}
-            filter={`url(#${shadow})`}
-            opacity="0.24"
-            transform="translate(0 1)"
-          >
-            <path d={WING_L} fill="#000" />
-            <path d={WING_R} fill="#000" />
-            <path d={KNOT} fill="#000" />
-          </g>
-        </>
-      )}
-
-      <path
-        d={WING_L}
-        fill={display ? `url(#${wingL})` : "var(--mark-wing-flat)"}
-      />
-      <path
-        d={WING_R}
-        fill={display ? `url(#${wingR})` : "var(--mark-wing-flat)"}
-      />
-      <path d={KNOT} fill="var(--mark-knot)" />
-
-      {display && (
-        <rect
-          x="0.55"
-          y="0.55"
-          width="62.9"
-          height="62.9"
-          rx={CHIP_RADIUS - 0.55}
-          fill="none"
-          strokeWidth="1"
-          style={{ stroke: "var(--mark-tile-border)" }}
-        />
-      )}
+      <defs>
+        <linearGradient
+          id={tile}
+          gradientUnits="userSpaceOnUse"
+          {...TILE_GRADIENT}
+        >
+          <stop offset="0" stopColor="var(--chip-tile-top)" />
+          <stop offset="1" stopColor="var(--chip-tile-deep)" />
+        </linearGradient>
+      </defs>
+      <path d={TILE} fill={`url(#${tile})`} />
+      <g transform={`rotate(${CHIP_TILT} 32 32)`}>
+        <path d={WING_L} fill="var(--chip-bow)" />
+        <path d={WING_R} fill="var(--chip-bow)" />
+      </g>
     </svg>
   )
 }
