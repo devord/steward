@@ -4,6 +4,7 @@
 
 import { spawnSync } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -63,7 +64,8 @@ const slug = String(opts.slug ?? "")
 if (!SLUG.test(slug))
   die(`--slug must be kebab-case: ${opts.slug ?? "(missing)"}`)
 const repoDir = String(opts["repo-dir"] ?? process.cwd())
-const outDir = String(opts.out ?? join(repoDir, ".steward-prior", slug))
+// Never default into the tree being read (see repo-modules).
+const outDir = String(opts.out ?? join(tmpdir(), "steward", "prior-run", slug))
 const ref = String(opts.ref ?? "origin/artifacts")
 const base = `w/${slug}`
 
