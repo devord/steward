@@ -73,55 +73,76 @@ So the migration is structural, not a rewrite:
 
 Neither is "the kit cannot express interaction".
 
-**1 — Payload size.** A 3.29 MB artifact, against every other widget on the
-board:
+**1 — Payload size. Largely fixed since this note was written**, in
+`286ae83` on the data repo, independently of the migration.
 
-| artifact                      | bytes     |
-| ----------------------------- | --------- |
-| `turtle-beach-hydrogen-stats` | 3,285,209 |
-| `corza-repo-stats`            | 278,795   |
-| `corza-progress`              | 209,865   |
-| `corza-pulse`                 | 176,810   |
-| `shopify-intel`               | 105,266   |
-| `corza-gated`                 | 97,837    |
-| `daniel-queue`                | 46,137    |
+The 3.29 MB was the encoding, not the data. The series shipped as a dense day
+× person matrix repeating the login and all three field names in every cell —
+`"VictorMedeiros":{"open":0,"merged":0,"created":0}`, 56 bytes to say nothing
+happened, once per person per day. Three lossless passes (positional rows
+against the existing `authors` list, deltas over the cumulative counts,
+dropping days that move nothing) take the series from 3,593,742 to 358,979
+bytes with **every day of history retained**:
 
-**12–71× the rest of the board**, and the kit inlines `kit.css` into every
-artifact, so migrating grows it further. Note `corza-repo-stats` — same
-template, one repo — is 279 KB, so the size is the 5-repo × 1038-day span, not
-the template. Whether the board should host a 3 MB tile is the open question.
+| artifact                      | was       | now     |
+| ----------------------------- | --------- | ------- |
+| `turtle-beach-hydrogen-stats` | 3,285,209 | 501,865 |
+| `corza-repo-stats`            | 278,795   | 124,687 |
+| `corza-progress`              | 209,865   | —       |
+| `corza-pulse`                 | 176,810   | —       |
+| `shopify-intel`               | 105,266   | —       |
+| `corza-gated`                 | 97,837    | —       |
+| `daniel-queue`                | 46,137    | —       |
+
+That puts it in the same order as the rest of the board rather than 12–71×
+it. What remains is not the series: `people` is 107 KB of the 502 KB, and the
+template itself is 34 KB.
+
+An earlier draft of this note said `corza-repo-stats` was small because it
+watches one repo. That was wrong, and worth recording: the day axis starts at
+the first PR in the set and **is never clamped**, so corza was small only
+because the repo is young — 95 days against turtle-beach's 1038. `build.mjs`
+has a `--start` flag for exactly this and no routine passes it. A window is
+still available as a second lever (180 days → 66 KB, 90 days → 34 KB), but it
+is now an optimisation rather than a precondition.
 
 **2 — Behaviour size.** 430 lines against the bucketer's ~60. Owning that in
 the board is real work and real surface. It is still the stated direction, and
-the alternative is leaving it re-derivable and ungated.
+the alternative is leaving it re-derivable and ungated. This is now the
+**larger** of the two blockers.
 
 ## Options on the payload
 
-Ranked. Note the first one's rationale is **not** variant pre-rendering — the
-widget pre-renders nothing, it embeds data and computes, so the axis
-granularity is a payload-size lever, not a combinatorial one.
+Superseded in part — (0) has shipped. Kept because the ranking was wrong in a
+way worth not repeating.
 
-1. **Coarsen the axis to weekly steps.** Cuts the embedded series roughly 7×,
-   to ~470 KB — in range of the rest of the board. Probably loses little:
-   per-person PR throughput is barely legible day-to-day. Cheapest, and it
-   attacks the actual problem.
-2. **Window the series server-side** — carry a trailing N months and let the
-   full history live in `data.json` on the branch, which is already published
+0. **Fix the encoding.** ✅ `286ae83`. 10× on the series, no fidelity lost, and
+   entirely inside `build.mjs` + the template's reader — no kit dependency.
+   Should have been first; it was not in the original list at all.
+1. **Window the series server-side** — carry a trailing N months and let the
+   full history stay in `data.json` on the branch, which is already published
    beside `index.html` and already the incremental-merge store. Keeps daily
    granularity for the range anyone scrubs in practice.
-3. **Use the reserved Alpine escape.** The kit README holds the seam open —
+2. **Use the reserved Alpine escape.** The kit README holds the seam open —
    Alpine "has that seam reserved but is not injected today: nothing emits
    `x-data` yet, and a framework with no consumer is cost without benefit."
    `repo-stats` would be that first consumer, which is the stated trigger. The
    validator already anticipates it, warning about hexes arriving "through the
-   Alpine escape hatch". This does nothing for payload size and means owning a
-   framework in the board for one widget — hence last.
+   Alpine escape hatch". Does nothing for payload and means owning a framework
+   in the board for one widget — hence last.
+3. ~~**Coarsen the axis to weekly steps.**~~ Dropped. Only ~7×, strictly worse
+   than fixing the encoding at 10×, and the sole option that _loses_ daily
+   granularity. It ranked first in the original draft on the assumption the
+   widget pre-rendered variants per scrub position. It does not — it embeds
+   data and computes — so axis granularity was only ever a payload lever, and
+   a worse one than the encoding sitting next to it.
 
 ## Open
 
-- Does the board tolerate a multi-megabyte tile, or is (1)/(2) a precondition?
 - The kit's `state` field is documented as inert JSON an artifact carries **for
   its next run**. Here the payload is a _render input_. Same channel or a new
   one is a contract decision.
 - `corza-repo-stats` (natan's) migrates on the same change — it shares the
-  frozen template and drifted identically.
+  frozen template, drifted identically, and got the encoding fix identically.
+- `people` at 107 KB is now the second-largest block in the file. Probably
+  inlined avatars; not looked at.
