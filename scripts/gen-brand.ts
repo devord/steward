@@ -33,6 +33,8 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import {
+  CHIP_INSET,
+  chipTransform,
   CHIP_TILT,
   CHIP_VIEWBOX,
   drawnFeatures,
@@ -42,6 +44,8 @@ import {
   MARK_RATIOS,
   MARK_TILE,
   markSpan,
+  MASK_INSET,
+  MASK_SAFE,
   squirclePath,
   TILE_GRADIENT,
   WING_L,
@@ -204,10 +208,16 @@ const TILE = squirclePath()
 
 /**
  * The product-icon chip: the identity drenched across a superellipse tile,
- * with the bow cut out of it in paper and turned.
+ * with the bow cut out of it in paper.
  *
- * `bleed` squares the corners and scales the artwork for the maskable
- * variant, where the launcher supplies its own mask and crops ~20%.
+ * `bleed` squares the corners and scales the artwork for the maskable variant,
+ * where the launcher supplies its own mask and crops ~20%.
+ *
+ * The placement is `chipTransform`'s, not this file's. It used to be composed
+ * here — no inset at all for the standard chip, a literal `0.82` for the
+ * maskable — while `logo.tsx` composed its own with `CHIP_INSET`. Same
+ * geometry, three different framings of it, and the one that looked right was
+ * the one that never reached a browser tab or a home screen.
  */
 function chip(opts: { bleed?: boolean } = {}): string {
   const { tileTop, tileDeep, bow } = CHIP_IDENTITY
@@ -215,16 +225,13 @@ function chip(opts: { bleed?: boolean } = {}): string {
   const tile = opts.bleed
     ? `  <rect width="64" height="64" fill="url(#tile)"/>`
     : `  <path d="${TILE}" fill="url(#tile)"/>`
-  const spin = opts.bleed
-    ? `rotate(${CHIP_TILT} 32 32) translate(32 32) scale(0.82) translate(-32 -32)`
-    : `rotate(${CHIP_TILT} 32 32)`
   return `  <defs>
     <linearGradient id="tile" gradientUnits="userSpaceOnUse" x1="${g.x1}" y1="${g.y1}" x2="${g.x2}" y2="${g.y2}">
       <stop offset="0" stop-color="${tileTop}"/><stop offset="1" stop-color="${tileDeep}"/>
     </linearGradient>
   </defs>
 ${tile}
-  <g transform="${spin}">
+  <g transform="${chipTransform(opts.bleed ? MASK_INSET : CHIP_INSET)}">
     <path d="${WING_L}" fill="${bow}"/><path d="${WING_R}" fill="${bow}"/>
   </g>`
 }
@@ -292,7 +299,10 @@ for (const [name, ink] of [
     svg(
       WORDMARK_VIEWBOX,
       ...WORDMARK_SIZE,
-      `  <g transform="rotate(${CHIP_TILT} 32 32)">\n${glyph(ink)}\n  </g>\n  <path d="${LOGOTYPE}" fill="${ink}"/>`,
+      // The bow sits in the chip's slot with no tile under it, so it takes the
+      // chip's placement: at full size it would out-measure the coloured
+      // lockup's bow beside it in the same kit.
+      `  <g transform="${chipTransform()}">\n${glyph(ink)}\n  </g>\n  <path d="${LOGOTYPE}" fill="${ink}"/>`,
       NOTE(`Steward wordmark, single colour (${name})`),
     ),
   )
@@ -506,8 +516,39 @@ ${table(
   ]),
 )}
 
-The bow covers **${((MARK_RATIOS.bowW / MARK_TILE) * 100).toFixed(0)}% × ${((MARK_RATIOS.bowH / MARK_TILE) * 100).toFixed(0)}%** of the tile at an aspect of
-${(MARK_RATIOS.bowW / MARK_RATIOS.bowH).toFixed(2)}:1, and the chip turns it ${CHIP_TILT}°.
+### How the chip places it
+
+The bow is ${MARK_RATIOS.bowW} × ${MARK_RATIOS.bowH} units at an aspect of ${(MARK_RATIOS.bowW / MARK_RATIOS.bowH).toFixed(2)}:1 — ${((MARK_RATIOS.bowW / MARK_TILE) * 100).toFixed(0)}% × ${((MARK_RATIOS.bowH / MARK_TILE) * 100).toFixed(0)}% of the tile if it
+were drawn at full size, which is a near miss rather than a margin. **Every**
+chip insets it, through one function, to the same share of whatever the viewer
+actually sees:
+
+${table(
+  ["", "scale", "bow spans", "of the visible tile", "ground per side"],
+  [
+    [
+      "chip",
+      `\`CHIP_INSET\` ${CHIP_INSET}`,
+      `${(MARK_RATIOS.bowW * CHIP_INSET).toFixed(1)}u`,
+      `${(((MARK_RATIOS.bowW * CHIP_INSET) / MARK_TILE) * 100).toFixed(0)}%`,
+      `${((MARK_TILE - MARK_RATIOS.bowW * CHIP_INSET) / 2).toFixed(1)}u`,
+    ],
+    [
+      "maskable icon",
+      `\`MASK_INSET\` ${MASK_INSET.toFixed(3)}`,
+      `${(MARK_RATIOS.bowW * MASK_INSET).toFixed(1)}u`,
+      `${(((MARK_RATIOS.bowW * MASK_INSET) / (MARK_TILE * MASK_SAFE)) * 100).toFixed(0)}%`,
+      `${((MARK_TILE * MASK_SAFE - MARK_RATIOS.bowW * MASK_INSET) / 2).toFixed(1)}u`,
+    ],
+  ],
+)}
+
+The maskable column measures against the safe zone — the middle ${(MASK_SAFE * 100).toFixed(0)}% a launcher
+is guaranteed to show — which is why its scale is \`CHIP_INSET\` times that and
+not a number of its own. The two shares match by construction.
+
+The bow is **level in every framing** (\`CHIP_TILT\` ${CHIP_TILT}°): it is symmetric by
+construction and the tile is square, so a rotation fights both.
 `
 
 /**

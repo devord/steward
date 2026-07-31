@@ -14,8 +14,8 @@ light or dark mode.
 
 **On display surfaces** — the browser tab, the launcher, the social card, the
 README lockup — it wears the **chip**: the identity drenched across a
-superellipse tile with the bow cut out of it in paper, turned 12°, because a
-bow tie is worn rather than laid flat. The chip is a single colourway in both
+superellipse tile with the bow cut out of it in paper, level, and inset so the
+tile keeps ground around it. The chip is a single colourway in both
 modes. It is a saturated object, not a surface; it isn't borrowing the page's
 tone, so it has no reason to follow the page's mode.
 
@@ -109,8 +109,24 @@ Device pixels at 1×. A feature either survives here or is not drawn — held by
 | `notch`  | 4     | 1.00px      | 1.33px       |
 | `corner` | 4     | 1.00px      | 1.33px       |
 
-The bow covers **88% × 44%** of the tile at an aspect of
-2.00:1, and the chip turns it 4°.
+### How the chip places it
+
+The bow is 56 × 28 units at an aspect of 2.00:1 — 88% × 44% of the tile if it
+were drawn at full size, which is a near miss rather than a margin. **Every**
+chip insets it, through one function, to the same share of whatever the viewer
+actually sees:
+
+|               | scale              | bow spans | of the visible tile | ground per side |
+| ------------- | ------------------ | --------- | ------------------- | --------------- |
+| chip          | `CHIP_INSET` 0.86  | 48.2u     | 75%                 | 7.9u            |
+| maskable icon | `MASK_INSET` 0.688 | 38.5u     | 75%                 | 6.3u            |
+
+The maskable column measures against the safe zone — the middle 80% a launcher
+is guaranteed to show — which is why its scale is `CHIP_INSET` times that and
+not a number of its own. The two shares match by construction.
+
+The bow is **level in every framing** (`CHIP_TILT` 0°): it is symmetric by
+construction and the tile is square, so a rotation fights both.
 
 {/* /gen:mark-facts */}
 

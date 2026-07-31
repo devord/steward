@@ -150,3 +150,47 @@ even if it had been pointed at the right question.
 
 The lesson generalises past the mark: a gate that only tests the hard end of a
 range will pass things that fail at the easy end, and will do it silently.
+
+## Amendment: the placement was a constant, not a contract
+
+The first amendment took the tilt from 12° to 4° and introduced `CHIP_INSET`.
+Both were right about the defect and wrong about the fix, and in the same way:
+each landed as a number that one caller happened to apply.
+
+- **`CHIP_TILT` 4° → 0.** The amendment that chose 4° had already written the
+  finding down — _"Zero is the cleanest read of the four"_ — and then kept the
+  tilt anyway, for a reason it stated as jaunt. There is no measurement behind
+  4° either; it is the angle at which the fight between a symmetric bow and a
+  square tile stops being visible rather than the angle at which it stops. The
+  mark is level in every framing now, so there is one object rather than a
+  chrome one and a display one that lean differently.
+- **`CHIP_INSET` applied to every chip, through `chipTransform`.** It was
+  applied by `logo.tsx` and by nothing else. The favicon, the launcher icons,
+  the apple-touch icon, both wordmark lockups and the whole `brand/` kit drew
+  the bow at full size — reaching within four units of a 64-unit tile, which at
+  the declared 16px minimum is one device pixel of clearance. The app's own
+  hero chip was the only one that looked the way the mark was designed to look,
+  and it is the one surface nobody ships a screenshot of.
+- **`MASK_INSET` is derived, not typed.** The maskable icon carried a literal
+  `0.82` — `CHIP_INSET` rounded, applied to a full-bleed tile 20% of which the
+  launcher then crops. So the bow filled ~90% of the safe zone and met the mask
+  at its tips. It is now `CHIP_INSET × MASK_SAFE`, which holds the bow at the
+  same share of what the viewer sees in both framings, by construction.
+
+The law needs a third clause. The first two were about what the mark is made of
+and how small it can get:
+
+> A geometry with one source still ships as many marks as there are callers
+> composing it. **Placement is geometry.**
+
+`mark.test.ts` held every drawn feature above a device pixel; `theme.test.ts`
+held every boundary above 3:1. Both were green for the whole life of the defect,
+because neither asks where the bow sits on its tile — which is a whole-shape
+property, and the first one a person actually notices. The new gate asserts
+against the **generated artefacts**, not the constants: a shared constant proves
+nothing about whether a caller reached for it, and that is precisely what went
+wrong here.
+
+This was reported by a person putting the landing page and their home screen
+side by side. No instrument in the repo was pointed at the comparison, and every
+instrument that existed passed.
