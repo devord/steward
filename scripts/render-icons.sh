@@ -91,13 +91,15 @@ render_kit() { # render_kit <dir> <basename> <intrinsic-w> <intrinsic-h> <widths
   done
 }
 
+# The bare glyph's crop follows the bow (60x32 for a 56x28 bow plus air), and
+# the chip is one colourway now, so it is rendered once rather than per mode.
 for MODE in light dark; do
-  render_kit mark "steward-mark-$MODE" 48 26 256 512 1024
-  render_kit icon "steward-icon-$MODE" 64 64 128 256 512 1024
+  render_kit mark "steward-mark-$MODE" 60 32 256 512 1024
   render_kit wordmark "steward-wordmark-$MODE" 300 64 600 1200
 done
+render_kit icon "steward-icon" 64 64 128 256 512 1024
 for INK in black white; do
-  render_kit mark "steward-mark-$INK" 48 26 512
+  render_kit mark "steward-mark-$INK" 60 32 512
   render_kit wordmark "steward-wordmark-$INK" 300 64 1200
 done
 
