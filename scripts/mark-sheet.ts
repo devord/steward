@@ -55,8 +55,19 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const outDir = path.join(root, "brand", "proof")
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
-/** Cell box in pass one. Wide enough for the largest mark plus air. */
-const CELL = 88
+/**
+ * Cell box in pass one, derived per sheet rather than fixed.
+ *
+ * It was a constant 88, which silently broke the moment a sheet asked for a
+ * mark larger than that: cells overflowed their grid boxes and pass two
+ * cropped neighbouring marks into each frame. A harness that misreports at
+ * exactly the sizes you added it to inspect is worse than no harness.
+ */
+const cellFor = (rows: Row[]) =>
+  Math.max(
+    88,
+    Math.max(...rows.flatMap((r) => r.cells.map((c) => c.size))) + 24,
+  )
 /** Every cell's magnified view lands near this width, so the sheet reads. */
 const ZOOM_TARGET = 132
 
@@ -126,7 +137,11 @@ function chrome(html: string, w: number, h: number, out: string, dsf: number) {
  * Pass one: every cell at its true device size on its true ground, laid out on
  * a rigid grid so pass two can crop by arithmetic rather than by search.
  */
-function truthPng(rows: Row[], file: string): { w: number; h: number } {
+function truthPng(
+  rows: Row[],
+  file: string,
+  CELL: number,
+): { w: number; h: number } {
   const w = Math.max(...rows.map((r) => r.cells.length)) * CELL
   const h = rows.length * CELL
   const cells = rows
@@ -158,6 +173,7 @@ function composeSheet(
   dims: { w: number; h: number },
   title: string,
   out: string,
+  CELL: number,
 ) {
   const data = `data:image/png;base64,${readFileSync(truth).toString("base64")}`
   const crop = (x: number, y: number, size: number, zoom: number) => {
@@ -176,7 +192,7 @@ function composeSheet(
         .join("")
       const zoomed = row.cells
         .map((c, x) => {
-          const z = Math.max(2, Math.round(ZOOM_TARGET / (c.size + 8)))
+          const z = Math.max(1, Math.round(ZOOM_TARGET / (c.size + 8)))
           return `<td>${crop(x, y, c.size, z)}<div class="z">×${z}</div></td>`
         })
         .join("")
@@ -215,9 +231,17 @@ function composeSheet(
   }
   // Size the window to the content: given a window much taller than the page,
   // headless Chrome paints the document a second time at the bottom.
+  const rowWidth = (row: Row) =>
+    row.cells.reduce(
+      (sum, c) =>
+        sum +
+        (c.size + 8) * Math.max(1, Math.round(ZOOM_TARGET / (c.size + 8))) +
+        28,
+      0,
+    )
   chrome(
     html,
-    120 + Math.max(...rows.map((r) => r.cells.length)) * (ZOOM_TARGET + 22),
+    120 + Math.max(...rows.map(rowWidth)),
     118 + rows.reduce((sum, r) => sum + rowHeight(r), 0) + 28,
     out,
     2,
@@ -238,8 +262,9 @@ function composeSheet(
 
 function sheet(rows: Row[], title: string, name: string) {
   const truth = path.join(outDir, `.${name}-truth.png`)
-  const dims = truthPng(rows, truth)
-  composeSheet(rows, truth, dims, title, path.join(outDir, `${name}.png`))
+  const CELL = cellFor(rows)
+  const dims = truthPng(rows, truth, CELL)
+  composeSheet(rows, truth, dims, title, path.join(outDir, `${name}.png`), CELL)
   rmSync(truth, { force: true })
   console.log(`  brand/proof/${name}.png`)
 }
@@ -249,6 +274,17 @@ function sheet(rows: Row[], title: string, name: string) {
 mkdirSync(outDir, { recursive: true })
 
 const SIZES = [16, 20, 24, 32, 64]
+
+/**
+ * The sizes at which the *silhouette* is judged, rather than the pixels.
+ *
+ * The sheets topped out at 64px for the whole of the redraw, and that is how a
+ * `notch` of 5 shipped: at 16px the bite is 1.25px and invisible, so every
+ * sheet passed while each wing was quietly rounding into its own lobe. The
+ * defect only exists at a size nothing rendered. Small sizes answer "can you
+ * see it"; these answer "is it the thing".
+ */
+const FORM_SIZES = [96, 160, 256]
 const themesOf = (mode: ThemeMode) =>
   themeEntries.filter(([, t]) => t.mode === mode)
 
@@ -320,6 +356,37 @@ for (const mode of ["light", "dark"] as const) {
     })),
     `Every ${mode} ground — page, sidebar, chip`,
     `grounds-${mode}`,
+  )
+}
+
+// Where the shape is judged rather than the pixels.
+for (const mode of ["light", "dark"] as const) {
+  const page = themesOf(mode)[0][1].tokens
+  sheet(
+    [
+      {
+        label: "the chip",
+        note: "does it read as a bow tie, not a bone?",
+        cells: FORM_SIZES.map((size) => ({
+          framing: "chip" as const,
+          size,
+          ground: page.bg,
+          mode,
+        })),
+      },
+      {
+        label: "the bare glyph",
+        note: "the silhouette alone, with nothing to hide behind",
+        cells: FORM_SIZES.map((size) => ({
+          framing: "glyph" as const,
+          size,
+          ground: page.bg1,
+          mode,
+        })),
+      },
+    ],
+    `Silhouette — ${mode}`,
+    `form-${mode}`,
   )
 }
 

@@ -1,6 +1,7 @@
 import { useId } from "react"
 
 import {
+  CHIP_INSET,
   CHIP_TILT,
   CHIP_VIEWBOX,
   GLYPH_VIEWBOX,
@@ -69,6 +70,8 @@ export function Logo({
     )
   }
 
+  const tileClip = `${id}-tc`
+
   return (
     <svg
       viewBox={CHIP_VIEWBOX}
@@ -84,11 +87,23 @@ export function Logo({
           <stop offset="0" stopColor="var(--chip-tile-top)" />
           <stop offset="1" stopColor="var(--chip-tile-deep)" />
         </linearGradient>
+        {/* The cut cannot leave the material. Turned, the bow's corners reach
+            ~62.3 of the tile's 64 units, and anything past the tile is paper
+            drawn on a paper page — invisible, so the tip reads as sliced off
+            rather than as overflowing. Clipping is the guarantee; CHIP_INSET
+            is what stops it ever being needed. */}
+        <clipPath id={tileClip}>
+          <path d={TILE} />
+        </clipPath>
       </defs>
       <path d={TILE} fill={`url(#${tile})`} />
-      <g transform={`rotate(${CHIP_TILT} 32 32)`}>
-        <path d={WING_L} fill="var(--chip-bow)" />
-        <path d={WING_R} fill="var(--chip-bow)" />
+      <g clipPath={`url(#${tileClip})`}>
+        <g
+          transform={`rotate(${CHIP_TILT} 32 32) translate(32 32) scale(${CHIP_INSET}) translate(-32 -32)`}
+        >
+          <path d={WING_L} fill="var(--chip-bow)" />
+          <path d={WING_R} fill="var(--chip-bow)" />
+        </g>
       </g>
     </svg>
   )

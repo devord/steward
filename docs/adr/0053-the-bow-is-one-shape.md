@@ -118,3 +118,35 @@ The alternative considered was keeping the knot and raising the declared
 minimum until it could be drawn. Rejected: the favicon is 16px whether or not
 we declare it, and a minimum that excludes the surface the mark is most often
 seen on is a way of not answering the question.
+
+## Amendment: the declared minimum needed a ceiling
+
+Three of the values this ADR derived were wrong, and they were wrong in the
+same way: each satisfied the 16px floor and was never rendered above 64px.
+
+- **`notch` 5 → 4.** The size gate wants ≥1 device pixel at 16px, which is 4
+  units exactly; 5 was picked with room to spare and is past the ~4.6 where
+  this repo already knew each wing rounds into its own lobe. At 16px the bite
+  is 1.25px and invisible. At 96px it is a bone.
+- **`CHIP_TILT` 12° → 4°.** Chosen by eye, flagged twice as the one number in
+  the mark that could not point at a measurement, and it was the single thing
+  deciding whether the chip read as a bow tie. The bow is symmetric by
+  construction and the tile is square; past ~4° the rotation fights both.
+- **The cut is clipped to the tile, and inset to `CHIP_INSET`.** Turned, the
+  bow reached ~62.3 of 64 units and the escaping tip was paper drawn on a
+  paper page — invisible, so it read as sliced off rather than as overflowing.
+
+The law is unchanged. What was missing is its other half:
+
+> A declared minimum without a declared **maximum** only proves the mark
+> survives being small. It says nothing about whether it is still the thing.
+
+`MARK_MINIMUM` answers "can you see it". Nothing answered "is it a bow tie",
+because every proof sheet stopped at 64px — the size at which all three defects
+above are invisible. `brand/proof/form-*.png` now renders 96/160/256, and
+building it surfaced that the sheet harness itself broke above an 88px cell,
+cropping neighbouring marks into each frame. The instrument would have lied
+even if it had been pointed at the right question.
+
+The lesson generalises past the mark: a gate that only tests the hard end of a
+range will pass things that fail at the easy end, and will do it silently.
