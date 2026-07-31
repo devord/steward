@@ -41,10 +41,12 @@ const OUT = path.resolve(
   "tokens.css",
 )
 
-// Gruvbox dark is the anchor artifacts are authored in (widget-standard), not
-// the fresh-install default (that is Flexoki, ADR-0046). Authoring against the
-// anchor is what keeps a raw-opened artifact looking like the thing the
-// routine wrote, whatever the viewer's preference happens to be.
+// Gruvbox dark is the anchor artifacts are authored in (widget-standard).
+// It reads `DEFAULT_THEME`, never the fresh-install slots — the two point at
+// the same theme again today (ADR-0051) but are separate decisions, and this
+// generator follows the anchor through any future move of the default.
+// Authoring against the anchor is what keeps a raw-opened artifact looking
+// like the thing the routine wrote, whatever the viewer's preference is.
 const anchor = themes[DEFAULT_THEME]
 
 const palette = ARTIFACT_TOKENS.map(

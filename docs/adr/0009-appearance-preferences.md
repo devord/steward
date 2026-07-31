@@ -19,8 +19,8 @@ evaluated and rejected on that second test.
 
 **Gruvbox dark hard remains canonical**: the server renders it, artifacts
 are authored in it, and it was the fresh-install dark default (the
-fresh-install default later moved to Flexoki — ADR-0046 — while the anchor
-stayed gruvbox-dark).
+fresh-install default later moved to Flexoki — ADR-0046 — and back to
+gruvbox — ADR-0051 — while the anchor stayed gruvbox-dark throughout).
 
 Mechanics:
 

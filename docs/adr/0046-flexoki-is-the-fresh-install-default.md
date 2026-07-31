@@ -1,5 +1,10 @@
 # Flexoki is the fresh-install default theme
 
+> Superseded in part by **ADR-0051**: the fresh-install slots moved back to
+> the gruvbox pair once ADR-0048 retranscribed gruvbox from material. The
+> anchor/default **split** this ADR introduced stands, and so does the
+> amendment below — the mark keeps Flexoki as its fixed identity.
+
 ADR-0009 shipped the theme registry and named gruvbox-dark twice: the
 **canonical anchor** (the server renders it on `:root`, artifacts are authored
 in it and inline it at rest) _and_ the **fresh-install default** (the palette a

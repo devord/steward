@@ -7,8 +7,9 @@
  * colors), transcribed from its upstream palette — no invented colors.
  * Gruvbox dark remains the canonical anchor: artifacts are authored in it
  * (docs/widget-standard.md) and the server renders it before the client
- * preference is known. The *fresh-install* default is a separate choice —
- * a new viewer now starts in the Flexoki pair (ADR-0046).
+ * preference is known. The *fresh-install* default is a separate choice
+ * that ADR-0046 pointed at Flexoki and ADR-0051 pointed back — a new viewer
+ * starts in the gruvbox pair again, now that it is material's (ADR-0048).
  *
  * The user's choice is an **appearance preference**: a `mode`
  * (`system` | `light` | `dark`) plus a `lightTheme` and a `darkTheme` slot
@@ -557,16 +558,23 @@ export const themeEntries: readonly [ThemeName, Theme][] = themeNames.map(
 /**
  * The canonical anchor — what the server renders on `:root` and the palette
  * artifacts are authored in and inline at rest (docs/widget-standard.md).
- * Stays gruvbox-dark even as the fresh-install default moves (ADR-0046).
- * Distinct from the fresh-install slots below — the palette a new user
- * *starts* in. Note this is only an *authoring* anchor: the frame injects
- * the active palette unconditionally, including this one, so an artifact
- * published against an older gruvbox row still renders in the current one.
+ * Held gruvbox-dark through both moves of the fresh-install default
+ * (ADR-0046, ADR-0051), which is the point of splitting them: the anchor
+ * answers to the artifact contract, the slots below answer to taste.
+ * Note this is only an *authoring* anchor: the frame injects the active
+ * palette unconditionally, including this one, so an artifact published
+ * against an older gruvbox row still renders in the current one.
  */
 export const DEFAULT_THEME: ThemeName = "gruvbox-dark"
-/** Fresh-install slots for a viewer with no stored preference (ADR-0046). */
-export const DEFAULT_DARK_THEME: ThemeName = "flexoki-dark"
-export const DEFAULT_LIGHT_THEME: ThemeName = "flexoki-light"
+/**
+ * Fresh-install slots for a viewer with no stored preference. Back on the
+ * gruvbox pair (ADR-0051): ADR-0046 moved them to Flexoki when gruvbox was
+ * still classic morhetz hard, and the material retranscription (ADR-0048)
+ * removed the reason. They stay separate constants from the anchor above —
+ * pointing them at the same theme is a coincidence of taste, not a merge.
+ */
+export const DEFAULT_DARK_THEME: ThemeName = "gruvbox-dark"
+export const DEFAULT_LIGHT_THEME: ThemeName = "gruvbox-light"
 
 /** A family that ships both a light and a dark member — one pick fills both slots. */
 export interface ThemeFamily {
@@ -672,7 +680,7 @@ export const APPEARANCE_STORAGE_KEY = "steward-appearance"
 /** Custom event fired after a preference write, for same-tab subscribers. */
 export const APPEARANCE_EVENT = "steward:appearance"
 
-/** Fresh default: follow the OS with the Flexoki pair (ADR-0046). */
+/** Fresh default: follow the OS with the gruvbox pair (ADR-0051). */
 export const DEFAULT_APPEARANCE: AppearancePrefs = {
   mode: "system",
   lightTheme: DEFAULT_LIGHT_THEME,

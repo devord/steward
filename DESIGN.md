@@ -23,10 +23,12 @@ carries it (ADR-0046). Gruvbox is transcribed from **gruvbox-material**
 (medium background), not classic morhetz (ADR-0048): it is the flavour the
 terminal beside the board is running, and its warmer ink (`#d4be98` /
 `#654735`) is what reads as gruvbox rather than as a yellow-tinted
-greyscale. The **Flexoki pair is the fresh-install default** and the
-identity: root.tsx stamps `data-theme` with the dark Flexoki slot at SSR, so
-the no-JS fallback and browser-chrome colors (`theme-color`, the manifest)
-match what a new viewer resolves to (ADR-0046 amendment). The dashboard
+greyscale. That retranscription is also why the **gruvbox pair is the
+fresh-install default again** (ADR-0051): root.tsx stamps `data-theme` with
+the dark slot at SSR, so the no-JS fallback and browser-chrome colors
+(`theme-color`, the manifest) match what a new viewer resolves to (ADR-0046
+amendment). The **identity stays Flexoki** — the mark never followed the
+active theme, so it never followed the default either. The dashboard
 injects the active theme into artifact iframes at render time, for every
 theme including the anchor, so a file published against an older row still
 paints the current one — the anchor is an _authoring_ default, not a pin on
@@ -267,8 +269,10 @@ the wordmark, so the knot is ink.
 
 The mark wears a **fixed identity**: it never follows the active theme. One
 light colorway and one dark colorway, both drawn from the Flexoki rows of
-the registry (the fresh-install default, ADR-0046), keyed on the mode class
-alone. Dark: `#da702c`→`#bc5215` fold wings, `#cecdc3` knot, on a
+the registry, keyed on the mode class alone. Flexoki was the fresh-install
+default when the mark took it (ADR-0046); the default moved back to gruvbox
+(ADR-0051) and the identity did not follow, which is the whole point of a
+fixed one. Dark: `#da702c`→`#bc5215` fold wings, `#cecdc3` knot, on a
 `#1c1b1a`→`#100f0f` tile with a `#403e3c` border. Light: `#bc5215`→`#9d4310`
 wings, `#100f0f` knot, `#fffcf0`→`#f2f0e5` tile, `#b7b5ac` border. The
 single source is `MARK_IDENTITY` in `lib/theme.ts` (built from the

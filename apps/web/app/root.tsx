@@ -50,9 +50,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     // SSR stamps the fresh-install dark default, so the no-JS fallback and
-    // the pre-hydration frame match what a new viewer resolves to
-    // (ADR-0046 amendment — the gruvbox canonical anchor stays on `:root`
-    // for the artifact contract; only the stamped attribute moved).
+    // the pre-hydration frame match what a new viewer resolves to (ADR-0046
+    // amendment). It reads the slot, never a literal, so ADR-0051 moving
+    // the slot back to gruvbox-dark needed nothing here — and the `:root`
+    // block still carries the anchor for the artifact contract regardless.
     // THEME_INIT_SCRIPT re-stamps both attributes from the stored
     // preference before first paint, hence suppressHydrationWarning
     // (ADR-0009).
