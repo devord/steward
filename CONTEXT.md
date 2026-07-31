@@ -81,11 +81,12 @@ _Avoid_: report, page, output file
 
 **Shared repo** (`steward`):
 This repository, the product. The web app, `packages/schema`, the contract
-skills (`run-routine`, `widget-artifact`, `publish-widget`), the data-repo
-template, and the built-in routine templates (`templates/routines/`,
-ADR-0021). Team- or user-specific templates live in the narrowest data
-repo all their users can read (ADR-0014/0021), never here. Team-visible;
-never contains user data.
+skills (`run-routine`, `widget-artifact`, `publish-widget`), the generic
+**primitives** (ADR-0053), the data-repo template, and the built-in routine
+templates (`templates/routines/`, ADR-0021). Team- or user-specific
+templates and primitives live in the narrowest data repo all their users
+can read (ADR-0014/0021/0053), never here. Team-visible; never contains
+user data.
 
 **Data repo**:
 A repo holding one routine pool, its dashboards, and its templates. A
@@ -152,8 +153,7 @@ appear (deliberately so for the `custom` built-in, whose input is the
 wizard's prompt field); a data-repo template shadows a same-named built-in.
 Templates are authored in Claude Code sessions, never in the app. The
 app's writable surface stays routines.yaml + layouts (ADR-0022).
-_Avoid_: skill (a template composes skills; it is not one), recipe,
-preset, blueprint
+_Avoid_: recipe, preset, blueprint
 
 **Skill**:
 A unit of agent behaviour shipped as a Claude Code skill. Two roles,
