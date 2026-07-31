@@ -6,13 +6,17 @@
  * the published package has no workspace dependencies and runs under `npx`
  * with nothing to resolve. Only Node builtins stay external.
  *
- * The three contract skills (run-routine, widget-artifact, publish-widget)
- * are copied into `skills/.claude/skills/` so `claude --add-dir <pkg>/skills`
- * resolves them from the install (`skills.ts`) — the data-repo cwd doesn't
- * carry them (ADR-0014).
+ * The repo's skills — the contract tier and the primitives built-in templates
+ * compose (ADR-0053) — are copied into `skills/.claude/skills/` so
+ * `claude --add-dir <pkg>/skills` resolves them from the install
+ * (`skills.ts`); the data-repo cwd doesn't carry them (ADR-0014).
+ *
+ * Discovered rather than listed: a hard-coded roster silently stops shipping
+ * whatever is added next, and a built-in template composing a primitive the
+ * install never received fails at the point of use.
  */
 import { build } from "esbuild"
-import { chmodSync, cpSync, mkdirSync, rmSync } from "node:fs"
+import { chmodSync, cpSync, mkdirSync, readdirSync, rmSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -41,16 +45,22 @@ await build({
 })
 chmodSync(outfile, 0o755)
 
-const CONTRACT_SKILLS = ["run-routine", "widget-artifact", "publish-widget"]
+// Vendored skills belong to interactive work in this repo, not to a routine
+// run, and shipping them would put someone else's docs in every install.
+const VENDORED = new Set(["react-router"])
+const skillsIn = path.join(repoRoot, ".claude", "skills")
+const skills = readdirSync(skillsIn, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && !VENDORED.has(entry.name))
+  .map((entry) => entry.name)
+  .sort()
+
 const skillsOut = path.join(here, "skills", ".claude", "skills")
 rmSync(path.join(here, "skills"), { recursive: true, force: true })
 mkdirSync(skillsOut, { recursive: true })
-for (const skill of CONTRACT_SKILLS) {
-  cpSync(
-    path.join(repoRoot, ".claude", "skills", skill),
-    path.join(skillsOut, skill),
-    { recursive: true },
-  )
+for (const skill of skills) {
+  cpSync(path.join(skillsIn, skill), path.join(skillsOut, skill), {
+    recursive: true,
+  })
 }
 
-console.log(`built dist/cli.js + skills/ (${CONTRACT_SKILLS.join(", ")})`)
+console.log(`built dist/cli.js + skills/ (${skills.join(", ")})`)
