@@ -469,26 +469,16 @@ describe("every theme clears the contrast floors", () => {
       // longer has one.
       const mark = MARK_IDENTITY[theme.mode]
       for (const surface of [t.bg, t.bg1]) {
-        expect(contrast(mark.wingFlat, surface)).toBeGreaterThanOrEqual(3)
+        expect(contrast(mark.ink, surface)).toBeGreaterThanOrEqual(3)
       }
     })
     it(`${name}: the chip's tile keeps an edge on page and sidebar`, () => {
-      // The chip carries no border. It had one only because the old tile sat
-      // within a hair of the page tone, and at 16px that `stroke-width: 1` on
-      // a 64-unit tile was a quarter of a device pixel — a feature that never
-      // rendered on the surface it existed for.
-      //
-      // Drenched, the tile holds its own edge, but neither gradient stop does
-      // it alone: `tileTop` clears every dark ground and reads 2.72 on a pale
-      // one, `tileDeep` clears every light ground and reads 2.41 on a dark
-      // one. They fail on opposite surfaces, and the gradient runs diagonally
-      // so both reach the perimeter — so what is held is that **at least one
-      // stop** clears on each ground. That is the load the diagonal carries.
-      const { tileTop, tileDeep } = CHIP_IDENTITY
+      // The chip carries no border and, since ADR-0055, no gradient: a single
+      // flat ember. Where the old two-stop tile relied on the diagonal so at
+      // least one stop cleared each ground, the flat #c75117 has to clear every
+      // ground by itself — which it does, ≥3.19 across the registry.
       for (const surface of [t.bg, t.bg1]) {
-        expect(
-          Math.max(contrast(tileTop, surface), contrast(tileDeep, surface)),
-        ).toBeGreaterThanOrEqual(3)
+        expect(contrast(CHIP_IDENTITY.tile, surface)).toBeGreaterThanOrEqual(3)
       }
     })
     it(`${name}: primary button label ≥ 4.5:1, fill and ring ≥ 3:1`, () => {
@@ -536,27 +526,22 @@ describe("every theme clears the contrast floors", () => {
   // The other half of the mark's contract. The bare glyph is held against
   // every theme's surfaces above; the chip is held here, once, because it is
   // one colourway in both modes (ADR-0053).
-  it("the chip's bow ≥ 3:1 against the whole tile gradient", () => {
+  it("the chip's bow ≥ 3:1 against the flat tile", () => {
     // The bow is a hole cut in the ember, so this is the chip's only interior
-    // boundary — and unlike the knot's, it is one the geometry can satisfy,
-    // because paper against ember is a real difference at both stops rather
-    // than two mid-tones sharing a hue.
-    const { tileTop, tileDeep, bow } = CHIP_IDENTITY
-    expect(contrast(bow, tileTop)).toBeGreaterThanOrEqual(3)
-    expect(contrast(bow, tileDeep)).toBeGreaterThanOrEqual(3)
+    // boundary — cream against #c75117, a real difference (4.01:1) rather than
+    // the two mid-tones sharing a hue that the old coloured knot was.
+    const { tile, bow } = CHIP_IDENTITY
+    expect(contrast(bow, tile)).toBeGreaterThanOrEqual(3)
   })
 
   it("the chip holds a real tab strip, light and dark", () => {
     // The surfaces the favicon actually lands on, which are not Steward's:
     // Chrome's two tab strips and GitHub's two page backgrounds. Held because
-    // the chip is a distributed object — it goes places the theme registry
-    // has no opinion about, and "it works in our own app" is not the claim
-    // a favicon needs to make.
-    const { tileTop, tileDeep } = CHIP_IDENTITY
+    // the chip is a distributed object — it goes places the theme registry has
+    // no opinion about, and "it works in our own app" is not the claim a
+    // favicon needs to make. The flat ember clears all four (≥3.47).
     for (const strip of ["#dee1e6", "#202124", "#ffffff", "#0d1117"]) {
-      expect(
-        Math.max(contrast(tileTop, strip), contrast(tileDeep, strip)),
-      ).toBeGreaterThanOrEqual(3)
+      expect(contrast(CHIP_IDENTITY.tile, strip)).toBeGreaterThanOrEqual(3)
     }
   })
 

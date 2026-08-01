@@ -27,10 +27,12 @@ greyscale. That retranscription is also why the **gruvbox pair is the
 fresh-install default again** (ADR-0051): root.tsx stamps `data-theme` with
 the dark slot at SSR, so the no-JS fallback and browser-chrome colors
 (`theme-color`, the manifest) match what a new viewer resolves to (ADR-0046
-amendment). The **identity is gruvbox too** (ADR-0052): the mark still never
-follows the _active_ theme, but a fixed badge drawn from a palette the product
-no longer defaults to was simply off-key, so it moved with the default and
-then stopped. The dashboard
+amendment). The **identity is its own brand palette** (ADR-0055): a burnt-orange
+ember (`#c75117`), a neutral ink, and cream, mostly sourced from the gruvbox
+rows so the registry stays authoritative. The mark still never follows the
+_active_ theme; the ember also enters the theme as the gruvbox `accent-deep`, so
+the rebrand's primary colour is in the registry rather than beside it. The
+dashboard
 injects the active theme into artifact iframes at render time, for every
 theme including the anchor, so a file published against an older row still
 paints the current one — the anchor is an _authoring_ default, not a pin on
@@ -53,8 +55,8 @@ gruvbox-dark row of the registry):
 | `ink` / `--foreground`           | `#d4be98`    | body text                                    |
 | `ink-dim` / `--muted-foreground` | `#a89984`    | secondary text                               |
 | `ink-faint`                      | `#928374`    | glyphs and disabled controls, never text     |
-| `accent` / `--primary`           | `#fe8019`    | the accent: primary actions, brand mark      |
-| `accent-deep` / `--ring`         | `#d65d0e`    | focus ring, selection                        |
+| `accent` / `--primary`           | `#fe8019`    | the accent: primary actions                  |
+| `accent-deep` / `--ring`         | `#c75117`    | focus ring, selection, the brand ember       |
 | `yellow`                         | `#d8a657`    | staleness, warnings                          |
 | `green`                          | `#a9b665`    | diff additions, success                      |
 | `red` / `--destructive`          | `#ea6962`    | diff deletions, destructive                  |
@@ -260,80 +262,71 @@ surface and sets its own inset.
 
 ## Mark
 
-The logo is **the bow tie**: two wings meeting at a pinched waist — the
-butler's uniform, one shape. The cut is the **rounded butterfly**: each wing's
-long edges bow gently outward where the fabric puffs, the outer corners round
-off, and the outer edge folds back in a shallow concave notch toward the
-centre. The silhouette of a tied bow, not two chevrons.
+The logo is **the bow tie**: the butler's collar over the shirt studs. Two
+folded wings meet at a **square knot**, with **two buttons** below. Each wing is
+a folded butterfly — the long edges bulge gently where the cloth puffs, the
+outer edge nips inward in a shallow concave fold so the tips flare and the
+middle pinches, and the throat is a short edge that tucks into the knot rather
+than a sharp point that stabs it (ADR-0055).
 
-**There is no knot.** There was, for a year, and it was the whole problem: a
-third shape whose only job was to be a different colour from the cloth it lay
-on, at a size where that boundary was four pixels wide and measured 1.40:1.
-Every contrast test in the suite passed the entire time, because they all held
-ink against _ground_ and none held ink against ink. The knot could not be
-recoloured out of it — protruding past the waist it touched the page, and no
-tone in the palette (nor black, nor white) clears both a mid-orange wing and
-every theme's page. Enclosing it cost the pinch; bunching cloth behind it made
-a belt buckle. Dropping it does not solve that problem so much as delete it.
-The waist carries the read, which `gen-brand.ts` had already argued for the
-one-colour cut — _"the knot is a colour relationship, not a shape the outline
-depends on"_ — and which turns out to be true at every ink. See ADR-0053.
+**The knot and the buttons are back** (ADR-0055, amending ADR-0053). ADR-0053
+deleted the knot because it was a third shape whose only job was to be a
+_different colour_ from the cloth it lay on, and at 16px that boundary measured
+1.40:1 while every contrast test passed — they all held ink against ground and
+none held ink against ink. What changed is not the knot but the mark's colour:
+it is a **single ink** in every framing now (§ below), so the knot and the
+buttons carry the wings' own fill. The gaps between them are _ground_ showing
+through, not an ink-against-ink edge, so the only contrast boundary the mark has
+is still itself against its surface — exactly ADR-0053's rule. A same-ink knot
+costs nothing the coloured one could not afford.
 
-**The geometry is generated, not transcribed** (ADR-0052). It lives once in
+**The geometry is generated, not transcribed** (ADR-0052/0055). It lives once in
 `apps/web/app/lib/mark.ts` as named ratios on a 64-unit tile, with the left
 wing derived and the right mirrored, so symmetry is a property of the
 construction. Run `node scripts/gen-brand.ts` to re-emit every static mirror
 and the `brand/` kit, then `zsh scripts/render-icons.sh` for the rasters. CI
 regenerates and fails on drift.
 
-The bow is **56×28** — exactly 2:1, covering 88% × 44% of the tile. It was
-44×22 (69% × 34%), and that is why the icon read as small beside other
-products': a 2:1 shape in a square tile can never cover more than half of it,
-and no refinement of the curves addresses that. Stretching the bow toward
-square fixes the fill and destroys the read — at 1.25:1 it is an X. So the
-proportion is kept and the **tile** carries the rest of the presence.
+The bow is **54×22** — wider than tall, covering 84% of the tile's width — with
+the knot and buttons carrying the rest of the height. A bow tie reads as a bow
+by being wide and pinched; stretched toward square it is an X.
 
-**Every drawn ratio clears one device pixel at the declared minimum** — 16px
+**Every drawn region clears one device pixel at the declared minimum** — 16px
 for the chip, 20px wide for the glyph, in device pixels at 1× (ADR-0053).
 Contrast says two regions differ; it never says either is big enough to be a
-region. The previous cut drew a notch of 0.65px, a corner of 0.45px and a cinch
-of 0.17px on the favicon: three named ratios, two of them chosen by a failing
-test, rendering nothing. A feature either survives at the minimum or is not
-drawn, and `mark.test.ts` holds that.
+region. The bow, the knot and each button clear the floor at both minimums; the
+fold (`notch`, `puff`) modulates the wing's edge rather than drawing a region,
+so it is not gated, the way the old `sweep` was not. A feature either survives
+or is not drawn — which is why the **browser-tab chip drops the buttons**, since
+at 16px they fall below a device pixel and would only muddy the bow.
+`mark.test.ts` holds all of it.
 
 Two framings, and they are genuinely different objects rather than one drawing
 with and without a tile.
 
-**In chrome** the mark is the **bare glyph**: flat ember, level, on whatever
-surface the rail or the header hands it. It is the one framing sitting on a
-ground it does not own, so it is the one thing still keyed on light or dark
-mode. No tile — a tile behind a chrome mark either vanishes or punches a hole
-in the sidebar, and glyph-only is the mark-in-chrome treatment everywhere else
-(GitHub, Linear, Vercel).
+**In chrome** the mark is the **bare glyph**: a **neutral ink** (`--mark-ink`),
+level, on whatever surface the rail or the header hands it — near-black on
+light, cream on dark. It is the one framing sitting on a ground it does not own,
+so it is the one thing keyed on light or dark mode. The orange is the chip's,
+not the bow's: glyph-as-ink is the mark-in-chrome treatment everywhere else
+(GitHub, Linear, Vercel), and it is what the brand sheet's primary logo does —
+the orange bow is the "filled" variant, not the default.
 
 **On display surfaces** — the browser tab, the OS launcher, the social card,
 the README lockup, the landing hero — the mark wears the **product-icon chip**:
-the identity drenched across a superellipse tile with the bow **cut out of it**
-in paper, level, and inset so the tile keeps ground around it. Both the level
-and the inset are one function, `chipTransform` — the app's chip used to
-compose its own placement and every generated chip composed a different one, so
-the mark had visible air on the landing page and none in the browser tab.
+a **flat ember** superellipse tile (`--chip-tile`) with the bow **cut out of it**
+in cream (`--chip-bow`), level, and inset so the tile keeps ground around it.
+Both the level and the inset are one function, `chipTransform`, which centres
+the whole mark — bow, knot and buttons — on the tile.
 
-- **The chip is one colourway in both modes.** Drenched and mode-keyed it
-  produced a polarity flip — deep tile with a pale bow in light, bright tile
-  with a near-black bow in dark — so figure and ground traded places on an OS
-  setting and it read as two logos. A drenched chip is a saturated _object_,
+- **The chip is one flat colourway in both modes.** It is a saturated _object_,
   not a surface; it is not borrowing the page's tone, so it does not follow the
   page's mode. The `.ico` and the maskable icon could never media-query anyway.
-- **The chip has no border.** It had one only because the old tile sat within a
-  hair of the page tone, and `stroke-width: 1` on a 64-unit tile is a quarter of
-  a device pixel at 16px — a feature that never rendered on the surface it
-  existed for.
-- **The tile gradient is load-bearing, not decoration.** Its two stops fail on
-  opposite grounds: the top clears every dark surface and drops to 2.72 on a
-  pale one, the deep end clears every light surface and drops to 2.41 on a dark
-  one. Run diagonally, both reach the perimeter, so at least one part of the
-  edge always clears the floor. That is what buys the chip its missing border.
+- **The chip has no gradient and no border** (ADR-0055). The old tile ran a
+  diagonal two-stop gradient so that at least one stop cleared each ground; the
+  flat `#c75117` clears the graphics floor on every ground it lands on by itself
+  (≥3.19 across the registry, ≥3.47 on the browser tab strips), so the gradient
+  is retired and the chip is one drawing at every size.
 - **The tile is a superellipse.** A rect's `rx` draws a circular arc, which
   meets the straight edge at a curvature discontinuity; continuous curvature is
   what platform icon grids use, and it is most of what separates a tile that
@@ -348,74 +341,72 @@ across the cloth, a white bar floating above the tile.
 
 ### The identity
 
-|                              | hex       |                            |
-| ---------------------------- | --------- | -------------------------- |
-| bare glyph, light surfaces   | `#af3a03` | gruvbox-light `accent`     |
-| bare glyph, dark surfaces    | `#fe8019` | gruvbox-dark `accent`      |
-| chip tile, top of the fold   | `#d65d0e` | gruvbox-light `accentDeep` |
-| chip tile, deep end          | `#af3a03` | gruvbox-light `accent`     |
-| the bow, cut out of the tile | `#fbf1c7` | gruvbox-light `bg`         |
-| logotype, light lockup       | `#282828` | gruvbox-dark `bg`          |
-| logotype, dark lockup        | `#d4be98` | gruvbox-dark `ink`         |
+|                              | hex       |                      |
+| ---------------------------- | --------- | -------------------- |
+| bare glyph, light surfaces   | `#1e1e1e` | brand ink            |
+| bare glyph, dark surfaces    | `#fbf1c7` | gruvbox-light `bg`   |
+| chip tile                    | `#c75117` | gruvbox `accentDeep` |
+| the bow, cut out of the tile | `#fbf1c7` | gruvbox-light `bg`   |
+| logotype, light lockup       | `#1e1e1e` | brand ink            |
+| logotype, dark lockup        | `#fbf1c7` | gruvbox-light `bg`   |
 
 ### What is measured, and where it is worst
 
-The bare glyph is one shape, so it has exactly one boundary: itself against the
-surface it was handed. Each colourway is measured only against the surfaces it
-can actually land on — page and card, of every theme in its mode:
+The bare glyph is a single ink, so it has exactly one boundary: itself against
+the surface it was handed. Each colourway is measured only against the surfaces
+it can actually land on — page and card, of every theme in its mode. Neutral
+ink clears its ground with enormous room, which is the point of moving the
+colour off the bow:
 
-|                         | worst      | on                     |
-| ----------------------- | ---------- | ---------------------- |
-| glyph on light surfaces | **4.30:1** | tokyo-night-light page |
-| glyph on dark surfaces  | **5.84:1** | gruvbox-dark page      |
+|                         | worst       | on                     |
+| ----------------------- | ----------- | ---------------------- |
+| glyph on light surfaces | **11.71:1** | tokyo-night-light page |
+| glyph on dark surfaces  | **12.99:1** | gruvbox-dark page      |
 
-The chip takes no mode, so its tile faces all 14 themes. It carries no border,
-and **neither gradient stop holds an edge alone** — they fail on opposite
-grounds, which is exactly why the gradient runs diagonally and puts both stops
-on the perimeter. What is held is that at least one clears:
+The chip takes no mode, so its **flat** tile faces all 14 themes at once. There
+is no gradient stop to fail on one ground and clear on another — the single
+ember carries the edge, and it clears the graphics floor on every surface it
+lands on:
 
-|                       | worst  | on                     |
-| --------------------- | ------ | ---------------------- |
-| tile, top of the fold | 2.72:1 | tokyo-night-light page |
-| tile, deep end        | 2.41:1 | gruvbox-dark page      |
+|           | worst  | on                     |
+| --------- | ------ | ---------------------- |
+| chip tile | 3.19:1 | tokyo-night-light page |
 
 The chip's own interior edge, and its habitat — the surfaces it lands on that
 are not Steward's:
 
-|                                 | ratio  |
-| ------------------------------- | ------ |
-| bow against the tile's top      | 3.41:1 |
-| bow against the tile's deep end | 5.40:1 |
-| tile on Chrome, light           | 4.67:1 |
-| tile on Chrome, dark            | 4.16:1 |
-| tile on GitHub, light           | 6.12:1 |
-| tile on GitHub, dark            | 4.89:1 |
+|                       | ratio  |
+| --------------------- | ------ |
+| bow against the tile  | 4.01:1 |
+| tile on Chrome, light | 3.47:1 |
+| tile on Chrome, dark  | 3.54:1 |
+| tile on GitHub, light | 4.55:1 |
+| tile on GitHub, dark  | 4.16:1 |
 
 ### Every drawn feature at the declared minimum
 
 Device pixels at 1×. A feature either survives here or is not drawn — held by
-`mark.test.ts`.
+`mark.test.ts`. The fold (`notch`, `puff`) is absent: it modulates the wing's
+edge rather than drawing a region with a width, exactly as the old `sweep` did.
 
 | ratio    | units | chip @ 16px | glyph @ 20px |
 | -------- | ----- | ----------- | ------------ |
-| `bowW`   | 56    | 14.00px     | 18.67px      |
-| `bowH`   | 28    | 7.00px      | 9.33px       |
-| `waist`  | 10    | 2.50px      | 3.33px       |
-| `cross`  | 4     | 1.00px      | 1.33px       |
-| `notch`  | 4     | 1.00px      | 1.33px       |
-| `corner` | 4     | 1.00px      | 1.33px       |
+| `bowW`   | 54    | 13.50px     | 18.62px      |
+| `bowH`   | 22    | 5.50px      | 7.59px       |
+| `inner`  | 7     | 1.75px      | 2.41px       |
+| `knot`   | 8     | 2.00px      | 2.76px       |
+| `button` | 4.8   | 1.20px      | 1.66px       |
 
 ### How the chip places it
 
-The bow is 56 × 28 units at an aspect of 2.00:1 — 88% × 44% of the tile if it
-were drawn at full size, which is a near miss rather than a margin. **Every**
-chip insets it, through one function, to the same share of whatever the viewer
-actually sees:
+The bow is 54 × 22 units at an aspect of 2.45:1 — 84% of the tile's width.
+Every chip insets the **whole mark** — bow, knot and buttons — through one
+function, to the same share of whatever the viewer actually sees:
 
 |               | scale              | bow spans | of the visible tile | ground per side |
 | ------------- | ------------------ | --------- | ------------------- | --------------- |
-| chip          | `CHIP_INSET` 0.86  | 48.2u     | 75%                 | 7.9u            |
-| maskable icon | `MASK_INSET` 0.688 | 38.5u     | 75%                 | 6.3u            |
+| chip          | `CHIP_INSET` 0.92  | 49.7u     | 78%                 | 7.2u            |
+| maskable icon | `MASK_INSET` 0.736 | 39.7u     | 78%                 | 5.7u            |
 
 The maskable column measures against the safe zone — the middle 80% a launcher
 is guaranteed to show — which is why its scale is `CHIP_INSET` times that and
@@ -439,17 +430,18 @@ once (ADR-0054).
   reads.
 - `apps/web/app/components/logo.tsx`: `Logo` (both framings) and `Wordmark`
   (mark + mono name lockup, scales with font size). The glyph consumes
-  `--mark-wing-flat`, which is mode-keyed; the chip consumes `--chip-*`, which
-  is not.
+  `--mark-ink`, which is mode-keyed; the chip consumes `--chip-tile`/`--chip-bow`,
+  which are not.
   **The chrome brand is one size, `text-base` (16px), and `Wordmark` carries
   it** the way `railCaptionCls` carries the caption tier — so the rail, the
   collapsed-rail header, the account bar, the error chrome and the device-code
   page can't drift apart. 16px is the heading tier the widget titles take: the
   brand is a section heading of the app, never a row in the list.
-- `apps/web/public/favicon.svg`: the chip, one colourway, no media query.
-  `favicon.ico` (16/32/48, packed by `render-icons.sh`) is the raster fallback.
-- `apps/web/public/apple-touch-icon.png` (180) + `icon-{192,512}.png`: the chip,
-  rendered from `scripts/icon.svg`.
+- `apps/web/public/favicon.svg`: the browser-tab chip — bow only, no buttons,
+  since they fall below a device pixel at 16px. `favicon.ico` (16/32/48, packed
+  by `render-icons.sh` from this file) is the raster fallback.
+- `apps/web/public/apple-touch-icon.png` (180) + `icon-{192,512}.png`: the chip
+  with buttons, rendered from `scripts/icon.svg`.
 - `apps/web/public/manifest.webmanifest` + `icon-maskable-512.png`: from
   `scripts/icon-maskable.svg`, full-bleed with the bow at `MASK_INSET` — the
   chip's inset times the 80% safe zone — so it holds the same share of what the
@@ -458,13 +450,13 @@ once (ADR-0054).
   cropped away, and it put the bow's tips against the mask. `theme_color`/`background_color` are
   `#282828` — the **default dark theme's** canvas, not the identity tile. The
   launcher chrome frames the app, so it matches what the app paints.
-- `apps/web/public/wordmark-{dark,light}.svg`: the chip + `Steward` lockup for
-  the README, swapped by `prefers-color-scheme` in a `<picture>`. Mirrored to
-  each data repo's `.github/`. The word is **outlined paths** (Geist Mono 600,
-  40px, tracking −1) rather than a `<text>` node, because GitHub's image context
-  can't load webfonts. Its ink is `LOGOTYPE_INK`, its own token — it used to be
-  filled from the mark's knot colour, which was fine until the knot moved and
-  would have rendered the dark lockup near-black on near-black.
+- `apps/web/public/wordmark-{dark,light}.svg`: the bare mark + `Steward` lockup
+  for the README, swapped by `prefers-color-scheme` in a `<picture>`. Mirrored to
+  each data repo's `.github/`. No tile — the reference lockup is the bare mark,
+  and orange lives on the app-icon chip. The word is **outlined paths** (Geist
+  Mono 600, 40px, tracking −1) rather than a `<text>` node, because GitHub's
+  image context can't load webfonts. Its ink is `LOGOTYPE_INK`, which matches
+  the neutral bow — near-black on the light lockup, cream on the dark.
 - `apps/web/public/og.png`: 1200×630 (@2x) social card. One fixed image for
   every viewer, since OG previews can't theme-switch. Source is
   `scripts/og-card.html`.
@@ -472,11 +464,11 @@ once (ADR-0054).
   one-colour cuts, SVG masters with PNG beside them, `brand/README.md` carrying
   the clear-space, minimum-size and don't rules, and `brand/proof/` carrying the
   renders. `brand/palette/identity.json` is the identity machine-readable. The
-  one-colour cut needs no special handling now: the mark is one shape at every
-  ink, so the cut is simply the mark.
+  one-colour cut needs no special handling: the mark is one ink at every colour,
+  so the cut is simply the mark.
 
-The wordmark text is `foreground` ink, mono, capitalized **`Steward`**; the
-mark's wings carry the identity ember.
+The wordmark text is `foreground` ink, mono, capitalized **`Steward`**; the mark
+is neutral ink beside it, and the ember lives on the chip.
 
 ## Layout
 

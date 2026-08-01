@@ -9,7 +9,8 @@
 
 # Brand kit
 
-The mark is a **bow tie** — the butler's uniform, one shape. Everything in this
+The mark is a **bow tie** — two folded wings, a square knot, two buttons, the
+butler's collar over the shirt studs (ADR-0055). Everything in this
 folder is generated from `apps/web/app/lib/mark.ts` by
 `node scripts/gen-brand.ts` (SVG) and `zsh scripts/render-icons.sh` (PNG).
 **Nothing here is hand-edited**; CI re-runs both and fails if the tree moves.
@@ -27,8 +28,8 @@ Fix the geometry at the source and regenerate.
 | theming around the mark in code                      | `palette/identity.json` | The identity hexes, machine-readable.                                                      |
 
 For the **glyph**, pick `-light` or `-dark` by the background it goes on, not
-by the ink. The **chip has no variants**: it is one colourway in both modes
-(ADR-0053), because a saturated object has no reason to follow the viewer's
+by the ink. The **chip has no variants**: it is one flat colourway in both modes
+(ADR-0055), because a saturated object has no reason to follow the viewer's
 page.
 
 ```
@@ -47,8 +48,7 @@ transparent backgrounds, at the sizes people actually paste into things.
 
 **Clear space** — keep **10 units of the mark's own 64-unit tile** free on all
 four sides of whatever you place, roughly one sixth of the chip's width.
-Nothing sits closer than that, including the edge of its own container. (This
-used to be stated as "one knot width". There is no knot.)
+Nothing sits closer than that, including the edge of its own container.
 
 Inside the chip that ground is already drawn: the bow is inset so the tile
 keeps ~8 units around it on the long axis — see the measurements below. The
@@ -90,74 +90,72 @@ into the sidebar or punches a hole in it.
 
 ### The identity
 
-|                              | hex       |                            |
-| ---------------------------- | --------- | -------------------------- |
-| bare glyph, light surfaces   | `#af3a03` | gruvbox-light `accent`     |
-| bare glyph, dark surfaces    | `#fe8019` | gruvbox-dark `accent`      |
-| chip tile, top of the fold   | `#d65d0e` | gruvbox-light `accentDeep` |
-| chip tile, deep end          | `#af3a03` | gruvbox-light `accent`     |
-| the bow, cut out of the tile | `#fbf1c7` | gruvbox-light `bg`         |
-| logotype, light lockup       | `#282828` | gruvbox-dark `bg`          |
-| logotype, dark lockup        | `#d4be98` | gruvbox-dark `ink`         |
+|                              | hex       |                      |
+| ---------------------------- | --------- | -------------------- |
+| bare glyph, light surfaces   | `#1e1e1e` | brand ink            |
+| bare glyph, dark surfaces    | `#fbf1c7` | gruvbox-light `bg`   |
+| chip tile                    | `#c75117` | gruvbox `accentDeep` |
+| the bow, cut out of the tile | `#fbf1c7` | gruvbox-light `bg`   |
+| logotype, light lockup       | `#1e1e1e` | brand ink            |
+| logotype, dark lockup        | `#fbf1c7` | gruvbox-light `bg`   |
 
 ### What is measured, and where it is worst
 
-The bare glyph is one shape, so it has exactly one boundary: itself against the
-surface it was handed. Each colourway is measured only against the surfaces it
-can actually land on — page and card, of every theme in its mode:
+The bare glyph is a single ink, so it has exactly one boundary: itself against
+the surface it was handed. Each colourway is measured only against the surfaces
+it can actually land on — page and card, of every theme in its mode. Neutral
+ink clears its ground with enormous room, which is the point of moving the
+colour off the bow:
 
-|                         | worst      | on                     |
-| ----------------------- | ---------- | ---------------------- |
-| glyph on light surfaces | **4.30:1** | tokyo-night-light page |
-| glyph on dark surfaces  | **5.84:1** | gruvbox-dark page      |
+|                         | worst       | on                     |
+| ----------------------- | ----------- | ---------------------- |
+| glyph on light surfaces | **11.71:1** | tokyo-night-light page |
+| glyph on dark surfaces  | **12.99:1** | gruvbox-dark page      |
 
-The chip takes no mode, so its tile faces all 14 themes. It carries no border,
-and **neither gradient stop holds an edge alone** — they fail on opposite
-grounds, which is exactly why the gradient runs diagonally and puts both stops
-on the perimeter. What is held is that at least one clears:
+The chip takes no mode, so its **flat** tile faces all 14 themes at once. There
+is no gradient stop to fail on one ground and clear on another — the single
+ember carries the edge, and it clears the graphics floor on every surface it
+lands on:
 
-|                       | worst  | on                     |
-| --------------------- | ------ | ---------------------- |
-| tile, top of the fold | 2.72:1 | tokyo-night-light page |
-| tile, deep end        | 2.41:1 | gruvbox-dark page      |
+|           | worst  | on                     |
+| --------- | ------ | ---------------------- |
+| chip tile | 3.19:1 | tokyo-night-light page |
 
 The chip's own interior edge, and its habitat — the surfaces it lands on that
 are not Steward's:
 
-|                                 | ratio  |
-| ------------------------------- | ------ |
-| bow against the tile's top      | 3.41:1 |
-| bow against the tile's deep end | 5.40:1 |
-| tile on Chrome, light           | 4.67:1 |
-| tile on Chrome, dark            | 4.16:1 |
-| tile on GitHub, light           | 6.12:1 |
-| tile on GitHub, dark            | 4.89:1 |
+|                       | ratio  |
+| --------------------- | ------ |
+| bow against the tile  | 4.01:1 |
+| tile on Chrome, light | 3.47:1 |
+| tile on Chrome, dark  | 3.54:1 |
+| tile on GitHub, light | 4.55:1 |
+| tile on GitHub, dark  | 4.16:1 |
 
 ### Every drawn feature at the declared minimum
 
 Device pixels at 1×. A feature either survives here or is not drawn — held by
-`mark.test.ts`.
+`mark.test.ts`. The fold (`notch`, `puff`) is absent: it modulates the wing's
+edge rather than drawing a region with a width, exactly as the old `sweep` did.
 
 | ratio    | units | chip @ 16px | glyph @ 20px |
 | -------- | ----- | ----------- | ------------ |
-| `bowW`   | 56    | 14.00px     | 18.67px      |
-| `bowH`   | 28    | 7.00px      | 9.33px       |
-| `waist`  | 10    | 2.50px      | 3.33px       |
-| `cross`  | 4     | 1.00px      | 1.33px       |
-| `notch`  | 4     | 1.00px      | 1.33px       |
-| `corner` | 4     | 1.00px      | 1.33px       |
+| `bowW`   | 54    | 13.50px     | 18.62px      |
+| `bowH`   | 22    | 5.50px      | 7.59px       |
+| `inner`  | 7     | 1.75px      | 2.41px       |
+| `knot`   | 8     | 2.00px      | 2.76px       |
+| `button` | 4.8   | 1.20px      | 1.66px       |
 
 ### How the chip places it
 
-The bow is 56 × 28 units at an aspect of 2.00:1 — 88% × 44% of the tile if it
-were drawn at full size, which is a near miss rather than a margin. **Every**
-chip insets it, through one function, to the same share of whatever the viewer
-actually sees:
+The bow is 54 × 22 units at an aspect of 2.45:1 — 84% of the tile's width.
+Every chip insets the **whole mark** — bow, knot and buttons — through one
+function, to the same share of whatever the viewer actually sees:
 
 |               | scale              | bow spans | of the visible tile | ground per side |
 | ------------- | ------------------ | --------- | ------------------- | --------------- |
-| chip          | `CHIP_INSET` 0.86  | 48.2u     | 75%                 | 7.9u            |
-| maskable icon | `MASK_INSET` 0.688 | 38.5u     | 75%                 | 6.3u            |
+| chip          | `CHIP_INSET` 0.92  | 49.7u     | 78%                 | 7.2u            |
+| maskable icon | `MASK_INSET` 0.736 | 39.7u     | 78%                 | 5.7u            |
 
 The maskable column measures against the safe zone — the middle 80% a launcher
 is guaranteed to show — which is why its scale is `CHIP_INSET` times that and

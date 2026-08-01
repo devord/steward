@@ -1,48 +1,45 @@
 /**
  * The mark's geometry — the one source every surface draws from.
  *
- * The bow tie used to be hand-tuned path data pasted into six places at once
- * (`logo.tsx`, `favicon.svg`, `scripts/icon*.svg`, both wordmarks), each
- * carrying a comment begging the next editor to keep them in sync. They are
- * now all generated from this module by `node scripts/gen-brand.ts`, so the
- * geometry cannot drift: there is one bow, and every mirror is a render of it.
+ * Every static mirror (favicon, launcher icons, wordmark lockups, the whole
+ * `brand/` kit) is generated from this module by `node scripts/gen-brand.ts`,
+ * so the geometry cannot drift: there is one bow, and every mirror is a render
+ * of it. CI regenerates and fails on a dirty tree.
  *
- * ## The construction
+ * ## The construction (ADR-0055)
  *
- * Ratios on a 64-unit tile, in `MARK_RATIOS`, built into path data by
- * `buildMark`. Nothing here is eyeballed — the left wing is derived and the
- * right is its mirror, so symmetry is a property of the construction rather
- * than something to check for.
+ * The mark is a **real bow tie**: two folded wings meeting at a **square
+ * knot**, with **two buttons** below — the butler's collar, cinched, over the
+ * shirt studs. It supersedes the one-shape butterfly of ADR-0053: the knot and
+ * the buttons come back, and they are safe to draw because the mark is now a
+ * **single ink** in every framing (ADR-0055 § colour). There is no
+ * ink-against-ink boundary anywhere in it — the gaps between wing, knot and
+ * button are the *ground* showing through, so the only contrast edge the mark
+ * has is still itself against its surface, exactly as ADR-0053 required. What
+ * ADR-0053 could not afford was a *coloured* knot at 1.40:1; a same-ink knot
+ * costs nothing.
  *
- * This module used to *describe* six ratios in this comment while holding
- * three literal path strings underneath, which meant the numbers could not be
- * measured, varied or tested — only re-typed. They are data now, and the two
- * gates in `theme.test.ts` read them directly (ADR-0053).
+ * Ratios on a 64-unit tile, in `MARK_RATIOS`, built into path data by the
+ * wing/knot/button builders. Nothing here is eyeballed — the left wing is
+ * derived and the right is its mirror, so symmetry is a property of the
+ * construction. Two gates in `theme.test.ts`/`mark.test.ts` read the ratios
+ * directly.
  *
- * | ratio       |         | why                                             |
- * | ----------- | ------- | ----------------------------------------------- |
- * | bow         | 56 × 28 | exactly 2:1, and 88% × 44% of the tile          |
- * | waist       | 10 / 28 | the pinch; this is what makes it read as a bow  |
- * | cross       | 4       | each wing runs 4 past centre, so the two overlap |
- * | notch       | 5       | the butterfly bite in the outer edge            |
- * | corner      | 4       | the flared tip's rounding                       |
- * | sweep, puff | —       | where the top edge's control sits, as fractions |
- * | notchSpread | 6.5     | how far apart the notch's two controls sit      |
- * | field       | 56 / 64 | the tie's share of the tile — derived, not set  |
+ * | ratio        |         | why                                              |
+ * | ------------ | ------- | ------------------------------------------------ |
+ * | bow          | 54 × 22 | wider-than-tall, ~84% × 34% of the tile          |
+ * | inner        | 7       | how far the wing's throat sits past centre       |
+ * | innerTrunc   | 3       | the throat is a short edge, not a sharp point    |
+ * | notch        | 2.5     | concave pinch in the outer edge — the fold       |
+ * | puff         | 1       | convex bulge on the top/bottom edges — the cloth |
+ * | corner       | 2       | rounding on every wing vertex                    |
+ * | knot         | 8       | the square knot at the centre                    |
+ * | button       | 4.8 dia | the two studs below the bow                      |
  *
- * `sweep`, `puff` and `notchSpread` carried no name until the construction
- * became data: they were digits inside `"M 33 28 Q 22.65 23.74 …"` and nothing
- * could see them, let alone test them.
- *
- * Every length here clears one device pixel at the declared minimum
- * (`MARK_MINIMUM`), which is what `mark.test.ts` holds. The previous cut did
- * not: its `notch` was 0.65px on the favicon, its `corner` 0.45px and its
- * `cinch` 0.17px — three named ratios, two of them chosen by a failing test,
- * that at the size people actually see the mark were drawing nothing at all.
- *
- * Neither fold creases nor a tile bevel are drawn. Both were tried at every
- * weight that read as material and every one of them also read as damage — a
- * scratch across the cloth, a white bar floating over the tile.
+ * `notch` and `puff` are absent from `drawnFeatures`: like the old `sweep`,
+ * they *modulate an edge* rather than draw a region with a width, so there is
+ * nothing for the size gate to measure. Everything that is a region — the bow,
+ * the knot, the buttons — clears one device pixel at the declared minimum.
  */
 
 /** The tile the mark is constructed on. Every number below is in these units. */
@@ -50,157 +47,6 @@ export const MARK_TILE = 64
 
 /** The air the glyph crop leaves around the ink, per side. */
 const GLYPH_AIR = 2
-
-/**
- * The bare glyph's tight crop: the bow's own bounding box plus `GLYPH_AIR` on
- * every side, centred on the tile so the tie sits on the line-box centre next
- * to the wordmark.
- *
- * Derived rather than written down. As a literal (`"8 19 48 26"`) it was
- * correct only for a 44×22 bow, and silently cropped any other — which is a
- * trap for exactly the redraw this file is built to allow.
- */
-export function glyphViewBox(r: MarkRatios = MARK_RATIOS): string {
-  const w = r.bowW + 2 * GLYPH_AIR
-  const h = r.bowH + 2 * GLYPH_AIR
-  return `${MARK_TILE / 2 - w / 2} ${MARK_TILE / 2 - h / 2} ${w} ${h}`
-}
-
-/** The chip's crop — the full tile. */
-export const CHIP_VIEWBOX = "0 0 64 64"
-
-/** Every number the bow is built from, in tile units (or as a fraction). */
-export type MarkRatios = {
-  /** The bow's full span, tip to tip. */
-  bowW: number
-  /** The bow's height at the flared tips. */
-  bowH: number
-  /** The pinch at the centre — what makes the silhouette read as a bow. */
-  waist: number
-  /** How far each wing reaches past the tile's centre, so the two overlap. */
-  cross: number
-  /** Depth of the butterfly bite in the outer edge. */
-  notch: number
-  /** Rounding at the flared tip's two corners. */
-  corner: number
-  /** Where the top edge's control sits along the tip-to-waist run, 0–1. */
-  sweep: number
-  /** How far that control lifts from the waist toward the tip, 0–1. */
-  puff: number
-  /** How far apart the notch's two controls sit, either side of centre. */
-  notchSpread: number
-}
-
-/**
- * The bow.
- *
- * **There is no knot** (ADR-0053). The mark was three shapes for a year and
- * the third one was the whole problem: a 10×14 block whose only job was to be
- * a different colour from the cloth it lay on, at a size where that boundary
- * was 4px wide and 1.40:1. Every attempt to save it made it worse — opening
- * the waist to 59% turned the bow into a slab with a letterbox slot, and
- * bunching the cloth behind it turned it into a belt buckle.
- *
- * Dropping it does not solve that problem, it deletes it: with one shape
- * there is no interior edge to hold at 3:1, no feature to keep above a pixel,
- * and nothing to measure clearance for. The waist pinch carries the read on
- * its own — which `gen-brand.ts` had already argued for the one-colour cut,
- * in as many words: *"the knot is a colour relationship, not a shape the
- * outline depends on. At one ink it simply stops being drawn, and nothing is
- * lost."* That was true at every ink, not just one.
- *
- * Gone with it: `knotW`, `knotH`, `knotCorner`, `cinch`, and the `gather` /
- * `pinchGap` pair that existed only to enclose it. `tuck` is now `cross`,
- * measured from the centre rather than from the knot's edge, because there is
- * no knot's edge.
- *
- * `field` is not here either: the tie's share of the tile is
- * `bowW / MARK_TILE`, a consequence of the bow's span rather than a knob of
- * its own. Naming it separately would let the two disagree.
- */
-export const MARK_RATIOS: MarkRatios = {
-  // 56×28 holds the 2:1 the bow has always been while covering 88% × 44% of
-  // the tile, against 69% × 34% before. A 2:1 shape in a square can never use
-  // more than half of it, which is why the icon read as small next to other
-  // products' — and why the tile, not the bow, is where the rest of the
-  // presence had to come from.
-  bowW: 56,
-  bowH: 28,
-  waist: 10,
-  cross: 4,
-  // 4.0, not 5. The size gate wants ≥1 device pixel at 16px, which is 4 units
-  // exactly — and DESIGN.md's own prior art says a notch past ~4.6 rounds each
-  // wing into its own lobe. At 5 it does: invisible at 16px, where the bite is
-  // 1.25px, and at hero scale the silhouette reads as a bone rather than a
-  // bow. The window between the two constraints is [4.0, 4.6); take the floor.
-  notch: 4,
-  corner: 4,
-  sweep: 0.488,
-  puff: 0.609,
-  notchSpread: 6.5,
-}
-
-/**
- * The chip's bow is **level**, like every other framing of it.
- *
- * The tilt went 12° → 4° → 0, and each step was the same discovery made at a
- * larger size: the bow is symmetric by construction and the tile is square, so
- * any rotation fights both. Twelve turned the silhouette into a fish. Four was
- * the point where the fight stopped being visible — not the point where it
- * stopped. ADR-0053's own amendment already recorded the finding and then
- * declined to act on it: *"Zero is the cleanest read of the four."*
- *
- * What the tilt was for — a bow tie is worn rather than laid flat — is a
- * property of the object, not something the drawing has to mime. It costs the
- * chip its only asymmetry, and it costs the launcher icon a shape whose tips
- * meet the mask at an angle. Level, the mark is the same object at every
- * framing and every size, which is the whole of what an identity is for.
- *
- * Kept as a named constant rather than deleted: `mark-sheet.ts` varies it to
- * re-ask the question, and a zero that can be pointed at is a decision, while
- * an absent rotation is an omission.
- */
-export const CHIP_TILT = 0
-
-/**
- * How much the bow is scaled down inside the chip.
- *
- * The bow is 56 units on a 64-unit tile. Drawn at full size it reaches within
- * two units of the edge, which is not a margin — it is a near miss, and it
- * leaves the chip with no air at all, against a kit rule that asks for clear
- * space on every side including the mark's own container. At 0.86 the bow
- * spans ~48 units, the tile keeps ~8 units of ground around it, and the mark
- * reads as placed rather than crammed.
- *
- * This applies to **every** chip. It used to be applied by `logo.tsx` alone,
- * so the app's own hero chip was inset and every generated one — favicon,
- * launcher icons, both wordmark lockups, the whole `brand/` kit — was not.
- * That is the defect `chipTransform` exists to make impossible: one placement,
- * not a constant plus the discipline to remember it.
- */
-export const CHIP_INSET = 0.86
-
-/**
- * The share of a maskable icon's canvas a launcher is guaranteed to show.
- *
- * The maskable spec reserves the middle 80%; everything outside it belongs to
- * whatever shape the launcher feels like cropping to. So the full-bleed icon's
- * bow has to be scaled by the safe zone *as well as* by `CHIP_INSET`, or it
- * keeps its size while the tile around it visibly shrinks — which is exactly
- * how the shipped Android icon ended up with its tips against the mask.
- */
-export const MASK_SAFE = 0.8
-
-/** The bow's scale inside the maskable icon: the chip's inset, masked. */
-export const MASK_INSET = CHIP_INSET * MASK_SAFE
-
-/**
- * A cubic whose two control points sit `d` off its chord bows out by exactly
- * ¾·d at the midpoint, so a depth anyone can name (`notch`, `cinch`) converts
- * to a control offset by 4/3. Without this the depths in `MARK_RATIOS` would
- * be control offsets — numbers that mean nothing to the eye measuring them.
- */
-const CTL = 4 / 3
 
 const C = MARK_TILE / 2
 
@@ -210,128 +56,212 @@ function n(v: number): string {
   return String(r === 0 ? 0 : r)
 }
 
+/** Every number the bow is built from, in tile units (or as a diameter). */
+export type MarkRatios = {
+  /** The bow's full span, tip to tip. */
+  bowW: number
+  /** The bow's height at the flared tips. */
+  bowH: number
+  /** How far each wing's inner throat sits past the tile's centre. */
+  inner: number
+  /** Half-height of the wing's short inner edge — the throat, not a point. */
+  innerTrunc: number
+  /** Concave depth of the outer edge — the fold that reads as folded cloth. */
+  notch: number
+  /** Convex bulge on the top and bottom edges — the puff of the fabric. */
+  puff: number
+  /** Rounding at every wing vertex. */
+  corner: number
+  /** The square knot's side. */
+  knot: number
+  /** Rounding on the knot's corners. */
+  knotCorner: number
+  /** The button studs' diameter. */
+  button: number
+  /** The first button's centre, below the bow. */
+  buttonTop: number
+  /** Centre-to-centre spacing of the two buttons. */
+  buttonGap: number
+}
+
 /**
- * How a chip places the bow on its tile: turned by `CHIP_TILT`, then scaled
- * about the tile's centre.
+ * The bow tie.
  *
- * The one thing every chip has to agree on, and the one thing they did not.
- * `logo.tsx` composed rotate + inset inline; `gen-brand.ts` composed rotate
- * alone for the standard chip and rotate + a hand-typed `0.82` for the
- * maskable. Three placements, one of which shipped to the landing page and two
- * of which shipped everywhere else — so the mark had visibly more air in the
- * app than in the browser tab or on a home screen, which is the report that
- * produced this function.
+ * A folded butterfly: the outer edge nips inward (`notch`) so the tips flare
+ * and the middle pinches like real cloth, the top and bottom edges bulge
+ * (`puff`), and the throat is a short vertical edge rather than a sharp point,
+ * so the wing tucks *into* the knot instead of stabbing it. The knot bridges
+ * the two wings; the buttons sit below.
+ */
+export const MARK_RATIOS: MarkRatios = {
+  bowW: 54,
+  bowH: 22,
+  inner: 7,
+  innerTrunc: 3,
+  notch: 2.5,
+  puff: 1,
+  corner: 2,
+  knot: 8,
+  knotCorner: 1.5,
+  button: 4.8,
+  buttonTop: 50,
+  buttonGap: 6.6,
+}
+
+/**
+ * The chip's bow is **level**, like every framing of it (ADR-0053): the bow is
+ * symmetric by construction and the tile is square, so any rotation fights
+ * both. Kept as a named constant so `mark-sheet.ts` can vary it to re-ask.
+ */
+export const CHIP_TILT = 0
+
+/**
+ * How much the whole mark is scaled inside the chip.
  *
- * Emits nothing for a rotation of zero and nothing for a scale of one, so the
- * generated SVGs carry no identity transforms.
+ * The mark spans 54 units on a 64 tile; drawn at full size it leaves no ground.
+ * At 0.92 the bow fills the tile the way a product icon should — the read that
+ * "the logo is too small in the app icon" was the chip sitting well under this
+ * — while the superellipse still keeps a hair of ground at the corners. Applies
+ * to **every** chip through `chipTransform`, so the app's hero chip and the
+ * favicon are one drawing.
+ */
+export const CHIP_INSET = 0.92
+
+/** The share of a maskable icon's canvas a launcher is guaranteed to show. */
+export const MASK_SAFE = 0.8
+
+/** The mark's scale inside the maskable icon: the chip's inset, masked. */
+export const MASK_INSET = CHIP_INSET * MASK_SAFE
+
+/**
+ * The mark's ink bounds, derived from the ratios.
+ *
+ * The buttons hang below the bow, so the ink's centre of area (`cy`) sits below
+ * the tile centre — which is why every chip centres the *whole mark* on the
+ * tile rather than the bow, or the buttons would strand against the edge.
+ */
+function markBounds(r: MarkRatios = MARK_RATIOS) {
+  const top = C - r.bowH / 2
+  const bottom = r.buttonTop + r.buttonGap + r.button / 2
+  return {
+    left: C - r.bowW / 2,
+    right: C + r.bowW / 2,
+    top,
+    bottom,
+    cx: C,
+    cy: (top + bottom) / 2,
+  }
+}
+
+/**
+ * How a chip places the mark on its tile: scaled about the mark's own centre,
+ * which is then dropped on the tile centre. One function, so every chip agrees
+ * (ADR-0053). Emits nothing for a scale of one.
  */
 export function chipTransform(scale: number = CHIP_INSET): string {
-  const parts: string[] = []
-  if (CHIP_TILT) parts.push(`rotate(${n(CHIP_TILT)} ${n(C)} ${n(C)})`)
-  if (scale !== 1) {
-    // Three decimals, not `n`'s two: `MASK_INSET` is a product rather than a
-    // typed-in number, and rounding it to 0.69 would leave the generated
-    // measurements describing a chip half a percent away from the shipped one.
-    const s = String(Math.round(scale * 1000) / 1000)
-    parts.push(
-      `translate(${n(C)} ${n(C)}) scale(${s}) translate(${n(-C)} ${n(-C)})`,
-    )
-  }
-  return parts.join(" ")
+  // CHIP_TILT is 0 (the bow is level); a rotation would be composed here.
+  if (scale === 1) return ""
+  const { cx, cy } = markBounds()
+  const s = String(Math.round(scale * 1000) / 1000)
+  // scale about the mark's centre, then land that point on the tile centre.
+  return `translate(${n(C - scale * cx)} ${n(C - scale * cy)}) scale(${s})`
 }
 
 type Pt = [number, number]
-type Quad = { p0: Pt; p1: Pt; p2: Pt }
 
-/** Where a wing's key x-positions land, for a given side. */
-function wingAnchors(r: MarkRatios, dir: 1 | -1) {
-  const outer = C - (dir * r.bowW) / 2
-  // The inner edge runs `cross` units past the tile's centre, so the two
-  // wings overlap each other and the silhouette is one continuous mass rather
-  // than two shapes meeting on a seam. At the old overlap of two units the
-  // join was half a pixel at 16px and any antialiasing showed the ground
-  // through the middle; eight units is two pixels there.
-  const inner = C + dir * r.cross
-  const cornerX = outer + dir * r.corner
-  return { outer, inner, cornerX }
+/**
+ * A closed path through `pts` with every corner rounded by `r` (clamped per
+ * corner to half the shorter adjacent edge). One quadratic per vertex — enough
+ * to soften a tip without a full arc, and it mirrors exactly, which is what the
+ * symmetry gate reads.
+ */
+function roundedPoly(pts: Pt[], r: number): string {
+  const len = pts.length
+  let d = ""
+  for (let i = 0; i < len; i++) {
+    const p0 = pts[(i - 1 + len) % len]
+    const p1 = pts[i]
+    const p2 = pts[(i + 1) % len]
+    const v1: Pt = [p0[0] - p1[0], p0[1] - p1[1]]
+    const v2: Pt = [p2[0] - p1[0], p2[1] - p1[1]]
+    const l1 = Math.hypot(v1[0], v1[1])
+    const l2 = Math.hypot(v2[0], v2[1])
+    const rr = Math.min(r, l1 / 2, l2 / 2)
+    const a: Pt = [p1[0] + (v1[0] / l1) * rr, p1[1] + (v1[1] / l1) * rr]
+    const b: Pt = [p1[0] + (v2[0] / l2) * rr, p1[1] + (v2[1] / l2) * rr]
+    d +=
+      (i ? `L ${n(a[0])} ${n(a[1])}` : `M ${n(a[0])} ${n(a[1])}`) +
+      ` Q ${n(p1[0])} ${n(p1[1])} ${n(b[0])} ${n(b[1])}`
+  }
+  return d + " Z"
 }
 
 /**
- * The wing's top edge, inner end first.
- *
- * One quadratic: from the waist at the centre out to the flared tip. It was
- * briefly four, to bunch cloth behind a knot that no longer exists.
+ * One wing. `dir` is 1 for the left and −1 for the right, which is the whole of
+ * the mirroring — there is no second copy to keep in step. The point list runs
+ * outer-top → top-edge-mid (puffed) → throat-top → throat-bottom →
+ * bottom-edge-mid (puffed) → outer-bottom → outer-edge-mid (notched inward).
  */
-function topEdge(r: MarkRatios, dir: 1 | -1): Quad[] {
-  const { inner, cornerX } = wingAnchors(r, dir)
-  const puffY = r.waist / 2 + r.puff * (r.bowH / 2 - r.waist / 2)
+function wingPath(r: MarkRatios, dir: 1 | -1): string {
+  const outer = C - dir * (r.bowW / 2)
+  const throat = C - dir * r.inner
+  const topY = C - r.bowH / 2
+  const botY = C + r.bowH / 2
+  const midx = (outer + throat) / 2
+  const pts: Pt[] = [
+    [outer, topY],
+    [midx, (topY + (C - r.innerTrunc)) / 2 - r.puff],
+    [throat, C - r.innerTrunc],
+    [throat, C + r.innerTrunc],
+    [midx, (botY + (C + r.innerTrunc)) / 2 + r.puff],
+    [outer, botY],
+    [outer + dir * r.notch, C],
+  ]
+  return roundedPoly(pts, r.corner)
+}
+
+/** The square knot at the centre, a rounded square. */
+function knotPath(r: MarkRatios): string {
+  const h = r.knot / 2
+  return roundedPoly(
+    [
+      [C - h, C - h],
+      [C + h, C - h],
+      [C + h, C + h],
+      [C - h, C + h],
+    ],
+    r.knotCorner,
+  )
+}
+
+/** The two button studs below the bow. */
+export function buttonCircles(
+  r: MarkRatios = MARK_RATIOS,
+): { cx: number; cy: number; rad: number }[] {
+  const rad = r.button / 2
   return [
-    {
-      p0: [inner, C - r.waist / 2],
-      p1: [inner - dir * r.sweep * Math.abs(cornerX - inner), C - puffY],
-      p2: [cornerX, C - r.bowH / 2],
-    },
+    { cx: C, cy: r.buttonTop, rad },
+    { cx: C, cy: r.buttonTop + r.buttonGap, rad },
   ]
 }
 
 /**
- * One wing. `dir` is 1 for the left and −1 for the right, which is the whole
- * of the mirroring — there is no second copy of this to keep in step.
- */
-function wingPath(r: MarkRatios, dir: 1 | -1): string {
-  const { outer, cornerX } = wingAnchors(r, dir)
-  const yTop = C - r.bowH / 2
-  const yBot = C + r.bowH / 2
-  const notchX = outer + dir * r.notch * CTL
-  const top = topEdge(r, dir)
-  // The bottom edge is the top one reflected through the tile's centre line,
-  // walked back inward.
-  const flip = (p: Pt): Pt => [p[0], 2 * C - p[1]]
-  const bottom = [...top]
-    .reverse()
-    .map((q) => ({ p0: flip(q.p2), p1: flip(q.p1), p2: flip(q.p0) }))
-  const draw = (q: Quad) =>
-    `Q ${n(q.p1[0])} ${n(q.p1[1])} ${n(q.p2[0])} ${n(q.p2[1])}`
-  return [
-    `M ${n(top[0].p0[0])} ${n(top[0].p0[1])}`,
-    ...top.map(draw),
-    `Q ${n(outer)} ${n(yTop)} ${n(outer)} ${n(yTop + r.corner)}`,
-    `C ${n(notchX)} ${n(C - r.notchSpread)} ${n(notchX)} ${n(C + r.notchSpread)} ${n(outer)} ${n(yBot - r.corner)}`,
-    `Q ${n(outer)} ${n(yBot)} ${n(cornerX)} ${n(yBot)}`,
-    ...bottom.map(draw),
-    "Z",
-  ].join(" ")
-}
-
-/**
- * The two wings for a given set of ratios.
- *
- * Taking ratios as an argument rather than reading the constant is what makes
- * a proof sheet possible: `scripts/mark-sheet.ts` renders several cuts side by
- * side by calling this with each, so a redraw is judged against real pixels
- * instead of described in prose (ADR-0054).
+ * The mark's shapes for a given set of ratios: two wings and a knot, plus the
+ * buttons via {@link buttonCircles}. Taking ratios as an argument is what lets
+ * `scripts/mark-sheet.ts` render alternative cuts side by side.
  */
 export function buildMark(r: MarkRatios = MARK_RATIOS): {
   wingL: string
   wingR: string
+  knot: string
 } {
-  return { wingL: wingPath(r, 1), wingR: wingPath(r, -1) }
+  return { wingL: wingPath(r, 1), wingR: wingPath(r, -1), knot: knotPath(r) }
 }
 
 /**
- * The chip's tile as a **superellipse** — the continuous-curvature squircle.
- *
- * A rect's `rx` draws a circular arc, which meets the straight edge at a
- * curvature discontinuity: the corner starts turning all at once, and the eye
- * reads the join even when it cannot name it. Every platform icon grid uses a
- * continuous curve instead, and it is most of what separates a tile that looks
- * drawn from one that looks defaulted. `n = 5` sits near Apple's.
- *
- * Emitted as a sampled polyline rather than a Bézier fit: the tile is
- * generated into static SVGs anyway, the sampling error at 128 steps is far
- * under a device pixel at any size the mark ships at, and a polyline cannot
- * drift from the curve it approximates the way a hand-fitted control point
- * can.
+ * The chip's tile as a **superellipse** — the continuous-curvature squircle
+ * every platform icon grid uses, rather than a rect's circular-arc corner.
+ * Sampled as a polyline; the error at 128 steps is far under a device pixel.
  */
 export function squirclePath(
   size: number = MARK_TILE,
@@ -353,20 +283,15 @@ export function squirclePath(
 
 /**
  * The smallest size each framing is declared to survive, in **device** pixels
- * at 1×, measured across the framing's own viewBox width.
- *
- * Device pixels, not CSS pixels: a floor that assumes a 2× display is not a
- * floor. The `.ico` frames are packed at 16, Windows at 100% and every
- * external monitor render there, and that is where the fine work disappears.
+ * at 1×, measured across the framing's own viewBox width. Device pixels, not
+ * CSS: the `.ico` frames pack at 16 and Windows renders there at 100%.
  */
 export const MARK_MINIMUM = { chip: 16, glyph: 20 } as const
 
 /**
  * Units across, per framing — the chip shows the whole tile, the glyph crops
- * to the bow. This is the divisor that turns a declared minimum into pixels
- * per unit, and it is why the two framings have different floors: at 16px the
- * chip spends a third of its width on tile around the bow, so its units are
- * smaller than the glyph's at 20px.
+ * to the bow's width. The divisor that turns a declared minimum into pixels per
+ * unit.
  */
 export function markSpan(
   framing: "chip" | "glyph",
@@ -383,10 +308,11 @@ export const MARK_SPAN = {
 /**
  * The drawn features a viewer can lose, in tile units.
  *
- * `sweep` and `puff` are absent because they are fractions positioning a
- * control point, and `notchSpread` because it places one rather than sizing
- * anything — none of the three is a thing on screen with a width. Everything
- * that *is* has to survive `MARK_MINIMUM` (ADR-0053).
+ * `notch` and `puff` are absent: they modulate the wing's edges rather than
+ * draw a region with a width, exactly as `sweep` was. Everything that *is* a
+ * region — the bow, the knot, the buttons — has to survive `MARK_MINIMUM`.
+ * `button` is a diameter; below one device pixel the two studs would render as
+ * nothing, so the size gate holds them like any other mark.
  */
 export function drawnFeatures(
   r: MarkRatios = MARK_RATIOS,
@@ -394,52 +320,52 @@ export function drawnFeatures(
   return {
     bowW: r.bowW,
     bowH: r.bowH,
-    waist: r.waist,
-    cross: r.cross,
-    notch: r.notch,
-    corner: r.corner,
+    inner: r.inner,
+    knot: r.knot,
+    button: r.button,
   }
 }
 
 const MARK = buildMark()
+
+/**
+ * The bare glyph's crop: the mark's own ink bounds plus `GLYPH_AIR` on every
+ * side. Wider than tall through the bow, and taller through the buttons, so the
+ * crop is the full mark rather than a square — derived, so a redraw cannot clip
+ * itself.
+ */
+export function glyphViewBox(r: MarkRatios = MARK_RATIOS): string {
+  const b = markBounds(r)
+  const w = r.bowW + 2 * GLYPH_AIR
+  const h = b.bottom - b.top + 2 * GLYPH_AIR
+  return `${n(C - w / 2)} ${n(b.top - GLYPH_AIR)} ${n(w)} ${n(h)}`
+}
+
+/** The chip's crop — the full tile. */
+export const CHIP_VIEWBOX = "0 0 64 64"
 
 /** The shipped glyph crop. Callers rendering another cut want `glyphViewBox`. */
 export const GLYPH_VIEWBOX = glyphViewBox()
 
 export const WING_L = MARK.wingL
 export const WING_R = MARK.wingR
+export const KNOT = MARK.knot
+
+/** The two button studs, resolved. */
+export const MARK_BUTTONS = buttonCircles()
 
 /**
- * The two wings, which overlap each other at the centre by `2 × cross`.
- *
- * They carry the same fill everywhere the mark is drawn, so the overlap is
- * invisible and the silhouette is one mass. There is no third path: the knot
- * is not drawn (ADR-0053).
+ * The mark's paths — two wings and a knot, all carrying the same fill wherever
+ * the mark is drawn (ADR-0055). The buttons are circles, in {@link MARK_BUTTONS}.
  */
-export const MARK_PATHS = [WING_L, WING_R] as const
-
-/**
- * The chip's tile gradient axis — top-left to bottom-right across the tile.
- *
- * The diagonal is not a style choice. The two stops fail on opposite grounds:
- * `#d65d0e` clears 3:1 on every dark surface and drops to 2.72 on a pale one,
- * `#af3a03` clears every light surface and drops to 2.41 on a dark one. Run
- * diagonally, both stops touch the perimeter, so on all 32 grounds measured —
- * Steward's 14 themes twice over, plus Chrome's and GitHub's light and dark
- * chrome — at least one part of the tile's edge always clears the floor. That
- * is what lets the chip drop its border.
- */
-export const TILE_GRADIENT = { x1: 6, y1: 0, x2: 58, y2: 64 } as const
+export const MARK_PATHS = [WING_L, WING_R, KNOT] as const
 
 /**
  * The logotype: "Steward" set in Geist Mono 600 at 40px, tracking −1, and
- * converted to outlines.
- *
- * Outlines rather than a live `<text>` node because the wordmark's audience
- * is GitHub's image context, which cannot load a webfont — live text would
- * render in whatever mono the viewer happens to have and the lockup would
- * stop being the brand. Positioned at a baseline of y=46.5, which is the
- * measured optical alignment that centres the word's cap band on the tile.
+ * converted to outlines. Outlines rather than a live `<text>` node because the
+ * wordmark's audience is GitHub's image context, which cannot load a webfont.
+ * Baseline y=46.5, the measured optical alignment that centres the word's cap
+ * band on the tile.
  */
 export const LOGOTYPE =
   "M98.30 47.14Q95.15 47.14 92.86 45.90Q90.56 44.66 89.25 42.41Q87.94 40.16 87.70 37.07L92.70 36.80Q92.97 38.72 93.73 40.04Q94.50 41.35 95.70 42.00Q96.90 42.66 98.52 42.66Q100.04 42.66 101.10 42.26Q102.15 41.85 102.71 41.06Q103.26 40.26 103.26 39.12Q103.26 37.93 102.71 37.07Q102.15 36.21 100.72 35.49Q99.28 34.76 96.60 34.04Q93.72 33.24 91.88 32.23Q90.03 31.22 89.16 29.70Q88.30 28.17 88.30 25.89Q88.30 23.35 89.44 21.45Q90.58 19.55 92.74 18.50Q94.91 17.46 97.96 17.46Q100.96 17.46 103.09 18.60Q105.22 19.74 106.44 21.84Q107.66 23.93 107.91 26.82L102.87 27.08Q102.66 25.52 102.03 24.36Q101.40 23.20 100.34 22.57Q99.27 21.94 97.77 21.94Q95.74 21.94 94.54 22.94Q93.34 23.93 93.34 25.60Q93.34 26.73 93.87 27.50Q94.40 28.26 95.73 28.86Q97.06 29.45 99.43 30.12Q102.74 31.01 104.68 32.22Q106.62 33.43 107.46 35.08Q108.30 36.72 108.30 39.00Q108.30 41.45 107.08 43.29Q105.86 45.12 103.62 46.13Q101.38 47.14 98.30 47.14Z M123.99 46.50Q120.56 46.50 118.92 44.92Q117.28 43.35 117.28 40.08V20.13H122.02V39.73Q122.02 41.21 122.72 41.93Q123.42 42.64 124.86 42.64H130.12V46.50ZM110.84 29.00V25.14H130.12V29.00Z M144.14 46.98Q141.14 46.98 138.88 45.61Q136.62 44.24 135.37 41.73Q134.12 39.21 134.12 35.82Q134.12 32.48 135.36 29.97Q136.61 27.47 138.84 26.06Q141.06 24.66 144.05 24.66Q146.94 24.66 149.15 26.02Q151.37 27.39 152.62 29.91Q153.88 32.43 153.88 35.91V37.15H139.02Q139.22 39.88 140.60 41.30Q141.98 42.72 144.22 42.72Q145.92 42.72 147.06 41.92Q148.20 41.12 148.64 39.79L153.47 40.13Q152.47 43.32 150.08 45.15Q147.68 46.98 144.14 46.98ZM139.06 33.69H148.78Q148.57 31.27 147.28 30.09Q145.99 28.92 144.02 28.92Q141.99 28.92 140.70 30.13Q139.41 31.34 139.06 33.69Z M159.66 46.50 155.64 25.14H160.47L162.70 40.36L165.22 28.20H168.78L171.30 40.36L173.53 25.14H178.36L174.36 46.50H169.45L167.00 35.00L164.55 46.50Z M187.04 46.98Q185.06 46.98 183.44 46.26Q181.82 45.54 180.88 44.20Q179.94 42.86 179.94 41.03Q179.94 38.31 181.64 36.80Q183.34 35.29 186.53 34.63L193.20 33.22Q193.20 30.96 192.25 29.80Q191.30 28.63 189.31 28.63Q187.50 28.63 186.50 29.50Q185.50 30.36 185.16 31.84L180.24 31.54Q180.84 28.44 183.21 26.55Q185.58 24.66 189.25 24.66Q193.62 24.66 195.78 26.98Q197.94 29.31 197.94 33.46V41.43Q197.94 42.21 198.24 42.51Q198.54 42.80 199.12 42.80H200.16V46.50Q199.92 46.54 199.38 46.59Q198.83 46.64 198.27 46.64Q196.75 46.64 195.69 46.12Q194.63 45.60 194.08 44.55Q193.53 43.50 193.47 41.96H194.08Q193.86 43.38 192.92 44.53Q191.97 45.68 190.46 46.33Q188.94 46.98 187.04 46.98ZM187.89 43.28Q189.62 43.28 190.80 42.67Q191.98 42.06 192.59 40.91Q193.20 39.76 193.20 38.20V36.74L187.87 37.86Q186.18 38.20 185.50 38.88Q184.83 39.56 184.83 40.74Q184.83 41.93 185.63 42.61Q186.42 43.28 187.89 43.28Z M204.12 46.50V42.64H211.47L209.38 44.71V26.91L211.47 29.00H204.12V25.14H212.98L213.42 31.33L213.00 31.00Q213.27 28.09 214.59 26.62Q215.91 25.14 218.42 25.14H223.08V29.11H218.70Q217.17 29.11 216.16 29.66Q215.14 30.22 214.63 31.30Q214.12 32.39 214.12 34.02V44.71L212.06 42.64H220.71V46.50Z M233.99 46.98Q231.34 46.98 229.38 45.64Q227.42 44.31 226.35 41.81Q225.28 39.32 225.28 35.82Q225.28 32.32 226.35 29.83Q227.42 27.33 229.38 26.00Q231.34 24.66 233.99 24.66Q235.78 24.66 237.17 25.30Q238.57 25.94 239.49 27.00Q240.42 28.05 240.74 29.32L240.30 30.21V18.10H245.04V46.50H240.56L240.33 41.11L240.91 41.92Q240.48 43.37 239.52 44.52Q238.57 45.67 237.18 46.32Q235.78 46.98 233.99 46.98ZM235.10 42.72Q236.69 42.72 237.86 41.90Q239.03 41.08 239.67 39.53Q240.30 37.98 240.30 35.82Q240.30 33.61 239.67 32.07Q239.03 30.52 237.86 29.72Q236.68 28.92 235.06 28.92Q232.74 28.92 231.48 30.72Q230.21 32.52 230.21 35.82Q230.21 39.09 231.48 40.91Q232.74 42.72 235.10 42.72Z"

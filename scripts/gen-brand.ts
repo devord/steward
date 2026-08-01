@@ -39,7 +39,9 @@ import {
   CHIP_VIEWBOX,
   drawnFeatures,
   glyphViewBox,
+  KNOT,
   LOGOTYPE,
+  MARK_BUTTONS,
   MARK_MINIMUM,
   MARK_RATIOS,
   MARK_TILE,
@@ -47,7 +49,6 @@ import {
   MASK_INSET,
   MASK_SAFE,
   squirclePath,
-  TILE_GRADIENT,
   WING_L,
   WING_R,
   WORDMARK_VIEWBOX,
@@ -197,42 +198,61 @@ ${body}
 `
 }
 
-/** The bare glyph: two wings in one flat tone, level. */
-function glyph(fill: string, cls?: string): string {
-  const attr = cls ? `class="${cls}"` : `fill="${fill}"`
+/**
+ * The mark's ink: two folded wings, a square knot, two buttons (ADR-0055), all
+ * carrying the one attribute — a `fill="…"` or a `class="…"` for the auto cut.
+ */
+function markBody(attr: string, opts: { buttons?: boolean } = {}): string {
+  const withButtons = opts.buttons ?? true
+  const buttons = withButtons
+    ? "\n" +
+      MARK_BUTTONS.map(
+        (b) => `  <circle ${attr} cx="${b.cx}" cy="${b.cy}" r="${b.rad}"/>`,
+      ).join("\n")
+    : ""
   return `  <path ${attr} d="${WING_L}"/>
-  <path ${attr} d="${WING_R}"/>`
+  <path ${attr} d="${WING_R}"/>
+  <path ${attr} d="${KNOT}"/>${buttons}`
+}
+
+/** The bare glyph: the mark in one flat ink, level. */
+function glyph(fill: string, cls?: string): string {
+  return markBody(cls ? `class="${cls}"` : `fill="${fill}"`)
 }
 
 const TILE = squirclePath()
 
 /**
- * The product-icon chip: the identity drenched across a superellipse tile,
- * with the bow cut out of it in paper.
+ * How the mark is centred inside a lockup's leading slot. It is `chipTransform`
+ * without the tile — the whole mark (bow, knot, buttons), scaled about its own
+ * centre and dropped on the tile centre — so the lockup mark and the chip are
+ * placed by the same rule.
+ */
+const LOCK_SCALE = 1.1
+function lockupMark(fill: string): string {
+  return `  <g transform="${chipTransform(LOCK_SCALE)}">
+${markBody(`fill="${fill}"`)}
+  </g>`
+}
+
+/**
+ * The product-icon chip: a **flat ember** superellipse tile with the bow cut
+ * out of it in cream (ADR-0055). No gradient — the flat #c75117 clears every
+ * ground the chip lands on by itself, so the diagonal the old two-stop tile
+ * needed is gone, and the chip is one drawing at every size.
  *
  * `bleed` squares the corners and scales the artwork for the maskable variant,
- * where the launcher supplies its own mask and crops ~20%.
- *
- * The placement is `chipTransform`'s, not this file's. It used to be composed
- * here — no inset at all for the standard chip, a literal `0.82` for the
- * maskable — while `logo.tsx` composed its own with `CHIP_INSET`. Same
- * geometry, three different framings of it, and the one that looked right was
- * the one that never reached a browser tab or a home screen.
+ * where the launcher supplies its own mask and crops ~20%. The placement is
+ * `chipTransform`'s, so the app's hero chip and the favicon are one drawing.
  */
-function chip(opts: { bleed?: boolean } = {}): string {
-  const { tileTop, tileDeep, bow } = CHIP_IDENTITY
-  const g = TILE_GRADIENT
-  const tile = opts.bleed
-    ? `  <rect width="64" height="64" fill="url(#tile)"/>`
-    : `  <path d="${TILE}" fill="url(#tile)"/>`
-  return `  <defs>
-    <linearGradient id="tile" gradientUnits="userSpaceOnUse" x1="${g.x1}" y1="${g.y1}" x2="${g.x2}" y2="${g.y2}">
-      <stop offset="0" stop-color="${tileTop}"/><stop offset="1" stop-color="${tileDeep}"/>
-    </linearGradient>
-  </defs>
-${tile}
+function chip(opts: { bleed?: boolean; buttons?: boolean } = {}): string {
+  const { tile, bow } = CHIP_IDENTITY
+  const tileShape = opts.bleed
+    ? `  <rect width="64" height="64" fill="${tile}"/>`
+    : `  <path d="${TILE}" fill="${tile}"/>`
+  return `${tileShape}
   <g transform="${chipTransform(opts.bleed ? MASK_INSET : CHIP_INSET)}">
-    <path d="${WING_L}" fill="${bow}"/><path d="${WING_R}" fill="${bow}"/>
+${markBody(`fill="${bow}"`, { buttons: opts.buttons })}
   </g>`
 }
 
@@ -251,7 +271,7 @@ for (const mode of ["light", "dark"] as const) {
     svg(
       GLYPH_BOX,
       ...GLYPH_SIZE,
-      glyph(MARK_IDENTITY[mode].wingFlat),
+      glyph(MARK_IDENTITY[mode].ink),
       NOTE(`Steward mark, ${mode} colourway`),
     ),
   )
@@ -260,7 +280,7 @@ for (const mode of ["light", "dark"] as const) {
     svg(
       WORDMARK_VIEWBOX,
       ...WORDMARK_SIZE,
-      `${chip()}\n  <path d="${LOGOTYPE}" fill="${LOGOTYPE_INK[mode]}"/>`,
+      `${lockupMark(MARK_IDENTITY[mode].ink)}\n  <path d="${LOGOTYPE}" fill="${LOGOTYPE_INK[mode]}"/>`,
       NOTE(`Steward wordmark, ${mode} colourway`),
     ),
   )
@@ -299,10 +319,9 @@ for (const [name, ink] of [
     svg(
       WORDMARK_VIEWBOX,
       ...WORDMARK_SIZE,
-      // The bow sits in the chip's slot with no tile under it, so it takes the
-      // chip's placement: at full size it would out-measure the coloured
-      // lockup's bow beside it in the same kit.
-      `  <g transform="${chipTransform()}">\n${glyph(ink)}\n  </g>\n  <path d="${LOGOTYPE}" fill="${ink}"/>`,
+      // The mark takes the lockup's placement, the same one the coloured
+      // lockups beside it in the kit use.
+      `${lockupMark(ink)}\n  <path d="${LOGOTYPE}" fill="${ink}"/>`,
       NOTE(`Steward wordmark, single colour (${name})`),
     ),
   )
@@ -318,30 +337,44 @@ emit(
     GLYPH_BOX,
     ...GLYPH_SIZE,
     `  <style>
-    .wing{fill:${MARK_IDENTITY.light.wingFlat}}
-    @media (prefers-color-scheme:dark){.wing{fill:${MARK_IDENTITY.dark.wingFlat}}}
+    .ink{fill:${MARK_IDENTITY.light.ink}}
+    @media (prefers-color-scheme:dark){.ink{fill:${MARK_IDENTITY.dark.ink}}}
   </style>
-${glyph("", "wing")}`,
+${glyph("", "ink")}`,
     NOTE("Steward mark, follows the viewer's colour scheme"),
   ),
 )
 
 /**
- * The browser tab and the launcher source. One colourway, so no media query:
- * the chip is a saturated object and holds its own against a light or a dark
- * tab strip (measured at 3.35 and 3.26 against Chrome's two).
+ * The launcher/app-icon source — full mark, buttons and all, rendered to the
+ * 180/192/512 PNGs. One flat colourway, so no media query: the ember tile holds
+ * its own against a light or a dark tab strip (ADR-0055).
  */
-for (const rel of ["apps/web/public/favicon.svg", "scripts/icon.svg"]) {
-  emit(
-    rel,
-    svg(
-      CHIP_VIEWBOX,
-      ...CHIP_SIZE,
-      chip(),
-      NOTE("Steward product icon — one colourway, both modes"),
-    ),
-  )
-}
+emit(
+  "scripts/icon.svg",
+  svg(
+    CHIP_VIEWBOX,
+    ...CHIP_SIZE,
+    chip(),
+    NOTE("Steward product icon — one colourway, both modes"),
+  ),
+)
+
+/**
+ * The browser tab. Purpose-built for 16px: the buttons fall below a device
+ * pixel there and would only muddy the bow, so the tab chip drops them (the
+ * placement is identical to the app icon's — one drawing, one stud short). The
+ * `.ico` is rasterised from this, not from `icon.svg`.
+ */
+emit(
+  "apps/web/public/favicon.svg",
+  svg(
+    CHIP_VIEWBOX,
+    ...CHIP_SIZE,
+    chip({ buttons: false }),
+    NOTE("Steward browser-tab icon — bow only, sized for 16px"),
+  ),
+)
 
 /** The maskable adaptive icon: full-bleed, bow inside the safe zone. */
 for (const rel of [
@@ -365,7 +398,7 @@ for (const mode of ["light", "dark"] as const) {
   const doc = svg(
     WORDMARK_VIEWBOX,
     ...WORDMARK_SIZE,
-    `${chip()}\n  <path d="${LOGOTYPE}" fill="${LOGOTYPE_INK[mode]}"/>`,
+    `${lockupMark(MARK_IDENTITY[mode].ink)}\n  <path d="${LOGOTYPE}" fill="${LOGOTYPE_INK[mode]}"/>`,
     NOTE(`Steward wordmark, ${mode}`),
   ).replace("<svg ", `<svg role="img" aria-label="Steward" `)
   emit(`apps/web/public/wordmark-${mode}.svg`, doc)
@@ -378,8 +411,8 @@ emit(
   `${JSON.stringify(
     {
       $comment:
-        "Steward's fixed identity. Generated by scripts/gen-brand.ts. Drawn from the gruvbox rows of the theme registry; the mark never follows the active theme.",
-      law: "The bow is one shape. The chip is one colourway in both modes; only the bare glyph, which sits on a surface it does not own, is keyed on mode.",
+        "Steward's fixed identity. Generated by scripts/gen-brand.ts. Drawn from the brand palette (ADR-0055); the mark never follows the active theme.",
+      law: "The bow is a real bow tie — two wings, a knot, two buttons — in one neutral ink, keyed on mode. The ember lives on the chip, a flat single colourway in both modes.",
       glyph: { light: MARK_IDENTITY.light, dark: MARK_IDENTITY.dark },
       chip: CHIP_IDENTITY,
       logotype: LOGOTYPE_INK,
@@ -392,13 +425,10 @@ emit(
 // ───────────────────────────────────────── the measured claims, as markdown
 
 const glyphWorst = {
-  light: worstGround(MARK_IDENTITY.light.wingFlat, "light"),
-  dark: worstGround(MARK_IDENTITY.dark.wingFlat, "dark"),
+  light: worstGround(MARK_IDENTITY.light.ink, "light"),
+  dark: worstGround(MARK_IDENTITY.dark.ink, "dark"),
 }
-const tileWorst = {
-  top: worstGround(CHIP_IDENTITY.tileTop),
-  deep: worstGround(CHIP_IDENTITY.tileDeep),
-}
+const tileWorst = worstGround(CHIP_IDENTITY.tile)
 
 const facts = `
 ### The identity
@@ -408,43 +438,32 @@ ${table(
   [
     [
       "bare glyph, light surfaces",
-      `\`${MARK_IDENTITY.light.wingFlat}\``,
-      "gruvbox-light `accent`",
+      `\`${MARK_IDENTITY.light.ink}\``,
+      "brand ink",
     ],
     [
       "bare glyph, dark surfaces",
-      `\`${MARK_IDENTITY.dark.wingFlat}\``,
-      "gruvbox-dark `accent`",
+      `\`${MARK_IDENTITY.dark.ink}\``,
+      "gruvbox-light `bg`",
     ],
-    [
-      "chip tile, top of the fold",
-      `\`${CHIP_IDENTITY.tileTop}\``,
-      "gruvbox-light `accentDeep`",
-    ],
-    [
-      "chip tile, deep end",
-      `\`${CHIP_IDENTITY.tileDeep}\``,
-      "gruvbox-light `accent`",
-    ],
+    ["chip tile", `\`${CHIP_IDENTITY.tile}\``, "gruvbox `accentDeep`"],
     [
       "the bow, cut out of the tile",
       `\`${CHIP_IDENTITY.bow}\``,
       "gruvbox-light `bg`",
     ],
-    [
-      "logotype, light lockup",
-      `\`${LOGOTYPE_INK.light}\``,
-      "gruvbox-dark `bg`",
-    ],
-    ["logotype, dark lockup", `\`${LOGOTYPE_INK.dark}\``, "gruvbox-dark `ink`"],
+    ["logotype, light lockup", `\`${LOGOTYPE_INK.light}\``, "brand ink"],
+    ["logotype, dark lockup", `\`${LOGOTYPE_INK.dark}\``, "gruvbox-light `bg`"],
   ],
 )}
 
 ### What is measured, and where it is worst
 
-The bare glyph is one shape, so it has exactly one boundary: itself against the
-surface it was handed. Each colourway is measured only against the surfaces it
-can actually land on — page and card, of every theme in its mode:
+The bare glyph is a single ink, so it has exactly one boundary: itself against
+the surface it was handed. Each colourway is measured only against the surfaces
+it can actually land on — page and card, of every theme in its mode. Neutral
+ink clears its ground with enormous room, which is the point of moving the
+colour off the bow:
 
 ${table(
   ["", "worst", "on"],
@@ -462,17 +481,14 @@ ${table(
   ],
 )}
 
-The chip takes no mode, so its tile faces all ${themeEntries.length} themes. It carries no border,
-and **neither gradient stop holds an edge alone** — they fail on opposite
-grounds, which is exactly why the gradient runs diagonally and puts both stops
-on the perimeter. What is held is that at least one clears:
+The chip takes no mode, so its **flat** tile faces all ${themeEntries.length} themes at once. There
+is no gradient stop to fail on one ground and clear on another — the single
+ember carries the edge, and it clears the graphics floor on every surface it
+lands on:
 
 ${table(
   ["", "worst", "on"],
-  [
-    ["tile, top of the fold", `${tileWorst.top.ratio}:1`, tileWorst.top.where],
-    ["tile, deep end", `${tileWorst.deep.ratio}:1`, tileWorst.deep.where],
-  ],
+  [["chip tile", `${tileWorst.ratio}:1`, tileWorst.where]],
 )}
 
 The chip's own interior edge, and its habitat — the surfaces it lands on that
@@ -482,16 +498,12 @@ ${table(
   ["", "ratio"],
   [
     [
-      "bow against the tile's top",
-      `${contrast(CHIP_IDENTITY.bow, CHIP_IDENTITY.tileTop)}:1`,
-    ],
-    [
-      "bow against the tile's deep end",
-      `${contrast(CHIP_IDENTITY.bow, CHIP_IDENTITY.tileDeep)}:1`,
+      "bow against the tile",
+      `${contrast(CHIP_IDENTITY.bow, CHIP_IDENTITY.tile)}:1`,
     ],
     ...HABITAT.map(([name, bg]) => [
       `tile on ${name}`,
-      `${Math.max(Number(contrast(CHIP_IDENTITY.tileTop, bg)), Number(contrast(CHIP_IDENTITY.tileDeep, bg))).toFixed(2)}:1`,
+      `${contrast(CHIP_IDENTITY.tile, bg)}:1`,
     ]),
   ],
 )}
@@ -499,7 +511,8 @@ ${table(
 ### Every drawn feature at the declared minimum
 
 Device pixels at 1×. A feature either survives here or is not drawn — held by
-\`mark.test.ts\`.
+\`mark.test.ts\`. The fold (\`notch\`, \`puff\`) is absent: it modulates the wing's
+edge rather than drawing a region with a width, exactly as the old \`sweep\` did.
 
 ${table(
   [
@@ -518,10 +531,9 @@ ${table(
 
 ### How the chip places it
 
-The bow is ${MARK_RATIOS.bowW} × ${MARK_RATIOS.bowH} units at an aspect of ${(MARK_RATIOS.bowW / MARK_RATIOS.bowH).toFixed(2)}:1 — ${((MARK_RATIOS.bowW / MARK_TILE) * 100).toFixed(0)}% × ${((MARK_RATIOS.bowH / MARK_TILE) * 100).toFixed(0)}% of the tile if it
-were drawn at full size, which is a near miss rather than a margin. **Every**
-chip insets it, through one function, to the same share of whatever the viewer
-actually sees:
+The bow is ${MARK_RATIOS.bowW} × ${MARK_RATIOS.bowH} units at an aspect of ${(MARK_RATIOS.bowW / MARK_RATIOS.bowH).toFixed(2)}:1 — ${((MARK_RATIOS.bowW / MARK_TILE) * 100).toFixed(0)}% of the tile's width.
+Every chip insets the **whole mark** — bow, knot and buttons — through one
+function, to the same share of whatever the viewer actually sees:
 
 ${table(
   ["", "scale", "bow spans", "of the visible tile", "ground per side"],

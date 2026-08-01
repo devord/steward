@@ -1,43 +1,38 @@
 ---
 title: The mark
-description: Steward's bow tie — one shape, two framings, and the measurements that keep it legible at sixteen pixels.
+description: Steward's bow tie — a real bow tie in one ink, two framings, and the measurements that keep it legible at sixteen pixels.
 ---
 
-The mark is a bow tie: two wings meeting at a pinched waist, the butler's
-uniform in one shape. It has two framings, and they are different objects
-rather than one drawing with and without a tile.
+The mark is a bow tie: two folded wings meeting at a square knot, with two
+buttons below — the butler's collar over the shirt studs. It has two framings,
+and they are different objects rather than one drawing with and without a tile.
 
 **In chrome** — the rail, the header, the account bar — it is the **bare
-glyph**: flat ember, level, on whatever surface it is handed. This is the one
-framing sitting on a ground it does not own, so it is the one thing keyed on
-light or dark mode.
+glyph**: a neutral ink, level, on whatever surface it is handed — near-black on
+light, cream on dark. This is the one framing sitting on a ground it does not
+own, so it is the one thing keyed on light or dark mode.
 
 **On display surfaces** — the browser tab, the launcher, the social card, the
-README lockup — it wears the **chip**: the identity drenched across a
-superellipse tile with the bow cut out of it in paper, level, and inset so the
-tile keeps ground around it. The chip is a single colourway in both
-modes. It is a saturated object, not a surface; it isn't borrowing the page's
-tone, so it has no reason to follow the page's mode.
+README lockup — it wears the **chip**: a flat burnt-orange tile with the bow cut
+out of it in cream, level, and inset so the tile keeps ground around it. The
+chip is a single colourway in both modes. It is a saturated object, not a
+surface; it isn't borrowing the page's tone, so it has no reason to follow the
+page's mode.
 
-## There is no knot
+## The knot is back
 
-The mark was three shapes for a year, and the third one was the whole problem.
-The knot's only job was to be a different colour from the cloth it lay on, and
-at favicon size that boundary was four pixels wide and measured **1.40:1** —
-while every contrast test in the suite passed, because they all held ink
-against _ground_ and none held ink against ink.
+The mark was two shapes for a year: [ADR-0053](/docs/architecture) deleted the
+knot because its only job was to be a _different colour_ from the cloth it lay
+on, and at favicon size that boundary was four pixels wide and measured
+**1.40:1** — while every contrast test passed, because they all held ink against
+_ground_ and none held ink against ink.
 
-It could not be fixed with colour. The knot protruded past the waist, so it
-touched the page as well as the cloth, and nothing clears both:
-
-| dark colourway  | vs the wing | vs the page |
-| --------------- | ----------- | ----------- |
-| pure black knot | 5.43 ✓      | 1.02 ✗      |
-| pure white knot | 2.53 ✗      | 14.74 ✓     |
-
-Dropping it doesn't solve that problem, it deletes it: one shape has no
-interior edge to hold, no sub-pixel feature to keep, nothing to measure. The
-waist carries the read. [ADR-0053](/docs/architecture) has the full argument.
+[ADR-0055](/docs/architecture) brings it back, because what changed is not the
+knot but the mark's colour. The bow is a **single ink** in every framing now, so
+the knot and the buttons carry the wings' own fill. The gaps between them are
+_ground_ showing through, not an ink-against-ink edge — so the only contrast
+boundary the mark has is still itself against its surface, exactly as ADR-0053
+required. A same-ink knot costs nothing the coloured one could not afford.
 
 ## What is measured
 
@@ -52,74 +47,72 @@ was illegible.
 
 ### The identity
 
-|                              | hex       |                            |
-| ---------------------------- | --------- | -------------------------- |
-| bare glyph, light surfaces   | `#af3a03` | gruvbox-light `accent`     |
-| bare glyph, dark surfaces    | `#fe8019` | gruvbox-dark `accent`      |
-| chip tile, top of the fold   | `#d65d0e` | gruvbox-light `accentDeep` |
-| chip tile, deep end          | `#af3a03` | gruvbox-light `accent`     |
-| the bow, cut out of the tile | `#fbf1c7` | gruvbox-light `bg`         |
-| logotype, light lockup       | `#282828` | gruvbox-dark `bg`          |
-| logotype, dark lockup        | `#d4be98` | gruvbox-dark `ink`         |
+|                              | hex       |                      |
+| ---------------------------- | --------- | -------------------- |
+| bare glyph, light surfaces   | `#1e1e1e` | brand ink            |
+| bare glyph, dark surfaces    | `#fbf1c7` | gruvbox-light `bg`   |
+| chip tile                    | `#c75117` | gruvbox `accentDeep` |
+| the bow, cut out of the tile | `#fbf1c7` | gruvbox-light `bg`   |
+| logotype, light lockup       | `#1e1e1e` | brand ink            |
+| logotype, dark lockup        | `#fbf1c7` | gruvbox-light `bg`   |
 
 ### What is measured, and where it is worst
 
-The bare glyph is one shape, so it has exactly one boundary: itself against the
-surface it was handed. Each colourway is measured only against the surfaces it
-can actually land on — page and card, of every theme in its mode:
+The bare glyph is a single ink, so it has exactly one boundary: itself against
+the surface it was handed. Each colourway is measured only against the surfaces
+it can actually land on — page and card, of every theme in its mode. Neutral
+ink clears its ground with enormous room, which is the point of moving the
+colour off the bow:
 
-|                         | worst      | on                     |
-| ----------------------- | ---------- | ---------------------- |
-| glyph on light surfaces | **4.30:1** | tokyo-night-light page |
-| glyph on dark surfaces  | **5.84:1** | gruvbox-dark page      |
+|                         | worst       | on                     |
+| ----------------------- | ----------- | ---------------------- |
+| glyph on light surfaces | **11.71:1** | tokyo-night-light page |
+| glyph on dark surfaces  | **12.99:1** | gruvbox-dark page      |
 
-The chip takes no mode, so its tile faces all 14 themes. It carries no border,
-and **neither gradient stop holds an edge alone** — they fail on opposite
-grounds, which is exactly why the gradient runs diagonally and puts both stops
-on the perimeter. What is held is that at least one clears:
+The chip takes no mode, so its **flat** tile faces all 14 themes at once. There
+is no gradient stop to fail on one ground and clear on another — the single
+ember carries the edge, and it clears the graphics floor on every surface it
+lands on:
 
-|                       | worst  | on                     |
-| --------------------- | ------ | ---------------------- |
-| tile, top of the fold | 2.72:1 | tokyo-night-light page |
-| tile, deep end        | 2.41:1 | gruvbox-dark page      |
+|           | worst  | on                     |
+| --------- | ------ | ---------------------- |
+| chip tile | 3.19:1 | tokyo-night-light page |
 
 The chip's own interior edge, and its habitat — the surfaces it lands on that
 are not Steward's:
 
-|                                 | ratio  |
-| ------------------------------- | ------ |
-| bow against the tile's top      | 3.41:1 |
-| bow against the tile's deep end | 5.40:1 |
-| tile on Chrome, light           | 4.67:1 |
-| tile on Chrome, dark            | 4.16:1 |
-| tile on GitHub, light           | 6.12:1 |
-| tile on GitHub, dark            | 4.89:1 |
+|                       | ratio  |
+| --------------------- | ------ |
+| bow against the tile  | 4.01:1 |
+| tile on Chrome, light | 3.47:1 |
+| tile on Chrome, dark  | 3.54:1 |
+| tile on GitHub, light | 4.55:1 |
+| tile on GitHub, dark  | 4.16:1 |
 
 ### Every drawn feature at the declared minimum
 
 Device pixels at 1×. A feature either survives here or is not drawn — held by
-`mark.test.ts`.
+`mark.test.ts`. The fold (`notch`, `puff`) is absent: it modulates the wing's
+edge rather than drawing a region with a width, exactly as the old `sweep` did.
 
 | ratio    | units | chip @ 16px | glyph @ 20px |
 | -------- | ----- | ----------- | ------------ |
-| `bowW`   | 56    | 14.00px     | 18.67px      |
-| `bowH`   | 28    | 7.00px      | 9.33px       |
-| `waist`  | 10    | 2.50px      | 3.33px       |
-| `cross`  | 4     | 1.00px      | 1.33px       |
-| `notch`  | 4     | 1.00px      | 1.33px       |
-| `corner` | 4     | 1.00px      | 1.33px       |
+| `bowW`   | 54    | 13.50px     | 18.62px      |
+| `bowH`   | 22    | 5.50px      | 7.59px       |
+| `inner`  | 7     | 1.75px      | 2.41px       |
+| `knot`   | 8     | 2.00px      | 2.76px       |
+| `button` | 4.8   | 1.20px      | 1.66px       |
 
 ### How the chip places it
 
-The bow is 56 × 28 units at an aspect of 2.00:1 — 88% × 44% of the tile if it
-were drawn at full size, which is a near miss rather than a margin. **Every**
-chip insets it, through one function, to the same share of whatever the viewer
-actually sees:
+The bow is 54 × 22 units at an aspect of 2.45:1 — 84% of the tile's width.
+Every chip insets the **whole mark** — bow, knot and buttons — through one
+function, to the same share of whatever the viewer actually sees:
 
 |               | scale              | bow spans | of the visible tile | ground per side |
 | ------------- | ------------------ | --------- | ------------------- | --------------- |
-| chip          | `CHIP_INSET` 0.86  | 48.2u     | 75%                 | 7.9u            |
-| maskable icon | `MASK_INSET` 0.688 | 38.5u     | 75%                 | 6.3u            |
+| chip          | `CHIP_INSET` 0.92  | 49.7u     | 78%                 | 7.2u            |
+| maskable icon | `MASK_INSET` 0.736 | 39.7u     | 78%                 | 5.7u            |
 
 The maskable column measures against the safe zone — the middle 80% a launcher
 is guaranteed to show — which is why its scale is `CHIP_INSET` times that and
@@ -130,19 +123,20 @@ construction and the tile is square, so a rotation fights both.
 
 {/* /gen:mark-facts */}
 
-## Why the gradient is not decoration
+## Why the chip is flat
 
-The chip carries no border. It had one only because the old tile sat within a
-hair of the page tone, and at 16px a one-unit stroke on a 64-unit tile is a
-quarter of a device pixel — a feature that never rendered on the surface it
-existed for.
+The chip carries no border and no gradient. The border went first: it existed
+only because the old tile sat within a hair of the page tone, and at 16px a
+one-unit stroke on a 64-unit tile is a quarter of a device pixel — a feature
+that never rendered on the surface it existed for.
 
-Drenched, the tile holds its own edge, but neither gradient stop does that
-alone: they fail on opposite grounds. The top clears every dark surface and
-drops on a pale one; the deep end clears every light surface and drops on a
-dark one. Running the gradient diagonally puts both stops on the perimeter, so
-at least one part of the edge always clears the floor. That is the load the
-diagonal carries, and it's asserted rather than assumed.
+The gradient went with the rebrand (ADR-0055). The old two-stop tile ran a
+diagonal so that at least one stop cleared each ground; the flat `#c75117`
+clears the graphics floor on every surface the chip lands on by itself — ≥3.19
+across the fourteen themes, ≥3.47 on the browser tab strips — so there is
+nothing for a gradient to buy. A flat object is one drawing at every size, and
+the `.ico` could never carry a gradient faithfully anyway. The table above
+asserts the edge rather than assuming it.
 
 ## Two gates, and why neither is enough
 
