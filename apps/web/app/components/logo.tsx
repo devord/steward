@@ -4,11 +4,9 @@ import {
   chipTransform,
   CHIP_VIEWBOX,
   GLYPH_VIEWBOX,
-  KNOT,
   MARK_BUTTONS,
+  MARK_PATHS,
   squirclePath,
-  WING_L,
-  WING_R,
 } from "~/lib/mark"
 import { cn } from "~/lib/utils"
 
@@ -64,11 +62,11 @@ export function Logo({
         className={cn("shrink-0", className)}
         fill="var(--mark-ink)"
       >
-        <path d={WING_L} />
-        <path d={WING_R} />
-        <path d={KNOT} />
+        {MARK_PATHS.map((d, i) => (
+          <path key={`p${i}`} d={d} />
+        ))}
         {MARK_BUTTONS.map((b, i) => (
-          <circle key={i} cx={b.cx} cy={b.cy} r={b.rad} />
+          <circle key={`b${i}`} cx={b.cx} cy={b.cy} r={b.rad} />
         ))}
       </svg>
     )
@@ -94,11 +92,11 @@ export function Logo({
       <path d={TILE} fill="var(--chip-tile)" />
       <g clipPath={`url(#${tileClip})`}>
         <g transform={chipTransform()} fill="var(--chip-bow)">
-          <path d={WING_L} />
-          <path d={WING_R} />
-          <path d={KNOT} />
+          {MARK_PATHS.map((d, i) => (
+            <path key={`p${i}`} d={d} />
+          ))}
           {MARK_BUTTONS.map((b, i) => (
-            <circle key={i} cx={b.cx} cy={b.cy} r={b.rad} />
+            <circle key={`b${i}`} cx={b.cx} cy={b.cy} r={b.rad} />
           ))}
         </g>
       </g>

@@ -312,8 +312,8 @@ not the bow's: glyph-as-ink is the mark-in-chrome treatment everywhere else
 (GitHub, Linear, Vercel), and it is what the brand sheet's primary logo does —
 the orange bow is the "filled" variant, not the default.
 
-**On display surfaces** — the browser tab, the OS launcher, the social card,
-the README lockup, the landing hero — the mark wears the **product-icon chip**:
+**On display surfaces** — the browser tab, the OS launcher, the landing hero —
+the mark wears the **product-icon chip**:
 a **flat ember** superellipse tile (`--chip-tile`) with the bow **cut out of it**
 in cream (`--chip-bow`), level, and inset so the tile keeps ground around it.
 Both the level and the inset are one function, `chipTransform`, which centres
