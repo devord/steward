@@ -1,24 +1,27 @@
 import { afterEach, describe, expect, it } from "vitest"
 
 import { renderArtifact } from "../../../../packages/artifact-kit/src/render.tsx"
-import { ARTIFACT_COLUMNS_SCRIPT, ARTIFACT_KIT_STYLE } from "./artifact-kit.ts"
+import {
+  ARTIFACT_THROUGHPUT_SCRIPT,
+  ARTIFACT_KIT_STYLE,
+} from "./artifact-kit.ts"
 import { DEFAULT_THEME, frameArtifactHtml } from "./theme.ts"
 
 /**
- * The `columns` band, framed the way the board frames it, in a real browser.
+ * The `throughput` band, framed the way the board frames it, in a real browser.
  *
  * This is the band that arrived as ~460 lines of script frozen inside a
  * routine's `template.html`, published by that routine's own script, never once
  * executed by a test. The migration is only worth something if the replacement
  * is actually exercised — and the parts that matter here cannot be asserted on
  * a string: the runtime *clones the server's own column* to build a view the
- * server did not draw, so what it produces is a function of markup `Columns.tsx`
+ * server did not draw, so what it produces is a function of markup `Throughput.tsx`
  * emits rather than of anything this file could hand-write.
  *
  * Which is why the fixture is rendered by the real renderer rather than typed
  * out. A hand-written stand-in would be a second, drifting definition of what a
  * column is, and the drift would land in the one code path no other test covers.
- * The runtime side is the *built* `columns.js` the board actually injects, so a
+ * The runtime side is the *built* `throughput.js` the board actually injects, so a
  * behaviour change that was never rebuilt fails here.
  */
 /** Two distinct 1×1 GIFs. Real `data:` URIs, so the browser actually loads them. */
@@ -80,7 +83,7 @@ function artifact(): string {
       stat: { value: 6, label: "merged" },
       blocks: [
         {
-          kind: "columns",
+          kind: "throughput",
           label: "PRs per person",
           spec: structuredClone(spec) as never,
         },
@@ -107,7 +110,7 @@ async function mount(html = artifact()) {
     "",
     undefined,
     ARTIFACT_KIT_STYLE,
-    ARTIFACT_COLUMNS_SCRIPT,
+    ARTIFACT_THROUGHPUT_SCRIPT,
   )
   document.body.appendChild(iframe)
   frames.push(iframe)
@@ -124,8 +127,8 @@ const text = (d: Document, sel: string) =>
   (d.querySelector(sel)?.textContent ?? "").trim()
 
 const columnKeys = (d: Document) =>
-  [...d.querySelectorAll("[data-kit-columns-col]")].map(
-    (el) => (el as HTMLElement).dataset.kitColumnsCol,
+  [...d.querySelectorAll("[data-kit-throughput-col]")].map(
+    (el) => (el as HTMLElement).dataset.kitThroughputCol,
   )
 
 /** Click a toggle option the way a reader would. */
@@ -146,7 +149,7 @@ function scrubTo(d: Document, index: number) {
   slider.dispatchEvent(new win.Event("input", { bubbles: true }))
 }
 
-describe("the injected columns runtime", () => {
+describe("the injected throughput runtime", () => {
   it("reveals the controls, which ship hidden", async () => {
     // ADR-0039: a raw-opened artifact keeps a real chart of a real day, and
     // gets no controls — a scrubber that looks live and does nothing is worse
@@ -176,15 +179,15 @@ describe("the injected columns runtime", () => {
 
   it("draws the day the server drew, so nothing jumps on attach", async () => {
     const d = await mount()
-    expect(text(d, "[data-kit-columns-date]")).toBe("Mar 3")
-    expect(text(d, "[data-kit-columns-total]")).toBe("6 merged · 4 open")
+    expect(text(d, "[data-kit-throughput-date]")).toBe("Mar 3")
+    expect(text(d, "[data-kit-throughput-total]")).toBe("6 merged · 4 open")
   })
 
   it("scrubs back to a day the server never rendered", async () => {
     const d = await mount()
     scrubTo(d, 0)
-    expect(text(d, "[data-kit-columns-date]")).toBe("Mar 1")
-    expect(text(d, "[data-kit-columns-total]")).toBe("0 merged · 0 open")
+    expect(text(d, "[data-kit-throughput-date]")).toBe("Mar 1")
+    expect(text(d, "[data-kit-throughput-total]")).toBe("0 merged · 0 open")
     // Day 0 is a tie at zero, and the order still holds — the ranking breaks
     // ties on the final standing so early days do not shuffle for no reason.
     expect(columnKeys(d)).toEqual(["ana", "bo"])
@@ -197,12 +200,12 @@ describe("the injected columns runtime", () => {
     press(d, "view", "reviewer")
     await new Promise((r) => setTimeout(r, 30))
     expect(columnKeys(d)).toEqual(["bo"])
-    const col = d.querySelector<HTMLElement>('[data-kit-columns-col="bo"]')
+    const col = d.querySelector<HTMLElement>('[data-kit-throughput-col="bo"]')
     expect(col?.title).toContain("Bo Chen")
     // A cloned column carries the server's face markup, not a second copy of
     // `Avatar` written here — the name reaches a screen reader either way.
     expect(col?.querySelector(".sr-only")?.textContent).toBe("Bo Chen")
-    expect(text(d, "[data-kit-columns-total]")).toBe("1 merged · 0 open")
+    expect(text(d, "[data-kit-throughput-total]")).toBe("1 merged · 0 open")
   })
 
   it("keeps a face whose bytes the payload deliberately does not carry", async () => {
@@ -213,7 +216,7 @@ describe("the injected columns runtime", () => {
     // a view Bo appears in under different markup.
     const html = artifact()
     const payload = JSON.parse(
-      html.match(/data-kit-columns-series[^>]*>([\s\S]*?)<\/script>/)?.[1] ??
+      html.match(/data-kit-throughput-series[^>]*>([\s\S]*?)<\/script>/)?.[1] ??
         "",
     )
     expect(payload.people.bo.avatar).toBeUndefined()
@@ -222,7 +225,7 @@ describe("the injected columns runtime", () => {
     press(d, "view", "reviewer")
     await new Promise((r) => setTimeout(r, 30))
     const img = d.querySelector<HTMLImageElement>(
-      '[data-kit-columns-col="bo"] img',
+      '[data-kit-throughput-col="bo"] img',
     )
     expect(img?.getAttribute("src")).toBe(FACE_B)
   })
@@ -254,7 +257,7 @@ describe("the injected columns runtime", () => {
           slug: "repo-stats",
           generatedAt: "2026-03-03T08:00:00Z",
           stat: { value: 6, label: "merged" },
-          blocks: [{ kind: "columns", spec: withCy as never }],
+          blocks: [{ kind: "throughput", spec: withCy as never }],
         },
         "",
       ),
@@ -264,7 +267,7 @@ describe("the injected columns runtime", () => {
     expect(columnKeys(d)).toEqual(["cy"])
     expect(
       d
-        .querySelector<HTMLImageElement>('[data-kit-columns-col="cy"] img')
+        .querySelector<HTMLImageElement>('[data-kit-throughput-col="cy"] img')
         ?.getAttribute("src"),
     ).toBe(FACE_A)
   })
@@ -274,12 +277,12 @@ describe("the injected columns runtime", () => {
     press(d, "mode", "window")
     await new Promise((r) => setTimeout(r, 30))
     // One day back from Mar 3: ana merged 2 and opened 2, bo opened 3.
-    expect(text(d, "[data-kit-columns-total]")).toBe(
+    expect(text(d, "[data-kit-throughput-total]")).toBe(
       "2 merged · 5 opened · last day",
     )
     // "open" is a level that falls as PRs merge; over a window the honest word
     // is what happened, not what stands.
-    expect(text(d, "[data-kit-columns-legend-open]")).toBe("opened")
+    expect(text(d, "[data-kit-throughput-legend-open]")).toBe("opened")
   })
 
   it("shows the window picker only where it means something", async () => {
@@ -294,12 +297,12 @@ describe("the injected columns runtime", () => {
   it("keeps the published frame standing when the payload is unreadable", async () => {
     // A truncated or hand-edited payload costs the scrubbing, not the chart.
     const broken = artifact().replace(
-      /(data-kit-columns-series="">)[\s\S]*?(<\/script>)/,
+      /(data-kit-throughput-series="">)[\s\S]*?(<\/script>)/,
       "$1{oh no$2",
     )
     const d = await mount(broken)
     expect(columnKeys(d)).toEqual(["ana", "bo"])
-    expect(text(d, "[data-kit-columns-total]")).toBe("6 merged · 4 open")
+    expect(text(d, "[data-kit-throughput-total]")).toBe("6 merged · 4 open")
     // Nothing was attached, so the controls stay honest about it.
     expect(
       d.querySelector<HTMLElement>('[data-kit-toggle="view"]')?.hidden,

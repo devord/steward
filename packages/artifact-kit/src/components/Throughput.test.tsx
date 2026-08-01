@@ -168,7 +168,7 @@ describe("the throughput band", () => {
         ...doc,
         blocks: [
           {
-            kind: "columns",
+            kind: "throughput",
             spec: {
               ...spec,
               views: [
@@ -196,7 +196,7 @@ describe("the throughput band", () => {
     )
     const payload = JSON.parse(
       withFaces.match(
-        /data-kit-columns-series[^>]*>([\s\S]*?)<\/script>/,
+        /data-kit-throughput-series[^>]*>([\s\S]*?)<\/script>/,
       )?.[1] ?? "",
     )
     expect(payload.people.ana.avatar).toBeUndefined()

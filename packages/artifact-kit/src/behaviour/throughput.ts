@@ -1,12 +1,12 @@
 /**
- * The `columns` band's behaviour, injected by the board (ADR-0050).
+ * The `throughput` band's behaviour, injected by the board (ADR-0050).
  *
  * The static render already shows the latest day — this adds the toggles and
  * the scrub on top of a chart that is there either way. Same contract as the
  * copy action: the markup ships inert with `data-*` seams, the board attaches,
  * and a raw-opened file simply stays on the day it was published.
  *
- * Built to `kit/columns.js` by `build.mjs` and imported `?raw` by the board,
+ * Built to `kit/throughput.js` by `build.mjs` and imported `?raw` by the board,
  * exactly as `kit.css` is. Written as a module rather than a template literal
  * for one reason: at this size, a string is a blob nothing can test, and a
  * frozen untestable blob is the thing this band was migrated to escape.
@@ -23,7 +23,7 @@ import {
   type EncodedView,
   frameAt,
   type Mode,
-} from "../components/columns-series.ts"
+} from "../components/throughput-series.ts"
 
 interface Person {
   name?: string
@@ -56,7 +56,7 @@ function cloneElement(el: HTMLElement): HTMLElement | null {
 }
 
 function install(root: HTMLElement): void {
-  const raw = q(root, "[data-kit-columns-series]")?.textContent
+  const raw = q(root, "[data-kit-throughput-series]")?.textContent
   if (!raw) return
   let payload: Payload
   try {
@@ -67,7 +67,7 @@ function install(root: HTMLElement): void {
     return
   }
 
-  const found = q<HTMLElement>(root, "[data-kit-columns-plot]")
+  const found = q<HTMLElement>(root, "[data-kit-throughput-plot]")
   if (!found || !payload.views?.length) return
   // Re-bound after the guard so the closures below see a plot that cannot be
   // null. They are hoisted declarations, so the narrowing does not reach them.
@@ -87,10 +87,10 @@ function install(root: HTMLElement): void {
   // Start from what the server said, not from a re-derivation of it. Guessing
   // here is how the first attached frame ends up differing from the one on
   // screen, which reads as the chart flinching when a frame loads.
-  let viewKey = root.dataset.kitColumnsView ?? payload.views[0].key
+  let viewKey = root.dataset.kitThroughputView ?? payload.views[0].key
   let mode: Mode =
-    root.dataset.kitColumnsMode === "window" ? "window" : "cumulative"
-  let windowDays = Number(root.dataset.kitColumnsWindow) || 7
+    root.dataset.kitThroughputMode === "window" ? "window" : "cumulative"
+  let windowDays = Number(root.dataset.kitThroughputWindow) || 7
   let view = viewOf(viewKey)
   let index = Math.max(0, view.days.length - 1)
   let ceiling = axisMax(view.days, view.authors, mode, windowDays)
@@ -102,7 +102,7 @@ function install(root: HTMLElement): void {
   // an avatar to put in it, so cloning a faceless column would leave nothing
   // to patch a face into — every rebuilt column would be an initial, decided
   // by whoever happened to rank first.
-  const all = qa<HTMLElement>(plot, "[data-kit-columns-col]")
+  const all = qa<HTMLElement>(plot, "[data-kit-throughput-col]")
   const prototype = all.find((el) => el.querySelector("img")) ?? all[0]
   const cloned = prototype && cloneElement(prototype)
   if (!cloned) return
@@ -111,8 +111,8 @@ function install(root: HTMLElement): void {
   let columns = new Map<string, HTMLElement>()
   const indexColumns = () => {
     columns = new Map(
-      qa<HTMLElement>(plot, "[data-kit-columns-col]").map((el) => [
-        el.dataset.kitColumnsCol ?? "",
+      qa<HTMLElement>(plot, "[data-kit-throughput-col]").map((el) => [
+        el.dataset.kitThroughputCol ?? "",
         el,
       ]),
     )
@@ -136,7 +136,7 @@ function install(root: HTMLElement): void {
     for (const key of view.authors) {
       const col = cloneElement(blank)
       if (!col) continue
-      col.dataset.kitColumnsCol = key
+      col.dataset.kitThroughputCol = key
       const person = payload.people?.[key] ?? {}
       const name = person.name?.trim() || key
 
@@ -145,7 +145,7 @@ function install(root: HTMLElement): void {
 
       // The face, patched in place: initial, optional image, sr-only name.
       const glyph = col.querySelector<HTMLElement>(
-        "[title]:not([data-kit-columns-col])",
+        "[title]:not([data-kit-throughput-col])",
       )
       const img = col.querySelector("img")
       // Only a data URI ever reaches here — the renderer strips the rest,
@@ -190,11 +190,11 @@ function install(root: HTMLElement): void {
       const seg = frame.segments[key] ?? { merged: 0, open: 0 }
       const total = seg.merged + seg.open
       el.style.order = String(rank)
-      const merged = q<HTMLElement>(el, "[data-kit-columns-merged]")
-      const open = q<HTMLElement>(el, "[data-kit-columns-open]")
+      const merged = q<HTMLElement>(el, "[data-kit-throughput-merged]")
+      const open = q<HTMLElement>(el, "[data-kit-throughput-open]")
       if (merged) merged.style.height = `${(seg.merged / ceiling) * 100}%`
       if (open) open.style.height = `${(seg.open / ceiling) * 100}%`
-      const value = q<HTMLElement>(el, "[data-kit-columns-value]")
+      const value = q<HTMLElement>(el, "[data-kit-throughput-value]")
       if (value) value.textContent = total ? String(total) : ""
       const name = payload.people?.[key]?.name?.trim() || key
       el.title = `${name} — ${seg.merged} ${words.merged}, ${seg.open} ${openWord}`
@@ -215,16 +215,16 @@ function install(root: HTMLElement): void {
       }
     })
 
-    const date = q(root, "[data-kit-columns-date]")
+    const date = q(root, "[data-kit-throughput-date]")
     if (date) date.textContent = shortDate(frame.date)
-    const total = q(root, "[data-kit-columns-total]")
+    const total = q(root, "[data-kit-throughput-total]")
     if (total)
       total.textContent =
         `${frame.totalMerged} ${words.merged} · ${frame.totalOpen} ${openWord}` +
         (mode === "cumulative" ? "" : ` · last ${windowLabel(windowDays)}`)
-    const axis = q(root, "[data-kit-columns-axis]")
+    const axis = q(root, "[data-kit-throughput-axis]")
     if (axis) axis.textContent = String(ceiling)
-    const legendOpen = q(root, "[data-kit-columns-legend-open]")
+    const legendOpen = q(root, "[data-kit-throughput-legend-open]")
     if (legendOpen) legendOpen.textContent = openWord
 
     // Value labels collide into an unreadable digit run once columns get
@@ -233,7 +233,7 @@ function install(root: HTMLElement): void {
     const probe = columns.get(frame.order[0] ?? "")
     if (probe)
       plot.classList.toggle(
-        "kit-columns-nolabels",
+        "kit-throughput-nolabels",
         probe.getBoundingClientRect().width < LEGIBLE_COLUMN_PX,
       )
   }
@@ -289,14 +289,14 @@ function install(root: HTMLElement): void {
           break
         case "mode":
           mode = value === "window" ? "window" : "cumulative"
-          root.dataset.kitColumnsMode = mode
+          root.dataset.kitThroughputMode = mode
           syncWindowVisibility()
           rescale()
           draw()
           break
         case "window":
           windowDays = Number(value) || windowDays
-          root.dataset.kitColumnsWindow = String(windowDays)
+          root.dataset.kitThroughputWindow = String(windowDays)
           rescale()
           draw()
           break
@@ -370,17 +370,17 @@ function capitalise(s: string): string {
   return s ? s[0].toUpperCase() + s.slice(1) : s
 }
 
-/** Attach to every columns band in the document. Safe to call more than once. */
-export function installColumns(scope: ParentNode = document): void {
-  for (const root of qa<HTMLElement>(scope, "[data-kit-columns]")) {
-    if (root.dataset.kitColumnsReady) continue
-    root.dataset.kitColumnsReady = "1"
+/** Attach to every throughput band in the document. Safe to call more than once. */
+export function installThroughput(scope: ParentNode = document): void {
+  for (const root of qa<HTMLElement>(scope, "[data-kit-throughput]")) {
+    if (root.dataset.kitThroughputReady) continue
+    root.dataset.kitThroughputReady = "1"
     install(root)
   }
 }
 
 if (typeof document !== "undefined") {
   if (document.readyState === "loading")
-    document.addEventListener("DOMContentLoaded", () => installColumns())
-  else installColumns()
+    document.addEventListener("DOMContentLoaded", () => installThroughput())
+  else installThroughput()
 }
