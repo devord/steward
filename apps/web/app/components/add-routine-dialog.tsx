@@ -37,7 +37,10 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
-import { ARTIFACT_KIT_STYLE } from "../lib/artifact-kit.ts"
+import {
+  ARTIFACT_COLUMNS_SCRIPT,
+  ARTIFACT_KIT_STYLE,
+} from "../lib/artifact-kit.ts"
 import {
   CONNECTOR_CATALOG,
   connectorKey,
@@ -1535,6 +1538,7 @@ function TemplatePreview({ html, name }: { html: string; name: string }) {
         ARTIFACT_FONT_STYLE,
         undefined,
         ARTIFACT_KIT_STYLE,
+        ARTIFACT_COLUMNS_SCRIPT,
       ),
     [html, theme],
   )

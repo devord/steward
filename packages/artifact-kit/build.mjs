@@ -95,13 +95,21 @@ const SAFELIST = [
  * across machines and filesystem orderings. CI diffs this output.
  */
 function componentSources() {
-  return readdirSync(src, { recursive: true, withFileTypes: true })
-    .filter(
-      (e) =>
-        e.isFile() && /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name),
-    )
-    .map((e) => path.join(e.parentPath, e.name))
-    .sort()
+  return (
+    readdirSync(src, { recursive: true, withFileTypes: true })
+      .filter(
+        (e) =>
+          e.isFile() && /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name),
+      )
+      .map((e) => path.join(e.parentPath, e.name))
+      // `behaviour/` is runtime JS, not markup. Scanning it compiles every
+      // identifier that happens to collide with a utility name — `transition`,
+      // `order`, `hidden`, `block` all appear there as DOM properties — into a
+      // stylesheet inlined on every artifact and injected into every frame. It
+      // writes exactly one class, and that rule lives in `tiers.css`.
+      .filter((f) => !f.startsWith(path.join(src, "behaviour") + path.sep))
+      .sort()
+  )
 }
 
 const input = [
@@ -178,7 +186,32 @@ execFileSync(
   { cwd: here, stdio: "inherit" },
 )
 
+// The `columns` band's behaviour, as a browser bundle the board injects.
+//
+// A third output rather than a template literal beside `artifact-copy.ts`: at
+// ~460 lines this is the frozen untestable blob the band was migrated out of a
+// routine's template to escape, and a string cannot be typechecked or tested.
+// It travels the same way `kit.css` does — committed here, imported `?raw` by
+// the board — so it needs no new mechanism to reach a frame.
+//
+// IIFE, not ESM: it is injected as a plain <script> into an already-parsed
+// document, where a module's deferred execution would land after the board has
+// stopped looking.
+execFileSync(
+  esbuild,
+  [
+    path.join(src, "behaviour", "columns.ts"),
+    "--bundle",
+    "--format=iife",
+    "--platform=browser",
+    "--target=es2020",
+    "--minify",
+    `--outfile=${path.join(outDir, "columns.js")}`,
+  ],
+  { cwd: here, stdio: "inherit" },
+)
+
 const kb = (p) => `${(statSync(p).size / 1024).toFixed(1)} KB`
 console.log(
-  `built kit.css (${kb(path.join(outDir, "kit.css"))}) + render.mjs (${kb(path.join(outDir, "render.mjs"))}) → ${path.relative(repoRoot, outDir)}`,
+  `built kit.css (${kb(path.join(outDir, "kit.css"))}) + render.mjs (${kb(path.join(outDir, "render.mjs"))}) + columns.js (${kb(path.join(outDir, "columns.js"))}) → ${path.relative(repoRoot, outDir)}`,
 )

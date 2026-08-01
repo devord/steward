@@ -1122,6 +1122,29 @@ export function usesArtifactKit(html: string): boolean {
   return /<meta[^>]+name="steward-kit-version"/i.test(html)
 }
 
+/**
+ * Does this artifact carry a `columns` band?
+ *
+ * Gated separately from the kit itself because the runtime is ~6 KB and one
+ * routine uses it. `kit.css` is injected over every kit artifact because a
+ * design fix has to reach all of them; a chart runtime has nothing to say to
+ * an artifact with no chart, so it is sent to the artifacts that asked.
+ */
+export function usesColumnsBand(html: string): boolean {
+  return /data-kit-columns[=\s>]/i.test(html)
+}
+
+/**
+ * The `columns` band's behaviour, wrapped for injection.
+ *
+ * Takes the bundle as a parameter for the same reason `artifactKitStyle` does:
+ * this module runs under plain Node for `scripts/artifact-sheet.ts`, which
+ * cannot resolve the Vite `?raw` import that reads it (see artifact-kit.ts).
+ */
+export function artifactColumnsScript(js: string): string {
+  return `<script data-steward-columns>${js}</script>`
+}
+
 /** Where a framed artifact renders: a board cell, or the full-view lightbox. */
 export type ArtifactView = "tile" | "full"
 
@@ -1155,6 +1178,7 @@ export function frameArtifactHtml(
   fontStyle = "",
   viewer?: ArtifactViewer,
   kitStyle = "",
+  columnsScript = "",
 ): string {
   return (
     html +
@@ -1170,6 +1194,10 @@ export function frameArtifactHtml(
     // Kit-only: the buttons it drives exist only in kit-rendered markup, and
     // they ship hidden until this reveals them.
     (usesArtifactKit(html) ? ARTIFACT_COPY_SCRIPT : "") +
+    // Same bargain as the copy action, one band up: the chart is already drawn
+    // server-side, and this adds the toggles and the scrub to it. Gated on the
+    // band as well as the kit — see usesColumnsBand.
+    (usesArtifactKit(html) && usesColumnsBand(html) ? columnsScript : "") +
     // After the viewer object above, which it reads, and before the tile guard
     // below, whose MutationObserver picks the regrouping up as the signal to
     // re-fit. Kit-only and viewer-only: without both it is inert.

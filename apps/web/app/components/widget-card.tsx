@@ -47,7 +47,10 @@ import {
   widgetStatus,
 } from "../lib/routine-status.ts"
 import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
-import { ARTIFACT_KIT_STYLE } from "../lib/artifact-kit.ts"
+import {
+  ARTIFACT_COLUMNS_SCRIPT,
+  ARTIFACT_KIT_STYLE,
+} from "../lib/artifact-kit.ts"
 import { frameArtifactHtml } from "../lib/theme.ts"
 import { agoParts } from "../lib/time.ts"
 import { useResolvedTheme } from "../lib/use-appearance.ts"
@@ -165,6 +168,7 @@ export function WidgetCard({
             ARTIFACT_FONT_STYLE,
             login ? { login } : undefined,
             ARTIFACT_KIT_STYLE,
+            ARTIFACT_COLUMNS_SCRIPT,
           )
         : null,
     [artifact?.html, theme, login],
@@ -181,6 +185,7 @@ export function WidgetCard({
             ARTIFACT_FONT_STYLE,
             login ? { login } : undefined,
             ARTIFACT_KIT_STYLE,
+            ARTIFACT_COLUMNS_SCRIPT,
           )
         : null,
     [artifact?.html, theme, login],
