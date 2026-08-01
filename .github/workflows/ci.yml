@@ -32,7 +32,8 @@ jobs:
             packages/artifact-kit/src/tokens/tokens.css \
             .claude/skills/widget-artifact/tokens.json \
             .claude/skills/widget-artifact/kit/kit.css \
-            .claude/skills/widget-artifact/kit/render.mjs
+            .claude/skills/widget-artifact/kit/render.mjs \
+            .claude/skills/widget-artifact/kit/columns.js
           # The previews are checked with `status`, not `diff`, because they are
           # the one generated output whose *set* changes: adding a template to
           # PREVIEWS writes a new file, and `git diff` cannot see a file that

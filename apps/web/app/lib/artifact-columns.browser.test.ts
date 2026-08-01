@@ -1,0 +1,238 @@
+import { afterEach, describe, expect, it } from "vitest"
+
+import { renderArtifact } from "../../../../packages/artifact-kit/src/render.tsx"
+import { ARTIFACT_COLUMNS_SCRIPT, ARTIFACT_KIT_STYLE } from "./artifact-kit.ts"
+import { DEFAULT_THEME, frameArtifactHtml } from "./theme.ts"
+
+/**
+ * The `columns` band, framed the way the board frames it, in a real browser.
+ *
+ * This is the band that arrived as ~460 lines of script frozen inside a
+ * routine's `template.html`, published by that routine's own script, never once
+ * executed by a test. The migration is only worth something if the replacement
+ * is actually exercised — and the parts that matter here cannot be asserted on
+ * a string: the runtime *clones the server's own column* to build a view the
+ * server did not draw, so what it produces is a function of markup `Columns.tsx`
+ * emits rather than of anything this file could hand-write.
+ *
+ * Which is why the fixture is rendered by the real renderer rather than typed
+ * out. A hand-written stand-in would be a second, drifting definition of what a
+ * column is, and the drift would land in the one code path no other test covers.
+ * The runtime side is the *built* `columns.js` the board actually injects, so a
+ * behaviour change that was never rebuilt fails here.
+ */
+const spec = {
+  windows: [1, 7],
+  views: [
+    {
+      key: "owner",
+      label: "by owner",
+      series: {
+        authors: ["ana", "bo"],
+        from: "2026-03-01",
+        n: 3,
+        changed: [
+          [
+            1,
+            [
+              [1, 4, 5],
+              [0, 0, 0],
+            ],
+          ],
+          [
+            2,
+            [
+              [0, 2, 2],
+              [3, 0, 3],
+            ],
+          ],
+        ],
+      },
+    },
+    {
+      key: "reviewer",
+      label: "by reviewer",
+      series: {
+        authors: ["bo"],
+        from: "2026-03-01",
+        n: 3,
+        changed: [[2, [[0, 1, 1]]]],
+      },
+    },
+  ],
+  people: {
+    ana: { name: "Ana Ruiz" },
+    bo: { name: "Bo Chen" },
+  },
+} as const
+
+function artifact(): string {
+  return renderArtifact(
+    {
+      slug: "repo-stats",
+      generatedAt: "2026-03-03T08:00:00Z",
+      stat: { value: 6, label: "merged" },
+      blocks: [
+        {
+          kind: "columns",
+          label: "PRs per person",
+          spec: structuredClone(spec) as never,
+        },
+      ],
+    },
+    "",
+  )
+}
+
+const frames: HTMLIFrameElement[] = []
+afterEach(() => {
+  for (const f of frames.splice(0)) f.remove()
+})
+
+/** Frame and mount, optionally without the kit stamp the injection gates on. */
+async function mount(html = artifact()) {
+  const iframe = document.createElement("iframe")
+  iframe.style.cssText = "width:640px;height:480px;border:0"
+  iframe.setAttribute("sandbox", "allow-scripts allow-same-origin")
+  iframe.srcdoc = frameArtifactHtml(
+    html,
+    DEFAULT_THEME,
+    "full",
+    "",
+    undefined,
+    ARTIFACT_KIT_STYLE,
+    ARTIFACT_COLUMNS_SCRIPT,
+  )
+  document.body.appendChild(iframe)
+  frames.push(iframe)
+  await new Promise((r) => {
+    iframe.addEventListener("load", r, { once: true })
+  })
+  const d = iframe.contentDocument
+  if (!d) throw new Error("no iframe document")
+  await new Promise((r) => setTimeout(r, 120))
+  return d
+}
+
+const text = (d: Document, sel: string) =>
+  (d.querySelector(sel)?.textContent ?? "").trim()
+
+const columnKeys = (d: Document) =>
+  [...d.querySelectorAll("[data-kit-columns-col]")].map(
+    (el) => (el as HTMLElement).dataset.kitColumnsCol,
+  )
+
+/** Click a toggle option the way a reader would. */
+function press(d: Document, group: string, value: string) {
+  const button = d.querySelector<HTMLElement>(
+    `[data-kit-toggle="${group}"] [data-kit-toggle-option="${value}"]`,
+  )
+  if (!button) throw new Error(`no ${group} option ${value}`)
+  button.click()
+}
+
+/** Move the scrubber, in the iframe's own realm so the event is its own. */
+function scrubTo(d: Document, index: number) {
+  const slider = d.querySelector<HTMLInputElement>("[data-kit-scrub-input]")
+  if (!slider) throw new Error("no scrubber")
+  slider.value = String(index)
+  const win = d.defaultView as Window & typeof globalThis
+  slider.dispatchEvent(new win.Event("input", { bubbles: true }))
+}
+
+describe("the injected columns runtime", () => {
+  it("reveals the controls, which ship hidden", async () => {
+    // ADR-0039: a raw-opened artifact keeps a real chart of a real day, and
+    // gets no controls — a scrubber that looks live and does nothing is worse
+    // than a chart that only shows the day it was published.
+    const d = await mount()
+    const view = d.querySelector<HTMLElement>('[data-kit-toggle="view"]')
+    const scrub = d.querySelector<HTMLElement>("[data-kit-scrub]")
+    expect(view?.hidden).toBe(false)
+    expect(scrub?.hidden).toBe(false)
+  })
+
+  it("leaves them hidden when nothing is listening", async () => {
+    // The same document without the kit stamp: `frameArtifactHtml` injects
+    // nothing, so this is what an artifact opened off the artifacts branch is.
+    const bare = artifact().replace(
+      /<meta name="steward-kit-version"[^>]*>/,
+      "",
+    )
+    const d = await mount(bare)
+    expect(
+      d.querySelector<HTMLElement>('[data-kit-toggle="view"]')?.hidden,
+    ).toBe(true)
+    // …and the chart is still a chart. This is the bug the migration fixed:
+    // the frozen template emptied the plot and rebuilt it in script.
+    expect(columnKeys(d)).toEqual(["ana", "bo"])
+  })
+
+  it("draws the day the server drew, so nothing jumps on attach", async () => {
+    const d = await mount()
+    expect(text(d, "[data-kit-columns-date]")).toBe("Mar 3")
+    expect(text(d, "[data-kit-columns-total]")).toBe("6 merged · 4 open")
+  })
+
+  it("scrubs back to a day the server never rendered", async () => {
+    const d = await mount()
+    scrubTo(d, 0)
+    expect(text(d, "[data-kit-columns-date]")).toBe("Mar 1")
+    expect(text(d, "[data-kit-columns-total]")).toBe("0 merged · 0 open")
+    // Day 0 is a tie at zero, and the order still holds — the ranking breaks
+    // ties on the final standing so early days do not shuffle for no reason.
+    expect(columnKeys(d)).toEqual(["ana", "bo"])
+  })
+
+  it("rebuilds the plot for a view with different people in it", async () => {
+    // The clone path: `reviewer` has one person, and the runtime has to make a
+    // column for them out of markup the server only ever wrote for `owner`.
+    const d = await mount()
+    press(d, "view", "reviewer")
+    await new Promise((r) => setTimeout(r, 30))
+    expect(columnKeys(d)).toEqual(["bo"])
+    const col = d.querySelector<HTMLElement>('[data-kit-columns-col="bo"]')
+    expect(col?.title).toContain("Bo Chen")
+    // A cloned column carries the server's face markup, not a second copy of
+    // `Avatar` written here — the name reaches a screen reader either way.
+    expect(col?.querySelector(".sr-only")?.textContent).toBe("Bo Chen")
+    expect(text(d, "[data-kit-columns-total]")).toBe("1 merged · 0 open")
+  })
+
+  it("switches to the trailing window, and says which one", async () => {
+    const d = await mount()
+    press(d, "mode", "window")
+    await new Promise((r) => setTimeout(r, 30))
+    // One day back from Mar 3: ana merged 2 and opened 2, bo opened 3.
+    expect(text(d, "[data-kit-columns-total]")).toBe(
+      "2 merged · 5 opened · last day",
+    )
+    // "open" is a level that falls as PRs merge; over a window the honest word
+    // is what happened, not what stands.
+    expect(text(d, "[data-kit-columns-legend-open]")).toBe("opened")
+  })
+
+  it("shows the window picker only where it means something", async () => {
+    const d = await mount()
+    const picker = d.querySelector<HTMLElement>('[data-kit-toggle="window"]')
+    expect(picker?.hidden).toBe(true)
+    press(d, "mode", "window")
+    await new Promise((r) => setTimeout(r, 30))
+    expect(picker?.hidden).toBe(false)
+  })
+
+  it("keeps the published frame standing when the payload is unreadable", async () => {
+    // A truncated or hand-edited payload costs the scrubbing, not the chart.
+    const broken = artifact().replace(
+      /(data-kit-columns-series="">)[\s\S]*?(<\/script>)/,
+      "$1{oh no$2",
+    )
+    const d = await mount(broken)
+    expect(columnKeys(d)).toEqual(["ana", "bo"])
+    expect(text(d, "[data-kit-columns-total]")).toBe("6 merged · 4 open")
+    // Nothing was attached, so the controls stay honest about it.
+    expect(
+      d.querySelector<HTMLElement>('[data-kit-toggle="view"]')?.hidden,
+    ).toBe(true)
+  })
+})
