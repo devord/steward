@@ -51,7 +51,7 @@ four sides of whatever you place, roughly one sixth of the chip's width.
 Nothing sits closer than that, including the edge of its own container.
 
 Inside the chip that ground is already drawn: the bow is inset so the tile
-keeps ~8 units around it on the long axis — see the measurements below. The
+keeps ~7 units around it on the long axis — see the measurements below. The
 inset is part of the artwork, not padding you can recover by scaling the bow
 up. The maskable icon keeps its own margin against the safe zone a launcher
 crops to — it fills that zone boldly, but never to the mask.

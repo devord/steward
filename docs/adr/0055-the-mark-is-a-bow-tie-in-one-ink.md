@@ -62,8 +62,9 @@ keeps them.
 
 The maskable icon is a separate placement question. Matching the chip's share of
 its tile left the full-bleed square reading _small_, so the maskable fills 90%
-of its safe zone (`MASK_FILL`) — bolder than the chip, but kept off the mask, so
-a launcher's crop never reaches the tips.
+of its safe zone (`MASK_FILL`, the target the icon's scale `MASK_INSET` derives
+from) — bolder than the chip, but kept off the mask, so a launcher's crop never
+reaches the tips.
 
 ## The chip is flat
 
