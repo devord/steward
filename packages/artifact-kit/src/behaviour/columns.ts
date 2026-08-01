@@ -97,7 +97,13 @@ function install(root: HTMLElement): void {
 
   // The server's own column, kept before anything mutates it, as the only
   // definition of a column's markup.
-  const prototype = q<HTMLElement>(plot, "[data-kit-columns-col]")
+  //
+  // Prefer one with a face on it. `Avatar` emits the <img> only when there is
+  // an avatar to put in it, so cloning a faceless column would leave nothing
+  // to patch a face into — every rebuilt column would be an initial, decided
+  // by whoever happened to rank first.
+  const all = qa<HTMLElement>(plot, "[data-kit-columns-col]")
+  const prototype = all.find((el) => el.querySelector("img")) ?? all[0]
   const cloned = prototype && cloneElement(prototype)
   if (!cloned) return
   const blank: HTMLElement = cloned
@@ -112,6 +118,17 @@ function install(root: HTMLElement): void {
     )
   }
   indexColumns()
+
+  // The faces the server already drew, read back before anything rebuilds the
+  // plot. An inlined avatar is a few KB of data URI, and the payload used to
+  // ship a second copy of every one of them — a third of the published bytes
+  // on the artifact this band exists for. So the renderer sends only the faces
+  // it did not draw (everyone the *other* views add), and these are the rest.
+  const drawn = new Map<string, string>()
+  for (const [key, el] of columns) {
+    const src = el.querySelector("img")?.getAttribute("src")
+    if (src) drawn.set(key, src)
+  }
 
   /** Build the plot for a view whose people may differ from the last one's. */
   function buildColumns(): void {
@@ -132,10 +149,12 @@ function install(root: HTMLElement): void {
       )
       const img = col.querySelector("img")
       // Only a data URI ever reaches here — the renderer strips the rest,
-      // because the sandbox cannot reach an avatar host (ADR-0044).
-      if (person.avatar) {
+      // because the sandbox cannot reach an avatar host (ADR-0044) — and the
+      // harvested half came out of an <img> the renderer had already vetted.
+      const avatar = person.avatar ?? drawn.get(key)
+      if (avatar) {
         if (img) {
-          img.src = person.avatar
+          img.src = avatar
           img.alt = ""
         }
       } else img?.remove()
