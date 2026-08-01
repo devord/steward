@@ -298,8 +298,9 @@ region. The bow, the knot and each button clear the floor at both minimums; the
 fold (`notch`, `puff`) modulates the wing's edge rather than drawing a region,
 so it is not gated, the way the old `sweep` was not. A feature either survives
 or is not drawn; the buttons clear the floor even at 16px (1.2px), so the
-favicon keeps them, and the maskable icon fills its safe zone boldly (90%) so
-the full-bleed square does not read small. `mark.test.ts` holds all of it.
+favicon keeps them, and the maskable icon takes the conventional Android keyline
+padding (~56% of the canvas) so Steward sits like its neighbours on a home
+screen. `mark.test.ts` holds all of it.
 
 Two framings, and they are genuinely different objects rather than one drawing
 with and without a tile.
@@ -310,7 +311,10 @@ light, cream on dark. It is the one framing sitting on a ground it does not own,
 so it is the one thing keyed on light or dark mode. The orange is the chip's,
 not the bow's: glyph-as-ink is the mark-in-chrome treatment everywhere else
 (GitHub, Linear, Vercel), and it is what the brand sheet's primary logo does —
-the orange bow is the "filled" variant, not the default.
+the orange bow is the "filled" variant, not the default. The chrome glyph is
+**bow and knot only** (`GLYPH_VIEWBOX_COMPACT`): at header size the buttons read
+as loose specks under the bow and pull it off the wordmark's baseline, so they
+stay a display-size detail the inline crop drops.
 
 **On display surfaces** — the browser tab, the OS launcher, the landing hero —
 the mark wears the **product-icon chip**:
@@ -401,18 +405,19 @@ edge rather than drawing a region with a width, exactly as the old `sweep` did.
 
 The bow is 54 × 22 units at an aspect of 2.45:1 — 84% of the tile's width.
 Every chip insets the **whole mark** — bow, knot and buttons — through one
-function; the chip keeps a hair of ground, and the maskable fills more of its
-safe zone so the full-bleed square reads bold:
+function; the chip keeps a hair of ground, and the maskable insets further for
+the padding an Android launcher crops around:
 
 |               | scale              | bow spans | of the visible tile | ground per side |
 | ------------- | ------------------ | --------- | ------------------- | --------------- |
 | chip          | `CHIP_INSET` 0.92  | 49.7u     | 78%                 | 7.2u            |
-| maskable icon | `MASK_INSET` 0.853 | 46.1u     | 90%                 | 2.6u            |
+| maskable icon | `MASK_INSET` 0.664 | 35.8u     | 70%                 | 7.7u            |
 
 The maskable column measures against the safe zone — the middle 80% a launcher
-is guaranteed to show. Its bow fills 90% of that zone, bolder than the chip's
-share of its tile so the full-bleed square does not read small, and kept off the
-mask so a launcher's crop never reaches the tips.
+is guaranteed to show. Its bow fills 70% of that zone — 56% of the whole
+canvas, the conventional keyline padding an Android adaptive icon keeps — so
+Steward sits like its neighbours on a home screen rather than crammed against
+the mask.
 
 The bow is **level in every framing** (`CHIP_TILT` 0°): it is symmetric by
 construction and the tile is square, so a rotation fights both.

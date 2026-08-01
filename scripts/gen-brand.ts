@@ -533,8 +533,8 @@ ${table(
 
 The bow is ${MARK_RATIOS.bowW} × ${MARK_RATIOS.bowH} units at an aspect of ${(MARK_RATIOS.bowW / MARK_RATIOS.bowH).toFixed(2)}:1 — ${((MARK_RATIOS.bowW / MARK_TILE) * 100).toFixed(0)}% of the tile's width.
 Every chip insets the **whole mark** — bow, knot and buttons — through one
-function; the chip keeps a hair of ground, and the maskable fills more of its
-safe zone so the full-bleed square reads bold:
+function; the chip keeps a hair of ground, and the maskable insets further for
+the padding an Android launcher crops around:
 
 ${table(
   ["", "scale", "bow spans", "of the visible tile", "ground per side"],
@@ -557,9 +557,10 @@ ${table(
 )}
 
 The maskable column measures against the safe zone — the middle ${(MASK_SAFE * 100).toFixed(0)}% a launcher
-is guaranteed to show. Its bow fills ${(MASK_FILL * 100).toFixed(0)}% of that zone, bolder than the chip's
-share of its tile so the full-bleed square does not read small, and kept off the
-mask so a launcher's crop never reaches the tips.
+is guaranteed to show. Its bow fills ${(MASK_FILL * 100).toFixed(0)}% of that zone — ${(((MARK_RATIOS.bowW * MASK_INSET) / MARK_TILE) * 100).toFixed(0)}% of the whole
+canvas, the conventional keyline padding an Android adaptive icon keeps — so
+Steward sits like its neighbours on a home screen rather than crammed against
+the mask.
 
 The bow is **level in every framing** (\`CHIP_TILT\` ${CHIP_TILT}°): it is symmetric by
 construction and the tile is square, so a rotation fights both.

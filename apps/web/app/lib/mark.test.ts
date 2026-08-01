@@ -146,15 +146,18 @@ describe("every chip places the mark the same way", () => {
     expect(MARK_SPAN.chip / 2 - reach(CHIP_INSET)).toBeGreaterThanOrEqual(6)
   })
 
-  it("the maskable fills its safe zone boldly but stays off the mask", () => {
-    // The bow's tips reach MASK_FILL of the safe zone — bolder than the chip's
-    // share of its tile, so the full-bleed square does not read small, but
-    // strictly inside the safe zone with margin, so a launcher's crop never
-    // reaches the tips (the shipped Android bug).
+  it("the maskable is padded for Android's crop and stays off the mask", () => {
+    // The maskable is the Android adaptive icon: the launcher masks and crops
+    // it and it sits beside other apps, so it takes the conventional keyline
+    // padding, not the chip's full-bleed fill. The bow's tips reach MASK_FILL
+    // of the safe zone — inside it with margin — and the bow fills *less* of the
+    // canvas than the (uncropped) chip fills of its tile, so Steward is not
+    // tighter than its neighbours. A detour to a bold fill read as cramped on a
+    // real home screen.
     const safe = (MARK_SPAN.chip * MASK_SAFE) / 2
     expect(reach(MASK_INSET) / safe).toBeCloseTo(MASK_FILL, 3)
     expect(reach(MASK_INSET)).toBeLessThan(safe)
-    expect(MASK_FILL).toBeGreaterThan(reach(CHIP_INSET) / 32)
+    expect(MASK_INSET).toBeLessThan(CHIP_INSET)
   })
 
   it("every shipped chip is the same drawing", async () => {

@@ -3,7 +3,7 @@ import { useId } from "react"
 import {
   chipTransform,
   CHIP_VIEWBOX,
-  GLYPH_VIEWBOX,
+  GLYPH_VIEWBOX_COMPACT,
   MARK_BUTTONS,
   MARK_PATHS,
   squirclePath,
@@ -32,7 +32,8 @@ const TILE = squirclePath()
  * - **In chrome**, the bare glyph: neutral ink (`--mark-ink`) on whatever
  *   surface the rail or the header hands it — near-black on light, cream on
  *   dark. Mode-keyed, since it is the one framing sitting on a surface it does
- *   not own. Orange is the chip's, not the bow's.
+ *   not own. Orange is the chip's, not the bow's, and it is bow-and-knot only —
+ *   the buttons are a display-size detail the inline crop drops.
  * - **On display surfaces** (`display`), the product-icon chip: a superellipse
  *   tile in a flat ember (`--chip-tile`) with the bow **cut out of it** in
  *   cream (`--chip-bow`), inset by `chipTransform` so the tile keeps ground.
@@ -55,18 +56,18 @@ export function Logo({
   const id = useId()
 
   if (!display) {
+    // Chrome inline glyph: bow and knot only. At header/rail size the buttons
+    // read as loose specks under the bow and pull it off the wordmark's
+    // baseline, so they are a display-size detail the chrome crop drops.
     return (
       <svg
-        viewBox={GLYPH_VIEWBOX}
+        viewBox={GLYPH_VIEWBOX_COMPACT}
         aria-hidden
         className={cn("shrink-0", className)}
         fill="var(--mark-ink)"
       >
         {MARK_PATHS.map((d, i) => (
           <path key={`p${i}`} d={d} />
-        ))}
-        {MARK_BUTTONS.map((b, i) => (
-          <circle key={`b${i}`} cx={b.cx} cy={b.cy} r={b.rad} />
         ))}
       </svg>
     )
@@ -129,12 +130,12 @@ export function Wordmark({
         className,
       )}
     >
-      {/* items-center puts the mark's bbox centre on the line-box centre. The
-          bow sits above that centre and the buttons hang below it, into the
-          descender band, which is where a tie's studs read against a word. */}
+      {/* items-center puts the glyph's crop centre on the line-box centre. The
+          chrome glyph is bow-and-knot only, cropped square-ish, so the bow sits
+          centred on the cap band; the display chip keeps the buttons. */}
       <Logo
         display={display}
-        className={display ? "size-[1.4em]" : "h-[1.5em] w-[1.9em]"}
+        className={display ? "size-[1.4em]" : "h-[1em] w-[2.2em]"}
       />
       Steward
     </span>
