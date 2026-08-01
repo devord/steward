@@ -419,13 +419,14 @@ readers will get.
 
 **The series is positional, delta-encoded and sparse.** `authors` fixes the
 order every other array is read in, `from` is day 0, `n` is the axis length
-including days where nothing happened, and `changed` holds only the days that
+including days when nothing happened, and `changed` holds only the days that
 moved: `[dayIndex, [[dOpen, dMerged, dCreated], ...one triple per author]]`. The
 dense form — every day × every person — is roughly ten times larger, and the
 payload is inlined into the artifact, so it is paid on every board render. A
 delta row shorter than `authors` is rejected at publish rather than decoded to
 zeroes, because the failure mode otherwise is a person whose work appears to
-have stopped.
+have stopped. A `dayIndex` outside `[0, n)` is rejected for the same reason: the
+decoder only reads days inside the axis, so the row is dropped whole.
 
 **`created` is stored even though nothing draws it**, and dropping it is the
 mistake to avoid. It is what makes `windows` possible: "opened in the last week"

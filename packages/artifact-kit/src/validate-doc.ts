@@ -298,8 +298,19 @@ export function validateDoc(doc: unknown): string[] {
               if (!Array.isArray(entry) || entry.length !== 2)
                 return void errors.push(`${cat} must be [dayIndex, deltas]`)
               const [day, deltas] = entry
-              if (typeof day !== "number" || !Number.isInteger(day) || day < 0)
-                errors.push(`${cat}[0] must be a day index`)
+              // Past the end of the axis is the same failure as before its
+              // start, and quieter: `decodeView` only ever reads `i < n`, so a
+              // row dated beyond it is dropped rather than misplaced — that
+              // person's work simply never appears.
+              if (
+                typeof day !== "number" ||
+                !Number.isInteger(day) ||
+                day < 0 ||
+                (typeof s.n === "number" && day >= s.n)
+              )
+                errors.push(
+                  `${cat}[0] must be a day index within the axis (0 to ${String(s.n)} exclusive)`,
+                )
               // A short delta row is the encoding bug that reads as a person
               // whose work stopped: the missing tail decodes to zeroes.
               if (!Array.isArray(deltas) || deltas.length !== width)
