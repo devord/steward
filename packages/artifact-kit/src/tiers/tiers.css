@@ -62,3 +62,17 @@
    gated "page generosity" on the stamp rather than on a breakpoint. */
 @custom-variant tile (:root[data-steward-tile] &);
 @custom-variant page-only (:root:not([data-steward-tile]) &);
+
+/* The one class the injected `columns` runtime sets that Tailwind cannot
+   compile from source: it is written in `behaviour/columns.ts`, which is
+   runtime JS rather than markup and is deliberately outside the scan (a
+   scanned runtime compiles every property name that happens to collide with a
+   utility into a stylesheet inlined on every artifact).
+
+   Value labels above each column collide into an unreadable digit run once
+   columns get narrow — 30 people in a one-column tile, which is the normal
+   case rather than the overflow case. The runtime measures the real column
+   width and sets this below the legible floor. */
+[data-kit-columns-plot].kit-columns-nolabels [data-kit-columns-value] {
+  visibility: hidden;
+}
