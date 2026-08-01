@@ -21,6 +21,12 @@ import { DEFAULT_THEME, frameArtifactHtml } from "./theme.ts"
  * The runtime side is the *built* `columns.js` the board actually injects, so a
  * behaviour change that was never rebuilt fails here.
  */
+/** Two distinct 1×1 GIFs. Real `data:` URIs, so the browser actually loads them. */
+const FACE_A =
+  "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+const FACE_B =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+
 const spec = {
   windows: [1, 7],
   views: [
@@ -61,8 +67,8 @@ const spec = {
     },
   ],
   people: {
-    ana: { name: "Ana Ruiz" },
-    bo: { name: "Bo Chen" },
+    ana: { name: "Ana Ruiz", avatar: FACE_A },
+    bo: { name: "Bo Chen", avatar: FACE_B },
   },
 } as const
 
@@ -197,6 +203,70 @@ describe("the injected columns runtime", () => {
     // `Avatar` written here — the name reaches a screen reader either way.
     expect(col?.querySelector(".sr-only")?.textContent).toBe("Bo Chen")
     expect(text(d, "[data-kit-columns-total]")).toBe("1 merged · 0 open")
+  })
+
+  it("keeps a face whose bytes the payload deliberately does not carry", async () => {
+    // The renderer omits an avatar it has already drawn, because a data URI in
+    // the markup and the same URI in the payload is the same face twice — 130
+    // of 206 KB on the real artifact. So the runtime has to read Bo's face off
+    // the plot it was handed, and still have it when the column is rebuilt for
+    // a view Bo appears in under different markup.
+    const html = artifact()
+    const payload = JSON.parse(
+      html.match(/data-kit-columns-series[^>]*>([\s\S]*?)<\/script>/)?.[1] ??
+        "",
+    )
+    expect(payload.people.bo.avatar).toBeUndefined()
+
+    const d = await mount(html)
+    press(d, "view", "reviewer")
+    await new Promise((r) => setTimeout(r, 30))
+    const img = d.querySelector<HTMLImageElement>(
+      '[data-kit-columns-col="bo"] img',
+    )
+    expect(img?.getAttribute("src")).toBe(FACE_B)
+  })
+
+  it("still takes a face for someone the first view never showed", async () => {
+    // The other half of the same rule: Cy is only ever in `reviewer`, so their
+    // face is nowhere in the markup and the payload is the only place it can
+    // come from.
+    const withCy = {
+      windows: spec.windows,
+      views: [
+        structuredClone(spec.views[0]),
+        {
+          key: "reviewer",
+          label: "by reviewer",
+          series: {
+            authors: ["cy"],
+            from: "2026-03-01",
+            n: 3,
+            changed: [[2, [[0, 1, 1]]]],
+          },
+        },
+      ],
+      people: { ...spec.people, cy: { name: "Cy Okafor", avatar: FACE_A } },
+    }
+    const d = await mount(
+      renderArtifact(
+        {
+          slug: "repo-stats",
+          generatedAt: "2026-03-03T08:00:00Z",
+          stat: { value: 6, label: "merged" },
+          blocks: [{ kind: "columns", spec: withCy as never }],
+        },
+        "",
+      ),
+    )
+    press(d, "view", "reviewer")
+    await new Promise((r) => setTimeout(r, 30))
+    expect(columnKeys(d)).toEqual(["cy"])
+    expect(
+      d
+        .querySelector<HTMLImageElement>('[data-kit-columns-col="cy"] img')
+        ?.getAttribute("src"),
+    ).toBe(FACE_A)
   })
 
   it("switches to the trailing window, and says which one", async () => {

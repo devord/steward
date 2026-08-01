@@ -106,22 +106,31 @@ function face(key: string, meta: ThroughputSpec["people"]): Face {
 }
 
 /**
- * The people registry as the runtime gets it, with unreachable avatars gone.
+ * The people registry as the runtime gets it: unreachable avatars dropped, and
+ * the drawn ones not sent a second time.
  *
  * `Avatar` already refuses a non-`data:` src, but the runtime rebuilds every
  * column on a toggle and would otherwise be free to put the dropped URL back —
  * two places enforcing one rule, and the second one is the one nobody tests
  * because it only runs on the board. Dropping it here means the runtime never
  * sees a src it must not use, and the payload stops carrying dead URLs.
+ *
+ * `drawn` is everyone the plot renders a face for. Their avatars are already
+ * in the document as `<img src="data:…">`, and an inlined avatar runs a few KB
+ * — on the real `repo-stats` artifact the two copies together came to 130 of
+ * 206 KB. The runtime reads the drawn ones back off the markup it was handed,
+ * so the payload carries only the faces the first view never showed.
  */
 function payloadPeople(
   people: ThroughputSpec["people"],
+  drawn: ReadonlySet<string>,
 ): NonNullable<ThroughputSpec["people"]> {
   const out: NonNullable<ThroughputSpec["people"]> = {}
   for (const [key, p] of Object.entries(people ?? {}))
     out[key] = {
       ...p,
-      avatar: p.avatar?.startsWith("data:") ? p.avatar : undefined,
+      avatar:
+        drawn.has(key) || !p.avatar?.startsWith("data:") ? undefined : p.avatar,
     }
   return out
 }
@@ -286,7 +295,7 @@ export function Throughput({ spec }: { spec: ThroughputSpec }) {
           __html: escapeContextBlock(
             JSON.stringify({
               views: views.map((v) => ({ key: v.key, series: v.series })),
-              people: payloadPeople(spec.people),
+              people: payloadPeople(spec.people, new Set(frame.order)),
               legend: words,
             }),
           ),

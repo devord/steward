@@ -156,6 +156,55 @@ describe("the throughput band", () => {
     ])
   })
 
+  it("sends a face the runtime cannot already see, and only that one", () => {
+    // An inlined avatar is a few KB, and the payload used to ship a second
+    // copy of every face already in the markup — 130 of 206 KB on the real
+    // artifact. Drawn faces are read back off the plot; the payload carries
+    // the people only the other views introduce.
+    const drawn = "data:image/png;base64,AAAA"
+    const undrawn = "data:image/png;base64,BBBB"
+    const withFaces = renderArtifact(
+      {
+        ...doc,
+        blocks: [
+          {
+            kind: "columns",
+            spec: {
+              ...spec,
+              views: [
+                spec.views[0],
+                {
+                  key: "reviewer",
+                  label: "by reviewer",
+                  series: {
+                    authors: ["cy"],
+                    from: "2026-03-01",
+                    n: 3,
+                    changed: [[2, [[0, 1, 1]]]],
+                  },
+                },
+              ],
+              people: {
+                ana: { name: "Ana", avatar: drawn },
+                cy: { name: "Cy", avatar: undrawn },
+              },
+            },
+          },
+        ],
+      },
+      "",
+    )
+    const payload = JSON.parse(
+      withFaces.match(
+        /data-kit-columns-series[^>]*>([\s\S]*?)<\/script>/,
+      )?.[1] ?? "",
+    )
+    expect(payload.people.ana.avatar).toBeUndefined()
+    expect(payload.people.cy.avatar).toBe(undrawn)
+    // Ana's face is in the document exactly once — as markup.
+    expect(withFaces.split(drawn)).toHaveLength(2)
+  })
+
   it("states its starting position so the runtime does not re-derive it", () => {
     // If the runtime guessed, its first frame could differ from the one on
     // screen and the chart would visibly jump the moment a frame loaded.
