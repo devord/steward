@@ -53,8 +53,9 @@ Nothing sits closer than that, including the edge of its own container.
 Inside the chip that ground is already drawn: the bow is inset so the tile
 keeps ~7 units around it on the long axis — see the measurements below. The
 inset is part of the artwork, not padding you can recover by scaling the bow
-up. The maskable icon keeps its own margin against the safe zone a launcher
-crops to — it fills that zone boldly, but never to the mask.
+up. The maskable icon insets further still, to the conventional keyline padding
+an Android launcher crops around — so it sits like other adaptive icons, never
+crammed against the mask.
 
 **Minimum size** — the chip is validated to **16 device pixels** and the bare
 glyph to **20 device pixels wide**. Device pixels at 1×, not CSS pixels on a
@@ -150,18 +151,19 @@ edge rather than drawing a region with a width, exactly as the old `sweep` did.
 
 The bow is 54 × 22 units at an aspect of 2.45:1 — 84% of the tile's width.
 Every chip insets the **whole mark** — bow, knot and buttons — through one
-function; the chip keeps a hair of ground, and the maskable fills more of its
-safe zone so the full-bleed square reads bold:
+function; the chip keeps a hair of ground, and the maskable insets further for
+the padding an Android launcher crops around:
 
 |               | scale              | bow spans | of the visible tile | ground per side |
 | ------------- | ------------------ | --------- | ------------------- | --------------- |
 | chip          | `CHIP_INSET` 0.92  | 49.7u     | 78%                 | 7.2u            |
-| maskable icon | `MASK_INSET` 0.853 | 46.1u     | 90%                 | 2.6u            |
+| maskable icon | `MASK_INSET` 0.664 | 35.8u     | 70%                 | 7.7u            |
 
 The maskable column measures against the safe zone — the middle 80% a launcher
-is guaranteed to show. Its bow fills 90% of that zone, bolder than the chip's
-share of its tile so the full-bleed square does not read small, and kept off the
-mask so a launcher's crop never reaches the tips.
+is guaranteed to show. Its bow fills 70% of that zone — 56% of the whole
+canvas, the conventional keyline padding an Android adaptive icon keeps — so
+Steward sits like its neighbours on a home screen rather than crammed against
+the mask.
 
 The bow is **level in every framing** (`CHIP_TILT` 0°): it is symmetric by
 construction and the tile is square, so a rotation fights both.

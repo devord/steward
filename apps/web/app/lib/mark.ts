@@ -133,15 +133,16 @@ export const MASK_SAFE = 0.8
 /**
  * How much of the safe zone the maskable bow's tips reach.
  *
- * The old maskable matched the chip's share of its tile (~78% of the safe
- * zone), which left the full-bleed square reading _small_ — the bow was 62% of
- * the visible square while the chip's was 78% of its tile. It fills the safe
- * zone boldly now (90%), so the raw square is as present as the chip, while
- * staying off the mask: a launcher is guaranteed to show the safe zone, so tips
- * at 90% of it keep a real margin — the opposite of the shipped Android icon
- * that put its tips against the mask.
+ * The maskable is the **Android adaptive icon**: the launcher masks and crops
+ * it, and it sits on a home screen beside other apps, so it wants the
+ * conventional keyline padding, not a bold fill. At 0.70 the bow spans ~56% of
+ * the full canvas — the share the platform's own adaptive icons keep — so
+ * Steward is not tighter than its neighbours, and the bow stays well off the
+ * mask. A brief detour to 0.90 chased the *unmasked* square looking small in a
+ * proof sheet, which is a view Android never renders; on a real home screen it
+ * read as cramped against every other icon.
  */
-export const MASK_FILL = 0.9
+export const MASK_FILL = 0.7
 
 /** The mark's scale inside the maskable icon, from {@link MASK_FILL}. */
 export const MASK_INSET = (MASK_FILL * MARK_TILE * MASK_SAFE) / MARK_RATIOS.bowW
@@ -153,9 +154,15 @@ export const MASK_INSET = (MASK_FILL * MARK_TILE * MASK_SAFE) / MARK_RATIOS.bowW
  * the tile centre — which is why every chip centres the *whole mark* on the
  * tile rather than the bow, or the buttons would strand against the edge.
  */
-function markBounds(r: MarkRatios = MARK_RATIOS) {
+function markBounds(
+  r: MarkRatios = MARK_RATIOS,
+  opts: { buttons?: boolean } = {},
+) {
+  const withButtons = opts.buttons ?? true
   const top = C - r.bowH / 2
-  const bottom = r.buttonTop + r.buttonGap + r.button / 2
+  const bottom = withButtons
+    ? r.buttonTop + r.buttonGap + r.button / 2
+    : C + r.bowH / 2
   return {
     left: C - r.bowW / 2,
     right: C + r.bowW / 2,
@@ -343,12 +350,20 @@ const MARK = buildMark()
 
 /**
  * The bare glyph's crop: the mark's own ink bounds plus `GLYPH_AIR` on every
- * side. Wider than tall through the bow, and taller through the buttons, so the
- * crop is the full mark rather than a square — derived, so a redraw cannot clip
- * itself.
+ * side. Wider than tall through the bow, and (with `buttons`) taller through
+ * them, so the crop is the full mark rather than a square — derived, so a
+ * redraw cannot clip itself.
+ *
+ * `buttons: false` crops to the bow and knot alone, for the **chrome inline
+ * glyph** (the header, the rail): at that size the studs read as loose specks
+ * below the bow and pull it off the wordmark's baseline, so chrome drops them
+ * while every display framing keeps them.
  */
-export function glyphViewBox(r: MarkRatios = MARK_RATIOS): string {
-  const b = markBounds(r)
+export function glyphViewBox(
+  r: MarkRatios = MARK_RATIOS,
+  opts: { buttons?: boolean } = {},
+): string {
+  const b = markBounds(r, opts)
   const w = r.bowW + 2 * GLYPH_AIR
   const h = b.bottom - b.top + 2 * GLYPH_AIR
   return `${n(C - w / 2)} ${n(b.top - GLYPH_AIR)} ${n(w)} ${n(h)}`
@@ -357,8 +372,13 @@ export function glyphViewBox(r: MarkRatios = MARK_RATIOS): string {
 /** The chip's crop — the full tile. */
 export const CHIP_VIEWBOX = "0 0 64 64"
 
-/** The shipped glyph crop. Callers rendering another cut want `glyphViewBox`. */
+/** The shipped glyph crop, full mark. Callers rendering another cut want `glyphViewBox`. */
 export const GLYPH_VIEWBOX = glyphViewBox()
+
+/** The chrome inline crop: bow and knot, no buttons (see `glyphViewBox`). */
+export const GLYPH_VIEWBOX_COMPACT = glyphViewBox(MARK_RATIOS, {
+  buttons: false,
+})
 
 export const WING_L = MARK.wingL
 export const WING_R = MARK.wingR

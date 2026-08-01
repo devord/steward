@@ -60,11 +60,14 @@ so it is not gated, as `sweep` was not. Every region — bow, knot, each button 
 clears the floor at both minimums (the buttons at 1.2px at 16px), so the favicon
 keeps them.
 
-The maskable icon is a separate placement question. Matching the chip's share of
-its tile left the full-bleed square reading _small_, so the maskable fills 90%
-of its safe zone (`MASK_FILL`, the target the icon's scale `MASK_INSET` derives
-from) — bolder than the chip, but kept off the mask, so a launcher's crop never
-reaches the tips.
+The maskable icon is a separate placement question. It is the Android adaptive
+icon — the launcher masks and crops it, and it sits on a home screen beside
+other apps — so it takes the conventional keyline padding, not the chip's
+full-bleed fill. The bow fills ~56% of the canvas (`MASK_FILL` 0.70 of the safe
+zone, the target the icon's scale `MASK_INSET` derives from), less than the chip
+and well off the mask, so Steward is not tighter than its neighbours. Chasing
+the _unmasked_ square looking bold — a view Android never renders — read as
+cramped against every other icon on the real home screen.
 
 ## The chip is flat
 
