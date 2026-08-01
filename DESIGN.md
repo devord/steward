@@ -297,9 +297,9 @@ Contrast says two regions differ; it never says either is big enough to be a
 region. The bow, the knot and each button clear the floor at both minimums; the
 fold (`notch`, `puff`) modulates the wing's edge rather than drawing a region,
 so it is not gated, the way the old `sweep` was not. A feature either survives
-or is not drawn — which is why the **browser-tab chip drops the buttons**, since
-at 16px they fall below a device pixel and would only muddy the bow.
-`mark.test.ts` holds all of it.
+or is not drawn; the buttons clear the floor even at 16px (1.2px), so the
+favicon keeps them, and the maskable icon fills its safe zone boldly (90%) so
+the full-bleed square does not read small. `mark.test.ts` holds all of it.
 
 Two framings, and they are genuinely different objects rather than one drawing
 with and without a tile.
@@ -401,16 +401,18 @@ edge rather than drawing a region with a width, exactly as the old `sweep` did.
 
 The bow is 54 × 22 units at an aspect of 2.45:1 — 84% of the tile's width.
 Every chip insets the **whole mark** — bow, knot and buttons — through one
-function, to the same share of whatever the viewer actually sees:
+function; the chip keeps a hair of ground, and the maskable fills more of its
+safe zone so the full-bleed square reads bold:
 
 |               | scale              | bow spans | of the visible tile | ground per side |
 | ------------- | ------------------ | --------- | ------------------- | --------------- |
 | chip          | `CHIP_INSET` 0.92  | 49.7u     | 78%                 | 7.2u            |
-| maskable icon | `MASK_INSET` 0.736 | 39.7u     | 78%                 | 5.7u            |
+| maskable icon | `MASK_INSET` 0.853 | 46.1u     | 90%                 | 2.6u            |
 
 The maskable column measures against the safe zone — the middle 80% a launcher
-is guaranteed to show — which is why its scale is `CHIP_INSET` times that and
-not a number of its own. The two shares match by construction.
+is guaranteed to show. Its bow fills 90% of that zone, bolder than the chip's
+share of its tile so the full-bleed square does not read small, and kept off the
+mask so a launcher's crop never reaches the tips.
 
 The bow is **level in every framing** (`CHIP_TILT` 0°): it is symmetric by
 construction and the tile is square, so a rotation fights both.
@@ -437,11 +439,12 @@ once (ADR-0054).
   collapsed-rail header, the account bar, the error chrome and the device-code
   page can't drift apart. 16px is the heading tier the widget titles take: the
   brand is a section heading of the app, never a row in the list.
-- `apps/web/public/favicon.svg`: the browser-tab chip — bow only, no buttons,
-  since they fall below a device pixel at 16px. `favicon.ico` (16/32/48, packed
-  by `render-icons.sh` from this file) is the raster fallback.
-- `apps/web/public/apple-touch-icon.png` (180) + `icon-{192,512}.png`: the chip
-  with buttons, rendered from `scripts/icon.svg`.
+- `apps/web/public/favicon.svg`: the browser-tab chip, one colourway — the same
+  drawing as the app icon, buttons and all (they clear a device pixel at 16px).
+  `favicon.ico` (16/32/48, packed by `render-icons.sh` from this file) is the
+  raster fallback.
+- `apps/web/public/apple-touch-icon.png` (180) + `icon-{192,512}.png`: the chip,
+  rendered from `scripts/icon.svg`.
 - `apps/web/public/manifest.webmanifest` + `icon-maskable-512.png`: from
   `scripts/icon-maskable.svg`, full-bleed with the bow at `MASK_INSET` — the
   chip's inset times the 80% safe zone — so it holds the same share of what the

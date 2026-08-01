@@ -46,6 +46,7 @@ import {
   MARK_RATIOS,
   MARK_TILE,
   markSpan,
+  MASK_FILL,
   MASK_INSET,
   MASK_SAFE,
   squirclePath,
@@ -361,18 +362,17 @@ emit(
 )
 
 /**
- * The browser tab. Purpose-built for 16px: the buttons fall below a device
- * pixel there and would only muddy the bow, so the tab chip drops them (the
- * placement is identical to the app icon's — one drawing, one stud short). The
- * `.ico` is rasterised from this, not from `icon.svg`.
+ * The browser tab, and the source the `.ico` is rasterised from. Same drawing
+ * as the app icon — the buttons clear a device pixel even at 16px (1.2px), so
+ * the tab keeps them.
  */
 emit(
   "apps/web/public/favicon.svg",
   svg(
     CHIP_VIEWBOX,
     ...CHIP_SIZE,
-    chip({ buttons: false }),
-    NOTE("Steward browser-tab icon — bow only, sized for 16px"),
+    chip(),
+    NOTE("Steward browser-tab icon — one colourway, both modes"),
   ),
 )
 
@@ -533,7 +533,8 @@ ${table(
 
 The bow is ${MARK_RATIOS.bowW} × ${MARK_RATIOS.bowH} units at an aspect of ${(MARK_RATIOS.bowW / MARK_RATIOS.bowH).toFixed(2)}:1 — ${((MARK_RATIOS.bowW / MARK_TILE) * 100).toFixed(0)}% of the tile's width.
 Every chip insets the **whole mark** — bow, knot and buttons — through one
-function, to the same share of whatever the viewer actually sees:
+function; the chip keeps a hair of ground, and the maskable fills more of its
+safe zone so the full-bleed square reads bold:
 
 ${table(
   ["", "scale", "bow spans", "of the visible tile", "ground per side"],
@@ -556,8 +557,9 @@ ${table(
 )}
 
 The maskable column measures against the safe zone — the middle ${(MASK_SAFE * 100).toFixed(0)}% a launcher
-is guaranteed to show — which is why its scale is \`CHIP_INSET\` times that and
-not a number of its own. The two shares match by construction.
+is guaranteed to show. Its bow fills ${(MASK_FILL * 100).toFixed(0)}% of that zone, bolder than the chip's
+share of its tile so the full-bleed square does not read small, and kept off the
+mask so a launcher's crop never reaches the tips.
 
 The bow is **level in every framing** (\`CHIP_TILT\` ${CHIP_TILT}°): it is symmetric by
 construction and the tile is square, so a rotation fights both.
