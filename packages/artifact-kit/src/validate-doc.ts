@@ -251,6 +251,65 @@ export function validateDoc(doc: unknown): string[] {
           })
         }
 
+        if (b.kind === "columns") {
+          if (!isObj(b.spec))
+            return void errors.push(`${at}.spec must be an object`)
+          const sp = b.spec
+          if (sp.windows !== undefined) {
+            if (!Array.isArray(sp.windows))
+              errors.push(`${at}.spec.windows must be an array of day counts`)
+            else
+              sp.windows.forEach((w, j) => {
+                if (typeof w !== "number" || !Number.isInteger(w) || w < 1)
+                  errors.push(
+                    `${at}.spec.windows[${j}] must be a positive whole number of days`,
+                  )
+              })
+          }
+          if (!Array.isArray(sp.views) || sp.views.length === 0)
+            return void errors.push(
+              `${at}.spec.views must be a non-empty array — the first is the one drawn`,
+            )
+          return void sp.views.forEach((v, j) => {
+            const vat = `${at}.spec.views[${j}]`
+            if (!isObj(v)) return void errors.push(`${vat} must be an object`)
+            str(v.key, `${vat}.key`)
+            str(v.label, `${vat}.label`)
+            if (!isObj(v.series))
+              return void errors.push(`${vat}.series must be an object`)
+            const s = v.series
+            if (!Array.isArray(s.authors))
+              errors.push(`${vat}.series.authors must be an array of keys`)
+            // `n` is the axis length and `from` its origin. Getting either
+            // wrong does not throw — it silently renders a chart of the wrong
+            // length or dated to 1970, which is exactly the class of failure
+            // this whole band was migrated out of a frozen template to stop.
+            if (typeof s.n !== "number" || !Number.isInteger(s.n) || s.n < 0)
+              errors.push(`${vat}.series.n must be a whole number of days`)
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(String(s.from)))
+              errors.push(`${vat}.series.from must be an ISO date (YYYY-MM-DD)`)
+            if (!Array.isArray(s.changed))
+              return void errors.push(
+                `${vat}.series.changed must be an array of [dayIndex, deltas]`,
+              )
+            const width = Array.isArray(s.authors) ? s.authors.length : 0
+            s.changed.forEach((entry, k) => {
+              const cat = `${vat}.series.changed[${k}]`
+              if (!Array.isArray(entry) || entry.length !== 2)
+                return void errors.push(`${cat} must be [dayIndex, deltas]`)
+              const [day, deltas] = entry
+              if (typeof day !== "number" || !Number.isInteger(day) || day < 0)
+                errors.push(`${cat}[0] must be a day index`)
+              // A short delta row is the encoding bug that reads as a person
+              // whose work stopped: the missing tail decodes to zeroes.
+              if (!Array.isArray(deltas) || deltas.length !== width)
+                errors.push(
+                  `${cat}[1] must hold one [open, merged, created] triple per author (${width})`,
+                )
+            })
+          })
+        }
+
         if (b.kind === "prose") {
           if (!Array.isArray(b.items))
             return void errors.push(`${at}.items must be an array`)
@@ -266,7 +325,7 @@ export function validateDoc(doc: unknown): string[] {
 
         if (b.kind !== "queue")
           errors.push(
-            `${at}.kind must be "queue", "prose", "series", "progress", "day" or "matrix"`,
+            `${at}.kind must be "queue", "prose", "series", "columns", "progress", "day" or "matrix"`,
           )
 
         // A queue carries either loose rows or labelled groups. Both absent is

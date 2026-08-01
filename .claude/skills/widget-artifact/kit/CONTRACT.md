@@ -370,3 +370,85 @@ looks as it does. `type` is `deep` `meeting` `shallow` `personal` `free`, and
 `deep` takes the accent because those are the blocks hardest to get back.
 
 Both are **page-only** by default.
+
+### `blocks[]` — columns
+
+```json
+{
+  "kind": "columns",
+  "label": "PRs per person",
+  "spec": {
+    "views": [
+      {
+        "key": "owner",
+        "label": "by owner",
+        "series": {
+          "authors": ["ana", "bo"],
+          "from": "2026-03-01",
+          "n": 3,
+          "changed": [
+            [
+              1,
+              [
+                [1, 4, 5],
+                [0, 0, 0]
+              ]
+            ]
+          ]
+        }
+      }
+    ],
+    "windows": [7, 30],
+    "people": {
+      "ana": { "name": "Ana Ruiz", "url": "https://github.com/ana" }
+    },
+    "legend": { "merged": "merged", "open": "open" }
+  }
+}
+```
+
+One column per person, over a day axis you can scrub. **Page only** by default,
+like prose and series.
+
+**The band renders the latest day server-side, and the scrub is added on top of
+it.** That is not an implementation note, it is the contract: an artifact read
+off the `artifacts` branch, or by anything that does not run scripts, shows a
+real chart of a real day rather than an empty plot beside a scale. Emit a series
+whose last day is worth looking at on its own, because that is the day most
+readers will get.
+
+**The series is positional, delta-encoded and sparse.** `authors` fixes the
+order every other array is read in, `from` is day 0, `n` is the axis length
+including days where nothing happened, and `changed` holds only the days that
+moved: `[dayIndex, [[dOpen, dMerged, dCreated], ...one triple per author]]`. The
+dense form — every day × every person — is roughly ten times larger, and the
+payload is inlined into the artifact, so it is paid on every board render. A
+delta row shorter than `authors` is rejected at publish rather than decoded to
+zeroes, because the failure mode otherwise is a person whose work appears to
+have stopped.
+
+**`created` is stored even though nothing draws it**, and dropping it is the
+mistake to avoid. It is what makes `windows` possible: "opened in the last week"
+is a count of events, and `open` is a level that falls as PRs merge, so the
+window cannot be recovered from the other two.
+
+**`authors` order is the ranking tiebreak, so put the final standing there.**
+Columns sort tallest-first per day; early days are mostly ties at zero, and
+without a stable order every one of them reshuffles the whole row while
+scrubbing, for reasons a reader cannot follow.
+
+**`views` are alternative rankings of the same facts** — the same PRs by author
+or by reviewer. The first is what the static render draws. One view emits no
+toggle at all, so a routine with nothing to switch between pays nothing.
+
+**`windows` opts into the trailing-window toggle**, in days, and `windows[0]` is
+the default. Omit it and the band is cumulative only, with no mode toggle and no
+picker. The y-axis is the tallest column across the _whole_ series for the
+current view, mode and window — not the scrubbed day — so the scale holds still
+while scrubbing and only a real change moves it.
+
+**`people` is display metadata, and every field is optional.** A person absent
+from it renders under their own key with an initial for a face — a missing
+registry entry costs a name, not a column. An `avatar` must be a `data:` URI:
+the sandbox cannot reach an avatar host, so anything else is dropped rather than
+emitted as a request that will fail (ADR-0044).
