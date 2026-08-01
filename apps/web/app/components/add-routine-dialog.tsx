@@ -38,7 +38,7 @@ import {
 } from "~/components/ui/select"
 import { ARTIFACT_FONT_STYLE } from "../lib/artifact-font.ts"
 import {
-  ARTIFACT_COLUMNS_SCRIPT,
+  ARTIFACT_THROUGHPUT_SCRIPT,
   ARTIFACT_KIT_STYLE,
 } from "../lib/artifact-kit.ts"
 import {
@@ -1538,7 +1538,7 @@ function TemplatePreview({ html, name }: { html: string; name: string }) {
         ARTIFACT_FONT_STYLE,
         undefined,
         ARTIFACT_KIT_STYLE,
-        ARTIFACT_COLUMNS_SCRIPT,
+        ARTIFACT_THROUGHPUT_SCRIPT,
       ),
     [html, theme],
   )

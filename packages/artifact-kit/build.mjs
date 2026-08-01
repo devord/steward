@@ -186,7 +186,7 @@ execFileSync(
   { cwd: here, stdio: "inherit" },
 )
 
-// The `columns` band's behaviour, as a browser bundle the board injects.
+// The `throughput` band's behaviour, as a browser bundle the board injects.
 //
 // A third output rather than a template literal beside `artifact-copy.ts`: at
 // ~460 lines this is the frozen untestable blob the band was migrated out of a
@@ -200,18 +200,18 @@ execFileSync(
 execFileSync(
   esbuild,
   [
-    path.join(src, "behaviour", "columns.ts"),
+    path.join(src, "behaviour", "throughput.ts"),
     "--bundle",
     "--format=iife",
     "--platform=browser",
     "--target=es2020",
     "--minify",
-    `--outfile=${path.join(outDir, "columns.js")}`,
+    `--outfile=${path.join(outDir, "throughput.js")}`,
   ],
   { cwd: here, stdio: "inherit" },
 )
 
 const kb = (p) => `${(statSync(p).size / 1024).toFixed(1)} KB`
 console.log(
-  `built kit.css (${kb(path.join(outDir, "kit.css"))}) + render.mjs (${kb(path.join(outDir, "render.mjs"))}) + columns.js (${kb(path.join(outDir, "columns.js"))}) → ${path.relative(repoRoot, outDir)}`,
+  `built kit.css (${kb(path.join(outDir, "kit.css"))}) + render.mjs (${kb(path.join(outDir, "render.mjs"))}) + throughput.js (${kb(path.join(outDir, "throughput.js"))}) → ${path.relative(repoRoot, outDir)}`,
 )

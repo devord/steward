@@ -55,7 +55,7 @@ export default defineConfig({
       // to a routine run, but it is generated and minified all the same.
       ".claude/skills/widget-artifact/kit/kit.css",
       ".claude/skills/widget-artifact/kit/render.mjs",
-      ".claude/skills/widget-artifact/kit/columns.js",
+      ".claude/skills/widget-artifact/kit/throughput.js",
     ],
     overrides: [
       {
@@ -100,7 +100,7 @@ export default defineConfig({
       // bundle aborts it outright.
       ".claude/skills/widget-artifact/kit/kit.css",
       ".claude/skills/widget-artifact/kit/render.mjs",
-      ".claude/skills/widget-artifact/kit/columns.js",
+      ".claude/skills/widget-artifact/kit/throughput.js",
       // The built-ins' picker previews (ADR-0037), likewise generated — by
       // `scripts/gen-template-previews.ts`, from the same renderer. Formatting
       // them would put the formatter and CI's drift check in a loop: the
