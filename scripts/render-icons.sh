@@ -67,12 +67,13 @@ render_svg scripts/icon-maskable.svg 512 512 "$PUB/icon-maskable-512.png"
   --virtual-time-budget=8000 \
   --screenshot="$PUB/og.png" "file://$PWD/scripts/og-card.html" 2>/dev/null
 
-# favicon.ico: the dark identity chip at 16/32/48 (.ico can't media-query,
-# so it bakes dark; tab strips give it the border for light). Chrome
-# renders a 512 master and ImageMagick downscales — Chrome refuses windows
-# smaller than ~100px, silently shipping blank frames.
+# favicon.ico: the browser-tab chip at 16/32/48. Rendered from favicon.svg, not
+# icon.svg — the tab chip drops the buttons, which fall below a device pixel at
+# 16px (ADR-0055). Chrome renders a 512 master and ImageMagick downscales —
+# Chrome refuses windows smaller than ~100px, silently shipping blank frames.
+render_svg apps/web/public/favicon.svg 512 512 "$TMP/favicon-512.png"
 for S in 16 32 48; do
-  magick "$TMP/icon-512.png" -resize "${S}x${S}" "$TMP/fav-$S.png"
+  magick "$TMP/favicon-512.png" -resize "${S}x${S}" "$TMP/fav-$S.png"
 done
 magick "$TMP/fav-16.png" "$TMP/fav-32.png" "$TMP/fav-48.png" "$PUB/favicon.ico"
 
@@ -91,15 +92,15 @@ render_kit() { # render_kit <dir> <basename> <intrinsic-w> <intrinsic-h> <widths
   done
 }
 
-# The bare glyph's crop follows the bow (60x32 for a 56x28 bow plus air), and
-# the chip is one colourway now, so it is rendered once rather than per mode.
+# The bare glyph's crop follows the mark (58x42 for a 54x22 bow plus the buttons
+# and air), and the chip is one colourway, so it is rendered once, not per mode.
 for MODE in light dark; do
-  render_kit mark "steward-mark-$MODE" 60 32 256 512 1024
+  render_kit mark "steward-mark-$MODE" 58 42 256 512 1024
   render_kit wordmark "steward-wordmark-$MODE" 300 64 600 1200
 done
 render_kit icon "steward-icon" 64 64 128 256 512 1024
 for INK in black white; do
-  render_kit mark "steward-mark-$INK" 60 32 512
+  render_kit mark "steward-mark-$INK" 58 42 512
   render_kit wordmark "steward-wordmark-$INK" 300 64 1200
 done
 

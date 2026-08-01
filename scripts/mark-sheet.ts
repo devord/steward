@@ -36,13 +36,13 @@ import { fileURLToPath } from "node:url"
 
 import {
   buildMark,
-  CHIP_TILT,
+  chipTransform,
   CHIP_VIEWBOX,
   GLYPH_VIEWBOX,
+  MARK_BUTTONS,
   MARK_MINIMUM,
   MARK_SPAN,
   squirclePath,
-  TILE_GRADIENT,
 } from "../apps/web/app/lib/mark.ts"
 import {
   CHIP_IDENTITY,
@@ -75,33 +75,31 @@ type Framing = "chip" | "glyph"
 type Cell = { framing: Framing; size: number; ground: string; mode: ThemeMode }
 type Row = { label: string; note?: string; cells: Cell[] }
 
-const { wingL, wingR } = buildMark()
+const { wingL, wingR, knot } = buildMark()
 const TILE = squirclePath()
 
-/** The bare glyph, level, in the mode's flat ember. */
+/** The mark's ink: two wings, a knot, two buttons, all one fill (ADR-0055). */
+function markBody(fill: string): string {
+  const buttons = MARK_BUTTONS.map(
+    (b) => `<circle cx="${b.cx}" cy="${b.cy}" r="${b.rad}" fill="${fill}"/>`,
+  ).join("")
+  return `<path d="${wingL}" fill="${fill}"/><path d="${wingR}" fill="${fill}"/><path d="${knot}" fill="${fill}"/>${buttons}`
+}
+
+/** The bare glyph, level, in the mode's neutral ink. */
 function glyphSvg(mode: ThemeMode, px: number): string {
   const h = Math.round(
     (px * Number(GLYPH_VIEWBOX.split(" ")[3])) / MARK_SPAN.glyph,
   )
-  const ink = MARK_IDENTITY[mode].wingFlat
-  return `<svg width="${px}" height="${h}" viewBox="${GLYPH_VIEWBOX}">
-    <path d="${wingL}" fill="${ink}"/><path d="${wingR}" fill="${ink}"/></svg>`
+  return `<svg width="${px}" height="${h}" viewBox="${GLYPH_VIEWBOX}">${markBody(MARK_IDENTITY[mode].ink)}</svg>`
 }
 
-/** The chip: one colourway, the bow cut out of the drenched tile and turned. */
-function chipSvg(px: number, id: string): string {
-  const { tileTop, tileDeep, bow } = CHIP_IDENTITY
-  const g = TILE_GRADIENT
+/** The chip: one flat colourway, the bow cut out of the ember tile. */
+function chipSvg(px: number, _id: string): string {
+  const { tile, bow } = CHIP_IDENTITY
   return `<svg width="${px}" height="${px}" viewBox="${CHIP_VIEWBOX}">
-    <defs>
-      <linearGradient id="t${id}" gradientUnits="userSpaceOnUse" x1="${g.x1}" y1="${g.y1}" x2="${g.x2}" y2="${g.y2}">
-        <stop offset="0" stop-color="${tileTop}"/><stop offset="1" stop-color="${tileDeep}"/>
-      </linearGradient>
-    </defs>
-    <path d="${TILE}" fill="url(#t${id})"/>
-    <g transform="rotate(${CHIP_TILT} 32 32)">
-      <path d="${wingL}" fill="${bow}"/><path d="${wingR}" fill="${bow}"/>
-    </g>
+    <path d="${TILE}" fill="${tile}"/>
+    <g transform="${chipTransform()}">${markBody(bow)}</g>
   </svg>`
 }
 
@@ -304,7 +302,7 @@ for (const mode of ["light", "dark"] as const) {
       },
       {
         label: "the bare glyph, on the page",
-        note: "flat ember on a surface it does not own",
+        note: "neutral ink on a surface it does not own",
         cells: SIZES.map((size) => ({
           framing: "glyph" as const,
           size,

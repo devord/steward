@@ -182,7 +182,12 @@ export const themes = {
       inkDim: "#a89984",
       inkFaint: "#928374",
       accent: "#fe8019",
-      accentDeep: "#d65d0e",
+      // The brand ember (ADR-0055). accent-deep is the ring/selection tone and
+      // the mark's chip tile, so pointing it at #c75117 puts the rebrand's
+      // primary colour into the theme while `accent` keeps the AA-capable
+      // gruvbox orange that carries button labels. #c75117 clears the ≥3:1
+      // accent-deep floor on both twins (3.24 dark, 4.01 light).
+      accentDeep: "#c75117",
       yellow: "#d8a657",
       green: "#a9b665",
       aqua: "#89b482",
@@ -209,7 +214,8 @@ export const themes = {
       inkDim: "#665c54",
       inkFaint: "#7c6f64",
       accent: "#af3a03",
-      accentDeep: "#d65d0e",
+      // The brand ember (ADR-0055) — see the gruvbox-dark note.
+      accentDeep: "#c75117",
       yellow: "#b47109",
       green: "#6c782e",
       aqua: "#4c7a5d",
@@ -767,96 +773,90 @@ function declarations(theme: Theme): string {
   return `${vars};color-scheme:${theme.mode}`
 }
 
-/**
- * The mark's fixed identity (DESIGN.md § Mark, ADR-0052). The bow tie does
- * not follow the active theme: one light colorway and one dark colorway,
- * keyed on mode alone, drawn from the **gruvbox** rows above so the registry
- * stays the single source of every hex.
- *
- * `wingFlat` is the whole point of the pair, and it exists because of a
- * measurement. The light gradient's bright end (`accentDeep`, #d65d0e) reads
- * 2.72:1 on the palest ground the product ships — tokyo-night-light's page —
- * which is under the WCAG graphics floor. Rather than dull the gradient
- * everywhere to satisfy the one surface it never actually sits on, the mark
- * splits by whether it brought its own ground:
- *
- * > **The gradient is a privilege of owning the ground.**
- *
- * On the chip the mark supplies its own tile, so the fold gradient is
- * measured against `tileTop`/`tileBottom` and runs at full range. As the bare
- * glyph in chrome it sits on a foreign surface, so it goes flat and deep —
- * `wingFlat` — which clears 3:1 on every theme's page and sidebar with room
- * to spare. `theme.test.ts` holds both halves of that contract.
- *
- * The knot takes the strongest neutral each colourway allows: gruvbox-dark
- * `ink` on the dark tie, gruvbox-dark `bg` on the light one. Tested at 16px
- * against the alternatives — the paper tones glared into a white pill, and
- * gruvbox-light `ink` (#654735) muddied straight into the wings.
- *
- * There is no `tileBevel`: the chip's top-lit tile gradient is the highlight,
- * and a white stroke over it read as a bar floating above the surface.
- */
 const gruvboxLight = themes["gruvbox-light"].tokens
-const gruvboxDark = themes["gruvbox-dark"].tokens
 
 /**
- * The bare glyph, in chrome. Keyed on mode, because this is the one framing
- * that sits directly on a surface it does not own and has to clear it.
+ * The rebrand's fixed brand palette (ADR-0055).
+ *
+ * The mark no longer wears the accent. It is a **neutral ink** that follows the
+ * viewer's mode — near-black on light, cream on dark — and the burnt-orange
+ * **ember** is spent on the product-icon chip and the interactive accent, not
+ * on the bow. That is why #c75117, which is a superb *mark* colour but fails
+ * WCAG AA as a button fill, can be the identity's signature without ever
+ * carrying a label: the bow is ink, the ember is an object.
+ *
+ * Sourced from the registry wherever the two coincide, so the registry stays
+ * authoritative: `ember` is the gruvbox accent-deep, `cream` the gruvbox-light
+ * page, `grey` its secondary ink. `ink` is the one brand neutral with no
+ * registry twin — gruvbox-dark `bg1` (#1b1b1b) is within three points, but the
+ * brand sheet specifies #1e1e1e, so it is named here rather than borrowed.
+ */
+const BRAND = {
+  /** Burnt orange — the chip tile and the gruvbox accent-deep. */
+  ember: gruvboxLight.accentDeep,
+  /** Near-black — the bow's ink on light surfaces, and the light lockup's word. */
+  ink: "#1e1e1e",
+  /** Cream — the bow's ink on dark surfaces, and the chip's bow cut-out. */
+  cream: gruvboxLight.bg,
+  /** Warm taupe — the secondary / one-colour grey cut. */
+  grey: gruvboxLight.inkDim,
+} as const
+
+/**
+ * The bare glyph, in chrome — a **neutral ink**, keyed on mode (ADR-0055).
+ *
+ * This is the one framing sitting directly on a surface it does not own, so it
+ * has to clear it: near-black on light, cream on dark, both trivially past the
+ * 3:1 mark floor on every theme (worst ~11:1). The mark used to carry the
+ * gruvbox ember here; the rebrand moves the colour to the chip and lets the
+ * bow read as the butler's ink, which is also what the primary logo of the
+ * brand sheet does — orange is the "filled" variant, not the default.
  */
 export const MARK_IDENTITY = {
-  light: { wingFlat: gruvboxLight.accent },
-  dark: { wingFlat: gruvboxDark.accent },
+  light: { ink: BRAND.ink },
+  dark: { ink: BRAND.cream },
 } as const satisfies Record<ThemeMode, Record<string, string>>
 
 /**
- * The product-icon chip — **one colourway, both modes** (ADR-0053).
+ * The product-icon chip — **one flat colourway, both modes** (ADR-0055).
  *
- * The chip used to swap with the viewer's mode like the glyph does, and
- * drenched that produced a polarity flip: a deep tile with a pale bow in
- * light, a bright tile with a near-black bow in dark. Figure and ground trade
- * places on an OS setting, which reads as two logos rather than one, and it
- * handed light mode the muddy version and dark mode the vivid one.
+ * A single ember tile with the bow cut out of it in cream. It used to be a
+ * diagonal gradient carrying two accent stops so that at least one cleared
+ * every ground; the flat #c75117 clears the graphics floor on every surface
+ * the chip lands on by itself (≥3.19 across the registry, ≥3.47 on the browser
+ * tab strips), so the gradient is retired — a flat object is one drawing at
+ * every size, and the `.ico` could never carry a gradient faithfully anyway.
  *
- * A drenched chip is a saturated **object**, not a surface. It is not
- * borrowing the page's tone, so it has no reason to follow the page's mode —
- * and the `.ico` and the maskable launcher icon could never media-query
- * anyway, so a single colourway makes the exception the rule.
- *
- * The bow is a hole: `bow` is the paper showing through the ember.
+ * The bow is a hole: `bow` is the paper showing through the ember. The chip is
+ * a saturated *object*, not a surface, so it takes no mode.
  */
 export const CHIP_IDENTITY = {
-  tileTop: gruvboxLight.accentDeep,
-  tileDeep: gruvboxLight.accent,
-  bow: gruvboxLight.bg,
+  tile: BRAND.ember,
+  bow: BRAND.cream,
 } as const
 
 /**
  * The logotype's ink in the static lockups, which cannot inherit `foreground`
- * from a page they are pasted into.
- *
- * Its own token rather than a borrow. It used to be filled with the mark's
- * knot colour on the reasoning that the knot and the word were the same block
- * of ink — true while the knot was dark, and a trap the moment it wasn't: the
- * knot went to paper and the dark lockup would have rendered near-black on
- * near-black. Two things that happen to match are not one thing.
+ * from a page they are pasted into. It matches the neutral bow now — near-black
+ * on the light lockup, cream on the dark — so the mark and the word read as one
+ * block of ink in either colourway.
  */
 export const LOGOTYPE_INK = {
-  light: gruvboxDark.bg,
-  dark: gruvboxDark.ink,
+  light: BRAND.ink,
+  dark: BRAND.cream,
 } as const satisfies Record<ThemeMode, string>
 
 /**
- * Only the bare glyph's ink is mode-keyed. The chip's three tones ride on
- * `:root` alone via `chipDeclarations`, because the chip is one colourway.
+ * Only the bare glyph's ink is mode-keyed. The chip's two tones ride on `:root`
+ * alone via `chipDeclarations`, because the chip is one colourway.
  */
 function markDeclarations(mode: ThemeMode): string {
-  return `--mark-wing-flat:${MARK_IDENTITY[mode].wingFlat}`
+  return `--mark-ink:${MARK_IDENTITY[mode].ink}`
 }
 
 function chipDeclarations(): string {
   return [
-    `--chip-tile-top:${CHIP_IDENTITY.tileTop}`,
-    `--chip-tile-deep:${CHIP_IDENTITY.tileDeep}`,
+    `--chip-tile:${CHIP_IDENTITY.tile}`,
     `--chip-bow:${CHIP_IDENTITY.bow}`,
   ].join(";")
 }
