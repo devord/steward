@@ -248,6 +248,29 @@ describe("the columns contract", () => {
     )
   })
 
+  it("names the field when a day sits past the end of the axis", () => {
+    // The quiet twin of the short row: `decodeView` only reads `i < n`, so a
+    // row dated off the top of the axis is dropped rather than misplaced, and
+    // the person it belongs to just never appears.
+    const problems = bad({
+      views: [
+        {
+          key: "owner",
+          label: "by owner",
+          series: {
+            authors: ["ana"],
+            from: "2026-03-01",
+            n: 2,
+            changed: [[2, [[1, 1, 1]]]],
+          },
+        },
+      ],
+    })
+    expect(problems.join("\n")).toContain(
+      "changed[0][0] must be a day index within the axis (0 to 2 exclusive)",
+    )
+  })
+
   it("rejects an axis with no origin", () => {
     const problems = bad({
       views: [
