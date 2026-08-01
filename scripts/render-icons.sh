@@ -67,10 +67,9 @@ render_svg scripts/icon-maskable.svg 512 512 "$PUB/icon-maskable-512.png"
   --virtual-time-budget=8000 \
   --screenshot="$PUB/og.png" "file://$PWD/scripts/og-card.html" 2>/dev/null
 
-# favicon.ico: the browser-tab chip at 16/32/48. Rendered from favicon.svg, not
-# icon.svg — the tab chip drops the buttons, which fall below a device pixel at
-# 16px (ADR-0055). Chrome renders a 512 master and ImageMagick downscales —
-# Chrome refuses windows smaller than ~100px, silently shipping blank frames.
+# favicon.ico: the browser-tab chip at 16/32/48, rendered from favicon.svg.
+# Chrome renders a 512 master and ImageMagick downscales — Chrome refuses
+# windows smaller than ~100px, silently shipping blank frames.
 render_svg apps/web/public/favicon.svg 512 512 "$TMP/favicon-512.png"
 for S in 16 32 48; do
   magick "$TMP/favicon-512.png" -resize "${S}x${S}" "$TMP/fav-$S.png"

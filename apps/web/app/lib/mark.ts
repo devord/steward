@@ -130,8 +130,21 @@ export const CHIP_INSET = 0.92
 /** The share of a maskable icon's canvas a launcher is guaranteed to show. */
 export const MASK_SAFE = 0.8
 
-/** The mark's scale inside the maskable icon: the chip's inset, masked. */
-export const MASK_INSET = CHIP_INSET * MASK_SAFE
+/**
+ * How much of the safe zone the maskable bow's tips reach.
+ *
+ * The old maskable matched the chip's share of its tile (~78% of the safe
+ * zone), which left the full-bleed square reading _small_ — the bow was 62% of
+ * the visible square while the chip's was 78% of its tile. It fills the safe
+ * zone boldly now (90%), so the raw square is as present as the chip, while
+ * staying off the mask: a launcher is guaranteed to show the safe zone, so tips
+ * at 90% of it keep a real margin — the opposite of the shipped Android icon
+ * that put its tips against the mask.
+ */
+export const MASK_FILL = 0.9
+
+/** The mark's scale inside the maskable icon, from {@link MASK_FILL}. */
+export const MASK_INSET = (MASK_FILL * MARK_TILE * MASK_SAFE) / MARK_RATIOS.bowW
 
 /**
  * The mark's ink bounds, derived from the ratios.

@@ -56,9 +56,14 @@ coloured one could not afford.
 in the outer edge, a `puff` on the top and bottom), a square knot, two buttons.
 The size gate (`mark.test.ts`) still holds every _region_ above a device pixel
 at the declared minimum; the fold modulates an edge rather than drawing a region,
-so it is not gated, as `sweep` was not. The buttons fall below a pixel at 16px,
-so the **browser-tab favicon drops them** — the one place a feature is _not
-drawn_ because it would not survive, exactly as ADR-0053 requires.
+so it is not gated, as `sweep` was not. Every region — bow, knot, each button —
+clears the floor at both minimums (the buttons at 1.2px at 16px), so the favicon
+keeps them.
+
+The maskable icon is a separate placement question. Matching the chip's share of
+its tile left the full-bleed square reading _small_, so the maskable fills 90%
+of its safe zone (`MASK_FILL`) — bolder than the chip, but kept off the mask, so
+a launcher's crop never reaches the tips.
 
 ## The chip is flat
 

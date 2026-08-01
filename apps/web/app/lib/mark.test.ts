@@ -13,6 +13,7 @@ import {
   MARK_RATIOS,
   MARK_SPAN,
   markSpan,
+  MASK_FILL,
   MASK_INSET,
   MASK_SAFE,
   squirclePath,
@@ -52,9 +53,9 @@ describe("the mark survives its declared minimum", () => {
 
     it(`${framing} @ ${min}px: every drawn feature ≥ 1 device pixel`, () => {
       // Zero passes: a feature either survives at the declared minimum or it is
-      // **not drawn** (the browser-tab chip drops the buttons for exactly this
-      // reason). What is not honest is the third state the old mark shipped in
-      // — a ratio named, argued for, and rendering as nothing.
+      // **not drawn**. What is not honest is the third state the old mark
+      // shipped in — a ratio named, argued for, and rendering as nothing. The
+      // buttons clear the floor even at 16px (1.2px), so they are kept.
       const tooSmall = Object.entries(drawnFeatures())
         .filter(([, units]) => units > 0)
         .map(([name, units]) => [name, units * scale] as const)
@@ -145,14 +146,15 @@ describe("every chip places the mark the same way", () => {
     expect(MARK_SPAN.chip / 2 - reach(CHIP_INSET)).toBeGreaterThanOrEqual(6)
   })
 
-  it("the maskable bow holds the same share of what a launcher shows", () => {
-    // `CHIP_INSET` applied to a full-bleed tile, 20% of which the launcher
-    // crops, would leave the bow filling ~90% of the safe zone. Measuring the
-    // share rather than the scale keeps the two framings in step through a
-    // redraw.
+  it("the maskable fills its safe zone boldly but stays off the mask", () => {
+    // The bow's tips reach MASK_FILL of the safe zone — bolder than the chip's
+    // share of its tile, so the full-bleed square does not read small, but
+    // strictly inside the safe zone with margin, so a launcher's crop never
+    // reaches the tips (the shipped Android bug).
     const safe = (MARK_SPAN.chip * MASK_SAFE) / 2
-    expect(reach(MASK_INSET) / safe).toBeCloseTo(reach(CHIP_INSET) / 32, 3)
+    expect(reach(MASK_INSET) / safe).toBeCloseTo(MASK_FILL, 3)
     expect(reach(MASK_INSET)).toBeLessThan(safe)
+    expect(MASK_FILL).toBeGreaterThan(reach(CHIP_INSET) / 32)
   })
 
   it("every shipped chip is the same drawing", async () => {
