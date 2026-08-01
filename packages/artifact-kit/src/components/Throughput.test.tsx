@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest"
 
 import { type ArtifactDoc, renderArtifact } from "../render.tsx"
 import { validateDoc } from "../validate-doc.ts"
-import type { ColumnsSpec } from "./Columns.tsx"
+import type { ThroughputSpec } from "./Throughput.tsx"
 
-const spec: ColumnsSpec = {
+const spec: ThroughputSpec = {
   windows: [1, 7, 30],
   views: [
     {
@@ -53,12 +53,12 @@ const doc: ArtifactDoc = {
   slug: "repo-stats",
   generatedAt: "2026-03-03T08:00:00Z",
   stat: { value: 7, label: "merged" },
-  blocks: [{ kind: "columns", label: "PRs per person", spec }],
+  blocks: [{ kind: "throughput", label: "PRs per person", spec }],
 }
 
 const html = renderArtifact(doc, ":root{--x:1}")
 
-describe("the columns band", () => {
+describe("the throughput band", () => {
   it("passes the input contract", () => {
     expect(validateDoc(doc)).toEqual([])
   })
@@ -68,10 +68,10 @@ describe("the columns band", () => {
     // every column in script, so an artifact opened off the artifacts branch —
     // or read by anything that does not run JS — showed an empty plot beside a
     // scale. Two people, two columns, in the markup.
-    const cols = html.match(/data-kit-columns-col="/g) ?? []
+    const cols = html.match(/data-kit-throughput-col="/g) ?? []
     expect(cols).toHaveLength(2)
-    expect(html).toContain('data-kit-columns-col="ana"')
-    expect(html).toContain('data-kit-columns-col="bo"')
+    expect(html).toContain('data-kit-throughput-col="ana"')
+    expect(html).toContain('data-kit-throughput-col="bo"')
   })
 
   it("draws the latest day, which is the day that answers the question", () => {
@@ -81,7 +81,7 @@ describe("the columns band", () => {
   })
 
   it("ranks the tallest column first", () => {
-    const order = [...html.matchAll(/data-kit-columns-col="(\w+)"/g)].map(
+    const order = [...html.matchAll(/data-kit-throughput-col="(\w+)"/g)].map(
       (m) => m[1],
     )
     expect(order).toEqual(["ana", "bo"])
@@ -90,7 +90,7 @@ describe("the columns band", () => {
   it("sizes segments against a stable ceiling, not the day's own peak", () => {
     // Ceiling is the floor of 10 here, so ana's 6 merged is 60% — not 100%,
     // which is what a per-day scale would have drawn.
-    expect(html).toContain('data-kit-columns-axis="">10<')
+    expect(html).toContain('data-kit-throughput-axis="">10<')
     expect(html).toContain("height:60%")
   })
 
@@ -116,7 +116,7 @@ describe("the columns band", () => {
       {
         ...doc,
         blocks: [
-          { kind: "columns", spec: { ...spec, views: [spec.views[0]] } },
+          { kind: "throughput", spec: { ...spec, views: [spec.views[0]] } },
         ],
       },
       "",
@@ -131,7 +131,10 @@ describe("the columns band", () => {
       {
         ...doc,
         blocks: [
-          { kind: "columns", spec: { views: spec.views, people: spec.people } },
+          {
+            kind: "throughput",
+            spec: { views: spec.views, people: spec.people },
+          },
         ],
       },
       "",
@@ -141,9 +144,10 @@ describe("the columns band", () => {
   })
 
   it("carries the series for the runtime to scrub", () => {
-    expect(html).toContain("data-kit-columns-series")
+    expect(html).toContain("data-kit-throughput-series")
     const json =
-      html.match(/data-kit-columns-series[^>]*>([\s\S]*?)<\/script>/)?.[1] ?? ""
+      html.match(/data-kit-throughput-series[^>]*>([\s\S]*?)<\/script>/)?.[1] ??
+      ""
     expect(json).toBeTruthy()
     const parsed = JSON.parse(json)
     expect(parsed.views.map((v: { key: string }) => v.key)).toEqual([
@@ -155,18 +159,18 @@ describe("the columns band", () => {
   it("states its starting position so the runtime does not re-derive it", () => {
     // If the runtime guessed, its first frame could differ from the one on
     // screen and the chart would visibly jump the moment a frame loaded.
-    expect(html).toContain('data-kit-columns-mode="cumulative"')
-    expect(html).toContain('data-kit-columns-view="owner"')
+    expect(html).toContain('data-kit-throughput-mode="cumulative"')
+    expect(html).toContain('data-kit-throughput-view="owner"')
   })
 
   it("names a person with no registry entry by their key", () => {
     // A missing registry entry costs a name, not a column.
     expect(html).toContain("Bo Chen")
     const bare = renderArtifact(
-      { ...doc, blocks: [{ kind: "columns", spec: { views: spec.views } }] },
+      { ...doc, blocks: [{ kind: "throughput", spec: { views: spec.views } }] },
       "",
     )
-    expect(bare).toContain('data-kit-columns-col="ana"')
+    expect(bare).toContain('data-kit-throughput-col="ana"')
   })
 
   it("drops a remote avatar rather than emitting a dead request", () => {
@@ -177,7 +181,7 @@ describe("the columns band", () => {
         ...doc,
         blocks: [
           {
-            kind: "columns",
+            kind: "throughput",
             spec: {
               ...spec,
               people: { ana: { name: "Ana", avatar: "https://x/a.png" } },
@@ -196,7 +200,7 @@ describe("the columns band", () => {
         ...doc,
         blocks: [
           {
-            kind: "columns",
+            kind: "throughput",
             label: "PRs per person",
             spec: {
               views: [
@@ -217,14 +221,14 @@ describe("the columns band", () => {
       },
       "",
     )
-    expect(empty).not.toContain("data-kit-columns-plot")
+    expect(empty).not.toContain("data-kit-throughput-plot")
     expect(empty).not.toContain("PRs per person")
   })
 })
 
-describe("the columns contract", () => {
+describe("the throughput contract", () => {
   const bad = (spec: unknown) =>
-    validateDoc({ ...doc, blocks: [{ kind: "columns", spec }] })
+    validateDoc({ ...doc, blocks: [{ kind: "throughput", spec }] })
 
   it("names the field when a delta row is short", () => {
     // The encoding bug that reads as a person whose work stopped: the missing

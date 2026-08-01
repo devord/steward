@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server"
 
-import { Columns, type ColumnsSpec } from "./components/Columns.tsx"
+import { Throughput, type ThroughputSpec } from "./components/Throughput.tsx"
 import {
   CouplingMatrix,
   type MatrixSpec,
@@ -133,9 +133,9 @@ export interface SeriesBlock extends BlockBase {
  * — the plot needs width for the columns *and* height for the scale, and a
  * tile that gives it both has nothing left for the ledger.
  */
-export interface ColumnsBlock extends BlockBase {
-  kind: "columns"
-  spec: ColumnsSpec
+export interface ThroughputBlock extends BlockBase {
+  kind: "throughput"
+  spec: ThroughputSpec
 }
 
 /** Long-form bands — the dives under a briefing's headlines. Page only. */
@@ -149,7 +149,7 @@ export type Block =
   | QueueBlock
   | ProseBlock
   | SeriesBlock
-  | ColumnsBlock
+  | ThroughputBlock
   | ProgressBlock
   | DayBlock
   | MatrixBlock
@@ -161,7 +161,7 @@ function filled(b: Block): boolean {
   if (b.kind === "series") return b.spec.lines.some((l) => l.points.length > 1)
   // One person on one day is not a ranking. The chart's whole claim is
   // relative standing over time, and it needs both to make it.
-  if (b.kind === "columns")
+  if (b.kind === "throughput")
     return (b.spec.views ?? []).some(
       (v) => (v.series?.authors?.length ?? 0) > 0 && (v.series?.n ?? 0) > 0,
     )
@@ -231,7 +231,7 @@ function Band({ block, index }: { block: Block; index: number }) {
         (block.pageOnly ??
         (block.kind === "prose" ||
           block.kind === "series" ||
-          block.kind === "columns" ||
+          block.kind === "throughput" ||
           block.kind === "day" ||
           block.kind === "matrix"))
           ? "hidden page-only:flex"
@@ -248,8 +248,8 @@ function Band({ block, index }: { block: Block; index: number }) {
         />
       ) : block.kind === "series" ? (
         <Series spec={block.spec} />
-      ) : block.kind === "columns" ? (
-        <Columns spec={block.spec} />
+      ) : block.kind === "throughput" ? (
+        <Throughput spec={block.spec} />
       ) : block.kind === "matrix" ? (
         <CouplingMatrix spec={block.spec} />
       ) : block.kind === "day" ? (

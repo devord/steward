@@ -1,8 +1,8 @@
 /**
- * The maths behind the `columns` band, written once and run twice.
+ * The maths behind the `throughput` band, written once and run twice.
  *
- * The static render (server, `Columns.tsx`) and the board's injected runtime
- * (browser, `behaviour/columns.ts`) have to agree exactly on what a column is
+ * The static render (server, `Throughput.tsx`) and the board's injected runtime
+ * (browser, `behaviour/throughput.ts`) have to agree exactly on what a column is
  * — the runtime's first act is to re-render the day the server already drew,
  * and any disagreement shows up as a visible jump the moment a frame loads.
  * Two implementations of that is how the jump gets in. So the arithmetic lives

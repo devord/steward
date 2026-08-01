@@ -5,7 +5,7 @@ import {
   type EncodedView,
   frameAt,
   type Mode,
-} from "./columns-series.ts"
+} from "./throughput-series.ts"
 import { Scrubber } from "./Scrubber.tsx"
 import { ToggleGroup } from "./ToggleGroup.tsx"
 import { escapeContextBlock } from "../Shell.tsx"
@@ -29,8 +29,17 @@ import { escapeContextBlock } from "../Shell.tsx"
  * Two tones, not a categorical palette: merged and open are one fact in two
  * states, so they read as one stack. A per-person hue would imply the people
  * are the axis, and the axis is time.
+ *
+ * Named for its subject, not its shape. This was `columns` first, which read
+ * as the kit's generic bar chart and is not one: the encoded triple is
+ * `[open, merged, created]`, `face()` resolves a key as a GitHub login, and
+ * the windowed maths in `throughput-series.ts` turns on `open` being a level
+ * that falls as PRs merge while `created` counts events. `legend` renames
+ * those in the UI but not in the schema. A routine wanting columns of
+ * something else needs its own band, and a shape-named one would have hidden
+ * that behind a name that sounded reusable.
  */
-export interface ColumnsSpec {
+export interface ThroughputSpec {
   /**
    * The alternative rankings the first toggle switches between — for
    * `repo-stats`, the same PRs grouped by author or by reviewer. The first is
@@ -85,7 +94,7 @@ export function shortDate(iso: string): string {
   return month ? `${month} ${Number(d)}` : iso
 }
 
-function face(key: string, meta: ColumnsSpec["people"]): Face {
+function face(key: string, meta: ThroughputSpec["people"]): Face {
   const p = meta?.[key]
   return {
     name: p?.name?.trim() || key,
@@ -106,9 +115,9 @@ function face(key: string, meta: ColumnsSpec["people"]): Face {
  * sees a src it must not use, and the payload stops carrying dead URLs.
  */
 function payloadPeople(
-  people: ColumnsSpec["people"],
-): NonNullable<ColumnsSpec["people"]> {
-  const out: NonNullable<ColumnsSpec["people"]> = {}
+  people: ThroughputSpec["people"],
+): NonNullable<ThroughputSpec["people"]> {
+  const out: NonNullable<ThroughputSpec["people"]> = {}
   for (const [key, p] of Object.entries(people ?? {}))
     out[key] = {
       ...p,
@@ -117,7 +126,7 @@ function payloadPeople(
   return out
 }
 
-export function Columns({ spec }: { spec: ColumnsSpec }) {
+export function Throughput({ spec }: { spec: ThroughputSpec }) {
   const views = spec.views ?? []
   const active = views[0]
   const decoded = active ? decodeView(active.series) : { authors: [], days: [] }
@@ -132,24 +141,24 @@ export function Columns({ spec }: { spec: ColumnsSpec }) {
   return (
     <div
       className="flex flex-col gap-2"
-      data-kit-columns=""
+      data-kit-throughput=""
       // The runtime reads its whole starting position off the markup rather
       // than re-deriving it, so the first frame it draws is the one already on
       // screen and nothing jumps when the board attaches.
-      data-kit-columns-mode={mode}
-      data-kit-columns-window={windowDays}
-      data-kit-columns-view={active?.key}
+      data-kit-throughput-mode={mode}
+      data-kit-throughput-window={windowDays}
+      data-kit-throughput-view={active?.key}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span
           className="text-ink font-mono text-sm leading-none"
-          data-kit-columns-date=""
+          data-kit-throughput-date=""
         >
           {frame.date ? shortDate(frame.date) : ""}
         </span>
         <span
           className="text-ink-dim font-mono text-xs leading-none"
-          data-kit-columns-total=""
+          data-kit-throughput-total=""
         >
           {frame.totalMerged} {words.merged} · {frame.totalOpen} {words.open}
         </span>
@@ -198,14 +207,14 @@ export function Columns({ spec }: { spec: ColumnsSpec }) {
 
       <div className="flex items-stretch gap-1.5">
         <div className="text-ink-faint flex w-6 shrink-0 flex-col justify-between py-0.5 text-right font-mono text-[10px] leading-none">
-          <span data-kit-columns-axis="">{ceiling}</span>
+          <span data-kit-throughput-axis="">{ceiling}</span>
           <span>0</span>
         </div>
         {/* Always scrollable rather than conditionally: 30+ people in a
             one-column tile is the normal case, not the overflow case. */}
         <div
           className="flex h-28 min-w-0 flex-1 items-end gap-0.5 overflow-x-auto"
-          data-kit-columns-plot=""
+          data-kit-throughput-plot=""
         >
           {frame.order.map((key) => {
             const seg = frame.segments[key] ?? { merged: 0, open: 0 }
@@ -214,24 +223,24 @@ export function Columns({ spec }: { spec: ColumnsSpec }) {
               <div
                 key={key}
                 className="flex h-full min-w-[14px] flex-1 flex-col items-center justify-end gap-1"
-                data-kit-columns-col={key}
+                data-kit-throughput-col={key}
                 title={`${face(key, spec.people).name} — ${seg.merged} ${words.merged}, ${seg.open} ${words.open}`}
               >
                 <span
                   className="text-ink-dim font-mono text-[10px] leading-none"
-                  data-kit-columns-value=""
+                  data-kit-throughput-value=""
                 >
                   {total || ""}
                 </span>
                 <div className="flex w-full flex-1 flex-col justify-end">
                   <div
                     className="bg-orange w-full rounded-t-[1px]"
-                    data-kit-columns-open=""
+                    data-kit-throughput-open=""
                     style={{ height: `${(seg.open / ceiling) * 100}%` }}
                   />
                   <div
                     className="bg-green w-full"
-                    data-kit-columns-merged=""
+                    data-kit-throughput-merged=""
                     style={{ height: `${(seg.merged / ceiling) * 100}%` }}
                   />
                 </div>
@@ -249,7 +258,7 @@ export function Columns({ spec }: { spec: ColumnsSpec }) {
         </span>
         <span className="flex items-center gap-1">
           <span className="bg-orange inline-block size-2 rounded-[1px]" />
-          <span data-kit-columns-legend-open="">{words.open}</span>
+          <span data-kit-throughput-legend-open="">{words.open}</span>
         </span>
       </div>
 
@@ -272,7 +281,7 @@ export function Columns({ spec }: { spec: ColumnsSpec }) {
           shell uses for `state` — a script tag the browser will not execute. */}
       <script
         type="application/json"
-        data-kit-columns-series=""
+        data-kit-throughput-series=""
         dangerouslySetInnerHTML={{
           __html: escapeContextBlock(
             JSON.stringify({

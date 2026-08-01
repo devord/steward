@@ -8,7 +8,7 @@ import {
   mergedPerDay,
   rankAuthors,
   segmentsAt,
-} from "./columns-series.ts"
+} from "./throughput-series.ts"
 
 /**
  * Four days, two people. `changed` carries deltas, so the cumulative series

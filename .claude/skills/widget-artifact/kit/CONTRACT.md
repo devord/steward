@@ -371,11 +371,11 @@ looks as it does. `type` is `deep` `meeting` `shallow` `personal` `free`, and
 
 Both are **page-only** by default.
 
-### `blocks[]` — columns
+### `blocks[]` — throughput
 
 ```json
 {
-  "kind": "columns",
+  "kind": "throughput",
   "label": "PRs per person",
   "spec": {
     "views": [

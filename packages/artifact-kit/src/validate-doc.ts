@@ -251,7 +251,7 @@ export function validateDoc(doc: unknown): string[] {
           })
         }
 
-        if (b.kind === "columns") {
+        if (b.kind === "throughput") {
           if (!isObj(b.spec))
             return void errors.push(`${at}.spec must be an object`)
           const sp = b.spec
@@ -336,7 +336,7 @@ export function validateDoc(doc: unknown): string[] {
 
         if (b.kind !== "queue")
           errors.push(
-            `${at}.kind must be "queue", "prose", "series", "columns", "progress", "day" or "matrix"`,
+            `${at}.kind must be "queue", "prose", "series", "throughput", "progress", "day" or "matrix"`,
           )
 
         // A queue carries either loose rows or labelled groups. Both absent is
