@@ -368,6 +368,102 @@ describe("WidgetCard empty states", () => {
   })
 })
 
+describe("WidgetCard expand affordance", () => {
+  /** A definite cell, so "does the artifact overflow it" has an answer. */
+  const inCell = (ui: React.ReactElement) => (
+    <div style={{ height: 200, width: 400 }}>{ui}</div>
+  )
+  const cue = () => document.querySelector("h2 button svg")
+
+  it("expands from the title — the one door, on every pointer type", async () => {
+    await renderCard(
+      inCell(
+        <WidgetCard
+          widget={widget}
+          routine={routine({ name: "Repo pulse" })}
+          artifact={artifact({ html: "<h1>live</h1>" })}
+          now={Date.now()}
+          committed
+        />,
+      ),
+    )
+    // The heading itself carries the action (ADR-0057), so the tile's most
+    // consequential control is legible without the hover a touch pointer
+    // never sends — and there is no second expand icon beside it.
+    const title = document.querySelector<HTMLButtonElement>(
+      'h2 > button[aria-label^="Expand"]',
+    )
+    await expect.poll(() => title != null).toBe(true)
+    // The accessible name contains the visible one (WCAG 2.5.3).
+    expect(title?.getAttribute("aria-label")).toContain("Repo pulse")
+    expect(title?.textContent).toContain("Repo pulse")
+    expect(document.querySelectorAll('[aria-label^="Expand"]')).toHaveLength(1)
+    title?.click()
+    await expect
+      .poll(() => document.querySelector('[data-slot="widget-lightbox"]'))
+      .not.toBe(null)
+  })
+
+  it("leaves the name plain when nothing was ever published", async () => {
+    await renderCard(
+      inCell(
+        <WidgetCard
+          widget={widget}
+          routine={routine({ name: "Repo pulse" })}
+          artifact={undefined}
+          now={Date.now()}
+          committed
+        />,
+      ),
+    )
+    // No artifact, no full view — a button here would open an empty room.
+    // The heading stays, so the card keeps its accessible name either way.
+    await expect
+      .poll(() => document.querySelector("h2")?.textContent)
+      .toBe("Repo pulse")
+    expect(document.querySelector('button[aria-label^="Expand"]')).toBe(null)
+  })
+
+  it("rests the cue faint while the artifact fits its cell", async () => {
+    await renderCard(
+      inCell(
+        <WidgetCard
+          widget={widget}
+          routine={routine()}
+          artifact={artifact({ html: "<h1>live</h1>" })}
+          now={Date.now()}
+          committed
+        />,
+      ),
+    )
+    // ink-faint is DESIGN.md's glyph role (≥3:1) — present at rest, quiet
+    // enough that a board of fitted tiles doesn't read as a row of buttons.
+    await expect
+      .poll(() => cue()?.classList.contains("text-ink-faint"))
+      .toBe(true)
+  })
+
+  it("brightens the cue once the guard reports a clipped artifact", async () => {
+    await renderCard(
+      inCell(
+        <WidgetCard
+          widget={widget}
+          routine={routine()}
+          artifact={artifact({ html: '<div style="height:5000px">live</div>' })}
+          now={Date.now()}
+          committed
+        />,
+      ),
+    )
+    // The same overflow that paints the guard's bottom fade (ADR-0019) now
+    // reaches the chrome, so the door brightens exactly where rows are being
+    // held back.
+    await expect
+      .poll(() => cue()?.classList.contains("text-ink-dim"))
+      .toBe(true)
+  })
+})
+
 describe("WidgetCard chat action", () => {
   const withContext = (body: string) =>
     `<h1>live</h1><script type="text/markdown" id="steward-context">${body}</script>`
