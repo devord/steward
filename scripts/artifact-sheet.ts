@@ -1,8 +1,9 @@
 /**
  * Contact sheet for a widget artifact: renders it at every real tile size
  * plus the full view, framed exactly as the dashboard frames it
- * (frameArtifactHtml — footer hidden, tile guard + stamp, theme override),
- * and screenshots one sheet per theme with headless Chrome.
+ * (frameArtifactHtml — footer hidden, tile guard + stamp, theme override, and
+ * the runtimes the kit's hidden controls wait for), and screenshots one sheet
+ * per theme with headless Chrome.
  *
  * The artifact goes inside `<iframe srcdoc sandbox="allow-scripts">` — the
  * board's own mechanism — because headless Chrome clamps its window to
@@ -26,6 +27,7 @@ import path from "node:path"
 import {
   artifactFontStyle,
   artifactKitStyle,
+  artifactThroughputScript,
   frameArtifactHtml,
   themeNames,
   themes,
@@ -53,6 +55,21 @@ const ARTIFACT_FONT_STYLE = artifactFontStyle(
 const ARTIFACT_KIT_STYLE = artifactKitStyle(
   readFileSync(
     new URL("../.claude/skills/widget-artifact/kit/kit.css", import.meta.url),
+    "utf8",
+  ),
+)
+
+// The throughput band ships every control `hidden` (ADR-0039) and the board
+// injects this to reveal them. Without it the sheet is the one viewer that
+// sees a band the board never shows: columns under a row of controls that
+// aren't there — so the gate would pass a broken toggle without comment.
+// Read from disk for the same reason as the two above.
+const ARTIFACT_THROUGHPUT_SCRIPT = artifactThroughputScript(
+  readFileSync(
+    new URL(
+      "../.claude/skills/widget-artifact/kit/throughput.js",
+      import.meta.url,
+    ),
     "utf8",
   ),
 )
@@ -118,6 +135,7 @@ for (const themeName of sheetThemes) {
       ARTIFACT_FONT_STYLE,
       undefined,
       ARTIFACT_KIT_STYLE,
+      ARTIFACT_THROUGHPUT_SCRIPT,
     )
     return (
       `<div><p>${label} — ${w}×${h}</p>` +
