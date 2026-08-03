@@ -314,8 +314,27 @@ export function validateDoc(doc: unknown): string[] {
               // A short delta row is the encoding bug that reads as a person
               // whose work stopped: the missing tail decodes to zeroes.
               if (!Array.isArray(deltas) || deltas.length !== width)
-                errors.push(
+                return void errors.push(
                   `${cat}[1] must hold one [open, merged, created] triple per author (${width})`,
+                )
+              // …and inside a triple the same two failures go quieter still.
+              // `decodeView` sums straight into a running total, so a string
+              // does not throw: `0 += "3"` concatenates, and every later day
+              // inherits it. A two-long triple loses `created` to the same
+              // silent zero as a short row, one author narrower.
+              //
+              // One error per row, naming the first offender: a mis-encoded
+              // row is usually mis-encoded all the way across, and twenty
+              // copies of the same sentence buries the twenty-first.
+              const bad = deltas.findIndex(
+                (d) =>
+                  !Array.isArray(d) ||
+                  d.length !== 3 ||
+                  d.some((x) => typeof x !== "number" || !Number.isFinite(x)),
+              )
+              if (bad !== -1)
+                errors.push(
+                  `${cat}[1][${bad}] must be [open, merged, created] as three finite numbers`,
                 )
             })
           })
