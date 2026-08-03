@@ -37,7 +37,14 @@ export function StatTier({
     //
     // Wrapping for the same reason the verdict band does: the row is three
     // pieces of caller-supplied text and nothing here can truncate.
-    <div className="beyond-glance:flex-row beyond-glance:flex-wrap beyond-glance:items-baseline beyond-glance:gap-x-2 beyond-glance:text-left flex flex-col items-center gap-0.5 text-center">
+    //
+    // `gap-y-1` is not symmetry with `gap-x-2`. `gap-x-2` sets the COLUMN gap
+    // only, so the row gap stayed at the `gap-0.5` the glance stack wants —
+    // 2px, which is right for a figure sitting directly over its label and
+    // wrong for a wrapped line. A note long enough to wrap landed 2px under
+    // the label and read as one mis-set paragraph. Same 4px the verdict band
+    // uses on the same wrap, for the same reason.
+    <div className="beyond-glance:flex-row beyond-glance:flex-wrap beyond-glance:items-baseline beyond-glance:gap-x-2 beyond-glance:gap-y-1 beyond-glance:text-left flex flex-col items-center gap-0.5 text-center">
       <span
         className={cn(
           // Not a type-scale step: the glance tier's whole job is this figure,
@@ -50,21 +57,36 @@ export function StatTier({
       >
         {value}
       </span>
-      <span className="text-ink-dim font-mono text-xs">{label}</span>
       {/* Labels sit at the 12px floor; data never does (widget-standard §6).
           And de-emphasis is spent on size and weight, never a dimmer ink —
-          ink-faint is a glyph role, below AA on all but one theme. */}
-      {note ? (
-        <span className="text-ink-dim beyond-glance:block hidden font-mono text-xs">
-          {/* Beyond the glance the stat lays out in a row, and the label and
-              the note butt together into one apparent sentence — "0 to file 38
-              pages audited". The glance gets its separation from the line
-              break; the inline one has to say it. Same separator the section
-              heading uses for the same job. */}
-          <span className="beyond-glance:inline hidden">· </span>
-          {note}
-        </span>
-      ) : null}
+          ink-faint is a glyph role, below AA on all but one theme.
+
+          The note rides INSIDE the label rather than beside it, and that is
+          what keeps the separator honest. Beyond the glance the stat lays out
+          in a row, and the label and the note butt together into one apparent
+          sentence — "0 to file 38 pages audited" — so the inline case has to
+          say where one ends and the other begins. As its own flex item the
+          note carried that separator unconditionally, and a note long enough
+          to wrap onto its own line then OPENED with it: a paragraph starting
+          `· Nothing new to report…`, a dangling mark with nothing on its left.
+          Sharing the label's box, the separator can only ever appear between
+          the two things it separates, and a note too long for the line wraps
+          as prose under its own label instead of as a stray bullet.
+
+          Capped at 72ch for the same reason the bottom line is: a `note` is
+          specified as one short line, but nothing stops a routine writing a
+          sentence, and at the page tier an uncapped one runs the full 1384px
+          frame. */}
+      <span className="text-ink-dim beyond-glance:max-w-[72ch] font-mono text-xs">
+        {label}
+        {note ? (
+          <span className="beyond-glance:inline hidden">
+            {/* Announced as the separator it is, not as a spoken character. */}
+            <span aria-hidden="true"> · </span>
+            {note}
+          </span>
+        ) : null}
+      </span>
     </div>
   )
 }

@@ -619,7 +619,46 @@ describe("the stat tier", () => {
     // The row layout and the separator that only reads in a row travel with it.
     expect(html).toContain("beyond-glance:flex-row")
     expect(html).not.toContain("tier-detail:flex-row")
-    expect(html).toContain('class="beyond-glance:inline hidden">· </span>')
+    expect(html).toContain('<span aria-hidden="true"> · </span>')
+  })
+
+  it("never lets the note open a line with the separator", () => {
+    // The separator says where the label ends and the note begins, which only
+    // means anything while the two share a line. As its own flex item the note
+    // carried it unconditionally, so a note long enough to wrap opened its line
+    // with a dangling `·` and nothing on its left — live on `corza-pings`.
+    // Nesting it inside the label is what makes that unrepresentable: the mark
+    // cannot start a line the label does not also start.
+    const html = renderArtifact(
+      {
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 0, label: "pings", note: "Nothing new to report." },
+      },
+      "",
+    )
+    const sep = html.indexOf('<span aria-hidden="true"> · </span>')
+    const label = html.indexOf("pings")
+    expect(label).toBeGreaterThan(-1)
+    expect(sep).toBeGreaterThan(label)
+    // No element boundary opens between them: the label's own text box holds
+    // both, so they wrap as one run of prose rather than as two flex items.
+    expect(html.slice(label + "pings".length, sep)).not.toContain("</span>")
+  })
+
+  it("gives the wrapped line a row gap, not the glance stack's 2px", () => {
+    // `gap-x-2` sets the COLUMN gap only, so the row gap stayed at the
+    // `gap-0.5` the glance's figure-over-label stack wants. A note long enough
+    // to wrap landed 2px under the label and read as one mis-set paragraph.
+    const html = renderArtifact(
+      {
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 0, label: "pings", note: "x" },
+      },
+      "",
+    )
+    expect(html).toContain("beyond-glance:gap-y-1")
   })
 })
 
@@ -634,21 +673,29 @@ describe("the verdict band", () => {
   }
 
   it("never ships colour alone", () => {
-    // Three redundant encodings, picked together by the level so no caller can
-    // separate them: the state has to survive colour-vision deficiency,
-    // grayscale and forced-colors, and two of the three carry no colour.
+    // Two encodings, picked together by the level so no caller can separate
+    // them: the word names the state, the silhouette ranks it, and neither is
+    // colour — which is what has to survive colour-vision deficiency,
+    // grayscale and forced-colors.
+    //
+    // Pinned on a stroke unique to each glyph, not on the level's text colour.
+    // Asserting the colour would let all four levels ship the SAME shape and
+    // still pass, which is the failure this test exists to catch: a reader
+    // without colour would see one undifferentiated mark on every verdict.
     const levels: [Verdict["level"], string][] = [
-      ["good", "bg-green"],
-      ["attn", "bg-orange"],
-      ["bad", "bg-red"],
-      ["pending", "bg-ink-dim"],
+      ["good", "m9 12 2 2 4-4"], // circle-check
+      ["attn", "m21.73 18-8-14"], // triangle-alert
+      ["bad", "M15.312 2a2 2 0"], // octagon-alert
+      ["pending", "M12 6v6l4 2"], // clock
     ]
-    for (const [level, dot] of levels) {
+    const seen = new Set<string>()
+    for (const [level, stroke] of levels) {
       const html = verdict({ level, word: "X" })
-      expect(html, level).toContain(dot) // 1. the dot
-      expect(html, level).toContain(">X<") // 2. the word
-      expect(html, level).toContain("<svg") // 3. the glyph
+      expect(html, level).toContain(">X<") // 1. the word
+      expect(html, level).toContain(stroke) // 2. this level's own silhouette
+      seen.add(stroke)
     }
+    expect(seen.size, "each level needs its own shape").toBe(levels.length)
   })
 
   it("steps the hero down the moment a second line appears", () => {
@@ -658,13 +705,15 @@ describe("the verdict band", () => {
     // step-down on `tier-detail` put it 360px of width later, and a 1×2 and a
     // 2×2 tile ran a 44px hero over a 14px sentence.
     const html = verdict({ clauses: [{ value: "12d" }] })
-    // The class attribute carrying the hero size — the dot and the glyph are
-    // its children, so walking back from the word finds the dot instead.
+    // The class attribute carrying the hero size. The glyph is its child, so
+    // matching on the class rather than on the word keeps this independent of
+    // what else the span holds.
     const cls = /class="([^"]*text-\[2\.75rem\][^"]*)"/.exec(html)?.[1] ?? ""
     expect(cls).toContain("beyond-glance:text-2xl")
     expect(cls).not.toContain("tier-detail:text-2xl")
-    // And it is the word that is sized, not something near it.
-    expect(html.slice(html.indexOf(cls))).toMatch(/^[^<]*<[^>]*><\/span>AMBER/)
+    // And it is the word that is sized, not something near it: the sized span
+    // opens on the word, with the glyph after it.
+    expect(html.slice(html.indexOf(cls))).toMatch(/^[^<]*">AMBER</)
   })
 
   it("keeps the gate beside the word it anchors", () => {
@@ -682,6 +731,21 @@ describe("the verdict band", () => {
     expect(cls).not.toContain("shrink-0")
     // And the row it sits in can take a second line rather than overflow.
     expect(html).toContain("flex-wrap")
+  })
+
+  it("puts the gate on the word's baseline, not on a synthesised one", () => {
+    // The gate is aligned with `items-baseline` against the hero span. A flex
+    // container takes its baseline from its FIRST flex item, and when that item
+    // carries no text of its own the baseline is synthesised from its bottom
+    // edge — so the hero must not be a flex container, or the gate floats. This
+    // was live: with a dot leading the row, "Aug 6 · 3d" rendered 5.9px above
+    // the baseline of the word it qualifies, landing on the dot's bottom edge.
+    const html = verdict({ gate: "Aug 6 · 3d" })
+    const cls = /class="([^"]*text-\[2\.75rem\][^"]*)"/.exec(html)?.[1] ?? ""
+    expect(cls).not.toMatch(/(^|\s)(inline-)?flex(\s|$)/)
+    expect(cls).not.toContain("items-center")
+    // The parent still baseline-aligns; that is the half this protects.
+    expect(html).toContain("items-baseline")
   })
 
   it("bolds the measured figure and nothing else", () => {

@@ -11,15 +11,22 @@ export type VerdictLevel = "good" | "attn" | "bad" | "pending"
  *
  * Orange for `attn`, never yellow: yellow is the board's carry-over /
  * record-in-doubt tone, and the amber step reads truer against the word.
+ *
+ * There used to be a third member here, a filled dot before the word, defended
+ * as the colour leg of "three redundant encodings". It was not one. The word
+ * is already painted `text`, so the dot restated a channel the group carried
+ * twice over while adding nothing a reader without colour could use — the
+ * silhouette is what survives grayscale and `forced-colors`, and that is the
+ * glyph's job. What it did add was width, on the tier with none to spare:
+ * measured at 340×160, `Reshuffled` plus a dot pushed the glyph onto a second
+ * line at every size from 0.22em up, on the tile where the word IS the
+ * artifact. Two marks, each carrying something the other cannot.
  */
-const LEVEL: Record<
-  VerdictLevel,
-  { text: string; dot: string; icon: IconName }
-> = {
-  good: { text: "text-green", dot: "bg-green", icon: "circle-check" },
-  attn: { text: "text-orange", dot: "bg-orange", icon: "triangle-alert" },
-  bad: { text: "text-red", dot: "bg-red", icon: "octagon-alert" },
-  pending: { text: "text-ink-dim", dot: "bg-ink-dim", icon: "clock" },
+const LEVEL: Record<VerdictLevel, { text: string; icon: IconName }> = {
+  good: { text: "text-green", icon: "circle-check" },
+  attn: { text: "text-orange", icon: "triangle-alert" },
+  bad: { text: "text-red", icon: "octagon-alert" },
+  pending: { text: "text-ink-dim", icon: "clock" },
 }
 
 /** One fired condition: connecting prose around a measured figure. */
@@ -57,12 +64,14 @@ export interface Verdict {
 }
 
 /**
- * The one-word status read: a dot, the word, and a glyph.
+ * The one-word status read: the word and a glyph.
  *
- * **Three redundant encodings by construction.** The level picks all three
- * together, so no caller can ship colour alone — the state survives
- * colour-vision deficiency, grayscale and `forced-colors` because two of the
- * three carry no colour at all.
+ * **Two encodings by construction, and neither is colour.** The level picks
+ * both together, so no caller can ship colour alone — the word names the state
+ * and the silhouette ranks it, which is what survives colour-vision
+ * deficiency, grayscale and `forced-colors`. Colour rides on top of both and
+ * is never asked to carry the reading on its own. Adding a third mark that
+ * carries only colour does not make that stronger; see `LEVEL`.
  *
  * **The accent budget is spent here and nowhere else.** Everything below the
  * word — the clauses, the caveat, the override note — is the neutral ink ramp.
@@ -96,24 +105,41 @@ export function VerdictBand({ verdict }: { verdict: Verdict }) {
             and a 2×2 tile ran a 44px hero over a 14px sentence — three times
             the next thing on screen, on a tile whose job is the ledger.
 
-            The dot and the icon size in `em` off this same span, so one number
-            sets the whole group per tier instead of three scales drifting
-            apart. They were a fixed 8px and a fixed 24px against a word that
-            ranged from 24 to 44: at the glance the dot read as a stray speck
-            and the glyph as an undersized afterthought, which is a group whose
-            proportions change every time the word does. */}
+            The glyph sizes in `em` off this same span, so one number sets the
+            pair per tier instead of two scales drifting apart. It was a fixed
+            24px against a word that ranged from 24 to 44, which reads as an
+            undersized afterthought at the glance and an oversized one below.
+
+            A run of text with a glyph set into it, NOT a flex row — and that
+            is load-bearing rather than tidiness. A flex container takes its
+            baseline from its first flex item, and when that item is a box with
+            no text of its own the baseline gets synthesised from its bottom
+            edge. With the dot leading the row that is exactly what happened:
+            the parent aligns the gate on `items-baseline`, so "Aug 6 · 3d" sat
+            5.9px above the baseline of the word it qualifies — measured, and
+            landing precisely on the dot's bottom edge. Inline flow has no such
+            rule. The span's baseline is the word's baseline, so the gate sits
+            on the line the reader sees, and it stays fixed even if something
+            is ever set before the word again.
+
+            `align-[-0.05em]` centres the glyph on the CAP BAND rather than on
+            the line box. Geist Mono's caps rise 0.7em off the baseline, so the
+            band's centre is 0.35em up; a baseline-aligned box of side S has
+            its own centre at S/2, and the shift is the difference. Centring on
+            the line box instead hangs the glyph low, because a word with no
+            descenders leaves the descent space empty. Same arithmetic as
+            `INLINE_GLYPH`, one tier larger. */}
         <span
           className={cn(
-            "beyond-glance:text-2xl flex items-center gap-[0.2em] font-mono text-[2.75rem] leading-none font-semibold",
+            "beyond-glance:text-2xl font-mono text-[2.75rem] leading-none font-semibold",
             l.text,
           )}
         >
-          <span
-            className={cn("size-[0.22em] shrink-0 rounded-full", l.dot)}
-            aria-hidden="true"
-          />
           {verdict.word}
-          <Icon name={l.icon} className="size-[0.8em] shrink-0" />
+          <Icon
+            name={l.icon}
+            className="ml-[0.2em] inline size-[0.8em] align-[-0.05em]"
+          />
         </span>
         {verdict.gate ? (
           // Beside the word, not at the far edge. `ml-auto` on an unbounded

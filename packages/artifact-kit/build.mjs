@@ -101,6 +101,14 @@ const RETIRED = [
   "tier-detail:text-left",
   // The stage strip was gated on height alone and is now gated on both axes.
   "taller:block",
+  // VerdictBand's hero was a flex row of [dot, word, glyph]. The dot is gone —
+  // it restated a colour the word already wore — and the row is inline flow,
+  // so the group now takes its baseline from the word instead of synthesising
+  // one from the dot's bottom edge. Every artifact published before that still
+  // carries both classes, and a published dot with no `size-[0.22em]` rule is
+  // not a smaller dot, it is a full-width bar across the tile.
+  "gap-[0.2em]",
+  "size-[0.22em]",
 ]
 
 const SAFELIST = [
