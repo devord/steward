@@ -95,6 +95,11 @@ import {
   type SyncKind,
   useDraft,
 } from "../lib/draft.ts"
+import {
+  beginGridGesture,
+  endGridGesture,
+  useGridGestureEscape,
+} from "../lib/grid-gesture.ts"
 import { useT } from "../lib/i18n.tsx"
 import { OPEN_LAYER_SELECTOR, useKeymap } from "../lib/keymap.ts"
 import { boardHref, routinesHref } from "../lib/repos.ts"
@@ -201,8 +206,18 @@ function BandGrid({
         threshold: 4,
       }}
       resizeConfig={{ enabled: editing, handles: [...RESIZE_HANDLES] }}
-      onDragStop={(layout) => onCommit(layout)}
-      onResizeStop={(layout) => onCommit(layout)}
+      // The gesture's start point is recorded so Escape can rewind to it; see
+      // grid-gesture.ts, which owns the cancel.
+      onDragStart={(_l, _o, _n, _p, event) => beginGridGesture(event)}
+      onResizeStart={(_l, _o, _n, _p, event) => beginGridGesture(event)}
+      onDragStop={(layout) => {
+        endGridGesture()
+        onCommit(layout)
+      }}
+      onResizeStop={(layout) => {
+        endGridGesture()
+        onCommit(layout)
+      }}
     >
       {cells.map((cell) => (
         <div key={cell.widget.routine} className="widget-cell">
@@ -940,12 +955,18 @@ export function DashboardBoard({
   // guard over the entry-point gating (editing can't be entered when read-only).
   const gridEditing = editing && !readOnly
 
+  // Esc abandons a drag or resize in flight, ahead of everything below: while
+  // a cell is under the pointer, "escape" means undo this, not leave the mode
+  // the reader is still working in.
+  useGridGestureEscape()
+
   // Esc leaves edit mode — the app-wide "close this layer" key (every dialog
   // honors it; edit mode is the one modal-ish state that didn't). Exiting is
   // always safe: layout edits land in the draft on drag/resize stop, so Esc is
   // exactly the Done button. Layers win the key: skip when a dialog, menu, or
   // select popup is open (it takes the first Esc; the next one reaches us) or
-  // when something already claimed the event.
+  // when something already claimed the event — which is how the gesture cancel
+  // above keeps a cancelled drag from also dropping the reader out of editing.
   useEffect(() => {
     if (!editing) return
     const onKeyDown = (event: KeyboardEvent) => {

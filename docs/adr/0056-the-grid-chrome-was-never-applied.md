@@ -62,11 +62,55 @@ whatever size it had reached. Growing is fine, because the pointer travels
 _away_ from the card. That asymmetry is why the complaint was specifically about
 sizing an edge **down**.
 
-**Decision: artifacts are inert for the duration of a gesture.** While the grid
-holds a `.react-draggable-dragging` or `.resizing` cell, every widget iframe
-takes `pointer-events: none`. This is the old overlay's job, scoped to the only
-window where it is needed — at rest the artifact is as interactive as ADR-0041
-intended.
+**Decision: artifacts are inert for the duration of a gesture.** While the
+board holds a `.react-draggable-dragging` or `.resizing` cell, every widget
+iframe takes `pointer-events: none`. This is the old overlay's job, scoped to
+the only window where it is needed — at rest the artifact is as interactive as
+ADR-0041 intended.
+
+**The board**, not the grid. The first cut scoped that `:has()` to the
+`.dash-grid` holding the gesture, which is wrong for the same reason it was
+easy to write: a board is not one grid. Every band is its own RGL instance
+(ADR-0044), so a band standing its own artifacts aside left every other band's
+answering the pointer — and growing a cell downwards is exactly the gesture
+that leaves its band. It failed on a boundary, too, which is why it read as
+intermittent rather than broken: the cell tracks the pointer exactly, so the
+pointer rides its edge for the whole gesture, and whether a hit lands on the
+cell or on what lies past it comes down to a sub-pixel. Reported as _"sometimes
+it freezes and I need to move the mouse to the sides"_ — sideways being the
+direction that finds something still willing to answer. The selector is scoped
+to the document.
+
+## Escape abandons a gesture
+
+Nothing did, before: once a drag or resize began, the only way out was to let
+go, and wherever the cell had got to was where it stayed. Escape meanwhile was
+the board's "leave edit mode" key, so during a gesture it did the wrong thing
+twice — dropped the reader out of the mode they were still working in, and kept
+the placement they were trying to escape.
+
+RGL has no cancel to call. Rather than reach into its state after the fact, the
+gesture is **rewound**: put the pointer back where it was pressed, release it
+there, and the library settles the cell home along the same path it would have
+taken if the reader had dragged it back by hand. The commit that follows
+carries the placement the board already had, so it reads as the no-op it is and
+never forks a draft. No library internals are touched.
+
+The order matters and is not obvious. A `mousemove` is a _continuous_ event, so
+React batches what it produces — and the grid settles against the geometry it
+holds at the moment of release. Sent in one tick, the release lands on the size
+from _before_ the rewind and stores exactly the placement being thrown away.
+The rewind is therefore `flushSync`ed before the release is sent. Deferring the
+release a frame instead only moves the race, since the reader's own mouseup can
+arrive first and settle it the same wrong way.
+
+The live gesture is module state, in `grid-gesture.ts`, because that is what it
+is: a pointer belongs to the document, not to a component, and only one of a
+board's grids is ever being gestured at. Hanging it off a single grid would
+repeat the mistake the iframe shield just made. Escape is claimed in the
+capture phase and marked handled, so the edit-mode Escape — which already
+stands down for a handled event — lets it through and the two never fire at
+once.
 
 ## Editing is armed at every breakpoint, and narrow grids commit only rows
 

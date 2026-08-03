@@ -13,6 +13,11 @@ import { render } from "vitest-browser-react"
 
 import "../app.css"
 import {
+  beginGridGesture,
+  endGridGesture,
+  useGridGestureEscape,
+} from "../lib/grid-gesture.ts"
+import {
   RESIZE_HANDLES,
   settledRect,
   widgetsToLayout,
@@ -53,6 +58,7 @@ function GridHarness({
   boardWidth?: number
 }) {
   const [widgets, setWidgets] = useState(initial)
+  useGridGestureEscape()
   const { width, containerRef, mounted } = useContainerWidth({
     initialWidth: boardWidth,
   })
@@ -118,8 +124,16 @@ function GridHarness({
               enabled: gridEditing,
               handles: [...RESIZE_HANDLES],
             }}
-            onDragStop={(layout) => commit(layout)}
-            onResizeStop={(layout) => commit(layout)}
+            onDragStart={(_l, _o, _n, _p, event) => beginGridGesture(event)}
+            onResizeStart={(_l, _o, _n, _p, event) => beginGridGesture(event)}
+            onDragStop={(layout) => {
+              endGridGesture()
+              commit(layout)
+            }}
+            onResizeStop={(layout) => {
+              endGridGesture()
+              commit(layout)
+            }}
           >
             {widgets.map((widget) => (
               // `data-cell` is the pointer commands' anchor: they resolve a
@@ -145,6 +159,87 @@ function GridHarness({
             ))}
           </ResponsiveGridLayout>
         )}
+      </div>
+    </>
+  )
+}
+
+/**
+ * A board of two bands, which is how a real board is built: each band is its
+ * own RGL instance (ADR-0044), so a gesture in one band is invisible to the
+ * other — including anything that band does to get its artifacts out of the
+ * pointer's way.
+ */
+function BandsHarness({ html }: { html: string }) {
+  const columns = 4
+  const [widgets, setWidgets] = useState<Widget[]>([
+    widget("a", 1, 1, 2, 1),
+    widget("b", 1, 1, 4, 2),
+  ])
+  const commit = useCallback((layout: readonly LayoutItem[]) => {
+    setWidgets((current) =>
+      current.map((w) => {
+        const item = layout.find((l) => l.i === w.routine)
+        if (!item) return w
+        const rect = settledRect(
+          item,
+          columns,
+          { ...w.position, ...w.size },
+          false,
+        )
+        return {
+          ...w,
+          position: { col: rect.col, row: rect.row },
+          size: { cols: rect.cols, rows: rect.rows },
+        }
+      }),
+    )
+  }, [])
+
+  return (
+    <>
+      {/* eslint-disable-next-line react/no-danger */}
+      <style dangerouslySetInnerHTML={{ __html: THEME_STYLESHEET }} />
+      <div data-testid="state">{JSON.stringify(widgets)}</div>
+      <div style={{ width: CONTAINER_WIDTH }}>
+        {widgets.map((band) => (
+          <ResponsiveGridLayout
+            key={band.routine}
+            className="dash-grid is-editing"
+            width={CONTAINER_WIDTH}
+            breakpoint="lg"
+            breakpoints={{ lg: 1100 }}
+            cols={{ lg: columns }}
+            layouts={{ lg: widgetsToLayout([band], columns) }}
+            rowHeight={150}
+            margin={[12, 12]}
+            containerPadding={[0, 0]}
+            compactor={COMPACTOR}
+            dragConfig={{ enabled: true, handle: ".widget-drag-handle" }}
+            resizeConfig={{ enabled: true, handles: [...RESIZE_HANDLES] }}
+            onDragStop={commit}
+            onResizeStop={commit}
+          >
+            <div
+              key={band.routine}
+              className="widget-cell"
+              data-cell={band.routine}
+            >
+              <WidgetCard
+                widget={band}
+                routine={routine(band.routine)}
+                artifact={{
+                  html,
+                  sha: "sha",
+                  lastRunAt: "2026-01-01T00:00:00Z",
+                }}
+                now={Date.now()}
+                editing
+                onRemove={() => undefined}
+              />
+            </div>
+          </ResponsiveGridLayout>
+        ))}
       </div>
     </>
   )
@@ -238,6 +333,19 @@ async function unveiled(slug: string) {
       return frame != null && !frame.classList.contains("opacity-0")
     })
     .toBe(true)
+}
+
+/** Whether an Escape would be taken by the gesture layer — i.e. whether the
+    board's own Escape handler, which stands down for a handled event, would
+    still see it. */
+function escapeIsClaimed(): boolean {
+  const event = new KeyboardEvent("keydown", {
+    key: "Escape",
+    bubbles: true,
+    cancelable: true,
+  })
+  window.dispatchEvent(event)
+  return event.defaultPrevented
 }
 
 function grid(): HTMLElement {
@@ -374,6 +482,36 @@ describe("grid editing (react-grid-layout, ADR-0041)", () => {
     expect(placementOf("a").cols).toBe(1)
   })
 
+  /**
+   * The same trap one band over, which is where it actually bit. A board is
+   * not one grid: every band is its own RGL instance (ADR-0044), so a band
+   * standing its own artifacts aside leaves every other band's live. Growing a
+   * cell downwards is exactly the gesture that leaves its band.
+   *
+   * It fails on a boundary, which is why it read as intermittent. The cell
+   * tracks the pointer exactly, so the pointer rides its edge for the whole
+   * gesture, and whether a hit lands on the cell or on what lies beyond it
+   * comes down to a sub-pixel — hence "sometimes it freezes, and moving
+   * sideways frees it". A geometric reproduction would be pinned to that same
+   * sub-pixel, so what is asserted is the invariant that removes the coin
+   * flip: while any gesture is open, *no* artifact on the board answers the
+   * pointer.
+   */
+  it("stands every band's artifact aside, not just the gesturing band's", async () => {
+    await render(<BandsHarness html="<p>artifact</p>" />)
+    await expect
+      .poll(() => document.querySelectorAll(".react-grid-item").length)
+      .toBe(2)
+    await unveiled("b")
+    // Resize in the top band; read the artifact in the band below it.
+    await commands.mouseDrag(GRIP("a"), { dx: 0, dy: 320 }, 8, true)
+    const elsewhere = cell("b").querySelector("iframe")
+    const shielded = elsewhere ? getComputedStyle(elsewhere).pointerEvents : ""
+    await commands.mouseRelease()
+    expect(shielded).toBe("none")
+    await expect.poll(() => placementOf("a").rows).toBeGreaterThan(1)
+  })
+
   it("moves a card dragged across a neighbour's artifact", async () => {
     // The same trap on the drag path: the title bar stays under the pointer,
     // but the cards it passes over do not, and one of them is an artifact.
@@ -387,6 +525,52 @@ describe("grid editing (react-grid-layout, ADR-0041)", () => {
     await unveiled("b")
     await commands.mouseDrag(HANDLE("a"), { dx: 700, dy: 40 }, 8)
     await expect.poll(() => placementOf("a").col).toBeGreaterThan(1)
+  })
+
+  /**
+   * Escape abandons a gesture in flight. RGL has no cancel of its own, so the
+   * gesture is rewound rather than aborted: the pointer is put back where it
+   * was pressed and released there, and the library settles the cell home
+   * along the same path it would have taken anyway.
+   */
+  describe("escape", () => {
+    it("abandons a resize, leaving the card the size it was", async () => {
+      await mounted(<GridHarness initial={[widget("a", 1, 1, 2, 2)]} />, 1)
+      const before = cell("a").getBoundingClientRect().width
+      await commands.mouseDrag(GRIP("a"), { dx: 400, dy: 300 }, 8, true)
+      await userEvent.keyboard("{Escape}")
+      await commands.mouseRelease()
+      await expect
+        .poll(() => cell("a").getBoundingClientRect().width)
+        .toBeCloseTo(before, 0)
+      expect(placementOf("a")).toMatchObject({ cols: 2, rows: 2 })
+    })
+
+    it("abandons a drag, leaving the card where it was", async () => {
+      await mounted(
+        <GridHarness
+          initial={[widget("a", 1, 1, 2, 1), widget("b", 3, 1, 2, 1)]}
+        />,
+        2,
+      )
+      await commands.mouseDrag(HANDLE("a"), { dx: 500, dy: 0 }, 8, true)
+      await userEvent.keyboard("{Escape}")
+      await commands.mouseRelease()
+      await expect.poll(() => placementOf("a").col).toBe(1)
+      expect(placementOf("b").col).toBe(3)
+    })
+
+    it("claims the key while a gesture is open, and only then", async () => {
+      // Escape is also the board's "leave edit mode" key, which stands down
+      // for an already-handled event. While a gesture is open Escape means the
+      // nearer thing — undo this — and must not do both at once.
+      await mounted(<GridHarness initial={[widget("a", 1, 1, 2, 2)]} />, 1)
+      expect(escapeIsClaimed()).toBe(false)
+      await commands.mouseDrag(GRIP("a"), { dx: 400, dy: 300 }, 8, true)
+      const duringGesture = escapeIsClaimed()
+      await commands.mouseRelease()
+      expect(duringGesture).toBe(true)
+    })
   })
 
   /**

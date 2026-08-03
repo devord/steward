@@ -523,13 +523,23 @@
 
      Nothing inside an artifact is interactive mid-gesture, and nothing on the
      board is worth selecting mid-gesture, so both go inert for the duration
-     and come back the moment it ends. */
-  .dash-grid:has(.react-draggable-dragging),
-  .dash-grid:has(.resizing) {
+     and come back the moment it ends.
+
+     Scoped to the document, not to the grid holding the gesture: a board is
+     not one grid. Every band is its own RGL instance (ADR-0044), so a band
+     asking its own artifacts to stand aside leaves every *other* band's
+     artifacts live — and growing a cell downwards is precisely the gesture
+     that leaves its band. Worse, it fails on a boundary: the cell tracks the
+     pointer exactly, so the pointer rides its edge, and whether the hit lands
+     on the cell or on what lies beyond it comes down to a sub-pixel. That is
+     the "sometimes it freezes, and moving sideways frees it" this fixes —
+     sideways moves the pointer back over something that still answers. */
+  body:has(.dash-grid .react-draggable-dragging),
+  body:has(.dash-grid .react-grid-item.resizing) {
     user-select: none;
   }
-  .dash-grid:has(.react-draggable-dragging) iframe,
-  .dash-grid:has(.resizing) iframe {
+  body:has(.dash-grid .react-draggable-dragging) .dash-grid iframe,
+  body:has(.dash-grid .react-grid-item.resizing) .dash-grid iframe {
     pointer-events: none;
   }
 
