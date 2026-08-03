@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server"
 
 import { Throughput, type ThroughputSpec } from "./components/Throughput.tsx"
+import { type BottomLine, BottomLineBand } from "./components/BottomLine.tsx"
 import {
   CouplingMatrix,
   type MatrixSpec,
@@ -201,6 +202,16 @@ export interface ArtifactDoc {
   }
   /** The glance as a one-word status read instead of a figure. */
   verdict?: Verdict
+  /**
+   * The conclusion, above the evidence for it — one sentence, under the glance
+   * and over the first band.
+   *
+   * Optional, and most artifacts should leave it unset: a ledger whose rows
+   * already say what they mean does not need a sentence introducing them. It
+   * is for the artifact written to be *read* rather than scanned, where the
+   * reader is accountable for the work and did not watch it happen.
+   */
+  bottomLine?: BottomLine
   blocks?: Block[]
   provenance?: string[]
   /** Where the underlying record lives — the sheet, the board, the register. */
@@ -293,6 +304,9 @@ function Document({ doc }: { doc: ArtifactDoc }) {
           crop. Everything below appears once the tile grows in either
           dimension. */}
       <div className="beyond-glance:flex hidden flex-col gap-3">
+        {/* Above the split, not inside the main column: the conclusion is about
+            the whole run, and a rail beside it would read as a caveat on it. */}
+        {doc.bottomLine ? <BottomLineBand line={doc.bottomLine} /> : null}
         {blocks.length ? (
           // Both columns have to have something. Gating on the rail alone left
           // an empty 3fr track beside the content whenever every main band came

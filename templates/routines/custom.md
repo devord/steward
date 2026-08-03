@@ -48,6 +48,10 @@ does say:
   fact**, whichever shape fits. A count takes `stat`; a state takes
   `verdict`. That is the whole artifact at 340×160, so choose the one a
   reader would want if they only ever saw one number or one word.
+- **A `bottomLine` when the widget is read rather than scanned.** One sentence
+  under the glance, saying what the run concluded — for a reader accountable
+  for the subject who did not watch it happen. A ledger whose rows already say
+  what they mean does not need one.
 - **Reach for a band before inventing a shape.** A list is a `queue`, an
   argument is `prose`, a qualifier is `rail: true`, an auditor's appendix is
   `pageOnly: true`. A magnitude is a `meter` on a column, not a new

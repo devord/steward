@@ -105,6 +105,28 @@ export function validateDoc(doc: unknown): string[] {
     }
   }
 
+  if (doc.bottomLine !== undefined) {
+    if (!isObj(doc.bottomLine)) {
+      // A bare string is the shape an author reaches for first, and it would
+      // otherwise render as nothing at all — the exact failure this field
+      // exists to fix.
+      errors.push("bottomLine must be an object with a text field")
+    } else {
+      str(doc.bottomLine.text, "bottomLine.text")
+      if (doc.bottomLine.refs !== undefined) {
+        if (!Array.isArray(doc.bottomLine.refs))
+          errors.push("bottomLine.refs must be an array")
+        else
+          doc.bottomLine.refs.forEach((r, i) => {
+            const rf = `bottomLine.refs[${i}]`
+            if (!isObj(r)) return void errors.push(`${rf} must be an object`)
+            str(r.label, `${rf}.label`)
+            str(r.href, `${rf}.href`, false)
+          })
+      }
+    }
+  }
+
   if (doc.blocks !== undefined) {
     if (!Array.isArray(doc.blocks)) errors.push("blocks must be an array")
     else

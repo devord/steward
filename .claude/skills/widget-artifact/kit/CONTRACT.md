@@ -21,6 +21,7 @@ the empty state. **Never hand-write HTML or CSS for a kit-rendered routine.**
 | `generatedAt`    | yes      | ISO-8601 UTC                                                      |
 | `stat`           | one of   | the 1×1 glance as a number — see below                            |
 | `verdict`        | one of   | the 1×1 glance as a judgement — see below                         |
+| `bottomLine`     |          | the conclusion, in one sentence, above the bands — see below      |
 | `blocks`         |          | ordered content bands                                             |
 | `provenance`     |          | countable facts about what the run looked at                      |
 | `provenanceLink` |          | `{ href, label }` — where the underlying record lives             |
@@ -72,6 +73,31 @@ publishes. `gate` is the countdown, pushed right. `clauses` are the fired
 reasons, each with its measured `value` emphasised between an optional `lead`
 and `tail`; `caveat` is the completeness line, for what the run could not
 check.
+
+### `bottomLine` — the conclusion, above the evidence
+
+```json
+{
+  "text": "Checkout is a week from shippable; the payments integration is the only thing still in the way.",
+  "refs": [{ "label": "#433", "href": "…" }]
+}
+```
+
+One sentence, sitting under the glance and over the first band, in full ink one
+step above the body. It is a **verdict, not a summary** — "Several PRs were
+merged this week" is the failure mode. Find it the way BLUF says to: draft the
+narrative, read your last paragraph, move it to the top. **Bad news leads**; a
+reader who learns on line nine that a date is gone has been failed.
+
+It is the one band the fit pass will not trim, because a tile that trimmed its
+way out of the conclusion still shows the evidence for a verdict it no longer
+states. On a tile it clamps at three lines instead, so write one sentence.
+
+**Most artifacts should leave it unset.** A ledger whose rows already say what
+they mean does not need a sentence introducing them; this is for the artifact
+written to be _read_ rather than scanned, whose reader is accountable for the
+work and did not watch it happen. It is not the place for a caveat
+(`verdict.caveat`), a held-back tally (`count`) or an exclusion (`note`).
 
 ### `blocks[]` — a queue
 

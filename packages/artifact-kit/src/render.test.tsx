@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import { escapeContextBlock, footerTimestamp } from "./Shell.tsx"
 import { type ArtifactDoc, type Block, renderArtifact } from "./render.tsx"
+import type { BottomLine } from "./components/BottomLine.tsx"
 import type { QueueRow } from "./components/QueueTable.tsx"
 import type { SeriesSpec } from "./components/Series.tsx"
 import type { Verdict } from "./components/VerdictBand.tsx"
@@ -656,6 +657,94 @@ describe("the verdict band", () => {
 
   it("refuses a doc with neither", () => {
     expect(validateDoc(base).join(" ")).toContain("stat or verdict is required")
+  })
+})
+
+describe("the bottom line", () => {
+  const base: ArtifactDoc = {
+    slug: "s",
+    generatedAt: "2026-07-30T09:00:00Z",
+    verdict: { level: "attn", word: "Stalled" },
+  }
+  const sentence = "Nothing has merged in 58 hours."
+  const withLine = (over: Partial<BottomLine> = {}) =>
+    renderArtifact({ ...base, bottomLine: { text: sentence, ...over } }, "")
+
+  it("renders under the glance and over the first band", () => {
+    // The regression this exists for: corza-narrative moved onto the kit, took
+    // `verdict` because its headline is a word, and its executive sentence had
+    // no slot — so the run stopped writing one at all.
+    const html = withLine()
+    const at = html.indexOf(sentence)
+    expect(at).toBeGreaterThan(html.indexOf("Stalled"))
+  })
+
+  it("carries the rank in ink and size, never a second colour", () => {
+    // The accent budget is spent on the glance word directly above it.
+    const html = withLine()
+    const at = html.indexOf(sentence)
+    const cls =
+      /class="([^"]*)"/.exec(
+        html.slice(html.lastIndexOf("<p ", at), at),
+      )?.[1] ?? ""
+    expect(cls).toContain("text-ink")
+    expect(cls).toContain("text-base")
+    expect(cls).not.toMatch(/text-(orange|red|green)/)
+  })
+
+  it("clamps on a tile rather than yielding to the fit pass", () => {
+    // Every other band trims; this one is the floor. A tile that trimmed its
+    // way out of the conclusion reports evidence for a verdict it no longer
+    // states — so it degrades visibly at three lines instead.
+    const html = withLine()
+    const at = html.indexOf(sentence)
+    const p = html.slice(html.lastIndexOf("<p ", at), at)
+    expect(p).toContain("tile:line-clamp-3")
+    expect(p).not.toContain("data-fit-item")
+  })
+
+  it("stays off the glance, where there is room for the glance alone", () => {
+    // The clamp and the visibility gate cannot share an element: line-clamp
+    // sets `display: -webkit-box`, which outranks `hidden` and put the
+    // sentence back on the 340×160 tile under the word.
+    const html = withLine()
+    const at = html.indexOf(sentence)
+    const p = html.lastIndexOf("<p ", at)
+    const wrapper = /class="([^"]*)"/.exec(
+      html.slice(html.lastIndexOf("<div ", p), p),
+    )?.[1]
+    expect(wrapper).toContain("hidden")
+    expect(wrapper).toContain("beyond-glance:block")
+    expect(wrapper).not.toContain("line-clamp")
+  })
+
+  it("links the keys it cites out of the frame", () => {
+    const html = withLine({
+      refs: [{ label: "#433", href: "https://example.test/433" }],
+    })
+    expect(html).toContain('href="https://example.test/433"')
+    expect(html).toContain(">#433<")
+  })
+
+  it("checks its shape", () => {
+    // A bare string is the shape an author reaches for first, and it would
+    // otherwise render as nothing — the failure the field exists to fix.
+    expect(validateDoc({ ...base, bottomLine: sentence }).join(" ")).toContain(
+      "bottomLine must be an object with a text field",
+    )
+    expect(validateDoc({ ...base, bottomLine: {} }).join(" ")).toContain(
+      "bottomLine.text is required",
+    )
+    expect(
+      validateDoc({
+        ...base,
+        bottomLine: {
+          text: sentence,
+          refs: [{ href: "https://example.test" }],
+        },
+      }).join(" "),
+    ).toContain("bottomLine.refs[0].label")
+    expect(validateDoc({ ...base, bottomLine: { text: sentence } })).toEqual([])
   })
 })
 

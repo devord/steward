@@ -114,8 +114,9 @@ leads**: a module that crossed into the top band this week is the bottom line
 even if everything else improved.
 
 - **`stat`** — the worst module's score with its direction (`84 ↗`), `label`
-  naming the module and what it is doing (`cart · worsening`), `note` the
-  bottom line. A bare index says the house is on fire without naming the room.
+  naming the module and what it is doing (`cart · worsening`).
+- **`bottomLine`** — the sentence above, in full. A bare index says the house is
+  on fire without naming the room.
 - **A `queue` block, "Rot ledger"** — a stated top N by score (12 is a good N),
   `count` saying so (`top 12 of 136 by score`). `title` the module, `detail` its
   signal breakdown, `values` the score as a **`meter`** and the direction as a

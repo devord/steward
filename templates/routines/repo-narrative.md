@@ -74,12 +74,19 @@ of forty merged PRs at 14px is still a changelog. **One story across the
 repos**: name the repo in the detail, never a section per repo.
 
 - **`stat`** — what landed, `label` the window (`7 days`), and the window's own
-  dates so it cannot be read as fresh when it is stale.
-- **`stat.note` is the bottom line**, and this is the one place it survives to
-  every tier. One sentence, a verdict rather than a summary, answering _so
+  dates so it cannot be read as fresh when it is stale. Where the honest
+  headline is a word rather than a count — a window where nothing moved, a gate
+  that will not be met — use `verdict` instead, with the window on its `gate`
+  and the figures as `clauses`.
+- **`bottomLine` is the whole point of this template, and it is never
+  optional.** One sentence, a verdict rather than a summary, answering _so
   what_ for `params.audience`. Find it the way BLUF says to: draft the
   narrative, read your last paragraph, move it to the top. **Bad news leads** —
   an executive who learns on line nine that a date is gone has been failed.
+  It is not `verdict.caveat` (what the run could not check) and not a `note`
+  (an aside): those are the slots a run reaches for when it has skipped this
+  one, and a brief without this sentence is the changelog this template exists
+  to avoid.
 - **A `queue` block, "What happened"** — at most 5 movements, ordered by
   consequence, not chronology. `face` is the principal, `title` the movement
   (≤ ~6 words), `detail` its evidence, and the other-contributor count as a
