@@ -26,7 +26,7 @@
               "id": "m1",
               "title": "cart",
               "state": { "label": "no test seam", "tone": "bad" },
-              "detail": "28% tested · one author · couples with checkout → 9 files re-export a 10-line hook; deleting them concentrates nothing. Collapse into one module, test at its interface. (in-process)",
+              "detail": "28% tested · one author · couples with checkout; 9 files re-export a 10-line hook; deleting them concentrates nothing. Collapse into one module, test at its interface. (in-process)",
               "values": [
                 {
                   "label": "commits",
@@ -103,7 +103,7 @@
           "rows": [
             {
               "id": "p1",
-              "title": "cart ↔ checkout",
+              "title": "cart and checkout",
               "state": { "label": "no import", "tone": "bad" },
               "detail": "14 of cart's 34 commits · the contract is a `checkout:step` string literal read on both sides",
               "values": [
@@ -117,7 +117,7 @@
             },
             {
               "id": "p2",
-              "title": "catalog ↔ account",
+              "title": "catalog and account",
               "state": { "label": "no import", "tone": "bad" },
               "detail": "14 of catalog's 22 commits · both read the `--surface-gap` CSS custom property, neither declares it",
               "values": [
@@ -131,7 +131,7 @@
             },
             {
               "id": "p3",
-              "title": "pricing ↔ catalog",
+              "title": "pricing and catalog",
               "state": { "label": "no import", "tone": "attn" },
               "detail": "8 of pricing's 19 commits · shared release cadence, not a contract — probably fine",
               "values": [{ "label": "commits", "value": "8", "meter": 8 }]
@@ -189,5 +189,5 @@
     "headline": "No history in the window",
     "detail": "The repository has no commits in the last 90 days."
   },
-  "context": "## The hot line\n\n21 of 136 modules sit at or above the 75th percentile of window churn, which resolved to 15 commits. Everything below it is excluded whatever its score — a module nobody touches costs nothing to leave alone.\n\n## Every hot module\n\nAll 21, with the problems that fired and the composite score as a tie-break.\n\n## Co-change, in full\n\nAll 7 undeclared pairs with file-level evidence and commit counts.\n\n## Ask me about\n\nWhether `cart` really fails the deletion test, whether `pricing ↔ catalog` is real coupling or shared release cadence, and whether the hot line belongs at p75 for this repo.\n\n## Handoff\n\n`app/lib · cart` — in-process. 9 files re-export a 10-line hook; 34 commits, 28% tested, couples with `checkout` on 14 commits with no import. Move: collapse into one module and test at its interface. Ready for `/improve-codebase-architecture`."
+  "context": "## The hot line\n\n21 of 136 modules sit at or above the 75th percentile of window churn, which resolved to 15 commits. Everything below it is excluded whatever its score — a module nobody touches costs nothing to leave alone.\n\n## Every hot module\n\nAll 21, with the problems that fired and the composite score as a tie-break.\n\n## Co-change, in full\n\nAll 7 undeclared pairs with file-level evidence and commit counts.\n\n## Ask me about\n\nWhether `cart` really fails the deletion test, whether `pricing and catalog` is real coupling or shared release cadence, and whether the hot line belongs at p75 for this repo.\n\n## Handoff\n\n`app/lib · cart` — in-process. 9 files re-export a 10-line hook; 34 commits, 28% tested, couples with `checkout` on 14 commits with no import. Move: collapse into one module and test at its interface. Ready for `/improve-codebase-architecture`."
 }

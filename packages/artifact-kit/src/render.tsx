@@ -269,10 +269,16 @@ function Band({ block, index }: { block: Block; index: number }) {
           {block.rails.map((r) => (
             <Rail key={r.id} {...r} />
           ))}
-          {/* Gated on height, not width: it costs a whole row, and a short
-              tile spends that row better on the ledger. */}
+          {/* Height AND width. It costs a whole row, so a short tile spends
+              that row better on the ledger — but the strip is a horizontal
+              chain of nowrap labels with no way to shed one, so a *narrow*
+              tile cannot hold it either. On height alone a 340×474 tile drew
+              a four-act strip 166px wider than the frame, running the last
+              act off the edge: the silent crop ADR-0019 forbids, from the
+              same mistake the verdict band's gate made — grading a two-axis
+              question on one axis. */}
           {block.stages?.length ? (
-            <div className="hidden taller:block">
+            <div className="tier-detail:taller:block hidden">
               <StageStrip stages={block.stages} />
             </div>
           ) : null}

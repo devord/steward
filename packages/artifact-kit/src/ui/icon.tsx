@@ -72,9 +72,62 @@ const ICONS = {
     ["path", { d: "M12 16v-4" }],
     ["path", { d: "M12 8h.01" }],
   ],
+
+  // Direction, as geometry rather than judgement — a rising bad number and a
+  // rising good one both point up. `minus` is the honest "no movement" mark:
+  // a rule in the same stroke language as its neighbours, where the `·` it
+  // replaces was a 1px speck from a different visual class entirely.
+  "arrow-up": [
+    ["path", { d: "m5 12 7-7 7 7" }],
+    ["path", { d: "M12 19V5" }],
+  ],
+  "arrow-down": [
+    ["path", { d: "M12 5v14" }],
+    ["path", { d: "m19 12-7 7-7-7" }],
+  ],
+  minus: [["path", { d: "M5 12h14" }]],
+  /** Leaves the artifact — the mark on an outbound link. */
+  "arrow-up-right": [
+    ["path", { d: "M7 7h10v10" }],
+    ["path", { d: "M7 17 17 7" }],
+  ],
+  /** Both ways at once: two things that move together. */
+  "move-horizontal": [
+    ["path", { d: "m18 8 4 4-4 4" }],
+    ["path", { d: "M2 12h20" }],
+    ["path", { d: "m6 8-4 4 4 4" }],
+  ],
 } satisfies Record<string, Shape[]>
 
 export type IconName = keyof typeof ICONS
+
+/**
+ * A glyph set inside a run of text, optically centred on the figures beside it.
+ *
+ * **Why these are icons and not characters.** The board injects the *latin
+ * subset* of Geist Mono (`artifact-font.ts`, ~30 kB), so any codepoint outside
+ * it silently falls back to whatever face the OS offers. Measured against the
+ * injected file at 100px: `M` and `0` advance 60.00 and rise to 71.0/72.6,
+ * while `▲`/`▼` (U+25B2/BC) advance 60.21 and span 55.76 up to 3.81 *below*
+ * the baseline the digits sit on — a different face, mid-string, with a
+ * different weight and a different vertical position per platform. `↔`
+ * (U+2194) and `↗` (U+2197) fall out of the subset the same way. Drawing them
+ * instead puts their size and alignment inside the design system.
+ *
+ * `0.85em` with a `-0.06em` shift centres the glyph on the figure block: mono
+ * digits rise 0.726em off the baseline, so their optical centre is 0.363em up,
+ * and a baseline-aligned box of side S has its centre at S/2 — the shift is
+ * the difference. Baseline alignment alone (the SVG default) hangs the glyph
+ * low, which is the other half of what made the text triangles read as loose.
+ *
+ * Sized to cost about what it replaced. A drawn glyph is free to be any width,
+ * which is the trap: at `0.9em` plus explicit margins each delta ran 8px wider
+ * than the `▲` it stands in for, and a ledger is where 8px × every row decides
+ * whether a column clips. Lucide's own sidebearing — the arrow's ink spans 14
+ * of 24 units — is the gap, so the callers add a leading margin and nothing
+ * between the glyph and its figure.
+ */
+export const INLINE_GLYPH = "inline size-[0.85em] align-[-0.06em]"
 
 /**
  * A glyph, sized to the text beside it.

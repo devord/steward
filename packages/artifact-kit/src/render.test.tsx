@@ -531,6 +531,31 @@ describe("prose bands", () => {
   })
 })
 
+describe("the stat tier", () => {
+  it("steps the hero down the moment a band appears beside it", () => {
+    // Same gate as the verdict band, for the same reason: the step is about
+    // whether anything else is on screen, which is a width OR height question.
+    // On `tier-detail` (width ≥ 701px) a 1×2 tile kept a 44px centred figure
+    // over a left-aligned ledger it had squeezed to one row and a `+2 more`.
+    const html = renderArtifact(
+      {
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 3, label: "to file", note: "12 held back" },
+        blocks: [{ kind: "queue", rows: [{ id: "a", title: "a" }] }],
+      },
+      "",
+    )
+    const cls = /class="([^"]*text-\[2\.75rem\][^"]*)"/.exec(html)?.[1] ?? ""
+    expect(cls).toContain("beyond-glance:text-2xl")
+    expect(cls).not.toContain("tier-detail:text-2xl")
+    // The row layout and the separator that only reads in a row travel with it.
+    expect(html).toContain("beyond-glance:flex-row")
+    expect(html).not.toContain("tier-detail:flex-row")
+    expect(html).toContain('class="beyond-glance:inline hidden">· </span>')
+  })
+})
+
 describe("the verdict band", () => {
   const base = { slug: "s", generatedAt: "2026-07-30T09:00:00Z" }
   const verdict = (over: Partial<Verdict> = {}) => {
@@ -557,6 +582,39 @@ describe("the verdict band", () => {
       expect(html, level).toContain(">X<") // 2. the word
       expect(html, level).toContain("<svg") // 3. the glyph
     }
+  })
+
+  it("steps the hero down the moment a second line appears", () => {
+    // The word is 44px because at the glance it IS the artifact. Every line
+    // under it — the reason, the caveat, the note — appears at `beyond-glance`,
+    // so that is where the word stops being the whole artifact. Gating the
+    // step-down on `tier-detail` put it 360px of width later, and a 1×2 and a
+    // 2×2 tile ran a 44px hero over a 14px sentence.
+    const html = verdict({ clauses: [{ value: "12d" }] })
+    // The class attribute carrying the hero size — the dot and the glyph are
+    // its children, so walking back from the word finds the dot instead.
+    const cls = /class="([^"]*text-\[2\.75rem\][^"]*)"/.exec(html)?.[1] ?? ""
+    expect(cls).toContain("beyond-glance:text-2xl")
+    expect(cls).not.toContain("tier-detail:text-2xl")
+    // And it is the word that is sized, not something near it.
+    expect(html.slice(html.indexOf(cls))).toMatch(/^[^<]*<[^>]*><\/span>AMBER/)
+  })
+
+  it("keeps the gate beside the word it anchors", () => {
+    // `ml-auto` on an unbounded row parked the anchor at the far edge — 1000px
+    // from the word at the full view — and at 340 wide the `shrink-0` span
+    // neither wrapped nor truncated, so the tail ran off the tile. That is the
+    // silent crop ADR-0019 forbids.
+    const html = verdict({ gate: "Aug 6 gate · 7 days out" })
+    const at = html.indexOf("Aug 6 gate")
+    const cls =
+      /class="([^"]*)"/.exec(
+        html.slice(html.lastIndexOf("<span", at), at),
+      )?.[1] ?? ""
+    expect(cls).not.toContain("ml-auto")
+    expect(cls).not.toContain("shrink-0")
+    // And the row it sits in can take a second line rather than overflow.
+    expect(html).toContain("flex-wrap")
   })
 
   it("bolds the measured figure and nothing else", () => {
@@ -776,12 +834,53 @@ describe("value deltas", () => {
       },
       "",
     )
-    expect(html).toContain("▲")
+    // Drawn, never typed. `▲`/`▼` are outside the latin subset the board
+    // injects, so they arrived from whatever face the OS offered — a
+    // different weight and baseline per platform, mid-string. A text
+    // direction glyph reappearing here is that regression.
+    expect(html).not.toMatch(/[▲▼]/)
+    expect(html).toContain("m5 12 7-7 7 7")
     expect(html).toContain("3d")
-    // Ink-dim whichever way it points: `▼` is good news on a slip and bad on a
-    // burn-up, so a tone here would have to be per-column.
-    const d = html.slice(html.indexOf("▲") - 120, html.indexOf("▲"))
-    expect(d).toContain("text-ink-dim")
+    // The shape cannot be read aloud, so the word travels with it.
+    expect(html).toContain(">up </span>3d")
+    // Ink-dim whichever way it points: down is good news on a slip and bad on
+    // a burn-up, so a tone here would have to be per-column.
+    const at = html.indexOf("m5 12 7-7 7 7")
+    expect(html.slice(at - 300, at)).toContain("text-ink-dim")
+  })
+
+  it("draws every glyph the injected font subset cannot carry", () => {
+    // The whole corpus, not one cell. `↔` (U+2194) in the matrix legend and
+    // `↗` (U+2197) on the provenance link fell out of the same subset for the
+    // same reason, and each put a fallback face inside an otherwise controlled
+    // line. Measured against the injected file at 100px: `M` advances 60.00
+    // and rises to 71.0, while every codepoint below advances 60.21 and sits
+    // on its own baseline.
+    //
+    // Routine *content* can still carry any character it likes — this is the
+    // markup the kit itself emits, which is the part the kit controls.
+    const OUT_OF_SUBSET = /[▲▼↔↗→]/
+    for (const name of ["status", "matrix", "ledger", "roster", "edge"]) {
+      const doc: ArtifactDoc = JSON.parse(
+        readFileSync(
+          new URL(`../fixtures/${name}.json`, import.meta.url),
+          "utf8",
+        ),
+      )
+      // Only the glyphs the kit chose. A fixture that writes `→` into a
+      // caption is the routine's own text and travels as data.
+      const emitted = renderArtifact(doc, "").replace(
+        /<script[\s\S]*?<\/script>/g,
+        "",
+      )
+      const content = new Set(
+        JSON.stringify(doc).match(new RegExp(OUT_OF_SUBSET, "g")) ?? [],
+      )
+      const kitGlyphs = [
+        ...(emitted.match(new RegExp(OUT_OF_SUBSET, "g")) ?? []),
+      ].filter((g) => !content.has(g))
+      expect(kitGlyphs, `${name} emits an out-of-subset glyph`).toEqual([])
+    }
   })
 })
 
@@ -1286,6 +1385,21 @@ describe("progress rails", () => {
     expect(html).toContain("(now)")
   })
 
+  it("needs width for the stage strip, not only height", () => {
+    // A chain of nowrap labels with no way to shed one. Gated on height
+    // alone, a 340×474 tile drew a four-act strip 166px wider than the frame
+    // and ran the last act off the edge.
+    const html = renderArtifact(
+      doc(
+        [{ id: "g", label: "g", percent: 40 }],
+        [{ id: "s1", label: "Discovery", state: "done" }],
+      ),
+      "",
+    )
+    expect(html).toContain("tier-detail:taller:block")
+    expect(html).not.toMatch(/class="hidden taller:block"/)
+  })
+
   it("rejects a percent that is not a number", () => {
     // A non-numeric percent draws a zero-width fill, which reads as
     // "nothing done yet" rather than as an error.
@@ -1398,8 +1512,8 @@ describe("the co-change field", () => {
 
   it("mirrors a triangle rather than making the emitter say it twice", () => {
     const html = renderArtifact(doc([{ a: 0, b: 2, value: 9 }]), "")
-    expect(html).toContain("a ↔ c: 9")
-    expect(html).toContain("c ↔ a: 9")
+    expect(html).toContain("a and c: 9")
+    expect(html).toContain("c and a: 9")
   })
 
   it("leaves the diagonal blank rather than drawing a self-pair", () => {
@@ -1407,7 +1521,7 @@ describe("the co-change field", () => {
     // darkest cells on the one axis carrying no information, and sets the
     // scale against a number that means nothing.
     const html = renderArtifact(doc([{ a: 0, b: 1, value: 4 }]), "")
-    expect(html).not.toContain("a ↔ a")
+    expect(html).not.toContain("a and a")
   })
 
   it("marks a named pair with a ring, not a hotter fill", () => {
@@ -1453,7 +1567,7 @@ describe("the co-change field", () => {
     // left at 6% opacity on the surface colour turned the field into floating
     // dots — which is not a sparser matrix, it is no matrix at all.
     const html = renderArtifact(doc([{ a: 0, b: 2, value: 9 }]), "")
-    expect(html).toContain("a ↔ b: 0")
+    expect(html).toContain("a and b: 0")
   })
 })
 

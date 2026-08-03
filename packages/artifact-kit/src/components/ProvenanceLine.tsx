@@ -6,6 +6,8 @@
  * absence of a finding is worth, where "audited the knowledge base" tells them
  * nothing. Page tier and up — it is the last thing to earn space on a tile.
  */
+import { Icon, INLINE_GLYPH } from "../ui/icon.tsx"
+
 export function ProvenanceLine({
   facts,
   /** Where the underlying record lives — the tile is triage, this is where
@@ -28,7 +30,13 @@ export function ProvenanceLine({
             rel="noopener"
             className="hover:text-ink underline decoration-transparent underline-offset-2 hover:decoration-current"
           >
-            {link.label} ↗
+            {link.label}
+            {/* Drawn, not typed: U+2197 is outside the injected font subset
+                and arrived from a fallback face. See INLINE_GLYPH. */}
+            <Icon
+              name="arrow-up-right"
+              className={`${INLINE_GLYPH} ml-1 decoration-transparent`}
+            />
           </a>
         </>
       ) : null}

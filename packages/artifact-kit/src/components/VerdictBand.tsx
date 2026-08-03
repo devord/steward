@@ -40,9 +40,9 @@ export interface Verdict {
   word: string
   /**
    * The anchor everything below is measured against — "Aug 6 gate · 7 days
-   * out". Pushed to the far edge of the verdict's own line, from the compact
-   * tier: a reader who has to remember the gate is doing arithmetic the tile
-   * should have done.
+   * out". Sits beside the word from the moment there is a second line to
+   * qualify: a reader who has to remember the gate is doing arithmetic the
+   * tile should have done.
    */
   gate?: string
   /** Fired conditions, highest severity first. */
@@ -76,29 +76,55 @@ export function VerdictBand({ verdict }: { verdict: Verdict }) {
   const l = LEVEL[verdict.level]
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-baseline gap-2">
-        <span
-          className={cn("size-2 shrink-0 self-center rounded-full", l.dot)}
-          aria-hidden="true"
-        />
-        {/* A machine verdict, so it takes the mono register. Sized against the
-            tile rather than the body scale — at 340×160 this word IS the
-            artifact. */}
+      {/* Centred at the glance, a left-aligned header everywhere above it —
+          the same shape StatTier takes, for the same reason: at 340×160 the
+          word IS the artifact and belongs in the middle of the tile, and on
+          any larger tier that treatment is a 1×1 design that outstayed its
+          tier. This band used to skip the centring and sit in the top-left
+          corner of an otherwise empty glance.
+
+          Wrapping, because the row can hold four things. `gap-x` alone would
+          leave the wrapped line touching the one above it. */}
+      <div className="beyond-glance:justify-start beyond-glance:text-left flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-center">
+        {/* A machine verdict, so it takes the mono register.
+
+            The step-down is gated on `beyond-glance`, not on width: the tier
+            that adds the reason line, the caveat and the note is exactly the
+            tier where the word stops being the whole artifact, and every one
+            of those lines is already gated on it. Gating the word on
+            `tier-detail` instead put the step 360px of width later, so a 1×2
+            and a 2×2 tile ran a 44px hero over a 14px sentence — three times
+            the next thing on screen, on a tile whose job is the ledger.
+
+            The dot and the icon size in `em` off this same span, so one number
+            sets the whole group per tier instead of three scales drifting
+            apart. They were a fixed 8px and a fixed 24px against a word that
+            ranged from 24 to 44: at the glance the dot read as a stray speck
+            and the glyph as an undersized afterthought, which is a group whose
+            proportions change every time the word does. */}
         <span
           className={cn(
-            "tier-detail:text-2xl font-mono text-[2.75rem] leading-none font-semibold",
+            "beyond-glance:text-2xl flex items-center gap-[0.2em] font-mono text-[2.75rem] leading-none font-semibold",
             l.text,
           )}
         >
+          <span
+            className={cn("size-[0.22em] shrink-0 rounded-full", l.dot)}
+            aria-hidden="true"
+          />
           {verdict.word}
-        </span>
-        <span className={cn("tier-detail:text-xl shrink-0 text-2xl", l.text)}>
-          <Icon name={l.icon} />
+          <Icon name={l.icon} className="size-[0.8em] shrink-0" />
         </span>
         {verdict.gate ? (
-          // Far edge, from the compact tier up: at the glance there is room for
-          // the verdict and nothing else.
-          <span className="text-ink-dim beyond-glance:block ml-auto hidden shrink-0 font-mono text-xs">
+          // Beside the word, not at the far edge. `ml-auto` on an unbounded
+          // row parked the anchor 1000px away from the thing it anchors at the
+          // full view, and at 340 wide it overflowed the tile outright — a
+          // `shrink-0` span that neither wrapped nor truncated, so "out" ran
+          // off the right edge. That is the silent crop ADR-0019 forbids, on
+          // the one line that says what the verdict is measured against.
+          // The extra margin is not decoration: at `gap-x-2` the gate butts
+          // against the level glyph and the two read as one object.
+          <span className="text-ink-dim beyond-glance:block ml-1 hidden font-mono text-xs">
             {verdict.gate}
           </span>
         ) : null}

@@ -2,7 +2,7 @@ import { TONES } from "./ui/tone.ts"
 
 const TONE_NAMES: ReadonlySet<string> = new Set(TONES)
 
-/** Mirrors DELTA_MARK in QueueTable — an unknown direction renders nothing. */
+/** Mirrors DELTA in QueueTable — an unknown direction renders nothing. */
 const DIRECTIONS = ["up", "down", "flat"]
 
 /**

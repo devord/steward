@@ -191,9 +191,24 @@ widget exists for collapses entirely before one housekeeping row goes.
 `page`. Order columns by what earns space soonest.
 
 **`delta`** puts movement on a value — `{ value: "3d", direction: "up" }`
-beside `12d behind`, rendered as `12d behind ▲3d`. `direction` is `up` `down`
+beside `12d behind`, rendered as `12d behind ↑3d`. `direction` is `up` `down`
 `flat`; it is the arrow's geometry, not a judgement, so a rising bad number and
 a rising good one both point up and the tone says which it is.
+
+**Never type a direction arrow, anywhere.** `"84 ↗"` in a value, or
+`"cart ↔ checkout"` in a title, looks like it works and does not: the board
+injects the _latin subset_ of Geist Mono, so `▲ ▼ ↗ ↘ → ↔` all fall out of it
+and arrive from whatever face the reader's OS offers — a different weight,
+advance and baseline, mid-string, per platform. Use `delta`, which draws the
+glyph from the kit's icon set at one size and one optical alignment
+everywhere; in prose, use the word. `↑` and `↓` do happen to be in the subset;
+the primitive is still the right answer, because it also carries the direction
+to a screen reader, which a character in a string does not.
+
+Same rule, one level up: a `spark` is **shape under a number, never instead of
+one**. `{ "value": "+22", "spark": [62, …, 84] }`, not `{ "value": "↗" }` — the
+sparkline is already the trend, so an arrow beside it draws the same quantity
+twice and prints it in a font the artifact does not control.
 
 **`state` is `{ label, tone }`, and it needs the `label`.** A chip is a word
 with a border round it, so a `state` carrying no word — `{ tone }` alone, or

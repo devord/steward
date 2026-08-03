@@ -2,7 +2,7 @@ import { Fragment } from "react"
 
 import { Badge, type BadgeTone } from "../ui/badge.tsx"
 import { cn } from "../ui/cn.ts"
-import { Icon, type IconName } from "../ui/icon.tsx"
+import { Icon, type IconName, INLINE_GLYPH } from "../ui/icon.tsx"
 import { type Tone, TONE_TEXT } from "../ui/tone.ts"
 import { Avatar, type Face } from "./Avatar.tsx"
 import { CopyAction } from "./CopyAction.tsx"
@@ -18,8 +18,23 @@ export type ColumnTier = "always" | "compact" | "detail" | "page"
  * produces a class that exists in the markup and in no stylesheet — the column
  * silently never appears. Every variant used here has to be written out.
  */
-/** Direction glyphs. Text, not icons — they sit inline in a tabular figure. */
-const DELTA_MARK = { up: "▲", down: "▼", flat: "·" } as const
+/**
+ * Direction glyphs, drawn rather than typed.
+ *
+ * These were the text triangles `▲ ▼ ·` on the reasoning that they "sit inline
+ * in a tabular figure" — which was the mistake: U+25B2/BC are outside the
+ * latin subset the board injects, so every one of them came from a fallback
+ * face with its own advance, weight and baseline. See `INLINE_GLYPH`.
+ *
+ * The word travels with the glyph, screen-reader-only. A shape alone cannot
+ * report which way a number moved, and this column is the movement.
+ */
+const DELTA: Record<"up" | "down" | "flat", { icon: IconName; word: string }> =
+  {
+    up: { icon: "arrow-up", word: "up" },
+    down: { icon: "arrow-down", word: "down" },
+    flat: { icon: "minus", word: "unchanged at" },
+  }
 
 const COLUMN_TIER: Record<ColumnTier, string> = {
   always: "table-cell",
@@ -46,12 +61,12 @@ export interface QueueValue {
    */
   meter?: number
   /**
-   * Movement since the previous run — `12d behind ▲3d`.
+   * Movement since the previous run — `12d behind ↑3d`.
    *
    * Stays ink-dim whichever way it points. A worsening delta is tempting to
    * paint red, but a tile spends its accent on one thing, and on a status
    * artifact that thing is the verdict. The arrow already carries direction,
-   * and direction is not the same as badness: `▼` on a slip is good news and
+   * and direction is not the same as badness: down on a slip is good news and
    * on a burn-up is bad, so a tone here would have to be per-column anyway.
    */
   delta?: { value: string; direction: "up" | "down" | "flat" }
@@ -430,8 +445,18 @@ function RowPair({
                 (v?.value ?? "")
               )}
               {v?.delta ? (
+                // Inline text flow, not a flex group: the delta trails the
+                // figure inside one cell, and an inline-flex box takes its
+                // baseline from its first child — which would lift the delta's
+                // own digits off the line the figure beside them sits on.
                 <span className="text-ink-dim ml-1">
-                  {DELTA_MARK[v.delta.direction]}
+                  <Icon
+                    name={DELTA[v.delta.direction].icon}
+                    className={INLINE_GLYPH}
+                  />
+                  <span className="sr-only">
+                    {DELTA[v.delta.direction].word}{" "}
+                  </span>
                   {v.delta.value}
                 </span>
               ) : null}

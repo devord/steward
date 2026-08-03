@@ -69,6 +69,40 @@ mkdirSync(outDir, { recursive: true })
  * Alpine escape hatch, where there is no source for Tailwind to scan.
  */
 const TIERS = "{,beyond-glance:,tier-detail:,tier-page:}"
+
+/**
+ * Classes no kit component writes any more, kept alive for the artifacts that
+ * still do.
+ *
+ * The board injects the *current* `kit.css` over files published months ago
+ * (ADR-0050), and that only works while the stylesheet is a superset of what
+ * the published markup names. A class dropped from source stops being compiled
+ * — Tailwind emits what it can see — so the published artifact keeps the class
+ * on the element and loses the rule under it. That is not "the old design",
+ * it is no design: measured on the real corpus, retiring
+ * `tier-detail:text-2xl` left every published hero at 44px at *every* size,
+ * including the 1384px full view where it had been 24px. The step-down did not
+ * revert, it vanished, and every artifact on the board got worse the moment
+ * the stylesheet deployed.
+ *
+ * So: when a component stops writing a class, move it here rather than letting
+ * it fall out. Entries can retire for real once no published artifact names
+ * them, which is a question for the artifacts branch rather than this file.
+ *
+ * These are cheap — six rules — and they buy the injection seam its whole
+ * premise, that a design fix reaches the board without a rerun.
+ */
+const RETIRED = [
+  // StatTier and VerdictBand stepped their hero down on width (`tier-detail`)
+  // until both moved to `beyond-glance`, which is the tier that actually adds
+  // the lines the hero has to share the tile with.
+  "tier-detail:text-2xl",
+  "tier-detail:text-xl",
+  "tier-detail:text-left",
+  // The stage strip was gated on height alone and is now gated on both axes.
+  "taller:block",
+]
+
 const SAFELIST = [
   `${TIERS}{flex,grid,block,hidden}`,
   `${TIERS}flex-{col,row,1}`,
@@ -79,6 +113,7 @@ const SAFELIST = [
   `${TIERS}justify-{start,center,between}`,
   `${TIERS}w-full`,
   `${TIERS}truncate`,
+  ...RETIRED,
 ]
 
 /**

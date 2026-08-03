@@ -1,4 +1,5 @@
 import { cn } from "../ui/cn.ts"
+import { Icon, INLINE_GLYPH } from "../ui/icon.tsx"
 
 export interface MatrixSpec {
   /** Row and column labels — the same set, in the same order. */
@@ -116,7 +117,12 @@ export function CouplingMatrix({ spec }: { spec: MatrixSpec }) {
                           ? undefined
                           : { opacity: 0.2 + (v / peak) * 0.8 }
                       }
-                      title={`${rowLabel} ↔ ${colLabel}: ${v}`}
+                      // One phrasing, and no codepoint outside the injected
+                      // font subset. It used to read `A ↔ B: 12` while the
+                      // sr-only line below said `A and B: 12` — two sentences
+                      // for one fact, and the hover one leaning on a glyph the
+                      // artifact cannot guarantee.
+                      title={`${rowLabel} and ${colLabel}: ${v}`}
                     >
                       <span className="sr-only">
                         {rowLabel} and {colLabel}: {v}
@@ -134,10 +140,22 @@ export function CouplingMatrix({ spec }: { spec: MatrixSpec }) {
           {spec.marks.map((m, i) => (
             <span key={m.label}>
               {i > 0 ? " · " : ""}
+              {/* Drawn, not typed, in both pairs: U+2194 is outside the latin
+                  subset the board injects, so it arrived from a fallback face
+                  with its own advance and baseline. See INLINE_GLYPH. The
+                  `title` above stays text — an OS tooltip is not our type. */}
               <span className="text-ink-faint">
-                {m.a + 1}↔{m.b + 1}
+                {m.a + 1}
+                <Icon
+                  name="move-horizontal"
+                  className={`${INLINE_GLYPH} mx-0.5`}
+                />
+                {m.b + 1}
               </span>{" "}
-              {spec.labels[m.a]} ↔ {spec.labels[m.b]}: {m.label}
+              {spec.labels[m.a]}
+              <Icon name="move-horizontal" className={`${INLINE_GLYPH} mx-1`} />
+              <span className="sr-only"> and </span>
+              {spec.labels[m.b]}: {m.label}
             </span>
           ))}
         </p>
