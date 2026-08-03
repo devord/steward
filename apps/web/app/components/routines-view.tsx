@@ -82,7 +82,7 @@ import {
 import type { DiscoveredTemplate } from "../lib/templates.ts"
 import { agoParts } from "../lib/time.ts"
 import { useOptimisticSidebar } from "../lib/optimistic-boards.ts"
-import { useStreamed } from "../lib/use-streamed.ts"
+import { readHeld, useStreamed, writeHeld } from "../lib/use-streamed.ts"
 import type { RunResult } from "../routes/run.ts"
 
 /** A routine pool draft edits routines.yaml alone; there's no board in scope,
@@ -237,21 +237,28 @@ export function RoutinesView({
   // Artifacts stream in after the table paints (ADR-0002): resolve once into
   // state so the state column fills in place, keeping row menus mounted (no
   // Suspense remount mid-interaction). null until resolved → skeleton state.
+  // Seeded across remounts (the pool remounts by repo) from the same store the
+  // board and the rail use, so leaving for a board and coming back paints the
+  // state column at once instead of re-reading every routine's artifact.
+  const artifactsKey = `artifacts:${repo.full}:`
   const [resolvedArtifacts, setResolvedArtifacts] = useState<Record<
     string,
     ArtifactInfo
-  > | null>(null)
+  > | null>(() => readHeld(artifactsKey))
   useEffect(() => {
     let live = true
     artifacts.then(
-      (value) => live && setResolvedArtifacts(value),
+      (value) => {
+        writeHeld(artifactsKey, value)
+        if (live) setResolvedArtifacts(value)
+      },
       // A dead stream leaves every row "unknown", never crashes the page.
-      () => live && setResolvedArtifacts({}),
+      () => live && setResolvedArtifacts((prev) => prev ?? {}),
     )
     return () => {
       live = false
     }
-  }, [artifacts])
+  }, [artifacts, artifactsKey])
   // A landed publish (its blob SHA now differs from the fire-time SHA) clears
   // the run mark, dropping the badge and the rail dot together.
   useEffect(() => {

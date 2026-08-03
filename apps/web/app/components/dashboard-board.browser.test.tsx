@@ -10,6 +10,7 @@ import type {
   DashboardBase,
   Placements,
 } from "../lib/dashboard.server.ts"
+import { __resetHeld, readHeld, writeHeld } from "../lib/use-streamed.ts"
 
 function view(): DashboardBase {
   return {
@@ -199,6 +200,55 @@ describe("DashboardBoard", () => {
   // can't seed the next test's board.
   beforeEach(() => {
     localStorage.clear()
+    // The cross-mount artifact store is module state — one test's held board
+    // would otherwise paint in the next test's first frame.
+    __resetHeld()
+  })
+
+  // Regression: switching boards remounts DashboardBoard by key, and the
+  // resolved-artifacts state started at null on every mount — so a board you
+  // left seconds ago came back as a grid of skeletons while loadArtifacts
+  // re-read two or three files per widget from GitHub. The rail already
+  // survived this via the held store (use-streamed.ts); artifacts now do too.
+  it("repaints a revisited board's widgets from the held store, without waiting on the stream", async () => {
+    // What the previous visit to this board left behind, under the key the
+    // board derives from its repo + slug.
+    writeHeld("artifacts:alice/steward-alice:main", {
+      daily: { html: "<p>ok</p>", sha: "a1", lastRunAt: null },
+    })
+
+    // Mount with a stream that never settles: anything on screen can only have
+    // come from the held store. Asserted synchronously — a poll would pass
+    // even if the paint took a second.
+    await renderBoard(new Promise(() => {}))
+    expect(document.body.textContent).toContain("Daily")
+  })
+
+  // The other half of the round trip: a resolved stream records itself, so the
+  // *next* mount has something to seed from.
+  it("records resolved artifacts for the next mount", async () => {
+    await renderBoard(
+      Promise.resolve({
+        daily: { html: "<p>ok</p>", sha: "a1", lastRunAt: null },
+      }),
+    )
+    await expect.poll(() => document.body.textContent).toContain("Daily")
+    expect(readHeld("artifacts:alice/steward-alice:main")).toMatchObject({
+      daily: { sha: "a1" },
+    })
+  })
+
+  // The bound on that store: artifact maps carry every widget's full HTML, so
+  // the namespace evicts past LIMITS.artifacts rather than growing with every
+  // board ever visited.
+  it("evicts the coldest board's artifacts past the cap", async () => {
+    for (const slug of ["b1", "b2", "b3", "b4", "b5"]) {
+      writeHeld(`artifacts:alice/steward-alice:${slug}`, {
+        daily: { html: "<p>ok</p>", sha: slug, lastRunAt: null },
+      })
+    }
+    expect(readHeld("artifacts:alice/steward-alice:b1")).toBeNull()
+    expect(readHeld("artifacts:alice/steward-alice:b5")).not.toBeNull()
   })
 
   // Regression: the always-mounted delete dialog, closed by default, used to

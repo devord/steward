@@ -102,7 +102,7 @@ import {
   markBoardDeleted,
   useOptimisticSidebar,
 } from "../lib/optimistic-boards.ts"
-import { useStreamed } from "../lib/use-streamed.ts"
+import { readHeld, useStreamed, writeHeld } from "../lib/use-streamed.ts"
 import { usePendingRuns } from "../lib/pending-runs.ts"
 import { findFreeSlot, type Rect } from "../lib/placement.ts"
 import { layoutItemToRect, widgetsToLayout } from "../lib/rgl-layout.ts"
@@ -481,8 +481,19 @@ export function DashboardBoard({
   // Hold the last resolved artifacts: a poll's revalidation returns a fresh
   // `artifacts` promise, and rendering it through <Await> would re-suspend the
   // whole grid into skeletons. Instead swap the resolved map in place.
+  //
+  // Seeded from the cross-mount store for the same reason the rail is
+  // (use-streamed.ts): switching boards remounts this component by key, and
+  // starting at null dropped every widget back to a skeleton while
+  // loadArtifacts re-read two or three files *per widget* from GitHub — so
+  // returning to a board you left seconds ago repainted from scratch. The
+  // held map paints the last known artifacts immediately; the streamed
+  // promise below swaps in the fresh ones when it lands. Server-side and on
+  // the first hydration render the store is empty, so SSR and hydration still
+  // agree on the skeleton.
+  const artifactsKey = `artifacts:${view.dataRepo}:${view.dashboardSlug}`
   const [resolved, setResolved] = useState<Record<string, ArtifactInfo> | null>(
-    null,
+    () => readHeld(artifactsKey),
   )
   // First-load stream death (server abort at streamTimeout, dropped
   // connection): flip every cell to its honest "unreachable" state instead of
@@ -494,6 +505,7 @@ export function DashboardBoard({
     setStreamFailed(false)
     artifacts.then(
       (a) => {
+        writeHeld(artifactsKey, a)
         if (alive) {
           setResolved(a)
           setStreamFailed(false)
@@ -511,7 +523,7 @@ export function DashboardBoard({
     return () => {
       alive = false
     }
-  }, [artifacts])
+  }, [artifacts, artifactsKey])
   useEffect(() => {
     if (resolved) resolveAgainst(resolved)
   }, [resolved, resolveAgainst])

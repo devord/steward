@@ -11,13 +11,62 @@ import { useEffect, useState } from "react"
 const held = new Map<string, unknown>()
 const isClient = typeof document !== "undefined"
 
-function seed<T>(key: string): T | null {
-  if (!isClient) return null
+/**
+ * Per-namespace cap (the key segment before the first `:`), LRU by last read
+ * or write. Chrome values — the rail, a repo's templates, its placements —
+ * are small and few, so they stay uncapped: evicting the rail after a dozen
+ * board visits would reintroduce the very flash this store exists to stop.
+ * Artifact maps carry every widget's full HTML, so their namespace is bounded
+ * to the handful of boards someone actually moves between, not a history.
+ */
+const LIMITS: Record<string, number> = { artifacts: 4 }
+
+function evict(key: string): void {
+  const colon = key.indexOf(":")
+  if (colon < 0) return
+  const namespace = key.slice(0, colon)
+  const limit = LIMITS[namespace]
+  if (limit === undefined) return
+  const mine = [...held.keys()].filter((k) => k.startsWith(`${namespace}:`))
+  // Map preserves insertion order and both read and write re-insert, so the
+  // front of this list is the coldest.
+  for (const stale of mine.slice(0, Math.max(0, mine.length - limit))) {
+    held.delete(stale)
+  }
+}
+
+/**
+ * The last value resolved under `key`, or null. Re-inserts to mark it
+ * most-recently-used, so alternating between two boards never evicts either.
+ */
+export function readHeld<T>(key: string): T | null {
+  if (!isClient || !held.has(key)) return null
+  const value = held.get(key)
+  held.delete(key)
+  held.set(key, value)
   // A key's held value is only ever written by that key's own promise, so
   // the stored unknown is the caller's T — an invariant the type system
   // can't carry through a shared heterogeneous map.
   // oxlint-disable-next-line typescript/consistent-type-assertions
-  return (held.get(key) as T | undefined) ?? null
+  return (value as T | undefined) ?? null
+}
+
+/** Record `key`'s freshly resolved value, dropping its namespace's coldest
+    entries past the cap. */
+export function writeHeld<T>(key: string, value: T): void {
+  if (!isClient) return
+  held.delete(key)
+  held.set(key, value)
+  evict(key)
+}
+
+/** Test-only: drop the whole store so cases don't leak held values. */
+export function __resetHeld(): void {
+  held.clear()
+}
+
+function seed<T>(key: string): T | null {
+  return readHeld<T>(key)
 }
 
 /**
@@ -45,7 +94,7 @@ export function useStreamed<T>(source: T | Promise<T>, key: string): T | null {
     let alive = true
     void Promise.resolve(source).then(
       (value) => {
-        held.set(key, value)
+        writeHeld(key, value)
         if (alive) setState({ key, value })
       },
       () => {},
