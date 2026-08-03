@@ -987,7 +987,11 @@ const LINK_GUARD_SCRIPT =
  *    truncation reads as "there's more — expand", never an ambiguous
  *    mid-line crop. The fade dissolves into `--color-bg` — the tile's flush
  *    page surface (see TILE_FLUSH_STYLE) — and retints with the theme
- *    override for free.
+ *    override for free;
+ *  - posts that same overflow up as `steward:tile-clipped` (ADR-0057). The
+ *    fade is the half of the promise the sandbox can keep; the door it points
+ *    at belongs to the chrome, and the chrome cannot measure a cross-origin
+ *    document. One boolean closes that gap.
  */
 const TILE_GUARD_STYLE =
   "<style data-steward-tile-guard>" +
@@ -1034,6 +1038,14 @@ document.body.appendChild(f);
 var posted=false;
 var ready=function(){if(!posted&&document.body.scrollHeight>24){posted=true;
 try{parent.postMessage({type:"steward:tile-painted"},"*")}catch(e){}}};
+// The same overflow the fade paints, told to the host (ADR-0057). The fade
+// says "there's more" inside the sandbox, where nothing is clickable; the
+// card owns the door, so it needs the boolean too. Posted on change only —
+// \`check\` runs on every mutation, and an unchanged state is not news. Left
+// undefined rather than seeded false, so the first check always reports.
+var clipped;
+var report=function(next){if(next===clipped)return;clipped=next;
+try{parent.postMessage({type:"steward:tile-clipped",clipped:next},"*")}catch(e){}};
 var ro,mo,busy=false;
 // Overflow must be read off <body>: html/body pin overflow:hidden, so the
 // clipped region belongs to body and never surfaces on documentElement.
@@ -1047,7 +1059,9 @@ if(mo){mo.takeRecords();mo.observe(document.body,{childList:true,subtree:true,ch
 if(ro)ro.observe(document.body);
 busy=false;
 ready();
-f.style.opacity=Math.max(d.scrollHeight,document.body.scrollHeight)>d.clientHeight+1?"1":"0"};
+var over=Math.max(d.scrollHeight,document.body.scrollHeight)>d.clientHeight+1;
+f.style.opacity=over?"1":"0";
+report(over)};
 ro=new ResizeObserver(check);ro.observe(document.body);
 // A ResizeObserver alone is not enough once a tile is interactive: body pins
 // overflow:hidden, so content growing past the fold changes scrollHeight

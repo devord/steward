@@ -222,7 +222,15 @@ surface and sets its own inset.
   color (full `foreground`) above the 12px `ink-dim` freshness beside it,
   which stays quiet. With no card
   border by design, that heading plus the whitespace rhythm _is_ the block's
-  separation. The lightbox header carries the same name in the same mono
+  separation. **The heading is also the door** (ADR-0057): it is a button that
+  opens the full artifact, carrying a trailing expand glyph that rests in
+  `ink-faint`, one step up in `ink-dim` when the tile guard reports the
+  artifact clipped, and `foreground` under pointer or focus, where the name
+  underlines. A tile is a crop (ADR-0019) and expanding it is the board's most
+  consequential action, so it gets the bar's widest, steadiest target rather
+  than a 20px icon revealed on hover — and one affordance, not two. Below
+  `16rem` of bar the glyph yields so the name keeps the width.
+  The lightbox header carries the same name in the same mono
   heading voice. State reads as pills in that same mono voice
   (`running`/`stale`/`manual`), never prose; a fresh tile carries no pill
   (semantic color only when it means something). In **edit mode** the tile

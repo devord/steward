@@ -129,31 +129,42 @@ export function WidgetCard({
   const theme = useResolvedTheme()
   const [expanded, setExpanded] = useState(false)
   const [painted, setPainted] = useState(false)
+  const [clipped, setClipped] = useState(false)
   const frameRef = useRef<HTMLIFrameElement>(null)
   const { size } = widget
-  // The veil lifts when the artifact reports real content (the tile guard's
-  // "steward:tile-painted" message, matched by source — an opaque-origin
-  // sandbox has no origin to check). `onLoad` alone lied: big or script-built
-  // artifacts finish loading long before they have anything to show, and the
-  // unveiled flush-bg document reads as a void.
+  // Both signals the tile guard sends up, matched by source — an opaque-origin
+  // sandbox has no origin to check.
+  //
+  // `steward:tile-painted` lifts the veil once the artifact reports real
+  // content. `onLoad` alone lied: big or script-built artifacts finish loading
+  // long before they have anything to show, and the unveiled flush-bg document
+  // reads as a void.
+  //
+  // `steward:tile-clipped` carries the overflow that drives the guard's bottom
+  // fade (ADR-0057), so the title's expand cue can rest a step brighter on a
+  // tile that is actually holding rows back. It arrives repeatedly over a
+  // tile's life — a sort, a filter, a resize all re-run the guard's check — so
+  // this listener stays mounted after `painted` latches.
   useEffect(() => {
-    if (painted) return
     const onMessage = (e: MessageEvent<unknown>) => {
       const data = e.data
       if (
-        e.source != null &&
-        e.source === frameRef.current?.contentWindow &&
-        typeof data === "object" &&
-        data !== null &&
-        "type" in data &&
-        data.type === "steward:tile-painted"
+        e.source == null ||
+        e.source !== frameRef.current?.contentWindow ||
+        typeof data !== "object" ||
+        data === null ||
+        !("type" in data)
       ) {
-        setPainted(true)
+        return
+      }
+      if (data.type === "steward:tile-painted") setPainted(true)
+      else if (data.type === "steward:tile-clipped") {
+        setClipped("clipped" in data && data.clipped === true)
       }
     }
     window.addEventListener("message", onMessage)
     return () => window.removeEventListener("message", onMessage)
-  }, [painted])
+  }, [])
   // The signed-in viewer resolves person-relative content at render time
   // (ADR-0039): repo-pulse's "needs your review" / "yours" enhance against
   // this login instead of the routine runner's. Absent on standalone renders
@@ -361,10 +372,12 @@ export function WidgetCard({
              contract every artifact (and the raw page) already ships with, and
              zeroing it would only move the misalignment, gluing content to the
              hover border. */
-          <header className="flex min-h-8 items-center gap-2 px-3.5 py-1.5">
-            <span className="min-w-0 truncate font-mono text-base font-semibold text-foreground">
-              {routine.name}
-            </span>
+          <header className="@container/bar flex min-h-8 items-center gap-2 px-3.5 py-1.5">
+            <WidgetTitle
+              name={routine.name}
+              clipped={clipped}
+              onExpand={html ? () => setExpanded(true) : undefined}
+            />
             <div className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-xs text-ink-dim">
               {/* The Update control is a re-run affordance; while a run is in
                   flight it can't fire and the "Running" readout already owns
@@ -407,21 +420,9 @@ export function WidgetCard({
                   className={cn(BAR_ACTION, "opacity-0")}
                 />
               )}
-              {/* Peek at full size. Recedes until the card is hovered/focused
-                (fine pointers); on touch it lives in the ⋯ menu below. The
-                reserved slot means no layout shift on reveal. */}
-              {html && (
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={t("widget.expand", { name: routine.name })}
-                  title={t("widget.expandShort")}
-                  className={cn(BAR_ACTION, "opacity-0")}
-                  onClick={() => setExpanded(true)}
-                >
-                  <Maximize2 />
-                </Button>
-              )}
+              {/* No expand icon here: the title *is* the expand control
+                  (ADR-0057), on every pointer type. One affordance per action,
+                  the same rule the run controls follow above. */}
               {/* Touch: the hover-revealed icons above collapse into one ⋯
                   menu so the title keeps its bar (BAR_ACTION hides them on
                   coarse pointers, this trigger only shows there). */}
@@ -429,7 +430,6 @@ export function WidgetCard({
                 routine={routine}
                 dataRepo={updateEligible ? dataRepo : undefined}
                 onEdit={onEdit}
-                onExpand={html ? () => setExpanded(true) : undefined}
                 onFired={onFired}
                 chat={context ? { context, ranLabel } : undefined}
               />
@@ -536,6 +536,107 @@ export function WidgetCard({
         />
       )}
     </>
+  )
+}
+
+/**
+ * The tile's name, and the door to the full artifact (ADR-0057).
+ *
+ * A tile is a crop: ADR-0019 makes it fit its height rather than scroll, and
+ * the lightbox is where the held-back rows live. That made the expand control
+ * the tile's most consequential action and, until now, its least visible one —
+ * an icon at `opacity-0` until hover, and on touch not in the bar at all. The
+ * title is the fix: it is already the widest, steadiest thing in the bar, it
+ * is the *name of the thing being opened*, and it needs no hover to be seen.
+ * So the standalone icon is gone from the bar and from the ⋯ menu — one
+ * affordance per action, as with Update and Run-now.
+ *
+ * It stays a heading. DESIGN.md § Typography reads each widget as a section of
+ * the page, so the name sits at the section-heading tier; wrapping it in `h2`
+ * rather than the bare `span` it used to be also gives the `article` an
+ * accessible name it never had, which is what makes a board navigable by
+ * landmark instead of by eye.
+ *
+ * Three states, no more: the glyph rests in `ink-faint` (DESIGN.md's glyph
+ * role, ≥3:1 — the same faint-at-rest idiom the band heading's chevron and ⋯
+ * use), rests a step up in `ink-dim` when the artifact is actually clipped,
+ * and goes to `foreground` under the pointer or keyboard focus, where the name
+ * also underlines. The middle step is the honest one: the guard's bottom fade
+ * has always said "there's more" (ADR-0019); this is the same sentence said
+ * where the door is.
+ */
+function WidgetTitle({
+  name,
+  clipped,
+  onExpand,
+}: {
+  name: string
+  /** The artifact overflows its cell — the tile guard's `tile-clipped`. */
+  clipped: boolean
+  /** Absent when nothing was ever published: no artifact, no full view, so
+      the name is plain text rather than a button that opens an empty room. */
+  onExpand?: () => void
+}) {
+  const t = useT()
+  // `min-w-0` so the heading may shrink past its own min-content: without it
+  // a long name pushes the freshness readout off the tile's edge instead of
+  // ellipsising. The button inside carries the same for the same reason.
+  const heading = "min-w-0 font-mono text-base font-semibold text-foreground"
+  if (onExpand == null) {
+    return <h2 className={cn(heading, "truncate")}>{name}</h2>
+  }
+  return (
+    <h2 className={heading}>
+      <button
+        type="button"
+        onClick={onExpand}
+        // The accessible name carries the action, and *contains* the visible
+        // label, so voice control still reaches it by the name on screen
+        // (WCAG 2.5.3). The tooltip is the pointer's version of the same
+        // sentence — nothing else in the bar says what clicking a heading does.
+        aria-label={t("widget.expand", { name })}
+        title={t("widget.expandShort")}
+        className={cn(
+          // No inline padding: the name keeps the 14px inset it shares with
+          // the artifact's first line (DESIGN.md § Shape), so the hit area
+          // starts on that same edge. `-mx-1 px-1` would buy target width at
+          // the cost of the shared edge; the edge wins.
+          // `w-full` is load-bearing: a `<button>` keeps the shrink-to-fit
+          // auto width of a form control whatever its `display`, so without it
+          // the button sizes to its full text and overruns the heading the
+          // header already shrank — the name overprints the freshness readout
+          // instead of ellipsising.
+          "group/expand flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-md text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+          // The line box is 24px at this tier, clearing WCAG 2.5.8's 24px
+          // floor on its own; coarse pointers take the bar to the 32px the ⋯
+          // trigger beside it already stands at.
+          "pointer-coarse:min-h-8",
+        )}
+      >
+        {/* The underline is the plain "this is clickable" cue, in `ink-dim`
+            rather than the name's own ink: at full weight a rule under 16px
+            semibold competes with the heading it belongs to. Offset by 4px so
+            it passes below the mono's descenders instead of through them. */}
+        <span className="min-w-0 truncate decoration-ink-dim decoration-1 underline-offset-4 group-hover/expand:underline">
+          {name}
+        </span>
+        {/* The glyph yields before the name does. It costs 20px, and the
+            freshness cluster beside it never gives ground, so on a 1-column
+            cell of a 6-column board that 20px is the difference between
+            "Turt…" and "T…". A hint on a tile too narrow to show what it
+            hints at is the wrong trade — below 16rem of bar (its content box,
+            so ~286px of tile) the name takes the space back, and the heading
+            stays clickable at every width regardless. */}
+        <Maximize2
+          aria-hidden
+          className={cn(
+            "hidden size-3.5 shrink-0 transition-colors @[16rem]/bar:block",
+            clipped ? "text-ink-dim" : "text-ink-faint",
+            "group-hover/expand:text-foreground group-focus-visible/expand:text-foreground",
+          )}
+        />
+      </button>
+    </h2>
   )
 }
 
@@ -709,17 +810,20 @@ function UpdateAction({
 
 /**
  * The touch counterpart of the bar's hover-revealed actions: coarse pointers
- * get one ⋯ menu (Update / Edit / Expand) instead of three 20px icons
- * crowding the title out of its own bar — BAR_ACTION hides the individual
- * icons on coarse, this trigger renders only there. The trigger stays a
- * 32px square so the bar keeps its height; the `after` inset extends the
- * touch target past 44px without inflating the visual.
+ * get one ⋯ menu (Update / Edit / Chat) instead of icons crowding the title
+ * out of its own bar — BAR_ACTION hides the individual icons on coarse, this
+ * trigger renders only there. The trigger stays a 32px square so the bar keeps
+ * its height; the `after` inset extends the touch target past 44px without
+ * inflating the visual.
+ *
+ * Expand is deliberately not among them (ADR-0057): the title is the expand
+ * control on every pointer type, and a tap target the width of the bar beats
+ * a row two taps deep in a menu.
  */
 function WidgetTouchMenu({
   routine,
   dataRepo,
   onEdit,
-  onExpand,
   onFired,
   chat,
 }: {
@@ -728,13 +832,11 @@ function WidgetTouchMenu({
       "one run affordance per card" gate in WidgetCard. */
   dataRepo?: string
   onEdit?: () => void
-  onExpand?: () => void
   onFired?: () => void
   /** Present only when the artifact carries a briefing (ADR-0043). */
   chat?: { context: string; ranLabel: string }
 }) {
-  if (dataRepo == null && onEdit == null && onExpand == null && chat == null)
-    return null
+  if (dataRepo == null && onEdit == null && chat == null) return null
   // The fetcher-bearing variant mounts only with a repo to fire against —
   // standalone renders (tests, previews) have no data router, and useFetcher
   // throws outside one. The split keeps the hook unconditional per component.
@@ -743,17 +845,11 @@ function WidgetTouchMenu({
       routine={routine}
       dataRepo={dataRepo}
       onEdit={onEdit}
-      onExpand={onExpand}
       onFired={onFired}
       chat={chat}
     />
   ) : (
-    <TouchMenuFrame
-      routine={routine}
-      onEdit={onEdit}
-      onExpand={onExpand}
-      chat={chat}
-    />
+    <TouchMenuFrame routine={routine} onEdit={onEdit} chat={chat} />
   )
 }
 
@@ -766,14 +862,12 @@ function TouchMenuWithUpdate({
   routine,
   dataRepo,
   onEdit,
-  onExpand,
   onFired,
   chat,
 }: {
   routine: Routine
   dataRepo: string
   onEdit?: () => void
-  onExpand?: () => void
   onFired?: () => void
   chat?: { context: string; ranLabel: string }
 }) {
@@ -786,7 +880,6 @@ function TouchMenuWithUpdate({
       <TouchMenuFrame
         routine={routine}
         onEdit={onEdit}
-        onExpand={onExpand}
         chat={chat}
         updateItem={
           <DropdownMenuItem
@@ -815,13 +908,11 @@ function TouchMenuWithUpdate({
 function TouchMenuFrame({
   routine,
   onEdit,
-  onExpand,
   updateItem,
   chat,
 }: {
   routine: Routine
   onEdit?: () => void
-  onExpand?: () => void
   updateItem?: React.ReactNode
   chat?: { context: string; ranLabel: string }
 }) {
@@ -864,12 +955,6 @@ function TouchMenuFrame({
           >
             <MessageSquare />
             {t("widget.chatShort")}
-          </DropdownMenuItem>
-        )}
-        {onExpand && (
-          <DropdownMenuItem className="min-h-11" onClick={onExpand}>
-            <Maximize2 />
-            {t("widget.expandShort")}
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
