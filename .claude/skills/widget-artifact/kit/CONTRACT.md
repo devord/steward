@@ -169,12 +169,14 @@ beside `12d behind`, rendered as `12d behind ▲3d`. `direction` is `up` `down`
 `flat`; it is the arrow's geometry, not a judgement, so a rising bad number and
 a rising good one both point up and the tone says which it is.
 
-**`state` needs a `label`.** A chip is a word with a border round it, so a
-`state` carrying no word is a bordered void that reads as a broken image — and
-because the leading chip column is only reserved when some row fills it, an
-empty chip also indents that ledger's titles past the ones in the band above.
-A row with nothing to chip omits `state` entirely; the renderer rejects the
-empty one at the field.
+**`state` is `{ label, tone }`, and it needs the `label`.** A chip is a word
+with a border round it, so a `state` carrying no word — `{ tone }` alone, or
+the bare `"merged"` a template invites when it names the word and not the
+shape — is a bordered void that reads as a broken image, and it drops the word
+it was published to carry. Because the leading chip column is reserved only
+when some row fills it, an empty chip also indents that ledger's titles past
+the ones in the band above. A row with nothing to chip omits `state` entirely;
+the renderer rejects both malformed shapes at the field.
 
 ### The viewer, and why rows carry relationships
 

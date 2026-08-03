@@ -214,6 +214,26 @@ describe("the leading key column", () => {
     )
   })
 
+  it("names a bare-string chip too, which is the emit that shipped", () => {
+    // `corza-csp-triage` said "`state` merged/closed" and never said the shape,
+    // so the run emitted `state: "merged"`. Nothing read it — not an object, so
+    // the object branch skipped it — and `state.label` came back undefined at
+    // render: a bordered void where the word should have been.
+    // Built raw rather than through the typed helpers: `validateDoc` takes
+    // `unknown`, and a malformed emit is exactly what it is here to catch.
+    const errs = validateDoc({
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [
+        { kind: "queue", rows: [{ id: "a", title: "a", state: "merged" }] },
+      ],
+    })
+    expect(errs.join(" ")).toContain(
+      "blocks[0].rows[0].state must be an object",
+    )
+  })
+
   it("spans a detail line across the columns the row actually has", () => {
     const out = renderArtifact(
       doc([

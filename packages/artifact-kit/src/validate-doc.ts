@@ -390,14 +390,23 @@ export function validateDoc(doc: unknown): string[] {
           if (!isObj(r)) return void errors.push(`${rat} must be an object`)
           str(r.id, `${rat}.id`)
           str(r.title, `${rat}.title`)
-          if (isObj(r.state)) {
-            // A chip is a word with a border round it. Without the word it is
-            // a bordered void that reads as a broken image and still indents
-            // the title off the margin — so a state with nothing to say is an
-            // omitted `state`, not an empty one, and the routine is the only
-            // place that can decide which.
-            str(r.state.label, `${rat}.state.label`)
-            tone(r.state.tone, `${rat}.state.tone`)
+          if (r.state !== undefined) {
+            // A bare `"merged"` is the emit a template invites when it names
+            // the chip's *word* and not its shape — and it used to pass every
+            // gate: not an object, so nothing here read it, and `state.label`
+            // came back undefined at render, so the row drew a bordered void
+            // and dropped the word it was published to carry.
+            if (!isObj(r.state))
+              errors.push(`${rat}.state must be an object — { label, tone }`)
+            else {
+              // A chip is a word with a border round it. Without the word it
+              // is a void that reads as a broken image and still indents the
+              // title off the margin — so a state with nothing to say is an
+              // omitted `state`, not an empty one, and the routine is the only
+              // place that can decide which.
+              str(r.state.label, `${rat}.state.label`)
+              tone(r.state.tone, `${rat}.state.tone`)
+            }
           }
           if (r.face !== undefined) {
             if (!isObj(r.face)) errors.push(`${rat}.face must be an object`)
