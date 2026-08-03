@@ -272,12 +272,18 @@ function BandHeading({
           {/* Hangs in the gutter on its own marker column, the way the rail's
               repo glyph does — the label has to hold the content column, so
               the disclosure marker outdents rather than pushing it right. The
-              chevron's ink sits in the middle ~40% of its box, so a flush box
-              still reads with ~6px of air before the name. */}
+              column belongs to the ink, not the box: a caret turned down is
+              twice the ink of one pointing right (7px against 3.5px, both
+              centred in the same 14px box), so a box flush at 0 left the open
+              band — the default — with 4.5px before the name against the
+              folded one's 6.25px. That reads glued, and tighter than the count
+              sitting 8px off the word's other side. -2px opens them to 6.5 and
+              8.25: a point needs more measured air than a wedge to read as the
+              same air, so one static offset serves both states. */}
           <ChevronRight
             aria-hidden
             className={cn(
-              "absolute top-1/2 left-0 size-3.5 -translate-y-1/2 text-ink-faint transition-[transform,color] group-hover/band:text-ink-dim",
+              "absolute top-1/2 -left-0.5 size-3.5 -translate-y-1/2 text-ink-faint transition-[transform,color] group-hover/band:text-ink-dim",
               !collapsed && "rotate-90",
             )}
           />
