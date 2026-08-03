@@ -231,7 +231,6 @@ function Band({ block, index }: { block: Block; index: number }) {
         (block.pageOnly ??
         (block.kind === "prose" ||
           block.kind === "series" ||
-          block.kind === "throughput" ||
           block.kind === "day" ||
           block.kind === "matrix"))
           ? "hidden page-only:flex"

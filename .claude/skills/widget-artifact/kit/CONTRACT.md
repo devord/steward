@@ -133,7 +133,13 @@ only, gated on the tile stamp rather than a width, so a four-column tile at
 1200px still does not get it. For an auditor's band rather than a glancer's: a
 rule trace in evaluation order restates, more slowly, what the verdict and the
 drivers already said, and rendering it on a wide tile put the same figure on
-screen four times. Prose is page-only whether or not you set it.
+screen four times.
+
+Four kinds are page-only whether or not you set it — `prose`, `series`, `day`
+and `matrix` — because each is a reading surface rather than a glance: running
+text, a sparkline read against its own axis labels, a 24-column day grid, a
+co-change matrix. Set **`pageOnly: false`** to put one on tiles anyway. Every
+other kind, `throughput` included, is on tiles unless it asks not to be.
 
 **`trimFirst: true`** makes this block give way before every other list,
 whatever the reading order. It exists for a bookkeeping band that sits _above_

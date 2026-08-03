@@ -74,6 +74,20 @@ describe("the throughput band", () => {
     expect(html).toContain('data-kit-throughput-col="bo"')
   })
 
+  it("is on the tile, which is where the chart gets looked at", () => {
+    // Shipped page-only for the whole migration and no test saw it: under the
+    // tile stamp `page-only:flex` resolves to display:none, so the board went
+    // from the frozen template's chart to a headline over an empty card. The
+    // band is a glancer's band — a ranked row of columns reads at 594px — and
+    // `pageOnly` stays there for a routine that disagrees.
+    expect(html).not.toContain("page-only:flex")
+    const asked = renderArtifact(
+      { ...doc, blocks: [{ kind: "throughput", spec, pageOnly: true }] },
+      "",
+    )
+    expect(asked).toContain("hidden page-only:flex")
+  })
+
   it("draws the latest day, which is the day that answers the question", () => {
     expect(html).toContain("Mar 3")
     // Day 2 cumulative: ana 6 merged / 1 open, bo 0 merged / 3 open.
