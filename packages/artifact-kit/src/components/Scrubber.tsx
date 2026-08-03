@@ -37,7 +37,15 @@ export function Scrubber({ spec }: { spec: ScrubberSpec }) {
         defaultValue={value}
         aria-label={spec.label}
         data-kit-scrub-input=""
-        className="accent-orange h-1 w-full cursor-pointer appearance-none rounded-full"
+        // `bg-bg3` is the track. `appearance-none` removes the platform widget
+        // — which is what this wants, a 4px bar under the chart rather than a
+        // 16px OS slider — but it takes the track with it, and nothing else
+        // paints one: the kit's stylesheet carries no ::-webkit-slider-* rules.
+        // That shipped as a lone dot floating between the end labels, the axis
+        // it slides along invisible. The thumb survived on its own because
+        // `accent-orange` still reaches it — which is exactly why the dot was
+        // there and the bar was not.
+        className="accent-orange bg-bg3 h-1 w-full cursor-pointer appearance-none rounded-full"
       />
       {spec.ends ? (
         <div className="text-ink-faint flex justify-between font-mono text-[10px] leading-none">

@@ -208,6 +208,38 @@ describe("the injected throughput runtime", () => {
     expect(text(d, "[data-kit-throughput-total]")).toBe("1 merged · 0 open")
   })
 
+  it("moves the pressed box onto the option that was clicked", async () => {
+    // The chart rebuilt and the highlight stayed on "by owner", so the button
+    // read as dead while it was in fact working. Nothing here asserted the
+    // control's own appearance, only the plot it drives — and the appearance is
+    // the half a reader sees. `aria-pressed` is the single record of which view
+    // is current, and the stylesheet paints from it, so this is both the state
+    // a screen reader is told and the state the box is drawn from.
+    const d = await mount()
+    const option = (v: string) =>
+      d.querySelector<HTMLElement>(
+        `[data-kit-toggle="view"] [data-kit-toggle-option="${v}"]`,
+      )
+    const painted = (v: string) => {
+      const el = option(v)
+      if (!el) throw new Error(`no option ${v}`)
+      const win = d.defaultView as Window & typeof globalThis
+      return win.getComputedStyle(el).backgroundColor
+    }
+    const before = { owner: painted("owner"), reviewer: painted("reviewer") }
+    expect(option("owner")?.getAttribute("aria-pressed")).toBe("true")
+    expect(before.owner).not.toBe(before.reviewer)
+
+    press(d, "view", "reviewer")
+    await new Promise((r) => setTimeout(r, 30))
+
+    expect(option("reviewer")?.getAttribute("aria-pressed")).toBe("true")
+    expect(option("owner")?.getAttribute("aria-pressed")).toBe("false")
+    // The fill swapped places rather than staying where the server put it.
+    expect(painted("reviewer")).toBe(before.owner)
+    expect(painted("owner")).toBe(before.reviewer)
+  })
+
   it("keeps a face whose bytes the payload deliberately does not carry", async () => {
     // The renderer omits an avatar it has already drawn, because a data URI in
     // the markup and the same URI in the payload is the same face twice — 130

@@ -57,14 +57,20 @@ export function ToggleGroup({ spec }: { spec: ToggleGroupSpec }) {
           key={o.value}
           type="button"
           data-kit-toggle-option={o.value}
-          // The pressed one is the current view, which is a state a screen
-          // reader has to be told: the styling below says it in colour only.
+          // The pressed one is the current view — a state a screen reader has
+          // to be told, and the *only* place the current view is recorded.
           aria-pressed={o.value === current}
+          // Painted from `aria-pressed`, not from a branch on `current`, so
+          // there is one definition of which option looks active. A branch here
+          // baked the highlight into the markup: the runtime flipped
+          // `aria-pressed` and rebuilt the chart correctly while the box stayed
+          // on the option the server happened to render, which reads as a
+          // toggle that did nothing. Every option ships with identical classes;
+          // moving the attribute is what moves the box.
           className={cn(
             "rounded-xs px-1.5 py-0.5 font-mono text-xs leading-none",
-            o.value === current
-              ? "bg-bg3 text-ink"
-              : "text-ink-dim hover:text-ink",
+            "text-ink-dim hover:text-ink",
+            "aria-pressed:bg-bg3 aria-pressed:text-ink",
           )}
         >
           {o.label}

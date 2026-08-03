@@ -119,6 +119,37 @@ describe("the throughput band", () => {
     }
   })
 
+  it("leaves the active look to aria-pressed, not to the markup", () => {
+    // The bug this pins: the toggle rebuilt the chart and the highlight stayed
+    // put, which reads as a button that did nothing. The runtime moves
+    // `aria-pressed` and nothing else, so if the markup decides who looks
+    // active, the box can never follow. Both options must ship byte-identical
+    // classes — then moving the attribute is what moves the box.
+    const buttons = [
+      ...html.matchAll(/<button[^>]*data-kit-toggle-option="(\w+)"[^>]*>/g),
+    ].map((m) => ({
+      value: m[1],
+      pressed: /aria-pressed="true"/.test(m[0]),
+      className: m[0].match(/class="([^"]*)"/)?.[1] ?? "",
+    }))
+    const view = buttons.filter((b) => ["owner", "reviewer"].includes(b.value))
+    expect(view.map((b) => b.value)).toEqual(["owner", "reviewer"])
+    expect(view.filter((b) => b.pressed).map((b) => b.value)).toEqual(["owner"])
+    expect(new Set(view.map((b) => b.className)).size).toBe(1)
+    // And the active look has to be reachable from the attribute at all.
+    expect(view[0].className).toContain("aria-pressed:bg-bg3")
+  })
+
+  it("draws a track for the scrubber to slide along", () => {
+    // `appearance-none` drops the platform widget and its track with it, and
+    // the kit has no ::-webkit-slider-* rules — so this shipped as a lone dot
+    // between two dates with no axis under it. The thumb kept working because
+    // `accent-orange` reaches it, which is what made the gap hard to see.
+    const input = html.match(/<input[^>]*data-kit-scrub-input[^>]*>/)?.[0] ?? ""
+    expect(input).toContain("appearance-none")
+    expect(input).toContain("bg-bg3")
+  })
+
   it("offers one toggle per axis the spec actually has", () => {
     expect(html).toContain('data-kit-toggle="view"')
     expect(html).toContain('data-kit-toggle="mode"')
