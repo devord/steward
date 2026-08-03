@@ -252,6 +252,67 @@ describe("the throughput contract", () => {
     )
   })
 
+  it("names the author when a triple is not three numbers", () => {
+    // Quieter than the short row and harder to see: `decodeView` sums each
+    // value straight into a running total, so `0 += "3"` concatenates and
+    // every day after it inherits the string. A two-long triple loses
+    // `created` to the same silent zero, one author narrower.
+    for (const [label, triple] of [
+      ["a string", ["3", 1, 0]],
+      ["a short triple", [1, 1]],
+      ["a non-finite number", [Number.NaN, 1, 0]],
+      ["not an array at all", 3],
+    ] as const) {
+      const problems = bad({
+        views: [
+          {
+            key: "owner",
+            label: "by owner",
+            series: {
+              authors: ["ana", "bo"],
+              from: "2026-03-01",
+              n: 2,
+              changed: [[0, [[1, 1, 1], triple]]],
+            },
+          },
+        ],
+      })
+      expect(problems.join("\n"), label).toContain(
+        "changed[0][1][1] must be [open, merged, created] as three finite numbers",
+      )
+    }
+  })
+
+  it("names one author per row, not every author on it", () => {
+    // A mis-encoded row is usually mis-encoded all the way across, and twenty
+    // copies of the same sentence buries the twenty-first problem.
+    const problems = bad({
+      views: [
+        {
+          key: "owner",
+          label: "by owner",
+          series: {
+            authors: ["ana", "bo"],
+            from: "2026-03-01",
+            n: 2,
+            changed: [
+              [
+                0,
+                [
+                  ["1", 1, 1],
+                  ["2", 2, 2],
+                ],
+              ],
+            ],
+          },
+        },
+      ],
+    })
+    expect(problems.filter((p) => p.includes("three finite numbers"))).toEqual([
+      "blocks[0].spec.views[0].series.changed[0][1][0] must be [open, merged, created] as three finite numbers",
+    ])
+  })
+
   it("names the field when a day sits past the end of the axis", () => {
     // The quiet twin of the short row: `decodeView` only reads `i < n`, so a
     // row dated off the top of the axis is dropped rather than misplaced, and
