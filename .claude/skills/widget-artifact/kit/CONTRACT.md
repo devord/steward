@@ -382,8 +382,19 @@ worth saying out loud. Spending the fill on significance as well as magnitude
 makes two claims in one channel, and a reader cannot tell which one a dark cell
 is making.
 
-Cap the labels yourself: a field is unreadable past a dozen or so rows, and the
-count you held back belongs on the block's `count`.
+**Columns are numbered and the number repeats on the row label**, so a cell
+reads `4 ↔ 7` and resolves both ends against one list. A square field has to
+name both axes or a hot cell is a fact the reader cannot repeat to anyone.
+
+**Populate it with the pairs that actually cluster**, not the top N of some
+other ranking. The field earns its cells by making a cluster visible at a
+glance; filled from a list sorted on something else it is a sparse scatter, and
+a scatter of five facts is worse than five sentences. Cap the labels yourself —
+a field is unreadable past a dozen or so rows — and put the count you held back
+on the block's `count`.
+
+**Every pair worth ringing is also worth a sentence.** A cell is a prompt to go
+look, never the only place a finding lives.
 
 ### `blocks[]` — progress and the day
 

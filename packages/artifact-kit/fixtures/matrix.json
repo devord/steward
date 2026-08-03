@@ -3,88 +3,138 @@
   "title": "Example module entropy",
   "generatedAt": "2026-07-30T09:00:00Z",
   "stat": {
-    "value": "84 ↗",
-    "label": "cart · worsening",
-    "note": "8 of 136 modules above the hot line"
+    "value": "62%",
+    "label": "of commits land in hotspots",
+    "tone": "attn"
+  },
+  "bottomLine": {
+    "text": "cart is where your next change costs: 34 commits this quarter, 28% tested, and it moves with checkout on 14 of them without importing it. Give it a test seam at the hook before the next change."
   },
   "blocks": [
     {
       "kind": "queue",
-      "label": "Rot ledger",
-      "count": "top 8 of 136 by score",
+      "label": "Where your next change costs",
+      "count": "5 of 21 hot modules · 136 censused",
       "showHeader": true,
-      "rows": [
+      "groups": [
         {
-          "id": "m1",
-          "title": "cart",
-          "detail": "34 commits · 1 author · 28% tested · in 61 / out 12",
-          "values": [
+          "id": "hot",
+          "label": "Hot and hard to change",
+          "count": "5 of 21",
+          "rows": [
             {
-              "label": "score",
-              "value": "84",
-              "meter": 84,
-              "tone": "attn"
+              "id": "m1",
+              "title": "cart",
+              "state": { "label": "no test seam", "tone": "bad" },
+              "detail": "28% tested · one author · couples with checkout → 9 files re-export a 10-line hook; deleting them concentrates nothing. Collapse into one module, test at its interface. (in-process)",
+              "values": [
+                {
+                  "label": "commits",
+                  "value": "34",
+                  "meter": 34,
+                  "tone": "attn",
+                  "delta": { "value": "6", "direction": "up" }
+                }
+              ]
             },
             {
-              "label": "trend",
-              "value": "↗",
-              "spark": [62, 66, 71, 74, 80, 84],
-              "from": "detail"
+              "id": "m2",
+              "title": "checkout",
+              "state": { "label": "undeclared coupling", "tone": "bad" },
+              "detail": "41% tested · moves with cart and account, imports neither — the shared contract is a `checkout:step` string literal. Give it a named module both sides import. (local-substitutable)",
+              "values": [
+                {
+                  "label": "commits",
+                  "value": "28",
+                  "meter": 28,
+                  "tone": "attn",
+                  "delta": { "value": "3", "direction": "up" }
+                }
+              ]
+            },
+            {
+              "id": "m3",
+              "title": "catalog",
+              "state": { "label": "rule breach", "tone": "bad" },
+              "detail": "defines its own badge primitive — packages/ui owns that. 71% tested, 3 authors, otherwise healthy. Delete the local copy, import the shared one. (in-process)",
+              "values": [
+                {
+                  "label": "commits",
+                  "value": "22",
+                  "meter": 22,
+                  "delta": { "value": "1", "direction": "down" }
+                }
+              ]
+            },
+            {
+              "id": "m4",
+              "title": "pricing",
+              "state": { "label": "one author", "tone": "attn" },
+              "detail": "19 of 19 commits from one author · 63% tested. Nothing structural — the bus factor is the finding.",
+              "values": [
+                {
+                  "label": "commits",
+                  "value": "19",
+                  "meter": 19,
+                  "delta": { "value": "0", "direction": "flat" }
+                }
+              ]
+            },
+            {
+              "id": "m5",
+              "title": "account",
+              "state": { "label": "wide interface", "tone": "attn" },
+              "detail": "8.1 exports/file against a 3.4 median — a proxy, not a verdict. Read it before acting.",
+              "values": [
+                {
+                  "label": "commits",
+                  "value": "17",
+                  "meter": 17,
+                  "delta": { "value": "4", "direction": "up" }
+                }
+              ]
             }
           ]
         },
         {
-          "id": "m2",
-          "title": "checkout",
-          "detail": "28 commits · 2 authors · 41% tested · in 44 / out 19",
-          "values": [
+          "id": "pairs",
+          "label": "Changes together, imports nothing",
+          "count": "3 of 7",
+          "rows": [
             {
-              "label": "score",
-              "value": "81",
-              "meter": 81,
-              "tone": "attn"
+              "id": "p1",
+              "title": "cart ↔ checkout",
+              "state": { "label": "no import", "tone": "bad" },
+              "detail": "14 of cart's 34 commits · the contract is a `checkout:step` string literal read on both sides",
+              "values": [
+                {
+                  "label": "commits",
+                  "value": "14",
+                  "meter": 14,
+                  "tone": "attn"
+                }
+              ]
             },
             {
-              "label": "trend",
-              "value": "↗",
-              "spark": [70, 72, 71, 75, 78, 81],
-              "from": "detail"
-            }
-          ]
-        },
-        {
-          "id": "m3",
-          "title": "pricing",
-          "detail": "19 commits · 3 authors · 63% tested · in 22 / out 8",
-          "values": [
-            {
-              "label": "score",
-              "value": "67",
-              "meter": 67
+              "id": "p2",
+              "title": "catalog ↔ account",
+              "state": { "label": "no import", "tone": "bad" },
+              "detail": "14 of catalog's 22 commits · both read the `--surface-gap` CSS custom property, neither declares it",
+              "values": [
+                {
+                  "label": "commits",
+                  "value": "14",
+                  "meter": 14,
+                  "tone": "attn"
+                }
+              ]
             },
             {
-              "label": "trend",
-              "value": "→",
-              "spark": [66, 68, 67, 67, 66, 67],
-              "from": "detail"
-            }
-          ]
-        },
-        {
-          "id": "m4",
-          "title": "search",
-          "detail": "11 commits · 4 authors · 78% tested · in 9 / out 14",
-          "values": [
-            {
-              "label": "score",
-              "value": "52",
-              "meter": 52
-            },
-            {
-              "label": "trend",
-              "value": "↘",
-              "spark": [71, 68, 64, 60, 55, 52],
-              "from": "detail"
+              "id": "p3",
+              "title": "pricing ↔ catalog",
+              "state": { "label": "no import", "tone": "attn" },
+              "detail": "8 of pricing's 19 commits · shared release cadence, not a contract — probably fine",
+              "values": [{ "label": "commits", "value": "8", "meter": 8 }]
             }
           ]
         }
@@ -93,7 +143,7 @@
     {
       "kind": "matrix",
       "label": "Co-change",
-      "count": "top 8 of 136 by score",
+      "count": "top 8 by strength · 128 modules held back",
       "spec": {
         "labels": [
           "cart",
@@ -106,137 +156,38 @@
           "jobs"
         ],
         "cells": [
-          {
-            "a": 0,
-            "b": 1,
-            "value": 5
-          },
-          {
-            "a": 0,
-            "b": 2,
-            "value": 1
-          },
-          {
-            "a": 0,
-            "b": 3,
-            "value": 8
-          },
-          {
-            "a": 0,
-            "b": 6,
-            "value": 14
-          },
-          {
-            "a": 1,
-            "b": 2,
-            "value": 5
-          },
-          {
-            "a": 1,
-            "b": 4,
-            "value": 14
-          },
-          {
-            "a": 1,
-            "b": 5,
-            "value": 2
-          },
-          {
-            "a": 2,
-            "b": 3,
-            "value": 8
-          },
-          {
-            "a": 2,
-            "b": 4,
-            "value": 8
-          },
-          {
-            "a": 2,
-            "b": 6,
-            "value": 2
-          },
-          {
-            "a": 3,
-            "b": 4,
-            "value": 14
-          },
-          {
-            "a": 3,
-            "b": 5,
-            "value": 8
-          },
-          {
-            "a": 4,
-            "b": 5,
-            "value": 2
-          },
-          {
-            "a": 4,
-            "b": 7,
-            "value": 8
-          },
-          {
-            "a": 5,
-            "b": 7,
-            "value": 2
-          }
+          { "a": 0, "b": 1, "value": 14 },
+          { "a": 0, "b": 2, "value": 1 },
+          { "a": 0, "b": 3, "value": 8 },
+          { "a": 0, "b": 6, "value": 14 },
+          { "a": 1, "b": 2, "value": 5 },
+          { "a": 1, "b": 4, "value": 14 },
+          { "a": 1, "b": 5, "value": 2 },
+          { "a": 2, "b": 3, "value": 8 },
+          { "a": 2, "b": 4, "value": 8 },
+          { "a": 2, "b": 6, "value": 2 },
+          { "a": 3, "b": 4, "value": 14 },
+          { "a": 3, "b": 5, "value": 8 },
+          { "a": 4, "b": 5, "value": 2 },
+          { "a": 4, "b": 7, "value": 8 },
+          { "a": 5, "b": 7, "value": 2 }
         ],
         "marks": [
-          {
-            "a": 0,
-            "b": 1,
-            "label": "14 of 34 commits, no declared import"
-          }
+          { "a": 0, "b": 1, "label": "no import — `checkout:step` literal" },
+          { "a": 3, "b": 4, "label": "no import — `--surface-gap` CSS var" }
         ]
       }
-    },
-    {
-      "kind": "queue",
-      "label": "Where else",
-      "rail": true,
-      "showHeader": false,
-      "rows": [
-        {
-          "id": "r1",
-          "title": "packages/ui",
-          "detail": "41 modules · 210 commits · median 38",
-          "values": [
-            {
-              "label": "worst",
-              "value": "60 ↗",
-              "meter": 60
-            }
-          ]
-        },
-        {
-          "id": "r2",
-          "title": "apps/web",
-          "detail": "63 modules · 388 commits · median 44",
-          "values": [
-            {
-              "label": "worst",
-              "value": "84 ↗",
-              "meter": 84,
-              "tone": "attn"
-            }
-          ]
-        }
-      ]
     }
   ],
   "provenance": [
     "corza · 90d",
-    "3 roots resolved",
-    "136 modules",
-    "1,204 files",
-    "weights v3",
-    "6 history points",
-    "2 sweeps ignored"
+    "136 modules censused",
+    "hot line at 15 commits (p75)",
+    "all 5 signals available"
   ],
   "empty": {
     "headline": "No history in the window",
     "detail": "The repository has no commits in the last 90 days."
   },
-  "context": "## The arithmetic\n\nEvery penalty line per judged module.\n\n## Ask me about\n\nWhich coupling is worth declaring and which is worth breaking."
+  "context": "## The hot line\n\n21 of 136 modules sit at or above the 75th percentile of window churn, which resolved to 15 commits. Everything below it is excluded whatever its score — a module nobody touches costs nothing to leave alone.\n\n## Every hot module\n\nAll 21, with the problems that fired and the composite score as a tie-break.\n\n## Co-change, in full\n\nAll 7 undeclared pairs with file-level evidence and commit counts.\n\n## Ask me about\n\nWhether `cart` really fails the deletion test, whether `pricing ↔ catalog` is real coupling or shared release cadence, and whether the hot line belongs at p75 for this repo.\n\n## Handoff\n\n`app/lib · cart` — in-process. 9 files re-export a 10-line hook; 34 commits, 28% tested, couples with `checkout` on 14 commits with no import. Move: collapse into one module and test at its interface. Ready for `/improve-codebase-architecture`."
 }

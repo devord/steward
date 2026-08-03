@@ -26,6 +26,19 @@ export interface MatrixSpec {
  * itself on magnitude; marking significance with more of the same fill makes
  * two different claims in one channel, and the reader cannot tell which one a
  * dark cell is making.
+ *
+ * **Columns are numbered, and the number rides on the row label.** A square
+ * matrix has to name both axes or a hot cell is a fact the reader cannot
+ * repeat, and rotated column text is the one layout a headless author cannot
+ * check. An index in the header and the same index beside the row label reads
+ * `4 ↔ 7` off the grid and resolves both ends against the same list.
+ *
+ * **The field tiles.** Cells sit flush at a fixed width, because the whole
+ * reason to draw a matrix rather than list the pairs is that a *cluster* is
+ * visible at a glance — and a cluster needs adjacency. Every empty cell is
+ * drawn too: the grid is the structure the eye reads the cluster against, so
+ * a field of floating dots on the surface colour is not a sparser matrix, it
+ * is no matrix at all.
  */
 export function CouplingMatrix({ spec }: { spec: MatrixSpec }) {
   const peak = Math.max(1, ...spec.cells.map((c) => c.value))
@@ -41,22 +54,44 @@ export function CouplingMatrix({ spec }: { spec: MatrixSpec }) {
   )
 
   return (
-    <div className="flex flex-col gap-2">
-      <table className="w-auto border-collapse font-mono text-xs">
+    <div className="flex flex-col items-start gap-2">
+      {/* `self-start` and a fixed column width, because a table left to stretch
+          in a flex column spreads 16px cells over 58px columns and the field
+          stops reading as one. */}
+      <table className="w-auto table-fixed border-collapse font-mono text-xs">
+        <thead>
+          <tr>
+            <td className="p-px" />
+            {spec.labels.map((colLabel, c) => (
+              <th
+                key={colLabel}
+                scope="col"
+                className="text-ink-faint w-5 p-px text-center font-normal"
+                title={colLabel}
+              >
+                {c + 1}
+                <span className="sr-only"> {colLabel}</span>
+              </th>
+            ))}
+          </tr>
+        </thead>
         <tbody>
           {spec.labels.map((rowLabel, r) => (
             <tr key={rowLabel}>
               <th
                 scope="row"
-                className="text-ink-dim max-w-[18ch] truncate pr-2 text-right font-normal whitespace-nowrap"
+                className="text-ink-dim max-w-[18ch] truncate py-px pr-2 text-right font-normal whitespace-nowrap"
               >
-                {rowLabel}
+                <span className="text-ink-faint">{r + 1}</span> {rowLabel}
               </th>
               {spec.labels.map((colLabel, c) => {
                 if (r === c) {
                   return (
                     <td key={colLabel} className="p-px">
-                      <span className="bg-bg2/40 block size-4 rounded-xs" />
+                      {/* The spine: the module against itself, quiet but drawn,
+                          so the diagonal orients the eye instead of reading as
+                          a column that failed to render. */}
+                      <span className="bg-bg3 block size-5 rounded-xs" />
                     </td>
                   )
                 }
@@ -66,15 +101,21 @@ export function CouplingMatrix({ spec }: { spec: MatrixSpec }) {
                   <td key={colLabel} className="p-px">
                     <span
                       className={cn(
-                        "bg-orange block size-4 rounded-xs",
+                        "block size-5 rounded-xs",
+                        // An empty pair is the grid, not a 6%-opacity accent:
+                        // it has to survive on both themes or the field loses
+                        // the structure the cluster is read against.
+                        v === 0 ? "bg-bg2" : "bg-orange",
                         isMarked && "ring-ink ring-1",
                       )}
                       // Opacity rather than a stepped palette: the ramp stays
                       // one hue by construction, and it re-points with the
                       // theme like everything else.
-                      style={{
-                        opacity: v === 0 ? 0.06 : 0.15 + (v / peak) * 0.85,
-                      }}
+                      style={
+                        v === 0
+                          ? undefined
+                          : { opacity: 0.2 + (v / peak) * 0.8 }
+                      }
                       title={`${rowLabel} ↔ ${colLabel}: ${v}`}
                     >
                       <span className="sr-only">
@@ -93,6 +134,9 @@ export function CouplingMatrix({ spec }: { spec: MatrixSpec }) {
           {spec.marks.map((m, i) => (
             <span key={m.label}>
               {i > 0 ? " · " : ""}
+              <span className="text-ink-faint">
+                {m.a + 1}↔{m.b + 1}
+              </span>{" "}
               {spec.labels[m.a]} ↔ {spec.labels[m.b]}: {m.label}
             </span>
           ))}

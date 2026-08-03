@@ -1438,6 +1438,23 @@ describe("the co-change field", () => {
       "b must be an index into spec.labels",
     )
   })
+
+  it("names both axes, so a hot cell is a fact the reader can repeat", () => {
+    // Shipped for months with row headers only: a reader could see the cluster
+    // and not say which pair any cell was. ADR-0047 specified `scope`-carrying
+    // row *and column* headers; only half of it was built.
+    const html = renderArtifact(doc([{ a: 0, b: 2, value: 9 }]), "")
+    expect(html).toContain('scope="col"')
+    expect(html).toContain('scope="row"')
+  })
+
+  it("draws every cell, including the empty ones", () => {
+    // The grid is the structure the eye reads a cluster against. Empty pairs
+    // left at 6% opacity on the surface colour turned the field into floating
+    // dots — which is not a sparser matrix, it is no matrix at all.
+    const html = renderArtifact(doc([{ a: 0, b: 2, value: 9 }]), "")
+    expect(html).toContain("a ↔ b: 0")
+  })
 })
 
 describe("sparklines", () => {

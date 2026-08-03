@@ -1,13 +1,13 @@
 ---
 name: module-entropy
 description: >-
-  Read where a codebase is decaying — module by module — from git history
-  and the source tree alone, and author a ledger of rot with a co-change
-  matrix. Executed by the run-routine dispatcher (ADR-0021).
+  Find the handful of places a codebase will cost you on your next change —
+  code you touch often that is hard to touch — and name one move for each.
+  Executed by the run-routine dispatcher (ADR-0021).
 widget:
-  artifact: "Which modules are rotting, how fast, and the coupling nobody declared"
+  artifact: "The few places you touch often and that fight back, and the move for each"
   sizes:
-    default: { cols: 4, rows: 3 }
+    default: { cols: 3, rows: 2 }
     min: { cols: 1, rows: 1 }
   # Weekly, Monday morning. Entropy accretes over weeks; a daily rerun
   # republishes a near-identical artifact and trains the reader to stop
@@ -42,40 +42,82 @@ widget:
       hint: >-
         Optional. One greppable rule per line. Only rules the linter CANNOT
         enforce — anything oxlint/eslint already guards scores zero forever
-    - key: weights
-      label: Penalty weights
-      placeholder: test=20, coupling=25, interface=15, churn=15, rules=15, author=10
-      hint: Optional. Overrides the defaults; must sum to 100
+    - key: window
+      label: Window (days)
+      placeholder: "90"
+      hint: How far back commits are read for churn and co-change
     - key: history
       label: History points
       placeholder: "8"
-      hint: How many weekly points the trend recomputes from git
-    - key: window
-      label: Co-change window (days)
-      placeholder: "90"
-      hint: How far back commits are read for churn and co-change
+      hint: >-
+        How many weekly points are recomputed from git, so a hot module can
+        say whether it is heating up
 ---
 
 # Module entropy
 
-The reader is someone who changes this code. They want to know **where it is
-getting harder to work**, and they want the answer to be a place, not a mood.
-_Software entropy_ (Hunt & Thomas) is the premise: a codebase degrades unless
-something pushes back. This widget is the push-back's instrument panel.
+The reader is someone who changes this code. They want to know **where their
+next change is going to cost them**, and they want the answer to be a place and
+a move — not a mood, and not a grade.
 
-This is **not a linter**. A linter reports violations of rules someone already
-wrote down; the interesting rot is the part no rule covers.
+That framing is Fowler's, and it is load-bearing: internal quality is worth
+arguing about **only as economics**. Cruft is not untidiness, it is time added
+to every future change. So the artifact never claims a module is _bad_. It
+claims a module is _expensive_, and it shows the bill.
+
+Two consequences, and they are the whole design:
+
+**Churn decides who is on the list.** This is Feathers' churn-versus-complexity
+quadrant and Tornhill's hotspot analysis, and it is the one filter that makes
+the rest useful: complicated code you never touch costs nothing. A module with
+no commits in the window is **not on the list at any score**. It is not a
+finding that a file nobody has opened since 2023 has no tests.
+
+**The problem is named, never blended.** A module that is hot gets one row, and
+that row says the single worst _specific_ thing about it — `no test seam`,
+`changes with cart, imports nothing`, `one author`. Averaging six greppable
+proxies into a number out of 100 produces a figure with no external referent,
+no spread (real repos cluster every module in the 50s–70s), and no action: the
+reader has to un-blend it before they can do anything, and the arithmetic
+throws away exactly the part they needed.
+
+**This is not a linter**, and it is not a coverage report. A linter reports
+violations of rules someone already wrote down; the interesting rot is the part
+no rule covers.
 
 ## Compose
 
 1. **`/repo-modules`** over the `params.repos` checkout, passing `roots`,
-   `exclude`, `rules`, `weights`, `history` and `window` straight through. It
-   returns the scored census, the co-change pairs, the availability of each
-   signal, and the weekly trend.
-2. **`/codebase-design`** for the vocabulary, then **judge the top 5 by score ×
-   churn** — scoring is cheap, reading code is not. Per judged module, read
-   enough to say one true thing and apply the **deletion test**: if it
-   vanished, would complexity vanish with it (a pass-through) or reappear
+   `exclude`, `rules`, `window` and `history` straight through. It returns the
+   module census with each signal **separately** — churn, tested share, exports
+   per file, hidden-coupling pairs, author counts, rule breaches — plus the
+   co-change pairs, the weekly points recomputed from git, and which signals
+   were available at all.
+
+   Take the signals. **Ignore its composite `score` for ranking and never print
+   it**; it exists as a tie-break and for the context block. Rank on churn.
+
+2. **Cut to the hotspots.** A module is a hotspot when it is at or above the
+   repo's **75th percentile of commits** in the window **and** carries at least
+   one of these, which is the entire finding vocabulary:
+
+   | problem               | fires on                                           |
+   | --------------------- | -------------------------------------------------- |
+   | `rule breach`         | a stated rule matched in its files                 |
+   | `undeclared coupling` | ≥1 pair it co-changes with and does not import     |
+   | `no test seam`        | under half its files are tests                     |
+   | `one author`          | a single author owns the window's commits          |
+   | `wide interface`      | exports per file ≥2× the repo median — a **proxy** |
+
+   That order is also the severity order, and it is stated so the choice is
+   deterministic: a row shows its **worst** problem, and the rest go in the
+   detail line. A breach is a contract someone wrote down and broke;
+   `wide interface` is a grep's guess at interface width and ranks last.
+
+3. **`/codebase-design`** for the vocabulary, then **judge at most 5** — the
+   hotspots, in churn order. Scoring is cheap; reading code is not. Per judged
+   module, read enough to say one true thing and apply the **deletion test**:
+   if it vanished, would complexity vanish with it (a pass-through) or reappear
    across N callers (it was earning its keep)? "Concentrates" is not a finding;
    "vanishes" is. Then **name the move in one clause** and stop:
 
@@ -107,67 +149,98 @@ what _complex_ means: hard to understand and modify, never merely long.
 Write `data.json` per `$STEWARD/.claude/skills/widget-artifact/kit/CONTRACT.md`
 and render it with the kit.
 
-**Bottom line first, and it names a place**: "Cart is where the entropy is — 34
-commits across 9 files with no test seam, and it co-changes with checkout
-without importing it." Not "several modules show signs of decay." **Bad news
-leads**: a module that crossed into the top band this week is the bottom line
-even if everything else improved.
+**The cap is the feature.** Five hotspots and three pairs, and no more, because
+a list where everything is urgent is a list where nothing is. The previous
+version of this widget shipped twelve ledger rows, fifteen root rows and a
+sixty-four-cell matrix, and a reader could not have told you what to do on
+Monday. Everything held back is counted on a `count` and detailed in context.
 
-- **`stat`** — the worst module's score with its direction (`84 ↗`), `label`
-  naming the module and what it is doing (`cart · worsening`).
-- **`bottomLine`** — the sentence above, in full. A bare index says the house is
-  on fire without naming the room.
-- **A `queue` block, "Rot ledger"** — a stated top N by score (12 is a good N),
-  `count` saying so (`top 12 of 136 by score`). `title` the module, `detail` its
-  signal breakdown, `values` the score as a **`meter`** and the direction as a
-  **`spark`**. Judged rows add their move to the detail. **Tone the score only
-  above the hot line** — scores cluster in the 50s–80s, so bar length barely
-  separates two rows and the accent is what makes "where does the hot list end"
-  readable.
-- **A `matrix` block, "Co-change"** — capped at exactly the top 8 modules by
-  score, ties on churn then id, with the held-back count on `count`. Name the
-  pairs worth naming in `marks`: an undeclared coupling is the one genuinely bad
-  state here and belongs in words as well as a cell.
-- **A `rail: true` `queue` block, "Where else"** — every root as one index row:
-  its module and commit counts as `detail`, its worst module's score as a
-  `meter`. Keep them to one line; at two, a root costs as much as the ledger row
-  it points at.
-- **One handoff line**, not one per row — the top module by score × churn, its
-  dependency category, and where it goes:
+- **`stat`** — **the concentration**, which is the economic claim in one
+  figure: commits landing in hotspots as a share of all commits landing in
+  censused modules (`62%`), `label` saying what it is a share of
+  (`of commits land in hotspots`). This number has an external referent a
+  reader can check, it cannot be moved by adding modules, and it goes down for
+  exactly one reason: the hot code got easier to change.
+
+  Zero hotspots is `0%` and `good`. That is a real result, not an empty state.
+
+- **`bottomLine`** — the top hotspot, its problem, and its move, in that order
+  and in one sentence. This is the artifact's reader: someone accountable for
+  code they did not spend the week in, who needs the conclusion before the
+  evidence. It belongs here rather than on `stat.note`, which is 12px `ink-dim`
+  specified for held-back tallies and is shed early by the fit pass — a verdict
+  that trims away is worse than one never written.
+
+- **One `queue` block with two `groups`** — one table, so both share a set of
+  column widths and the reader never re-anchors:
+
+  - **"Hot and hard to change"** — the hotspots, churn order, at most 5.
+    `state` is the **worst problem's name**, and it is the chip's whole job:
+    the reader scans a column of specific nouns instead of twelve repetitions
+    of `worsening`. `title` the module, `detail` its other problems and the
+    move, `values` its window commits as a **`meter`** with a `delta`.
+  - **"Changes together, imports nothing"** — at most 3 undeclared pairs,
+    `title` as `a ↔ b`, `detail` naming the **actual shared contract** where
+    the judging found it (a CSS custom property, a hand-rolled mock, a magic
+    string), `values` the shared commits on the same meter scale.
+
+  Commits are the meter everywhere, so one scale is honest across both groups.
+  **Never meter the score** — scores cluster in fifteen points and every bar
+  comes out the same length, which is how the last version managed to draw
+  twelve bars that ranked nothing.
+
+- **No per-row direction chip.** Movement rides as a `delta` on the commits
+  value where it is real. A `worsening` chip on eight of twelve rows is a
+  chip that has stopped carrying information.
+
+- **The `matrix` block, "Co-change"** — page tier only, which is the kit's
+  default for it. Top 8 **by co-change strength**, not by score: the field
+  exists to show a cluster, so it must be populated by the pairs that actually
+  cluster. Held-back count on `count`. Every pair it rings is **also stated in
+  words** in the group above or in `marks` — a cell is a prompt to look, never
+  the only place a finding lives.
+
+- **No rail.** A row per root, metering each root's worst module, is a
+  directory listing with a bar on it; it told the reader that `routes` has 21
+  modules and nothing they could act on. Root totals live in context.
+
+- **One handoff line** — the top hotspot, its dependency category, where it
+  goes:
 
   > → hand `app/lib · cart` to `/improve-codebase-architecture`
 
-  With no churn, rank on score alone and say which ranking ran. With no module
-  to name, the line is the empty state's own next action.
+- **`provenance`** — one line, and only what changes how the number should be
+  read: window, modules censused, and **any signal that was unavailable**. A
+  concentration computed without the import overlay is a different claim from
+  one computed with it. Weights, sweep counts, dropped roots and pair floors go
+  to context; they are audit trail, not reading.
 
-- **`provenance`** — everything the reading reported: resolved roots, roots
-  dropped and why, module and file counts, signals unavailable, weights,
-  history points, sweeps ignored, pairs below the floor — and the proxy caveat.
-  A score of 62 built from three signals and one built from six are different
-  claims.
-- **`empty`** — no repo configured → a state naming the setting. A repo with no
-  history in the window is **not** empty; the bottom line says exactly that.
+- **`empty`** — no repo configured → a state naming the setting. A repo with
+  commits but no hotspots is **not** empty; that is the `0%` good state above.
 
 **No faces, and no names in the render.** Rot accretes across everyone who ever
-touched a module; a face beside a score reads as blame. Bus factor rides as a
-number — `1 author · 34 commits`. Names appear only in the context block.
+touched a module; a face beside a finding reads as blame. Bus factor rides as a
+problem name and a number — `one author · 34 commits`. Names appear only in the
+context block.
 
-Viewer-neutral (ADR-0039): this is about the code, not the reader. The score
-arithmetic is page-only.
+Viewer-neutral (ADR-0039): this is about the code, not the reader.
 
 ## The context block
 
-Every module with its penalty arithmetic; the full co-change table with each
-pair's percentage and whether an import exists; every hidden coupling as file
-pairs with commit counts, so the claim can be checked; the rules checked and
-which breached; bus factor **by name**; the resolved roots, weights, history
-points and window; and everything the tile capped.
+Everything the tile capped, and everything a reader would need to argue with
+it: every module that cleared the churn gate with its problems and its
+composite score; the churn percentile the gate resolved to, in commits; the
+full co-change table with each pair's percentage and whether an import exists;
+every undeclared coupling as file pairs with commit counts, so the claim can be
+checked; the rules checked and which breached; bus factor **by name**; the
+resolved roots with their module and commit totals; and the signals that were
+unavailable and what that removes from the concentration figure.
 
 Close with `## Ask me about` — whether a judged module really fails the deletion
-test, whether a hot pair is real coupling or shared release cadence, and what
-weight a signal deserves.
+test, whether a hot pair is real coupling or shared release cadence, and whether
+the churn gate is set where this repo wants it.
 
-Then a `## Handoff` section naming the top module as a ready-to-run brief for
+Then a `## Handoff` section naming the top hotspot as a ready-to-run brief for
 `/improve-codebase-architecture`: its id, dependency category, evidence, and the
 move this run named. The weekly diagnosis and the interactive design session are
 two halves of one loop; this is the seam between them.

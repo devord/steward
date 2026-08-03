@@ -230,7 +230,12 @@ export function QueueTable({
   }
   return (
     <table
-      className="w-auto border-collapse font-mono text-sm tabular-nums"
+      // `self-start` is what makes `w-auto` mean anything: the band lays its
+      // children out in a flex column, which stretches them, and a stretched
+      // auto table hands the slack to whichever column the algorithm likes —
+      // stranding the meter against the far edge with the prose it qualifies
+      // half a screen away.
+      className="w-auto self-start border-collapse font-mono text-sm tabular-nums"
       data-fit-list
       {...(trimFirst ? { "data-fit-first": "" } : {})}
       // Inert until the board injects a viewer. A raw-opened file carries the
@@ -244,14 +249,14 @@ export function QueueTable({
         <thead className="hidden tier-page:table-header-group">
           <tr className="text-ink-dim text-xs">
             {hasLead ? (
-              <th className="pr-3 pb-1 text-left font-normal" />
+              <th className="w-0 pr-3 pb-1 text-left font-normal" />
             ) : null}
             <th className="pr-3 pb-1 text-left font-normal">item</th>
             {columns.map((c) => (
               <th
                 key={c.label}
                 className={cn(
-                  "pr-3 pb-1 font-normal whitespace-nowrap",
+                  "w-0 pr-3 pb-1 font-normal whitespace-nowrap",
                   c.numeric ? "text-right" : "text-left",
                   COLUMN_TIER[c.from ?? "always"],
                 )}
@@ -351,7 +356,11 @@ function RowPair({
     >
       <tr>
         {hasLead ? (
-          <td className="py-1 pr-2 align-baseline">
+          // `w-0` is what makes "sizes to its content" true. Left to itself an
+          // auto table hands leftover width to every column in proportion, so
+          // a chip column took 299px of a 1160px table and the prose column
+          // came out narrower than both of its neighbours.
+          <td className="w-0 py-1 pr-2 align-baseline whitespace-nowrap">
             {row.face ? (
               <Avatar face={row.face} />
             ) : lead ? (
@@ -387,7 +396,7 @@ function RowPair({
             <td
               key={col.label}
               className={cn(
-                "py-1 pr-3 align-baseline whitespace-nowrap",
+                "w-0 py-1 pr-3 align-baseline whitespace-nowrap",
                 col.numeric ? "text-right" : "text-left",
                 // On a meter the tone paints the bar, so the count stays ink:
                 // tinting both spends one signal twice and makes a long orange
