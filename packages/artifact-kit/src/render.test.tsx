@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 
 import { escapeContextBlock, footerTimestamp } from "./Shell.tsx"
-import { type ArtifactDoc, renderArtifact } from "./render.tsx"
+import { type ArtifactDoc, type Block, renderArtifact } from "./render.tsx"
+import type { QueueRow } from "./components/QueueTable.tsx"
 import type { SeriesSpec } from "./components/Series.tsx"
 import type { Verdict } from "./components/VerdictBand.tsx"
 import { validateDoc } from "./validate-doc.ts"
@@ -116,11 +117,126 @@ describe("QueueTable columns", () => {
     const out = renderArtifact(doc, "")
     const bodies = [...out.matchAll(/<tbody[^>]*>([\s\S]*?)<\/tbody>/g)]
     expect(bodies).toHaveLength(2)
-    // Same physical cell count in both rows: state + title + 2 values + action.
+    // Same physical cell count in both rows: title + 2 values + action.
     const cells = (b: string) => (b.match(/<td/g) ?? []).length
     expect(cells(bodies[0][1])).toBe(cells(bodies[1][1]))
     // The row missing "one" still occupies that column, empty.
     expect(bodies[1][1]).toContain("B")
+  })
+})
+
+describe("the leading key column", () => {
+  const queue = (rows: QueueRow[], label: string): Block => ({
+    kind: "queue",
+    label,
+    rows,
+  })
+  const doc = (blocks: Block[]): ArtifactDoc => ({
+    slug: "s",
+    generatedAt: "2026-07-30T09:00:00Z",
+    stat: { value: 1, label: "x" },
+    blocks,
+  })
+  /** Cells ahead of the title's own — what sets where a title starts. */
+  const indent = (html: string, title: string) => {
+    const body = [...html.matchAll(/<tbody[^>]*>([\s\S]*?)<\/tbody>/g)]
+      .map((m) => m[1])
+      .find((b) => b.includes(title))
+    return (body?.slice(0, body.indexOf(title)).match(/<td/g) ?? []).length - 1
+  }
+
+  it("reserves no cell when no row has a face or a chip", () => {
+    // Each queue block is its own table, so a cell reserved for nothing is not
+    // a harmless empty cell — it is an indent one ledger pays and the next one
+    // does not, and the two titles land at different x down the same artifact.
+    const out = renderArtifact(
+      doc([
+        queue([{ id: "v", title: "CORZA-EYE-Q" }], "Violations"),
+        queue([{ id: "p", title: "fix(csp): allowlist GTM" }], "Recent PRs"),
+      ]),
+      "",
+    )
+    expect(indent(out, "CORZA-EYE-Q")).toBe(0)
+    expect(indent(out, "fix(csp)")).toBe(0)
+  })
+
+  it("keeps the cell on every row once one row fills it", () => {
+    // Alignment within a table is the other half: a chip-less row still holds
+    // the column open, or its title slides left under the chips above it.
+    const out = renderArtifact(
+      doc([
+        queue(
+          [
+            {
+              id: "a",
+              title: "chipped",
+              state: { label: "open", tone: "attn" },
+            },
+            { id: "b", title: "bare" },
+          ],
+          "Mixed",
+        ),
+      ]),
+      "",
+    )
+    expect(indent(out, "chipped")).toBe(1)
+    expect(indent(out, "bare")).toBe(1)
+  })
+
+  it("prints no chip for a state carrying no word", () => {
+    // A published CSP artifact rendered `state` with no label as a bordered
+    // 14px void beside every PR — read as a broken image, and it pushed the
+    // title off the margin the section above it started from.
+    const out = renderArtifact(
+      doc([
+        queue(
+          [{ id: "a", title: "bare", state: { label: "", tone: "neutral" } }],
+          "PRs",
+        ),
+      ]),
+      "",
+    )
+    expect(out).not.toContain("rounded-sm border")
+    expect(indent(out, "bare")).toBe(0)
+  })
+
+  it("names a chip with no word as a field, not as a silent void", () => {
+    const errs = validateDoc(
+      doc([
+        queue(
+          [{ id: "a", title: "a", state: { label: "", tone: "neutral" } }],
+          "PRs",
+        ),
+      ]),
+    )
+    expect(errs.join(" ")).toContain(
+      "blocks[0].rows[0].state.label must be a non-empty string",
+    )
+  })
+
+  it("spans a detail line across the columns the row actually has", () => {
+    const out = renderArtifact(
+      doc([
+        queue(
+          [
+            {
+              id: "a",
+              title: "bare",
+              detail: "2026-07-31",
+              values: [{ label: "one", value: "1" }],
+            },
+          ],
+          "PRs",
+        ),
+      ]),
+      "",
+    )
+    // title + one value, with no lead cell ahead of it to leave room for.
+    expect(out).toContain('colSpan="2"')
+    // The detail line starts where the title does: one cell, spanning the rest.
+    const detail =
+      /<tr class="hidden tier-detail:table-row">([\s\S]*?)<\/tr>/.exec(out)?.[1]
+    expect((detail?.match(/<td/g) ?? []).length).toBe(1)
   })
 })
 

@@ -208,8 +208,17 @@ export function QueueTable({
     }
   }
   const hasAction = allRows.some((r) => r.action)
+  // The leading key column exists only if something actually lands in it. An
+  // always-reserved cell is an indent nothing occupies, and since each queue
+  // block is its own table, that indent is exactly what makes two lead-less
+  // ledgers on one artifact start their titles at different x — the
+  // re-anchoring the group mechanism above exists to prevent.
+  const hasLead = allRows.some(
+    (r) => r.face !== undefined || leadLabel(r) !== undefined,
+  )
+  const leadCount = hasLead ? 1 : 0
   // Fixed for every row, so a detail line always spans the full table.
-  const columnCount = columns.length + 2 + (hasAction ? 1 : 0)
+  const columnCount = columns.length + 1 + leadCount + (hasAction ? 1 : 0)
   // One scale per meter column, taken over the whole table. Scaling each bar
   // to its own row would render every bar full and compare nothing.
   const meterMax = new Map<string, number>()
@@ -234,7 +243,9 @@ export function QueueTable({
       {showHeader && columns.length > 0 ? (
         <thead className="hidden tier-page:table-header-group">
           <tr className="text-ink-dim text-xs">
-            <th className="pr-3 pb-1 text-left font-normal" />
+            {hasLead ? (
+              <th className="pr-3 pb-1 text-left font-normal" />
+            ) : null}
             <th className="pr-3 pb-1 text-left font-normal">item</th>
             {columns.map((c) => (
               <th
@@ -285,6 +296,7 @@ export function QueueTable({
               row={r}
               columns={columns}
               hasAction={hasAction}
+              hasLead={hasLead}
               columnCount={columnCount}
               meterMax={meterMax}
             />
@@ -295,10 +307,24 @@ export function QueueTable({
   )
 }
 
+/**
+ * The row's chip text, or undefined when there is none to print.
+ *
+ * A chip is a word with a border around it; a `state` carrying no word is a
+ * bordered 14px void that reads as a broken image and still pushes the title
+ * off the margin. `validateDoc` rejects that emit at the field, which is where
+ * a routine can act on it — this is the belt to that pair of braces, for the
+ * exported component and for a caller typed loosely enough to get past it.
+ */
+function leadLabel(row: QueueRow): string | undefined {
+  return row.state?.label?.trim() || undefined
+}
+
 function RowPair({
   row,
   columns,
   hasAction,
+  hasLead,
   columnCount,
   meterMax,
 }: {
@@ -306,10 +332,13 @@ function RowPair({
   /** The table's column set, so every row lines up with the header. */
   columns: QueueValue[]
   hasAction: boolean
+  /** Whether the table reserves a leading key column at all. */
+  hasLead: boolean
   columnCount: number
   /** Column label → the table-wide magnitude every bar in it scales against. */
   meterMax: Map<string, number>
 }) {
+  const lead = leadLabel(row)
   return (
     <tbody
       data-fit-item
@@ -321,13 +350,15 @@ function RowPair({
       )}
     >
       <tr>
-        <td className="py-1 pr-2 align-baseline">
-          {row.face ? (
-            <Avatar face={row.face} />
-          ) : row.state ? (
-            <Badge tone={row.state.tone}>{row.state.label}</Badge>
-          ) : null}
-        </td>
+        {hasLead ? (
+          <td className="py-1 pr-2 align-baseline">
+            {row.face ? (
+              <Avatar face={row.face} />
+            ) : lead ? (
+              <Badge tone={row.state?.tone}>{lead}</Badge>
+            ) : null}
+          </td>
+        ) : null}
         {/* The one flexible column. Capped at a 52ch measure so it stops
             growing before the line becomes unreadable; everything else sizes
             to its content. */}
@@ -409,9 +440,9 @@ function RowPair({
         <tr className="hidden tier-detail:table-row">
           {/* colspan is what the subgrid version needed a spanning grid item
               for — the thing that broke its track sizing. */}
-          <td />
+          {hasLead ? <td /> : null}
           <td
-            colSpan={columnCount - 1}
+            colSpan={columnCount - (hasLead ? 1 : 0)}
             className="text-ink-dim max-w-[52ch] pb-2 font-sans text-sm"
           >
             {row.detail}

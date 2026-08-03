@@ -390,7 +390,15 @@ export function validateDoc(doc: unknown): string[] {
           if (!isObj(r)) return void errors.push(`${rat} must be an object`)
           str(r.id, `${rat}.id`)
           str(r.title, `${rat}.title`)
-          if (isObj(r.state)) tone(r.state.tone, `${rat}.state.tone`)
+          if (isObj(r.state)) {
+            // A chip is a word with a border round it. Without the word it is
+            // a bordered void that reads as a broken image and still indents
+            // the title off the margin — so a state with nothing to say is an
+            // omitted `state`, not an empty one, and the routine is the only
+            // place that can decide which.
+            str(r.state.label, `${rat}.state.label`)
+            tone(r.state.tone, `${rat}.state.tone`)
+          }
           if (r.face !== undefined) {
             if (!isObj(r.face)) errors.push(`${rat}.face must be an object`)
             else {
