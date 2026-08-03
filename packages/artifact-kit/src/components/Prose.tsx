@@ -57,7 +57,7 @@ export function Prose({ items }: { items: ProseItem[] }) {
           {item.body.split(/\n\s*\n/).map((para, i) => (
             <p
               key={i}
-              className="text-ink-dim m-0 max-w-[52ch] font-sans text-sm"
+              className="text-ink-dim m-0 max-w-[52ch] text-pretty font-sans text-sm"
             >
               {para}
             </p>

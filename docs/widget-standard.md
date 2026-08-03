@@ -56,21 +56,41 @@ An artifact MUST:
      nearly the whole viewport, so the reader sees every row of data. Author
      for it: the widest tier must read like a page, not a stretched cell.
 
-     **Width: content shrinks to fit, and the surplus lands as one trailing
-     right gutter.** No cap, no centring, and no stretching columns to the
-     edge either. This resolves a contradiction that was live in two
-     documents at once — this section used to say the artifact "fills the
-     full width it is given… the content is never capped", while the
-     `widget-artifact` skill said to "cap the content column (~72ch/900px,
-     centered)". Both readings are wrong in the same way: they treat leftover
-     width as something to be spent. Stretching a ledger opens a hole in the
-     middle of every row between the label and its trailing values; capping
-     and centring puts two margins where one gutter reads better and throws
-     away the width a genuine multi-column table wants. A shrink-to-fit
-     `<table>` does the right thing for free, which is what the kit renders
-     (`Shell.tsx` carries no `max-width` and no `margin-inline: auto`). The
-     one measure that _is_ capped is long-form prose, on the text block
-     itself — a paragraph has a readable line length whatever the frame does.
+     **Width: a ledger fills the frame, with exactly one flexible column.**
+     No cap and no centring on the document (`Shell.tsx` carries no
+     `max-width` and no `margin-inline: auto`), and inside a `<table>` the
+     title column takes `w-full` while every other cell is
+     `w-0 whitespace-nowrap`, so the surplus has one home and the trailing
+     values anchor to the right edge. The one measure that _is_ capped is
+     long-form prose, and the cap goes **on the text block, never on a
+     cell** — a paragraph has a readable line length whatever the frame
+     does, but a `max-width` on a `<td>` sizes the table too. Column gutters
+     ride the **leading** edge of each value column (`pl-3`) rather than the
+     trailing edge of its neighbour, so the last column ends flush and the
+     ledger, the section rule above it and the provenance line below it
+     share one right edge.
+
+     Two earlier readings were wrong, in opposite directions. The first said
+     to "cap the content column (~72ch/900px, centered)", which puts two
+     margins where one edge reads better and throws away the width a genuine
+     multi-column table wants. The second replaced it with shrink-to-fit —
+     surplus as one trailing right gutter — arguing that stretching "opens a
+     hole in the middle of every row between the label and its trailing
+     values". That hole is real and is still the price; what the argument
+     missed is what shrink-to-fit cost instead. It never actually shrank to
+     the content: the flexible column carried a 52ch reading measure, so the
+     table stopped at roughly 620px whatever frame it was given — a dead
+     band over a quarter of an 880px tile and nearly half the full view —
+     and a title longer than the measure wrapped to a second line _while
+     that band sat empty beside it_, a wrap and a gutter at once, the extra
+     line spending height budget on a tile that clips (ADR-0019). It
+     misaligned the ledger against its own artifact: every band draws a
+     full-width rule (`Section`) and the provenance foot justifies across
+     the frame, so a ledger ending at 55% under a rule running to 100% reads
+     as a fault rather than as a margin. And it moved columns between runs,
+     since shrink-to-fit sizes the title column to whichever title happens
+     to be longest _this_ run — these artifacts regenerate on a schedule,
+     and a layout that reflows on refresh is the opposite of glanceable.
 
      Spend the extra height on the fullest detail level (all line items, full
      history, the large sparkline) rather than scaling one number up. There is

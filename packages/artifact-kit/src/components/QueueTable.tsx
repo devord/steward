@@ -177,9 +177,40 @@ export interface QueueRow {
  * element entirely, and value columns size to content without `ch` arithmetic
  * against a font they do not use.
  *
- * `width: auto` is load-bearing. It makes surplus width land as one trailing
- * gutter instead of stretching the tracks apart, which is the mid-row hole a
- * `1fr` title column produces at the page tier.
+ * The table fills its frame, and **exactly one column is flexible** — the
+ * title. Every other cell is `w-0 whitespace-nowrap`, so the slack has nowhere
+ * else to go and the trailing values anchor to the right edge. This is the
+ * ledger discipline the app's own chrome already runs on (DESIGN.md, § ledger
+ * rows), applied to the artifact side.
+ *
+ * It replaces a shrink-to-fit table (`w-auto self-start`) whose flexible column
+ * was additionally capped at a 52ch reading measure. That combination had the
+ * table stop at `lead + 52ch + values` — about 620px — whatever frame it was
+ * given, so every tier from a two-column tile up ended with a dead trailing
+ * band, 26% of an 880px tile and 44% of the full view. Three things made that
+ * the wrong trade rather than the restrained one:
+ *
+ *   1. The cap is a *prose* measure (52ch resolves to ~73 rendered characters
+ *      at 14px) and a ledger title is scanned, not read line after line. A
+ *      title longer than that wrapped to a second line while 200-400px sat
+ *      empty beside it — a wrap *and* a gutter, which is the one combination
+ *      shrink-to-fit was supposed to avoid. On a tile that clips (ADR-0019)
+ *      that second line is also a row of the height budget spent on nothing.
+ *   2. Every band around the ledger already marks the frame's right edge —
+ *      `Section`'s `flex-1` rule, the provenance line's justified foot. A
+ *      ledger stopping at 55% under a rule that runs to 100% reads as
+ *      misalignment, not as a margin.
+ *   3. Column positions moved between runs. Shrink-to-fit sizes the title
+ *      column to whichever title happens to be longest *this* run, so the age
+ *      column a reader compares down the page sat at a different x every time
+ *      the routine republished. These artifacts regenerate on a schedule; a
+ *      layout that reflows on refresh is the opposite of glanceable.
+ *
+ * What the old comment feared — "the mid-row hole a `1fr` title column
+ * produces" — is real and is the price: a short title now has whitespace
+ * between it and its values. That is what a table is, the two columns it sits
+ * between are both aligned, and it costs less than the same hole plus a
+ * misaligned right edge. See widget-standard §2.
  */
 export function QueueTable({
   rows,
@@ -245,12 +276,11 @@ export function QueueTable({
   }
   return (
     <table
-      // `self-start` is what makes `w-auto` mean anything: the band lays its
-      // children out in a flex column, which stretches them, and a stretched
-      // auto table hands the slack to whichever column the algorithm likes —
-      // stranding the meter against the far edge with the prose it qualifies
-      // half a screen away.
-      className="w-auto self-start border-collapse font-mono text-sm tabular-nums"
+      // `w-full` only names where the slack goes once the title column claims
+      // it. Without that one `w-full` cell below, an auto table hands the
+      // surplus to whichever column the algorithm likes — stranding a meter
+      // against the far edge with the prose it qualifies half a screen away.
+      className="w-full border-collapse font-mono text-sm tabular-nums"
       data-fit-list
       {...(trimFirst ? { "data-fit-first": "" } : {})}
       // Inert until the board injects a viewer. A raw-opened file carries the
@@ -266,12 +296,15 @@ export function QueueTable({
             {hasLead ? (
               <th className="w-0 pr-3 pb-1 text-left font-normal" />
             ) : null}
-            <th className="pr-3 pb-1 text-left font-normal">item</th>
+            {/* Matches the body cell: the header has to claim the slack too,
+                or the column widths a `<thead>` participates in settle on the
+                header's own content and the two rows disagree. */}
+            <th className="w-full pb-1 text-left font-normal">item</th>
             {columns.map((c) => (
               <th
                 key={c.label}
                 className={cn(
-                  "w-0 pr-3 pb-1 font-normal whitespace-nowrap",
+                  "w-0 pb-1 pl-3 font-normal whitespace-nowrap",
                   c.numeric ? "text-right" : "text-left",
                   COLUMN_TIER[c.from ?? "always"],
                 )}
@@ -280,7 +313,7 @@ export function QueueTable({
               </th>
             ))}
             {hasAction ? (
-              <th className="hidden pb-1 tier-detail:table-cell" />
+              <th className="hidden pb-1 pl-3 tier-detail:table-cell" />
             ) : null}
           </tr>
         </thead>
@@ -383,10 +416,18 @@ function RowPair({
             ) : null}
           </td>
         ) : null}
-        {/* The one flexible column. Capped at a 52ch measure so it stops
-            growing before the line becomes unreadable; everything else sizes
-            to its content. */}
-        <td className="text-ink max-w-[52ch] py-1 pr-3 align-baseline font-sans text-sm">
+        {/* The one flexible column, and the only cell that carries a width:
+            `w-0` everywhere else is what makes "all the slack lands here"
+            true. It carries no measure cap. A title is scanned once, not read
+            line after line, so its ceiling is the frame — capping it at a
+            reading measure is what used to wrap a long title in half while the
+            width it wanted sat empty to its right. */}
+        {/* The column gutter is carried on the *leading* edge of each value
+            cell, not the trailing edge of its neighbour, so the table's last
+            column ends flush with the frame. As trailing padding it left the
+            ledger 12px short of the section rule above it and the provenance
+            line below it — three right edges that should be one. */}
+        <td className="text-ink w-full py-1 align-baseline font-sans text-sm">
           {row.href ? (
             // In-frame navigation is sandbox-blocked (ADR-0028), so a bare
             // href goes nowhere — every link is a real new tab or it is dead.
@@ -411,7 +452,7 @@ function RowPair({
             <td
               key={col.label}
               className={cn(
-                "w-0 py-1 pr-3 align-baseline whitespace-nowrap",
+                "w-0 py-1 pl-3 align-baseline whitespace-nowrap",
                 col.numeric ? "text-right" : "text-left",
                 // On a meter the tone paints the bar, so the count stays ink:
                 // tinting both spends one signal twice and makes a long orange
@@ -465,7 +506,7 @@ function RowPair({
           )
         })}
         {hasAction ? (
-          <td className="hidden py-1 text-right align-baseline tier-detail:table-cell">
+          <td className="hidden py-1 pl-3 text-right align-baseline tier-detail:table-cell">
             {row.action ? <CopyAction {...row.action} /> : null}
           </td>
         ) : null}
@@ -477,9 +518,16 @@ function RowPair({
           {hasLead ? <td /> : null}
           <td
             colSpan={columnCount - (hasLead ? 1 : 0)}
-            className="text-ink-dim max-w-[52ch] pb-2 font-sans text-sm"
+            className="text-ink-dim pb-2 font-sans text-sm"
           >
-            {row.detail}
+            {/* The measure lives on the text, never on the cell. This is the
+                one line in the ledger that is genuinely read rather than
+                scanned, so it keeps the 52ch cap — but as `max-width` on a
+                `<td>` that cap was also sizing the table, which is how a
+                widget with short rows and long why-lines ended up exactly as
+                wide as a paragraph. A detail line is a consequence of the
+                row's width, never a driver of it. */}
+            <span className="block max-w-[52ch] text-pretty">{row.detail}</span>
           </td>
         </tr>
       ) : null}

@@ -79,8 +79,10 @@ still reasons about these is describing a document the kit does not produce:
 
 - **The shell** — top-alignment, the glance tier's centred KPI, the footer,
   page padding, the scroll spacer.
-- **Width at the full view** — content shrinks to fit and surplus lands as one
-  trailing right gutter. There is no cap and no centring (`Shell.tsx`).
+- **Width at the full view** — a ledger fills the frame, with the title column
+  flexible and every other cell sized to its content, so the trailing values
+  anchor to the right edge. There is no cap and no centring (`Shell.tsx`); the
+  one capped measure is long-form prose, and it sits on the text block.
 - **Type and spacing** — the 14px body, the 12px label floor, the section
   rhythm. `ink-faint` is a glyph role, never text.
 - **The fit pass, the theme, the mono face, link targeting** — all injected by

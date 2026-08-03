@@ -19,7 +19,9 @@ export function EmptyState({
     <div className="flex flex-col items-center gap-1 py-4 text-center">
       <p className="text-ink m-0 text-sm">{headline}</p>
       {detail ? (
-        <p className="text-ink-dim m-0 max-w-[48ch] text-sm">{detail}</p>
+        <p className="text-ink-dim m-0 max-w-[48ch] text-pretty text-sm">
+          {detail}
+        </p>
       ) : null}
     </div>
   )

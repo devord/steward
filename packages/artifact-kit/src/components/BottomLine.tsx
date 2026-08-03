@@ -46,7 +46,12 @@ export function BottomLineBand({ line }: { line: BottomLine }) {
       {/* Capped at 72ch. Read across a 2560px frame this is not a sentence, it
           is a line of a table — a wide page spends its width on a second
           column instead. */}
-      <p className="text-ink tile:line-clamp-3 m-0 max-w-[72ch] font-sans text-base">
+      {/* `text-pretty` across every prose surface in the kit — the conclusion,
+          the dives, a ledger's why-line, an empty state. A measure that stops
+          at a readable ceiling strands a one-word last line often enough to be
+          the normal case, and an orphan under a full-width band reads as a
+          layout fault rather than as a sentence ending. */}
+      <p className="text-ink tile:line-clamp-3 m-0 max-w-[72ch] text-pretty font-sans text-base">
         {line.text}
         {line.refs?.length ? (
           <>

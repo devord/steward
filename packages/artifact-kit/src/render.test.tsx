@@ -126,6 +126,73 @@ describe("QueueTable columns", () => {
   })
 })
 
+describe("the ledger's width", () => {
+  const out = renderArtifact(
+    {
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [
+        {
+          kind: "queue",
+          label: "PRs",
+          rows: [
+            {
+              id: "a",
+              title:
+                "Activate Shopify Payments on the prod store — Test Mode / test orders can't run until it's set up",
+              detail: "Jeff / Ash · Corza",
+              values: [{ label: "age", value: "7d", numeric: true }],
+            },
+          ],
+        },
+      ],
+    },
+    "",
+  )
+  const row =
+    /<tbody data-fit-item[^>]*>([\s\S]*?)<\/tbody>/.exec(out)?.[1] ?? ""
+
+  it("fills the frame instead of stopping at a measure", () => {
+    // A shrink-to-fit table capped at 52ch stopped at ~620px whatever frame it
+    // was given: a dead trailing band over a quarter of an 880px tile and
+    // nearly half the full view, under section rules that ran edge to edge.
+    expect(out).toContain(
+      '<table class="w-full border-collapse font-mono text-sm tabular-nums"',
+    )
+    expect(out).not.toContain("self-start")
+  })
+
+  it("leaves exactly one column flexible, so the slack has one home", () => {
+    // `w-full` on more than one cell splits the surplus between them and the
+    // trailing values stop anchoring; `w-full` on none hands it to whichever
+    // column the auto algorithm likes.
+    expect((row.match(/<td class="[^"]*\bw-full\b/g) ?? []).length).toBe(1)
+    expect(row).toContain('<td class="text-ink w-full')
+  })
+
+  it("caps no measure on the title, which is scanned rather than read", () => {
+    // The wrap this used to force cost a line of the height budget on a tile
+    // that clips, and it happened while the width the title wanted sat empty
+    // to its right.
+    expect(/<td class="text-ink w-full[^"]*"/.exec(row)?.[0]).not.toContain(
+      "max-w-",
+    )
+  })
+
+  it("puts the detail line's measure on the text, not on the cell", () => {
+    // As `max-width` on a `<td>` the 52ch measure also sized the table, so a
+    // widget with short rows and long why-lines came out exactly as wide as a
+    // paragraph. A detail line is a consequence of the row's width.
+    const detail =
+      /<tr class="hidden tier-detail:table-row">([\s\S]*?)<\/tr>/.exec(
+        out,
+      )?.[1] ?? ""
+    expect(/<td[^>]*>/.exec(detail)?.[0]).not.toContain("max-w-")
+    expect(detail).toContain('<span class="block max-w-[52ch] text-pretty">')
+  })
+})
+
 describe("the leading key column", () => {
   const queue = (rows: QueueRow[], label: string): Block => ({
     kind: "queue",
