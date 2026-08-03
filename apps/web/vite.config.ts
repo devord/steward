@@ -4,6 +4,12 @@ import { playwright } from "@vitest/browser-playwright"
 import mdx from "fumadocs-mdx/vite"
 import { defineConfig } from "vitest/config"
 
+import {
+  mouseDrag,
+  mouseRelease,
+  touchDrag,
+} from "./app/mocks/pointer-commands.ts"
+
 export default defineConfig({
   // react-grid-layout's react-draggable reads `process.env.DRAGGABLE_DEBUG`
   // at drag start; the client bundle has no `process`, so without this the
@@ -45,6 +51,9 @@ export default defineConfig({
             enabled: true,
             provider: playwright(),
             headless: true,
+            // Real stepped mouse/touch input — see pointer-commands.ts for
+            // why `userEvent.dragAndDrop` isn't enough for a grid gesture.
+            commands: { mouseDrag, mouseRelease, touchDrag },
             instances: [
               {
                 browser: "chromium",

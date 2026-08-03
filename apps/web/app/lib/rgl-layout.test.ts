@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   layoutItemToRect,
+  settledRect,
   widgetsToLayout,
   widgetToLayoutItem,
 } from "./rgl-layout.ts"
@@ -95,5 +96,44 @@ describe("layoutItemToRect", () => {
       cols: 2,
       rows: 1,
     })
+  })
+})
+
+describe("settledRect", () => {
+  const item = (x: number, y: number, w: number, h: number): LayoutItem => ({
+    i: "a",
+    x,
+    y,
+    w,
+    h,
+  })
+  // What a 4-column board stores for a widget sitting in its right half.
+  const stored = { col: 3, row: 1, cols: 2, rows: 3 }
+
+  it("takes the whole rect from the board's own grid", () => {
+    expect(settledRect(item(0, 1, 3, 2), 4, stored, false)).toEqual({
+      col: 1,
+      row: 2,
+      cols: 3,
+      rows: 2,
+    })
+  })
+
+  it("keeps the stored columns when the grid is narrower than the board", () => {
+    // A phone grid is one column, so RGL can only ever hand back x=0, w=1.
+    // Writing that would move the widget to column 1 and shrink it to a single
+    // column on the desktop board — the layout the phone was never shown.
+    expect(settledRect(item(0, 2, 1, 2), 4, stored, true)).toEqual({
+      col: 3,
+      row: 3,
+      cols: 2,
+      rows: 2,
+    })
+  })
+
+  it("still carries a height changed on a narrow grid", () => {
+    // Rows are the one thing a narrow grid states faithfully, so a resize
+    // there is real and must persist.
+    expect(settledRect(item(0, 0, 1, 5), 4, stored, true).rows).toBe(5)
   })
 })

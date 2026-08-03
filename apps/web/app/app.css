@@ -1,3 +1,16 @@
+/* Layer order, declared before the first @import so it is this file that
+   fixes it (a layer's place is set where its name first appears, and
+   `@layer` statements are the one rule allowed to precede `@import`).
+   `vendor` sits below `components` so the board's grid chrome can dress
+   react-grid-layout's structural classes: the library's own stylesheet used
+   to be imported from the board component as a plain <style>, and *unlayered*
+   declarations outrank every layer no matter how specific the layered
+   selector is — so every rule the "Dashboard grid" block below writes was
+   inert, and the board wore the library's defaults (invisible resize grip,
+   red placeholder block). Vendor CSS belongs in a layer for exactly this
+   reason; it is imported into one at the end of this list. */
+@layer theme, base, vendor, components, utilities;
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -10,6 +23,11 @@
 @import "fumadocs-ui/css/preset.css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
+/* The grid's structural stylesheet — transforms, transitions, the resize
+   grip's geometry. Imported here rather than from the board component so it
+   lands in `vendor`, under the chrome that dresses it (see the layer
+   statement at the top of this file). */
+@import "react-grid-layout/css/styles.css" layer(vendor);
 
 @custom-variant dark (&:is(.dark *));
 
@@ -361,35 +379,56 @@
    free-form push compactor, so dropping a widget onto/between others slides
    the neighbors aside rather than blocking on empty space. These rules dress
    RGL's structural classes (.react-grid-*) in the chrome's gruvbox skin; the
-   library's own base stylesheet (transforms, transitions) is imported by the
-   board component. */
+   library's own base stylesheet (transforms, transitions) is imported at the
+   top of this file into the `vendor` layer, so these rules outrank it. */
 @layer components {
-  /* The drop target RGL paints under the lifted card: a calm dashed accent
-     well, not the library default's opaque red block. */
-  .react-grid-item.react-grid-placeholder {
-    background: var(--color-primary);
-    opacity: 0.12;
-    border: 1px dashed var(--color-primary);
-    /* Square, like the card that will land in it (widget-card) — a rounded
-       well under a square tile shows its corners through the drop. */
+  /* Stacking inside the grid: the cells sit above the drop well, and the cell
+     you are moving sits above its neighbours. The library ships the middle
+     rank the other way up — its placeholder outranks every settled cell — so
+     the well paints *over* whatever it overlaps, and a resize that grows past
+     a neighbour washes that neighbour's artifact in accent. A well is a hole
+     in the board; it belongs behind the things standing on it. */
+  .dash-grid .react-grid-item {
+    z-index: 1;
   }
-
-  /* The card being moved/resized floats above its neighbors. */
-  .react-grid-item.react-draggable-dragging,
-  .react-grid-item.resizing {
+  .dash-grid .react-grid-item.react-grid-placeholder {
+    z-index: 0;
+  }
+  .dash-grid .react-grid-item.react-draggable-dragging,
+  .dash-grid .react-grid-item.resizing {
     z-index: 20;
   }
 
-  /* The resize grip rides above the edit-mode header and the artifact; hidden
-     until the board enters edit mode, then lit at the corner (the library
-     otherwise reveals it only on hover). */
+  /* The drop well itself: a dashed accent outline over a wash of the same,
+     not the library default's opaque red block. The alpha lives in the
+     background colour, never on the element — element opacity takes the
+     outline down with it, and at 0.12 the dashes disappear entirely and the
+     "well" reads as a muddy slab. Square, like the card that will land in it
+     (widget-card): a rounded well under a square tile shows its corners
+     through the drop. */
+  .dash-grid .react-grid-item.react-grid-placeholder {
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    border: 1px dashed var(--color-primary);
+    opacity: 1;
+  }
+
+  /* The resize grips ride above the edit-mode header and the artifact; hidden
+     until the board enters edit mode, then lit (the library otherwise reveals
+     them only on hover, which leaves nothing to aim at until the pointer is
+     already there). `touch-action: none` is what makes a grip reachable by
+     finger at all: without it the browser claims the gesture for scrolling
+     before RGL ever sees a touchmove — the same opt-out the title bar carries
+     below. */
   .dash-grid .react-resizable-handle {
     z-index: 30;
     opacity: 0;
+    touch-action: none;
   }
   .dash-grid.is-editing .react-resizable-handle {
     opacity: 1;
   }
+  /* The corner grip keeps the chevron — it sits on the frame's corner, which
+     is where a corner chevron belongs. */
   .dash-grid .react-resizable-handle-se::after {
     right: 4px;
     bottom: 4px;
@@ -399,6 +438,99 @@
   }
   .dash-grid .react-resizable-handle-se:hover::after {
     border-color: var(--color-primary);
+  }
+
+  /* The edge grips lie *on* the border they move: a short bar centred on it,
+     with a shallow grab band around it. The library dresses them as the same
+     corner chevron, rotated to point along the axis — which lands the glyph
+     several pixels inside the cell, floating over the artifact. That is the
+     one place widget-card keeps clear of controls, and three loose carets per
+     card read as marks on the data rather than edges of the frame. A bar on
+     the border reads as what it is: the pane edge, offered as a handle. */
+  .dash-grid .react-resizable-handle-s,
+  .dash-grid .react-resizable-handle-e {
+    transform: none;
+  }
+  .dash-grid .react-resizable-handle-s {
+    left: 50%;
+    width: 48px;
+    height: 12px;
+    margin-left: -24px;
+  }
+  .dash-grid .react-resizable-handle-e {
+    top: 50%;
+    width: 12px;
+    height: 48px;
+    margin-top: -24px;
+  }
+  .dash-grid .react-resizable-handle-s::after,
+  .dash-grid .react-resizable-handle-e::after {
+    border: 0;
+    background: var(--color-ink-dim);
+  }
+  .dash-grid .react-resizable-handle-s::after {
+    inset: auto 50% 1px auto;
+    width: 24px;
+    height: 2px;
+    margin-right: -12px;
+  }
+  .dash-grid .react-resizable-handle-e::after {
+    inset: 50% 1px auto auto;
+    width: 2px;
+    height: 24px;
+    margin-top: -12px;
+  }
+  .dash-grid .react-resizable-handle-s:hover::after,
+  .dash-grid .react-resizable-handle-e:hover::after {
+    background: var(--color-primary);
+  }
+
+  /* A 20px box is a mouse target, not a finger one. The edge grips already
+     run 48px along their border, so only their depth grows; the corner has
+     both to gain. */
+  @media (pointer: coarse) {
+    .dash-grid .react-resizable-handle-se {
+      width: 32px;
+      height: 32px;
+    }
+    .dash-grid .react-resizable-handle-s {
+      height: 20px;
+    }
+    .dash-grid .react-resizable-handle-e {
+      width: 20px;
+    }
+  }
+
+  /* A gesture owns the pointer, and the board has to stop competing for it.
+
+     Selection: a press-and-sweep is also how you select text, and only the
+     drag path is guarded — react-draggable lays down its own user-select hack
+     for the duration, but the resize grips come from react-resizable, which
+     RGL gives no way to ask. So every resize dragged a selection across the
+     board behind it, highlighting each card it passed and leaving the
+     selection standing after the mouse came up.
+
+     Hit-testing: an artifact is a cross-origin sandboxed iframe, and a
+     cross-origin frame takes the pointer with it. The instant a gesture
+     crosses one, the mousemove/mouseup RGL listens for on the *parent*
+     document go to the frame instead and the gesture dies where it stands —
+     no drop, no commit, the card left at whatever size it had reached.
+     Shrinking loses this race almost every time: the cell resizes in whole
+     rows and columns while the pointer moves continuously, so the grip is
+     forever a fraction of a step behind the finger, and behind the finger on
+     an inward drag is the card's own artifact. Growing is fine, which is why
+     the failure reads as "resizing down is broken".
+
+     Nothing inside an artifact is interactive mid-gesture, and nothing on the
+     board is worth selecting mid-gesture, so both go inert for the duration
+     and come back the moment it ends. */
+  .dash-grid:has(.react-draggable-dragging),
+  .dash-grid:has(.resizing) {
+    user-select: none;
+  }
+  .dash-grid:has(.react-draggable-dragging) iframe,
+  .dash-grid:has(.resizing) iframe {
+    pointer-events: none;
   }
 
   /* Grab affordance on the edit-mode title bar (RGL's drag handle). */

@@ -14,6 +14,15 @@ import type { Rect } from "./placement.ts"
  * coordinate systems meet, so a reader never has to hold both in their head.
  */
 
+/**
+ * The grips a cell offers. The corner alone (RGL's default, and all the board
+ * had) moves width and height together, so making a widget shorter without
+ * also making it narrower meant dragging a 20px corner box along a perfectly
+ * vertical line. The bottom and right edges give each dimension its own
+ * handle, which is the gesture a dashboard grid is expected to have.
+ */
+export const RESIZE_HANDLES = ["se", "s", "e"] as const
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
@@ -62,4 +71,32 @@ export function layoutItemToRect(item: LayoutItem, columns: number): Rect {
   const col = clamp(Math.round(item.x) + 1, 1, columns - cols + 1)
   const row = Math.max(1, Math.round(item.y) + 1)
   return { col, row, cols, rows }
+}
+
+/**
+ * A settled RGL item folded onto what the board should store, given the grid
+ * the reader actually settled it on.
+ *
+ * The tablet and phone grids have fewer columns than the board — 2 and 1 —
+ * and RGL generates them from the desktop layout, so the item it hands back
+ * says `x: 0, w: 1` no matter where the widget lives on the board. Writing
+ * that would move every widget to column 1 and shrink it to a single column:
+ * a phone reorder would silently flatten a desktop arrangement its reader was
+ * never shown.
+ *
+ * Rows are the one thing a narrow grid states faithfully — it stacks in the
+ * board's own vertical order and a resize there changes a real height — so on
+ * a narrow grid only `row`/`rows` move and the stored columns are kept.
+ * Reordering on a phone still reorders the board, which is the point; widgets
+ * that shared a desktop row rejoin it on the next render, since vertical
+ * compaction floats them back up beside each other (ADR-0041).
+ */
+export function settledRect(
+  item: LayoutItem,
+  columns: number,
+  stored: Rect,
+  narrow: boolean,
+): Rect {
+  const rect = layoutItemToRect(item, columns)
+  return narrow ? { ...stored, row: rect.row, rows: rect.rows } : rect
 }

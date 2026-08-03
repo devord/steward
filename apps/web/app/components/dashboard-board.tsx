@@ -71,7 +71,9 @@ import {
   useContainerWidth,
   verticalCompactor,
 } from "react-grid-layout"
-import "react-grid-layout/css/styles.css"
+// The library's stylesheet is imported by app.css into the `vendor` layer, not
+// here: a plain import lands unlayered, and unlayered CSS outranks every layer
+// — which silently voided the whole "Dashboard grid" block in app.css.
 
 import { bandHeadingCls, cn } from "~/lib/utils"
 import { writeCollapsedBands } from "../lib/band-collapse.ts"
@@ -105,7 +107,11 @@ import {
 import { readHeld, useStreamed, writeHeld } from "../lib/use-streamed.ts"
 import { usePendingRuns } from "../lib/pending-runs.ts"
 import { findFreeSlot, type Rect } from "../lib/placement.ts"
-import { layoutItemToRect, widgetsToLayout } from "../lib/rgl-layout.ts"
+import {
+  RESIZE_HANDLES,
+  settledRect,
+  widgetsToLayout,
+} from "../lib/rgl-layout.ts"
 import { usePollRevalidate } from "../lib/use-poll-revalidate.ts"
 
 /**
@@ -120,7 +126,8 @@ const COMPACTOR = verticalCompactor
 
 /** Grid breakpoints, keyed to viewport width to match the widget-standard's
     cell sizes (desktop → the board's own columns; tablet → 2; phone → 1).
-    Editing (drag/resize) is desktop-only, as it was before ADR-0041. */
+    Editing is armed at all three (ADR-0056); what a gesture is allowed to
+    commit on the narrow two is `settledRect`'s business, not this map's. */
 const RGL_BREAKPOINTS = { lg: 1100, md: 700, sm: 0 } as const
 const GRID_MARGIN: readonly [number, number] = [12, 12]
 
@@ -193,7 +200,7 @@ function BandGrid({
         cancel: "button, a, [data-no-drag]",
         threshold: 4,
       }}
-      resizeConfig={{ enabled: editing, handles: ["se"] }}
+      resizeConfig={{ enabled: editing, handles: [...RESIZE_HANDLES] }}
       onDragStop={(layout) => onCommit(layout)}
       onResizeStop={(layout) => onCommit(layout)}
     >
@@ -810,6 +817,12 @@ export function DashboardBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placeParam])
 
+  // The grid the reader is settling gestures on. Declared here rather than
+  // beside the container width below because the commit path needs it: what a
+  // settled layout is allowed to say about a widget depends on how many
+  // columns the reader could actually see (see `settledRect`).
+  const breakpoint = useViewportBreakpoint()
+
   // RGL hands back the whole layout once a drag or resize settles; fold each
   // item back into the draft as 1-indexed position/size. Guarded so a settle
   // that changed nothing (a click, or a drag that snapped home) never forks a
@@ -819,10 +832,19 @@ export function DashboardBoard({
     (layout: readonly LayoutItem[]) => {
       const rects = new Map<string, Rect>()
       let changed = false
+      // A tablet/phone grid has fewer columns than the board, so it can only
+      // ever hand back column 1 — `settledRect` keeps the stored columns there
+      // and takes the rows, which are the part a narrow grid states truly.
+      const narrow = breakpoint !== "lg"
       for (const item of layout) {
         const widget = dashboard.widgets.find((w) => w.routine === item.i)
         if (!widget) continue
-        const rect = layoutItemToRect(item, columns)
+        const rect = settledRect(
+          item,
+          columns,
+          { ...widget.position, ...widget.size },
+          narrow,
+        )
         rects.set(item.i, rect)
         if (
           widget.position.col !== rect.col ||
@@ -844,7 +866,7 @@ export function DashboardBoard({
         return current
       })
     },
-    [update, dashboard.widgets, columns],
+    [update, dashboard.widgets, columns, breakpoint],
   )
 
   const removeWidget = useCallback(
@@ -904,18 +926,19 @@ export function DashboardBoard({
 
   // Container width drives RGL's pixel geometry (via a ResizeObserver, so it
   // already reflects the fixed/wide canvas cap the shell applies); the
-  // viewport-keyed breakpoint picks the column count and gates editing to the
-  // desktop grid — drag/resize stayed desktop-only across ADR-0041.
+  // viewport-keyed breakpoint above picks the column count.
   // `measureBeforeMount` holds the first paint until the real width is known,
   // so the grid never renders at a guessed width and then snaps to the measured
   // one — that snap read as a flicker on every mount/board-switch.
   const { width, containerRef, mounted } = useContainerWidth({
     measureBeforeMount: true,
   })
-  const breakpoint = useViewportBreakpoint()
-  // Never arm drag/resize for a read-only viewer — a belt-and-suspenders guard
-  // over the entry-point gating (editing can't be entered when read-only).
-  const gridEditing = editing && breakpoint === "lg" && !readOnly
+  // Armed at every breakpoint (ADR-0056, amending ADR-0041's desktop-only
+  // gate): the library handles touch, the grips opt out of scroll gestures,
+  // and a narrow grid commits only what it can honestly state — its rows.
+  // Never arm drag/resize for a read-only viewer, though: a belt-and-suspenders
+  // guard over the entry-point gating (editing can't be entered when read-only).
+  const gridEditing = editing && !readOnly
 
   // Esc leaves edit mode — the app-wide "close this layer" key (every dialog
   // honors it; edit mode is the one modal-ish state that didn't). Exiting is
@@ -1370,10 +1393,12 @@ export function DashboardBoard({
 
 /**
  * The grid's active breakpoint, keyed to viewport width (not container width)
- * so the column count and the desktop-only editing gate match the
- * widget-standard's cell breakpoints exactly, the way the old CSS `@media`
- * rules did. Defaults to `lg` for the server/first paint (the board is
- * desktop-primary) and settles on mount.
+ * so the column count matches the widget-standard's cell breakpoints exactly,
+ * the way the old CSS `@media` rules did. It also decides how much of a
+ * settled gesture may be stored (ADR-0056) — a grid narrower than the board
+ * cannot state a widget's column, so it commits only rows. Defaults to `lg`
+ * for the server/first paint (the board is desktop-primary) and settles on
+ * mount.
  */
 function useViewportBreakpoint(): "lg" | "md" | "sm" {
   const [bp, setBp] = useState<"lg" | "md" | "sm">("lg")
