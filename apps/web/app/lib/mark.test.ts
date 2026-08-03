@@ -7,7 +7,9 @@ import {
   CHIP_INSET,
   chipTransform,
   CHIP_TILT,
+  chromeGlyphBox,
   drawnFeatures,
+  GLYPH_INK_CAP,
   MARK_BUTTONS,
   MARK_MINIMUM,
   MARK_RATIOS,
@@ -17,6 +19,7 @@ import {
   MASK_INSET,
   MASK_SAFE,
   squirclePath,
+  WORDMARK_CAP,
 } from "./mark.ts"
 
 /**
@@ -179,5 +182,58 @@ describe("every chip places the mark the same way", () => {
       "utf8",
     )
     expect(maskable).toContain(`transform="${chipTransform(MASK_INSET)}"`)
+  })
+})
+
+/**
+ * The mark's **proportion inside the lockup** — the fourth thing none of the
+ * three above could see. They hold the bow's own geometry, its contrast and its
+ * placement on a tile, and every one of them passed while the chrome lockup put
+ * a bow 1.15× the height of the caps beside it. A mark is not only a drawing;
+ * next to a word it is also a ratio, and that ratio is what a reader calls the
+ * logo being "too big".
+ *
+ * The trap the old literal fell into is the reason this is derived: the box was
+ * `1em`, which reads as "one line tall" but measures the **crop**, and the crop
+ * is the ink plus `GLYPH_AIR` on all four sides.
+ */
+describe("the chrome lockup sizes the mark against the word", () => {
+  /** The chrome brand's one size (`text-base`), in px — see `Wordmark`. */
+  const BRAND_PX = 16
+
+  const box = chromeGlyphBox()
+  const em = (v: string) => Number(v.replace("em", ""))
+
+  it("the box holds the crop's aspect, so the bow never letterboxes", () => {
+    // Two dimensions derived from one, rather than two literals kept in step by
+    // hand: a mismatch here would not error, it would silently shrink the bow
+    // inside its own box and knock it off the word's centre.
+    const cropAspect = MARK_SPAN.glyph / (MARK_RATIOS.bowH + 4)
+    expect(em(box.width) / em(box.height)).toBeCloseTo(cropAspect, 3)
+  })
+
+  it("the bow's ink sits inside the word's cap band", () => {
+    // What the eye compares is ink to ink. The crop is taller than the bow, so
+    // the assertion has to come back through it — measuring the box would be
+    // the same mistake that shipped.
+    const inkHeight =
+      (em(box.height) * MARK_RATIOS.bowH) / (MARK_RATIOS.bowH + 4)
+    expect(inkHeight).toBeCloseTo(GLYPH_INK_CAP * WORDMARK_CAP, 4)
+    expect(inkHeight).toBeLessThan(WORDMARK_CAP)
+  })
+
+  it("the wide mark still leads with the word, not with itself", () => {
+    // The bow is 2.45:1 through the ink, so it takes its mass from its width:
+    // level with the caps it outweighs all seven letters. Under 1 is the whole
+    // point of the ratio, and a later nudge back over it should fail here.
+    expect(GLYPH_INK_CAP).toBeLessThan(1)
+  })
+
+  it("shrinking the mark did not push it under its own floor", () => {
+    // `MARK_MINIMUM.glyph` is declared in device pixels at 1× across the crop's
+    // width. The lockup renders at the brand's 16px, and the smaller box has to
+    // clear that floor — otherwise this fix would have traded a mark that
+    // shouts for one that cannot be read.
+    expect(em(box.width) * BRAND_PX).toBeGreaterThanOrEqual(MARK_MINIMUM.glyph)
   })
 })

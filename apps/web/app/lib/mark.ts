@@ -380,6 +380,51 @@ export const GLYPH_VIEWBOX_COMPACT = glyphViewBox(MARK_RATIOS, {
   buttons: false,
 })
 
+/**
+ * Geist Mono 600's cap height, in em — measured off the shipped face
+ * (`measureText("S").actualBoundingBoxAscent`), not inferred from the em box.
+ * Its ascender is *shorter* than its cap, so the cap band is the tallest ink
+ * "Steward" puts on the line, and the thing the bow is read against.
+ */
+export const WORDMARK_CAP = 0.726
+
+/**
+ * The bow's ink height in the chrome lockup, as a share of that cap band.
+ *
+ * Under 1 on purpose. The bow is a **wide** mark — 2.45:1 through the ink — so
+ * it takes its mass from its width before it takes any from its height; level
+ * with the caps it already outweighs the seven letters it leads. It shipped at
+ * 1.15×, because the box was set to 1em of the *crop*, and the crop carries
+ * {@link GLYPH_AIR} on all four sides — so the number that looked like "one
+ * line tall" drew 0.83em of bow against a 0.726em cap. In a 240px rail that
+ * put the widest, darkest object on the column above the nav it introduces.
+ *
+ * At 0.85 the ink sits inside the cap band and the word leads the lockup,
+ * which is the order a wordmark is for.
+ */
+export const GLYPH_INK_CAP = 0.85
+
+/**
+ * The chrome lockup's glyph box, in em of the wordmark's own font size.
+ *
+ * Sized by the mark's **ink** and then derived back out through the crop, so
+ * both dimensions hold the viewBox's aspect exactly — nothing letterboxes, and
+ * a redraw that reproportions the bow moves the box with it instead of quietly
+ * cropping or padding it.
+ */
+export function chromeGlyphBox(r: MarkRatios = MARK_RATIOS): {
+  height: string
+  width: string
+} {
+  const cropW = r.bowW + 2 * GLYPH_AIR
+  const cropH = r.bowH + 2 * GLYPH_AIR
+  const height = (GLYPH_INK_CAP * WORDMARK_CAP * cropH) / r.bowH
+  return {
+    height: `${height.toFixed(4)}em`,
+    width: `${((height * cropW) / cropH).toFixed(4)}em`,
+  }
+}
+
 export const WING_L = MARK.wingL
 export const WING_R = MARK.wingR
 export const KNOT = MARK.knot
