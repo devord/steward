@@ -15,6 +15,31 @@ export interface RunReceipt {
   at: string
   /** Commit author name; runners name it freely, so display-only. */
   author: string | null
+  /** What the run spent, off the receipt's own commit message. null for
+      every receipt published before routines wrote the trailers, and for
+      any run that couldn't price itself — a run that published without
+      saying what it cost is still a run (see parseRunCost). */
+  cost: RunCost | null
+}
+
+/**
+ * A run's spend, as the publish commit reported it (`publish-widget`). The
+ * receipt is the only record a run leaves (ADR-0026) and the session that
+ * knows lives on claude.ai, which the app can't read (ADR-0016) — so this
+ * is the whole of what the app can know about cost.
+ */
+export interface RunCost {
+  /** Total tokens across every model the run used, all cache tiers. */
+  tokens: number
+  /**
+   * Dollars, **imputed at API list prices** — cloud runs bill against the
+   * runner's subscription (ADR-0012), so nobody was charged this. It also
+   * undercounts: the sum is taken before the publish turns it pays for.
+   * Render it as an approximation, never as a bill. null when the run used
+   * a model the summing script had no rate for, in which case `tokens`
+   * still stands — a token count is true regardless of pricing.
+   */
+  usd: number | null
 }
 
 /**
@@ -36,6 +61,50 @@ export interface RunView extends RunReceipt {
       clock skew must never surface as a negative duration. */
   gapMs: number | null
   cadence: RunCadence
+}
+
+// The trailers `publish-widget` writes on the publish commit. Anchored to
+// column 1 so a slug or an instruction quoting them in the subject can't be
+// read as a cost.
+const RUN_TOKENS = /^Run-Tokens: (\d+)$/m
+const RUN_COST_USD = /^Run-Cost-USD: (\d+(?:\.\d+)?)$/m
+
+/**
+ * The cost trailers off a publish commit's message, or null when it carries
+ * none — which is the common case and not a failure: every receipt published
+ * before this shipped predates the trailers, and a run whose transcript was
+ * unreadable publishes without them by design.
+ *
+ * Tokens are the anchor: a message with a price but no token count is
+ * malformed, so it reads as no cost at all rather than as a bare dollar
+ * figure with nothing to check it against.
+ */
+export function parseRunCost(
+  message: string | null | undefined,
+): RunCost | null {
+  if (!message) return null
+  const tokens = RUN_TOKENS.exec(message)
+  if (!tokens) return null
+  const usd = RUN_COST_USD.exec(message)
+  return { tokens: Number(tokens[1]), usd: usd ? Number(usd[1]) : null }
+}
+
+/** What the listed runs cost together, and how many of them that covers —
+    a mixed list (old receipts, unpriced models) must show its own reach
+    rather than pass a partial sum off as the total. */
+export function totalRunCost(runs: RunView[]): {
+  usd: number
+  priced: number
+  runs: number
+} {
+  let usd = 0
+  let priced = 0
+  for (const run of runs) {
+    if (run.cost?.usd == null) continue
+    usd += run.cost.usd
+    priced += 1
+  }
+  return { usd, priced, runs: runs.length }
 }
 
 /** Judge each receipt (newest-first, as the commits API lists them) against

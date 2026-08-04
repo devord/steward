@@ -81,11 +81,47 @@ fi
 mkdir -p "w/$SLUG"
 cp "$ARTIFACT_FILE" "w/$SLUG/index.html"
 git add "w/$SLUG/index.html"
-git commit -m "publish: $SLUG"
+# Quoted, and appended to the message rather than passed as a second -m:
+# the trailers are two lines, and an unquoted expansion word-splits them
+# into separate arguments that git then reflows out of column 1.
+MSG="publish: $SLUG"
+TRAILERS=$(node "$STEWARD/.claude/skills/publish-widget/scripts/run-cost.mjs" || true)
+if [ -n "$TRAILERS" ]; then MSG="$MSG
+
+$TRAILERS"; fi
+git commit -m "$MSG"
 git push origin artifacts
 ```
 
 Clean up the worktree afterwards: `git worktree remove "$WT" --force`.
+
+## What the run cost
+
+The receipt is the only record a run leaves (ADR-0026), so what the run
+_spent_ has to ride in it or be lost — the session that knows lives on
+claude.ai, which the app can't read (ADR-0016). `run-cost.mjs` sums this
+session's own transcript and emits two trailers the runs view reads back:
+
+```
+publish: shopify-intel
+
+Run-Tokens: 5487635
+Run-Cost-USD: 12.1518
+```
+
+Three things follow from doing it here, in the publish commit:
+
+- **It undercounts, always in the same direction.** The commit is the run's
+  last step, so the turns that _do_ the publishing aren't in the sum yet, and
+  the transcript is written as the run goes — the final line can lag. The
+  figure is a floor, never an overstatement. The app renders it with a ≈.
+- **It never fails the publish.** No session id, no transcript, no usage, or
+  a model with no rate in the table: the script says so on stderr, prints no
+  trailer, and exits 0. A receipt without cost is a run that published.
+- **Don't add a second commit for it.** The runs view lists commits touching
+  `w/<slug>/index.html`, so a follow-up commit on another path wouldn't
+  create a phantom run — but it would spend a second push on chrome, and the
+  trailer is already free here.
 
 ## The push race
 

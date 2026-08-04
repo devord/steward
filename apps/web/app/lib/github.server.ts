@@ -430,6 +430,9 @@ export interface PathCommit {
   /** ISO committer date. */
   date: string
   author: string | null
+  /** The full commit message — read for the trailers a publish writes on it
+      (parseRunCost). null when GitHub omitted it. */
+  message: string | null
 }
 
 /**
@@ -465,6 +468,7 @@ export async function listPathCommits(
             htmlUrl: entry.html_url,
             date: entry.commit.committer.date,
             author: entry.commit.author?.name ?? null,
+            message: entry.commit.message ?? null,
           },
         ]
       : [],

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { deriveRuns, type RunReceipt } from "./runs.ts"
+import {
+  deriveRuns,
+  parseRunCost,
+  totalRunCost,
+  type RunReceipt,
+} from "./runs.ts"
 
 const HOUR = 3_600_000
 
@@ -11,6 +16,7 @@ function receipt(hoursAgo: number, over: Partial<RunReceipt> = {}): RunReceipt {
     htmlUrl: `https://github.com/o/r/commit/sha-${hoursAgo}`,
     at: new Date(1_770_000_000_000 - hoursAgo * HOUR).toISOString(),
     author: "Claude",
+    cost: null,
     ...over,
   }
 }
@@ -64,5 +70,65 @@ describe("deriveRuns", () => {
     // clock-skewed pair must not surface as a negative duration.
     const runs = deriveRuns([receipt(4), receipt(3)], null)
     expect(runs[0]?.gapMs).toBe(0)
+  })
+})
+
+/** A publish commit as `publish-widget` writes it. */
+function message(...trailers: string[]): string {
+  return ["publish: shopify-intel", "", ...trailers].join("\n")
+}
+
+describe("parseRunCost", () => {
+  it("reads both trailers off a publish commit", () => {
+    expect(
+      parseRunCost(message("Run-Tokens: 5487635", "Run-Cost-USD: 12.1518")),
+    ).toEqual({ tokens: 5_487_635, usd: 12.1518 })
+  })
+
+  it("keeps the token count when the run had no price", () => {
+    // A model the summing script has no rate for: the tokens are still true,
+    // and reporting them beats reporting nothing.
+    expect(parseRunCost(message("Run-Tokens: 900"))).toEqual({
+      tokens: 900,
+      usd: null,
+    })
+  })
+
+  it("reads no cost from a receipt that predates the trailers", () => {
+    // Every receipt published before this shipped — the common case, and not
+    // a failure.
+    expect(parseRunCost("publish: shopify-intel")).toBeNull()
+    expect(parseRunCost(null)).toBeNull()
+    expect(parseRunCost(undefined)).toBeNull()
+  })
+
+  it("refuses a price with no token count to check it against", () => {
+    expect(parseRunCost(message("Run-Cost-USD: 12.15"))).toBeNull()
+  })
+
+  it("only reads trailers in column 1, not a subject quoting them", () => {
+    // The subject is a slug someone wrote; it must not be able to claim a cost.
+    expect(parseRunCost("publish: Run-Tokens: 999")).toBeNull()
+    expect(parseRunCost(message("  Run-Tokens: 999"))).toBeNull()
+  })
+})
+
+describe("totalRunCost", () => {
+  const priced = (usd: number | null, hoursAgo: number) =>
+    receipt(hoursAgo, { cost: { tokens: 1000, usd } })
+
+  it("sums the priced runs and says how many that covers", () => {
+    const runs = deriveRuns([priced(1.5, 0), receipt(4), priced(2.25, 8)], null)
+    expect(totalRunCost(runs)).toEqual({ usd: 3.75, priced: 2, runs: 3 })
+  })
+
+  it("counts a token-only run as unpriced rather than as zero", () => {
+    const runs = deriveRuns([priced(null, 0), priced(2, 4)], null)
+    expect(totalRunCost(runs)).toEqual({ usd: 2, priced: 1, runs: 2 })
+  })
+
+  it("reaches nothing when no run carries a cost", () => {
+    const runs = deriveRuns([receipt(0), receipt(4)], null)
+    expect(totalRunCost(runs)).toEqual({ usd: 0, priced: 0, runs: 2 })
   })
 })
