@@ -557,6 +557,28 @@ export function reviewDoc(doc: unknown): string[] {
           `"1.4k", "3 files" — or name the basis on \`title\`.`,
       )
     }
+    // A "copy all" is the companion to the per-row copies, never a substitute
+    // for them: it exists because clicking seventeen buttons is tedious, not
+    // because seventeen payloads should collapse into one. A band that carries
+    // the batch while no row carries its own is the shape of a *dropped field*
+    // — `ticket-gaps` published exactly that on 2026-08-04, seventeen
+    // recommendations whose only copy handed the reader all seventeen prompts
+    // — and nothing in the render can tell: the band copy looks deliberate,
+    // and the missing column is indistinguishable from a ledger that never
+    // offered one. Only the emit knows, so this says so at the emit.
+    if (
+      isObj(b.action) &&
+      rows.length > 0 &&
+      !rows.some((r) => isObj(r) && r.action)
+    ) {
+      notes.push(
+        `blocks[${i}] has a band-level \`action\` ("copy all") but not one of ` +
+          `its ${rows.length} rows carries \`action\`. The batch is the ` +
+          `companion to the per-row copies — a reader who wants one item ` +
+          `gets all ${rows.length} — so either give every row its own payload ` +
+          `or drop the band's.`,
+      )
+    }
   })
 
   return notes

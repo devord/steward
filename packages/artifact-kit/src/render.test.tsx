@@ -2099,6 +2099,65 @@ describe("reviewDoc", () => {
     expect(notes).toHaveLength(1)
   })
 
+  it("flags a band copy that stands alone, which is a dropped field", () => {
+    // The shipped defect: `ticket-gaps` published seventeen recommendations
+    // whose only copy handed the reader all seventeen prompts. Nothing in the
+    // render can tell — a band copy looks deliberate, and a missing action
+    // column is indistinguishable from a ledger that never offered one — so
+    // the emit is the only place the mistake is visible.
+    const notes = reviewDoc({
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [
+        {
+          kind: "queue",
+          action: { payload: "1. …\n2. …", label: "copy all" },
+          rows: [
+            { id: "a", title: "a" },
+            { id: "b", title: "b" },
+          ],
+        },
+      ],
+    })
+    expect(notes).toHaveLength(1)
+    expect(notes[0]).toContain("band-level `action`")
+    expect(notes[0]).toContain("2 rows")
+  })
+
+  it("passes the batch when the rows carry their own", () => {
+    // The pairing the band copy is for: seventeen clicks is tedious, one
+    // click for seventeen payloads is not a substitute for either.
+    const notes = reviewDoc({
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [
+        {
+          kind: "queue",
+          action: { payload: "1. …\n2. …", label: "copy all" },
+          rows: [
+            { id: "a", title: "a", action: { payload: "…" } },
+            { id: "b", title: "b", action: { payload: "…" } },
+          ],
+        },
+      ],
+    })
+    expect(notes).toEqual([])
+  })
+
+  it("says nothing about a ledger that offers no copy at all", () => {
+    // Most ledgers are triage, not a working surface. Silence about them is
+    // what keeps the note worth reading when it does print.
+    const notes = reviewDoc({
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [{ kind: "queue", rows: [{ id: "a", title: "a" }] }],
+    })
+    expect(notes).toEqual([])
+  })
+
   it("says nothing about the kit's own fixtures", () => {
     // The fixtures are what every archetype's sample is rendered from, so a
     // note here would ship as the worked example of the emit it warns about.

@@ -11,7 +11,9 @@
  *    `document.execCommand("copy")` — must run *inside the same synchronous
  *    click handler*, because what the sandbox actually permits is a copy
  *    during a user gesture. Awaiting the promise first and falling back in
- *    `.catch()` loses the gesture and fails silently.
+ *    `.catch()` loses the gesture and fails silently. It also needs the
+ *    frame's document to be the focused one, which an embedded artifact
+ *    cannot assume — hence the `window.focus()` in `write`.
  * 2. **The button ships hidden.** A raw-opened artifact has no behaviour
  *    attached, and a dead control is worse than none — the same
  *    degrade-to-honest rule the rest of the contract follows. Revealing it
@@ -23,6 +25,14 @@ export const ARTIFACT_COPY_SCRIPT = `<script data-steward-copy>(function(){
 // — and left an unhandled rejection behind in a frame where nobody sees the
 // console. \`done\` is the single place the answer is committed.
 function write(text,done){
+  // execCommand("copy") is defined to fail when the document is not the
+  // focused one, and an artifact is never the focused document by default —
+  // it is a frame inside someone else's page, and the lightbox above it runs
+  // a focus trap that has opinions about where focus belongs. Claiming the
+  // frame's own window first is free when focus is already here and is the
+  // difference between a copy and a "copy failed" when it is not. Inside the
+  // gesture, like everything else in this function.
+  try{window.focus()}catch(e){}
   // Synchronous path first — it is the one the sandbox reliably allows,
   // and it is the only one that answers within the user gesture.
   var ta=document.createElement("textarea")

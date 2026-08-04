@@ -190,6 +190,15 @@ widget exists for collapses entirely before one housekeeping row goes.
 `from` decides the tier a column first appears at: `always` `compact` `detail`
 `page`. Order columns by what earns space soonest.
 
+**A band's `action` never stands in for the rows'.** The batch exists because
+seventeen clicks is tedious, not because seventeen payloads should collapse
+into one — a reader who wants the third ticket and finds only `copy all` has
+to paste all seventeen and cut sixteen back out. So `action` on a block means
+every row under it carries `action` too; a block with the batch and no rows
+with their own is a dropped field, and the renderer prints a `note:` saying
+so. If the rows genuinely have nothing individual to hand over, the band has
+no batch to offer either.
+
 **A value carries its own unit.** **A tile never shows the column header** —
 only the full view names the columns — so a ledger spends most of its life
 with no header row at all: `"20"` in an `age` column is an unlabelled
