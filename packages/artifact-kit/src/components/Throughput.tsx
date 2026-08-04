@@ -149,7 +149,13 @@ export function Throughput({ spec }: { spec: ThroughputSpec }) {
 
   return (
     <div
-      className="flex flex-col gap-2"
+      // Three blocks, not five evenly-spaced rows. It was one `gap-2` for
+      // everything, which is the same as no grouping: the legend sat as far
+      // from the chart it annotates as the scrub control sat from the legend,
+      // so five unrelated-looking strips stacked down the band. Readout and
+      // controls belong together (both are the frame you are looking at), the
+      // plot and its legend are one object, and the scrub is a third thing.
+      className="flex flex-col gap-3"
       data-kit-throughput=""
       // The runtime reads its whole starting position off the markup rather
       // than re-deriving it, so the first frame it draws is the one already on
@@ -158,117 +164,159 @@ export function Throughput({ spec }: { spec: ThroughputSpec }) {
       data-kit-throughput-window={windowDays}
       data-kit-throughput-view={active?.key}
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span
-          className="text-ink font-mono text-sm leading-none"
-          data-kit-throughput-date=""
-        >
-          {frame.date ? shortDate(frame.date) : ""}
-        </span>
-        <span
-          className="text-ink-dim font-mono text-xs leading-none"
-          data-kit-throughput-total=""
-        >
-          {frame.totalMerged} {words.merged} · {frame.totalOpen} {words.open}
-        </span>
-      </div>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <span
+            className="text-ink font-mono text-sm leading-none"
+            data-kit-throughput-date=""
+          >
+            {frame.date ? shortDate(frame.date) : ""}
+          </span>
+          <span
+            className="text-ink-dim font-mono text-xs leading-none"
+            data-kit-throughput-total=""
+          >
+            {frame.totalMerged} {words.merged} · {frame.totalOpen} {words.open}
+          </span>
+        </div>
 
-      {views.length > 1 || windows.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {views.length > 1 ? (
-            <ToggleGroup
-              spec={{
-                key: "view",
-                label: "Group by",
-                value: active?.key,
-                options: views.map((v) => ({ value: v.key, label: v.label })),
-              }}
-            />
-          ) : null}
-          {windows.length > 0 ? (
-            <>
+        {views.length > 1 || windows.length > 0 ? (
+          // `gap-4` between sets against `gap-0.5` inside one. The sets are
+          // independent axes — who is counted, over what span, how long a span
+          // — and with the old 8px row gap against a 12px chip gap they read as
+          // one strip of up to six buttons. Grouping is the only thing telling
+          // a reader that picking `recent` does not un-pick `by owner`.
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {views.length > 1 ? (
               <ToggleGroup
                 spec={{
-                  key: "mode",
-                  label: "Totals",
-                  value: mode,
-                  options: [
-                    { value: "cumulative", label: "all time" },
-                    { value: "window", label: "recent" },
-                  ],
+                  key: "view",
+                  label: "Group by",
+                  value: active?.key,
+                  options: views.map((v) => ({ value: v.key, label: v.label })),
                 }}
               />
-              <ToggleGroup
-                spec={{
-                  key: "window",
-                  label: "Window",
-                  value: String(windowDays),
-                  options: windows.map((d) => ({
-                    value: String(d),
-                    label: WINDOW_LABEL[d] ?? `${d} days`,
-                  })),
-                }}
-              />
-            </>
-          ) : null}
-        </div>
-      ) : null}
-
-      <div className="flex items-stretch gap-1.5">
-        <div className="text-ink-faint flex w-6 shrink-0 flex-col justify-between py-0.5 text-right font-mono text-[10px] leading-none">
-          <span data-kit-throughput-axis="">{ceiling}</span>
-          <span>0</span>
-        </div>
-        {/* Always scrollable rather than conditionally: 30+ people in a
-            one-column tile is the normal case, not the overflow case. */}
-        <div
-          className="flex h-28 min-w-0 flex-1 items-end gap-0.5 overflow-x-auto"
-          data-kit-throughput-plot=""
-        >
-          {frame.order.map((key) => {
-            const seg = frame.segments[key] ?? { merged: 0, open: 0 }
-            const total = seg.merged + seg.open
-            return (
-              <div
-                key={key}
-                className="flex h-full min-w-[14px] flex-1 flex-col items-center justify-end gap-1"
-                data-kit-throughput-col={key}
-                title={`${face(key, spec.people).name} — ${seg.merged} ${words.merged}, ${seg.open} ${words.open}`}
-              >
-                <span
-                  className="text-ink-dim font-mono text-[10px] leading-none"
-                  data-kit-throughput-value=""
-                >
-                  {total || ""}
-                </span>
-                <div className="flex w-full flex-1 flex-col justify-end">
-                  <div
-                    className="bg-orange w-full rounded-t-[1px]"
-                    data-kit-throughput-open=""
-                    style={{ height: `${(seg.open / ceiling) * 100}%` }}
-                  />
-                  <div
-                    className="bg-green w-full"
-                    data-kit-throughput-merged=""
-                    style={{ height: `${(seg.merged / ceiling) * 100}%` }}
-                  />
-                </div>
-                <Avatar face={face(key, spec.people)} />
+            ) : null}
+            {windows.length > 0 ? (
+              // The window picker is not a third peer, it is what `recent`
+              // means — it only exists while `recent` is on. So it rides
+              // closer to the set it qualifies than that set rides to `view`.
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+                <ToggleGroup
+                  spec={{
+                    key: "mode",
+                    label: "Totals",
+                    value: mode,
+                    options: [
+                      { value: "cumulative", label: "all time" },
+                      { value: "window", label: "recent" },
+                    ],
+                  }}
+                />
+                <ToggleGroup
+                  spec={{
+                    key: "window",
+                    label: "Window",
+                    value: String(windowDays),
+                    options: windows.map((d) => ({
+                      value: String(d),
+                      label: WINDOW_LABEL[d] ?? `${d} days`,
+                    })),
+                  }}
+                />
               </div>
-            )
-          })}
-        </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
-      <div className="text-ink-faint flex items-center gap-3 font-mono text-[10px] leading-none">
-        <span className="flex items-center gap-1">
-          <span className="bg-green inline-block size-2 rounded-[1px]" />
-          {words.merged}
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="bg-orange inline-block size-2 rounded-[1px]" />
-          <span data-kit-throughput-legend-open="">{words.open}</span>
-        </span>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-stretch gap-1.5">
+          {/* The scale, registered to the track it scales.
+              It used to be one `justify-between` column spanning the whole
+              plot, and the plot is not the track: a column is a value label,
+              then the bars, then a face, so `0` printed level with the faces
+              — 17px below the baseline — and the ceiling printed level with
+              the value labels, 7px above the top of the tallest bar. The
+              labelled range came out 108px tall over 74px of data, so every
+              bar read ~30% shorter than the number beside it said. Mirroring
+              the column's own three rows here is what keeps the two honest;
+              the spacers are the value row and the face, and `-my-1.5` lets
+              each tick centre on the line it names instead of hanging inside
+              it. */}
+          <div
+            data-kit-throughput-scale=""
+            className="text-ink-dim flex w-8 shrink-0 flex-col gap-1 text-right font-mono text-xs leading-none"
+          >
+            <span className="h-3" aria-hidden="true" />
+            <div className="-my-1.5 flex flex-1 flex-col justify-between">
+              <span data-kit-throughput-axis="">{ceiling}</span>
+              <span>0</span>
+            </div>
+            <span className="h-[18px]" aria-hidden="true" />
+          </div>
+          {/* Always scrollable rather than conditionally: 30+ people in a
+              one-column tile is the normal case, not the overflow case. */}
+          <div
+            className="flex h-28 min-w-0 flex-1 items-end gap-0.5 overflow-x-auto"
+            data-kit-throughput-plot=""
+          >
+            {frame.order.map((key) => {
+              const seg = frame.segments[key] ?? { merged: 0, open: 0 }
+              const total = seg.merged + seg.open
+              return (
+                <div
+                  key={key}
+                  // Never narrower than the face it ends in. At `14px` the
+                  // 18px avatar outgrew its own column, so a crowded plot —
+                  // which is the normal one — overlapped every face with its
+                  // neighbour's.
+                  className="flex h-full min-w-[18px] flex-1 flex-col items-center justify-end gap-1"
+                  data-kit-throughput-col={key}
+                  title={`${face(key, spec.people).name} — ${seg.merged} ${words.merged}, ${seg.open} ${words.open}`}
+                >
+                  <span
+                    className="text-ink-dim font-mono text-xs leading-none"
+                    data-kit-throughput-value=""
+                  >
+                    {total || ""}
+                  </span>
+                  <div className="flex w-full flex-1 flex-col justify-end">
+                    <div
+                      className="bg-orange w-full rounded-t-[1px]"
+                      data-kit-throughput-open=""
+                      style={{ height: `${(seg.open / ceiling) * 100}%` }}
+                    />
+                    <div
+                      className="bg-green w-full"
+                      data-kit-throughput-merged=""
+                      style={{ height: `${(seg.merged / ceiling) * 100}%` }}
+                    />
+                  </div>
+                  <Avatar face={face(key, spec.people)} />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* The key to the two tones, so it belongs to the plot rather than
+            floating between it and the scrub control. 12px `ink-dim` for the
+            same reason the scrubber's dates are: `ink-faint` is a glyph role
+            (ADR-0048), it bottoms out at 3.20:1 across the registry, and the
+            board repaints artifacts in whichever theme is active — so this was
+            10px text at well under AA on most boards. The swatches are the
+            glyphs; the words beside them are text. */}
+        <div className="text-ink-dim flex items-center gap-3 font-mono text-xs leading-none">
+          <span className="flex items-center gap-1">
+            <span className="bg-green inline-block size-2 rounded-[1px]" />
+            {words.merged}
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="bg-orange inline-block size-2 rounded-[1px]" />
+            <span data-kit-throughput-legend-open="">{words.open}</span>
+          </span>
+        </div>
       </div>
 
       {decoded.days.length > 1 ? (

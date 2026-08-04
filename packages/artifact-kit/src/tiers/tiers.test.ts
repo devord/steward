@@ -87,6 +87,25 @@ describe("tier variants", () => {
     expect(mediaFor(css, "tall:hidden")).toEqual(["(min-height: 161px)"])
   })
 
+  it("hands every button a pointer, and lets a utility take it back", () => {
+    // Tailwind v4's preflight dropped v3's `cursor: pointer` on `button`, so
+    // the kit's toggle and copy buttons came out with the arrow while the
+    // anchors and the scrub input next to them came out with the hand: two
+    // clickable things in one band disagreeing about whether they are
+    // clickable. Restored as a base default rather than per-component, so it
+    // reaches artifacts already published (ADR-0050) — none of them name a
+    // cursor — and so `cursor-*` still wins where a component wants otherwise.
+    expect(css).toMatch(/(^|\n)\s*button\s*\{[^}]*cursor:\s*pointer/)
+    // And inside `@layer base`, not loose. An unlayered rule outranks every
+    // utility whatever the specificity, which is how a "sensible default"
+    // becomes something no component can opt out of. Written as "reachable
+    // from the layer's opening brace without crossing another `@layer`",
+    // because the emitted blocks are not in the order they are declared in.
+    expect(css).toMatch(
+      /@layer base\s*\{(?:(?!@layer)[\s\S])*?\bbutton\s*\{[^}]*cursor:\s*pointer/,
+    )
+  })
+
   it("gates tile and page on the board's stamp, not on a breakpoint", () => {
     // Width alone cannot tell a wide tile from the full view (ADR-0027), which
     // is why these key off `data-steward-tile` rather than a media query.

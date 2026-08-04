@@ -42,8 +42,14 @@ const q = <T extends Element>(root: ParentNode, sel: string) =>
 const qa = <T extends Element>(root: ParentNode, sel: string) =>
   Array.from(root.querySelectorAll<T>(sel))
 
-/** Below this a value label is a digit run, not a number. Measured, not guessed. */
-const LEGIBLE_COLUMN_PX = 22
+/**
+ * Below this a value label is a digit run, not a number. Measured, not guessed.
+ *
+ * 26 rather than 22 since the labels came off 10px and onto the 12px artifact
+ * floor: three digits of Geist Mono at 12px measure 21.6px, so the old floor
+ * now sits *under* the widest label it is meant to admit.
+ */
+const LEGIBLE_COLUMN_PX = 26
 
 /**
  * `cloneNode` is typed to `Node`, and the answer is not a cast. This runs

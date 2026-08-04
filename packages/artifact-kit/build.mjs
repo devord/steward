@@ -109,6 +109,17 @@ const RETIRED = [
   // not a smaller dot, it is a full-width bar across the tile.
   "gap-[0.2em]",
   "size-[0.22em]",
+  // The throughput band's micro-type, before its axis, value labels, legend
+  // and scrub dates came up to the 12px artifact floor (widget-standard §6).
+  // This was the kit's only sub-floor size and the last `text-[10px]` in
+  // source; published repo-stats artifacts still name it on four elements, and
+  // without a rule they inherit the shell's 14px — an axis column sized for
+  // two 10px digits, holding three 14px ones.
+  "text-[10px]",
+  // The same band's axis column and column floor, before the column was widened
+  // for a 12px ceiling and the floor raised to the width of the face it ends in.
+  "w-6",
+  "min-w-[14px]",
 ]
 
 const SAFELIST = [

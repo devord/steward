@@ -1,8 +1,19 @@
+import { readFileSync } from "node:fs"
+
 import { describe, expect, it } from "vitest"
 
 import { type ArtifactDoc, renderArtifact } from "../render.tsx"
 import { validateDoc } from "../validate-doc.ts"
 import type { ThroughputSpec } from "./Throughput.tsx"
+
+/** The built stylesheet, the way `retired.test.ts` reads it. */
+const kitCss = readFileSync(
+  new URL(
+    "../../../../.claude/skills/widget-artifact/kit/kit.css",
+    import.meta.url,
+  ),
+  "utf8",
+)
 
 const spec: ThroughputSpec = {
   windows: [1, 7, 30],
@@ -140,14 +151,47 @@ describe("the throughput band", () => {
     expect(view[0].className).toContain("aria-pressed:bg-bg3")
   })
 
-  it("draws a track for the scrubber to slide along", () => {
-    // `appearance-none` drops the platform widget and its track with it, and
-    // the kit has no ::-webkit-slider-* rules — so this shipped as a lone dot
-    // between two dates with no axis under it. The thumb kept working because
-    // `accent-orange` reaches it, which is what made the gap hard to see.
+  it("draws the scrubber's track and thumb from real slider pseudo-elements", () => {
+    // Two bugs, one cause. `appearance-none` drops the platform widget and its
+    // track with it, so this first shipped as a lone dot between two dates
+    // with no axis under it. The fix — paint the input box itself, `h-1
+    // bg-bg3` — gave it a bar and made the box 4px tall, a quarter of the
+    // thumb the browser still draws: the dot overflowed onto the end labels
+    // and covered the last date at the position the control rests in.
+    //
+    // A range input cannot say "24px box, 4px bar" in utilities, so the track
+    // and the thumb are pseudo-element rules in `tiers.css`, unlayered so they
+    // also reach artifacts published against the old markup (ADR-0050).
     const input = html.match(/<input[^>]*data-kit-scrub-input[^>]*>/)?.[0] ?? ""
-    expect(input).toContain("appearance-none")
-    expect(input).toContain("bg-bg3")
+    expect(input).toContain("data-kit-scrub-input")
+    // No height on the element: that belongs to the box the rules size, and an
+    // `h-1` here is exactly what put the thumb over the label.
+    expect(input).not.toMatch(/class="[^"]*\bh-\d/)
+
+    const css = kitCss.replace(/\s+/g, "")
+    for (const sel of [
+      "[data-kit-scrub-input]::-webkit-slider-runnable-track",
+      "[data-kit-scrub-input]::-moz-range-track",
+      "[data-kit-scrub-input]::-webkit-slider-thumb",
+      "[data-kit-scrub-input]::-moz-range-thumb",
+    ])
+      expect(css, sel).toContain(sel)
+  })
+
+  it("keeps the scrubber's thumb inside the box it is centred in", () => {
+    // The relationship *is* the bug: the thumb is centred on the input box, so
+    // a box shorter than the thumb overflows onto whatever sits below it —
+    // here, the dates that say what the ends of the track mean. Pinned as
+    // numbers so a later tweak that grows the thumb has to notice.
+    const box = kitCss.match(
+      /\[data-kit-scrub-input\]\s*\{[^}]*height:\s*([\d.]+)rem/,
+    )
+    const thumb = kitCss.match(
+      /::-webkit-slider-thumb\s*\{[^}]*height:\s*(\d+)px/,
+    )
+    expect(box, "the input box declares a height").toBeTruthy()
+    expect(thumb, "the thumb declares a height").toBeTruthy()
+    expect(Number(box?.[1]) * 16).toBeGreaterThanOrEqual(Number(thumb?.[1]))
   })
 
   it("offers one toggle per axis the spec actually has", () => {

@@ -76,3 +76,114 @@
 [data-kit-throughput-plot].kit-throughput-nolabels [data-kit-throughput-value] {
   visibility: hidden;
 }
+
+/* One scale at a time.
+ *
+ * The band prints two: a number over every column, and a `ceiling … 0` axis
+ * beside the track. While both show, they are two encodings of one fact, and
+ * the redundancy is not the only cost — the ceiling tick sits on the top of the
+ * track, which is one row *below* the value labels, so `150` reads as a member
+ * of the `146 140 123 …` row that someone nudged out of line. It is not
+ * misaligned; it is a second scale standing where the first one already is.
+ *
+ * So the axis appears exactly when it is the only scale left: when the runtime
+ * has measured the columns below the legible floor and hidden the per-column
+ * numbers. `visibility` rather than `display`, at the cost of a gutter nothing
+ * is standing in while the labels show: the plot's left edge is where every
+ * column's baseline starts, and the label state flips on a *view* switch — a
+ * roster of 40 reviewers where there were 18 authors — so `display` would slide
+ * the whole plot 38px sideways in the middle of the reorder the switch is
+ * already animating. A still frame beats a reclaimed margin.
+ *
+ * Dropped wholesale where `:has()` is unsupported, which leaves both scales
+ * showing — the state this shipped in, not a broken one. */
+[data-kit-throughput]:has(
+    [data-kit-throughput-plot]:not(.kit-throughput-nolabels)
+  )
+  [data-kit-throughput-scale] {
+  visibility: hidden;
+}
+
+/* Every button in an artifact is a pointer target.
+ *
+ * Tailwind v4's preflight dropped v3's `cursor: pointer` on `button` in favour
+ * of the UA default, which is an arrow — so the kit's two buttons (the toggle
+ * option and the copy action) came out `default` while the anchors and the
+ * scrub input beside them came out `pointer`. Inside one band that reads as
+ * "the faces and the slider are clickable, the toggles are not", which is the
+ * opposite of true, and it is the kind of thing a reader feels before they can
+ * name it.
+ *
+ * In `@layer base` rather than unlayered, unlike the rules below: this is a
+ * default in the preflight's own sense, so a `cursor-*` utility must still be
+ * able to overrule it. Being in the stylesheet at all is what carries it to
+ * artifacts already published (ADR-0050) — none of them name a cursor. */
+@layer base {
+  button {
+    cursor: pointer;
+  }
+}
+
+/* The scrubber's track and thumb.
+ *
+ * These have to be real pseudo-element rules rather than utilities, because a
+ * range input has no other way to say "the box is 24px and the bar inside it is
+ * 4px". Painting the *box* as the track — `h-1 bg-bg3`, which is what shipped —
+ * leaves the thumb the browser still draws (~16px) overflowing a 4px box by 6px
+ * in each direction, and the end labels sitting 4px underneath catch it: at the
+ * right-hand extreme, where the control rests by default, the dot covers the
+ * last date. Sizing the box for its own thumb is the fix, and it cannot be
+ * expressed in Tailwind's vocabulary.
+ *
+ * Unlayered, like the rule above, so it also lands on artifacts published
+ * against the old markup (ADR-0050): those files still carry `h-1 bg-bg3` on
+ * the input, and unlayered declarations beat anything in `@layer utilities`
+ * whatever the specificity. The overlap is a bug in every published file, so
+ * the fix has to reach them without a rerun. */
+[data-kit-scrub-input] {
+  appearance: none;
+  height: 1.5rem;
+  background: transparent;
+  border-radius: 0;
+}
+
+/* Split per vendor on purpose: an unrecognised pseudo-element invalidates the
+   whole selector list, so one rule naming both would reach neither browser. */
+[data-kit-scrub-input]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-border);
+}
+
+[data-kit-scrub-input]::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-border);
+}
+
+/* `margin-top` re-centres the thumb on the track WebKit lays out from the top
+   of the box: (4px track − 12px thumb) / 2. Firefox centres it for us. */
+[data-kit-scrub-input]::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border-radius: 9999px;
+  background: var(--color-orange);
+}
+
+[data-kit-scrub-input]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--color-orange);
+}
+
+/* The band is keyboard-scrubbable — arrows, Home/End, PageUp/Down — which is
+   half of why it is a range input at all, and none of that is usable without a
+   ring saying where focus is. `accent-color` does not draw one. */
+[data-kit-scrub-input]:focus-visible {
+  outline: 2px solid var(--color-orange);
+  outline-offset: 2px;
+}

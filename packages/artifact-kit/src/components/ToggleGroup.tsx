@@ -50,7 +50,22 @@ export function ToggleGroup({ spec }: { spec: ToggleGroupSpec }) {
       aria-label={spec.label}
       data-kit-toggle={spec.key}
       data-kit-toggle-value={current}
-      className="border-border-dim inline-flex items-center gap-0 rounded-sm border p-0.5"
+      // No frame. It used to carry one — `border-border-dim` around the set,
+      // with the pressed option filled `bg-bg3` — and those are the *same
+      // value* in the canonical row (#45403d each), so the line that was
+      // supposed to say "these two are one choice" read as the same material
+      // as the fill that says "this one is on". A band running three of these
+      // side by side then had six chips in a row whose grouping was carried by
+      // an 8px gap against a 12px one, and the whole strip read as six
+      // unrelated buttons.
+      //
+      // The palette has no token for a control boundary either: chrome spends
+      // `border-strong` on fill-less controls, and the artifact tokens stop at
+      // `border`, which sits at 2.25:1 on `bg1` — under 1.4.11's floor for the
+      // one line identifying a control. So the grouping is proximity and the
+      // state is a fill, both of which clear their bars without a hairline
+      // pretending to.
+      className="inline-flex items-center gap-0.5"
     >
       {spec.options.map((o) => (
         <button
@@ -67,9 +82,16 @@ export function ToggleGroup({ spec }: { spec: ToggleGroupSpec }) {
           // on the option the server happened to render, which reads as a
           // toggle that did nothing. Every option ships with identical classes;
           // moving the attribute is what moves the box.
+          // `min-h-6` rather than vertical padding: 24px is WCAG 2.5.8's
+          // target minimum, and the options touch, so the spacing exception
+          // that lets a small target pass does not apply here. It shipped at
+          // 16px, which is a target you miss on a trackpad and cannot hit at
+          // all with a thumb. The label stays at the 12px artifact floor — the
+          // box grows around it rather than the type growing with it.
           className={cn(
-            "rounded-xs px-1.5 py-0.5 font-mono text-xs leading-none",
-            "text-ink-dim hover:text-ink",
+            "inline-flex min-h-6 items-center rounded-sm px-2",
+            "font-mono text-xs leading-none",
+            "text-ink-dim hover:bg-bg2 hover:text-ink",
             "aria-pressed:bg-bg3 aria-pressed:text-ink",
           )}
         >

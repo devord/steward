@@ -53,7 +53,14 @@ export function Avatar({ face }: { face: Face }) {
   )
   return face.href ? (
     // In-frame navigation is sandbox-blocked (ADR-0028): a bare href is dead.
-    <a href={face.href} target="_blank" rel="noopener">
+    //
+    // `inline-flex` so the anchor is exactly as tall as the face inside it. A
+    // plain <a> is a line box, so it inherits the strut of whatever font-size
+    // it lands in — 20px around an 18px face in the throughput column — and
+    // those two extra pixels are invisible until something has to line up with
+    // the face's row, which is what threw the chart's zero tick 2px below its
+    // own baseline.
+    <a className="inline-flex" href={face.href} target="_blank" rel="noopener">
       {glyph}
     </a>
   ) : (

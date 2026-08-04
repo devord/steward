@@ -52,6 +52,16 @@ describe("classes retired from source but live in published artifacts", () => {
     // is a full-width bar across the tile.
     "gap-[0.2em]",
     "size-[0.22em]",
+    // The throughput band's micro-type, before its axis, value labels, legend
+    // and scrub dates came up to the 12px artifact floor. Published
+    // repo-stats names this on four elements; with no rule they inherit the
+    // shell's 14px inside boxes measured for 10px.
+    "text-[10px]",
+    // The same band's axis column and column floor, before the column was
+    // widened for a 12px ceiling and the floor raised to the width of the
+    // face each column ends in.
+    "w-6",
+    "min-w-[14px]",
   ])("keeps %s in the injected stylesheet", (cls) => {
     expect(defines(cls)).toBe(true)
   })

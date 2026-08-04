@@ -37,18 +37,31 @@ export function Scrubber({ spec }: { spec: ScrubberSpec }) {
         defaultValue={value}
         aria-label={spec.label}
         data-kit-scrub-input=""
-        // `bg-bg3` is the track. `appearance-none` removes the platform widget
-        // — which is what this wants, a 4px bar under the chart rather than a
-        // 16px OS slider — but it takes the track with it, and nothing else
-        // paints one: the kit's stylesheet carries no ::-webkit-slider-* rules.
-        // That shipped as a lone dot floating between the end labels, the axis
-        // it slides along invisible. The thumb survived on its own because
-        // `accent-orange` still reaches it — which is exactly why the dot was
-        // there and the bar was not.
-        className="accent-orange bg-bg3 h-1 w-full cursor-pointer appearance-none rounded-full"
+        // The track and the thumb are drawn by real ::-webkit-slider-* and
+        // ::-moz-range-* rules in `tiers.css`, not by utilities here, and the
+        // difference is the whole bug this had.
+        //
+        // It used to be `h-1 bg-bg3`: a 4px-tall *input box* painted as the
+        // track. But `appearance-none` only suppresses the platform track — the
+        // browser still draws a thumb, ~16px of it, centred on that 4px box. A
+        // thumb cannot fit in a box a quarter its height, so it overflowed 6px
+        // top and bottom, and the end labels 4px below caught the overflow: at
+        // the right-hand extreme, where the scrubber rests by default, the dot
+        // sat on top of the last date. The control was covering its own
+        // readout on first paint, on every published artifact.
+        //
+        // So the box is sized for the thumb (24px, which is also 2.5.8's
+        // target minimum for the drag handle) and the 4px bar is painted on
+        // the track pseudo-element inside it. Only `w-full` and the cursor
+        // belong on the element itself.
+        className="accent-orange w-full cursor-pointer"
       />
       {spec.ends ? (
-        <div className="text-ink-faint flex justify-between font-mono text-[10px] leading-none">
+        // 12px `ink-dim`, not 10px `ink-faint`: these are the axis of the
+        // control, the only thing saying what the far end of the track means,
+        // and both the floor (widget-standard §6) and the "no text below AA"
+        // rule (ADR-0048) apply to them like any other data carrier.
+        <div className="text-ink-dim flex justify-between font-mono text-xs leading-none">
           <span>{spec.ends[0]}</span>
           <span>{spec.ends[1]}</span>
         </div>
