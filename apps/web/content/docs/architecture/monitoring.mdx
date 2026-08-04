@@ -125,14 +125,26 @@ unmasked. Replay is here for the drag, the dialogs and the rail.
 
 ## Tracing
 
-Full sampling on both sides, and one trace end to end: the SSR span
-propagates into the browser pageload through meta tags injected before
-`</head>`. Server spans cover middleware, loaders and actions (React
-Router's instrumentation API) plus every outgoing GitHub `fetch`.
+One trace end to end: the SSR span propagates into the browser pageload
+through meta tags injected before `</head>`. Server spans cover middleware,
+loaders and actions (React Router's instrumentation API) plus every outgoing
+GitHub `fetch`.
 
 The request span ends when the HTTP response closes, not when the shell is
 handed back — so the deferred artifact reads (ADR-0002), which are the
 slowest thing the board does, are inside it rather than after it.
+
+**Traces are sampled at 0.2 in production**, and the reason is worth knowing
+before you change it. A board `.data` revalidation is 65–98 spans, and
+`use-poll-revalidate` fires one every 120s while a board tab is _visible_ —
+so one board left open around the clock is ~1.7M spans a month against the
+free plan's 5M, and three of them would spend the month with nobody looking
+at any of them. The cost here scales with open tabs, not with people.
+
+Sampling is head-based, so you get one whole trace in five, not a fifth of
+each trace. Errors stay at 1: they are rare, and a sampled-away crash is a
+crash nobody hears. Local runs (`VERCEL_ENV=development`) trace at 1, because
+one person reproducing one thing is not what the quota is spent on.
 
 ## Source maps
 

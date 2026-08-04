@@ -2,10 +2,9 @@
  * Deploy-tier-keyed Sentry sample rates (ADR-0059).
  *
  * How much signal a tier collects is a row in this table, never a branch in
- * the init. The rows are generous because Steward's audience is a handful of
- * signed-in people: full error capture and full tracing cost nothing at this
- * volume, and sampling down before there is volume to sample would only make
- * the first real incident harder to read.
+ * the init. Errors stay at 1 everywhere that collects at all — they are rare,
+ * and a sampled-away crash is a crash nobody hears. Traces are the row that
+ * costs, and the row that moves.
  *
  * Resolution fails closed (`getSampleRates`): a tier nobody deliberately
  * configured collects NOTHING — errors included. That is the same stance as
@@ -35,19 +34,46 @@ const OFF: SampleRates = {
 }
 
 /**
- * Everything except ordinary sessions.
+ * Live traffic.
  *
- * `replaySessions: 0` is the deliberate part. Replay records the chrome — the
- * grid drag, the dialogs, the rail — and recording *unerrored* sessions of a
- * product whose screens are full of private repo names buys nothing we
- * couldn't get by asking the person, who we know by name. On error, the
- * recording is worth its cost, so `replayErrors` is 1.
+ * `traces: 0.2` is sized against a measured cost, not a hunch. One board
+ * `.data` revalidation is 65–98 spans — the loader fan-out plus a GitHub read
+ * per widget (ADR-0002) — and `use-poll-revalidate` fires one every 120s
+ * while a board tab is *visible*. So a single board left open around the
+ * clock is ~1.7M spans a month against a 5M allowance, and three of them
+ * would spend the month with nobody looking. Headcount was never the risk;
+ * always-on tabs are.
+ *
+ * Sampling is head-based, so this keeps one whole trace in five rather than a
+ * fifth of every trace. At a handful of users that is still ample resolution,
+ * and it leaves 5× headroom for the 20s poll a pending run switches on.
+ *
+ * `replaySessions: 0` is the other deliberate part. Replay records the chrome
+ * — the grid drag, the dialogs, the rail — and recording *unerrored* sessions
+ * of a product whose screens are full of private repo names buys nothing we
+ * couldn't get by asking the person, who we know by name. On error the
+ * recording earns its cost, so `replayErrors` is 1.
  */
-const FULL: SampleRates = {
+const LIVE: SampleRates = {
+  sampleRate: 1,
+  traces: 0.2,
+  replaySessions: 0,
+  replayErrors: 1,
+}
+
+/**
+ * A local run that has been deliberately switched on.
+ *
+ * Traces at 1 because the quota argument above does not apply to one person
+ * on one machine reproducing one thing: sampling here would hide the trace
+ * they turned this on to look at. Replay stays off — a local error does not
+ * need a recording of the person who caused it on purpose.
+ */
+const LOCAL: SampleRates = {
   sampleRate: 1,
   traces: 1,
   replaySessions: 0,
-  replayErrors: 1,
+  replayErrors: 0,
 }
 
 /**
@@ -60,9 +86,9 @@ const FULL: SampleRates = {
  * default.
  */
 const RATES_BY_TIER: Record<string, SampleRates> = {
-  development: FULL,
+  development: LOCAL,
   preview: OFF,
-  production: FULL,
+  production: LIVE,
 }
 
 /**

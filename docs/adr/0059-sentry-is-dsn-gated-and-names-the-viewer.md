@@ -30,7 +30,13 @@ Decision, in four parts:
   turning an environment on is setting a variable, never shipping a branch.
   Sample rates key off the deploy tier through a table that fails closed: a
   tier nobody deliberately configured collects nothing, errors included. The
-  same stance twice — absent configuration means silence, not defaults.
+  same stance twice — absent configuration means silence, not defaults. What
+  that table is sized against is worth recording, because it is not what one
+  would guess: the cost of this app's tracing scales with _open tabs_, not
+  with people. A board revalidates itself every two minutes while visible and
+  each revalidation is most of a hundred spans, so a single board on a wall
+  outspends a busy afternoon, and errors — the thing actually worth having —
+  are so rare by comparison that they stay unsampled at 1 while traces do not.
 
 - **The session cookie is a credential, and Sentry never sees it.**
   `__steward_session` carries the viewer's GitHub token (ADR-0004). That makes

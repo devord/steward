@@ -140,7 +140,7 @@ a mechanism), and whether a data repo can ship its own kit components.
 ## M9 — Steward can see its own failures ✅ (code)
 
 Implements ADR-0059 (built 2026-08-03). `apps/web` reports to Sentry — errors,
-full tracing on both sides in one distributed trace, Logs, and Replay on error
+tracing on both sides in one distributed trace, Logs, and Replay on error
 only. Scope is the web app: the CLI runs on other people's machines and cloud
 routines have no guaranteed egress.
 
