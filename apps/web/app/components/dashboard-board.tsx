@@ -286,8 +286,15 @@ function BandHeading({
           // where an in-flow chevron and gap put it — is the drift that rule
           // exists to catch. pr-8 reserves the ⋯ column so the hairline stops
           // short of the glyph instead of running under it.
+          //
+          // `cursor-pointer` because the browser leaves `<button>` on the
+          // default arrow, and this row is the widest control on the board —
+          // the one place where a reader sweeping the pointer is most owed an
+          // answer. Every other clickable thing in the chrome already opts in
+          // (`ui/button.tsx`, the rail's rows, the widget title), and app.css
+          // opts the docs chrome back in wholesale; this row was the miss.
           className={cn(
-            "flex w-full items-center gap-2 text-left",
+            "group/band-heading flex w-full cursor-pointer items-center gap-2 text-left",
             bandIndentCls,
             hasMenu && "pr-8",
           )}
@@ -318,7 +325,32 @@ function BandHeading({
               !collapsed && "rotate-90",
             )}
           />
-          <span className={bandHeadingCls}>{category}</span>
+          {/* The name underlines under the pointer, in `ink-dim` at
+              `decoration-1` and offset 4 — the widget title's own three tokens
+              (ADR-0057), because this is that sentence one tier up: a heading
+              you can click says so by underlining, and the two sit 40px apart
+              on the same board, so a second dialect there would read as drift.
+              At full weight a rule under semibold caps competes with the
+              landmark it belongs to, which is why the decoration is a step
+              dimmer than the ink above it.
+
+              Scoped to the name, not the row: the count is data beside the
+              label and the hairline is furniture, the same way the widget
+              title underlines its name while its glyph only brightens. A hover
+              *fill* was the other candidate and DESIGN.md § Shape rules it out
+              — only rows take a fill, captions never do — and a wash spanning
+              the whole canvas is a far louder gesture than folding a band. The
+              chevron's own `ink-faint`→`ink-dim` step stays what it always
+              was: a proximity cue in the gutter, 3.5px of ink outside the
+              label, which is why it could never carry this on its own. */}
+          <span
+            className={cn(
+              bandHeadingCls,
+              "decoration-ink-dim decoration-1 underline-offset-4 group-hover/band-heading:underline",
+            )}
+          >
+            {category}
+          </span>
           {/* The count is always on (ADR-0048), the same way the rail's
               captions carry theirs — a bare word heading a band is decoration,
               the number makes it navigation. Collapsed, the number gives way
@@ -1305,7 +1337,9 @@ export function DashboardBoard({
             <p className="mt-6 text-xs text-ink-dim">
               <button
                 type="button"
-                className="underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
+                // Same opt-in as the band heading above: it reads as a link
+                // and acts as one, so it may not leave the pointer on the arrow.
+                className="cursor-pointer underline decoration-dotted underline-offset-2 outline-none hover:text-foreground focus-visible:text-foreground"
                 onClick={() => setEditing(true)}
               >
                 {t("offgrid.viewHint", { n: unplaced.length })}

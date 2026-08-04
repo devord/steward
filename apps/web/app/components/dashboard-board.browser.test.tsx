@@ -1,6 +1,6 @@
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { beforeEach, describe, expect, it } from "vitest"
-import { page, userEvent } from "vitest/browser"
+import { cdp, page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 
 import "../app.css"
@@ -573,6 +573,48 @@ describe("DashboardBoard", () => {
 
       await userEvent.click(heading())
       await expect.poll(() => document.body.textContent).toContain("Pulse")
+    })
+
+    // The row is the widest control on the board and it used to answer the
+    // pointer with nothing: `<button>` rests on the default arrow, and the only
+    // hover response was the chevron stepping one ink — 3.5px of it, hanging in
+    // the gutter outside the label. The name underlines instead, the widget
+    // title's own cue one tier up (ADR-0057), and the cursor says so everywhere
+    // along the row, which is the part a wash at the left edge can't do.
+    it("answers the pointer on its heading — cursor and underline both", async () => {
+      await page.viewport(1280, 900)
+      await renderBoard(Promise.resolve({}), { base: bandedView() })
+      await expect.poll(() => document.body.textContent).toContain("Pulse")
+
+      const heading = document.querySelector<HTMLElement>(
+        '[data-band-heading="Engineering"]',
+      )
+      if (!heading) throw new Error("Engineering band heading not rendered")
+      expect(getComputedStyle(heading).cursor).toBe("pointer")
+
+      // The name only — the count beside it is data and the trailing hairline
+      // is furniture, so neither takes the rule.
+      const name = [...heading.querySelectorAll("span")].find(
+        (el) => el.textContent === "Engineering",
+      )
+      if (!name) throw new Error("band name not rendered")
+
+      // Every test in this file shares one page, so the pointer is wherever the
+      // last one parked it — over this very heading, as it happens, which reads
+      // as an underline at rest. Park it in the corner before measuring rest.
+      await cdp().send("Input.dispatchMouseEvent", {
+        type: "mouseMoved",
+        x: 0,
+        y: 0,
+      })
+      await expect
+        .poll(() => getComputedStyle(name).textDecorationLine)
+        .toBe("none")
+
+      await userEvent.hover(heading)
+      await expect
+        .poll(() => getComputedStyle(name).textDecorationLine)
+        .toBe("underline")
     })
   })
 
