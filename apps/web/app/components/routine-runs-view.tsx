@@ -27,7 +27,7 @@ import type {
 import { useT, type Translate } from "../lib/i18n.tsx"
 import { boardHref, routineHref, routinesHref } from "../lib/repos.ts"
 import { claudeRoutineUrl, widgetStatus } from "../lib/routine-status.ts"
-import { deriveRuns, type RunView } from "../lib/runs.ts"
+import { deriveRuns, totalRunCost, type RunView } from "../lib/runs.ts"
 import { agoParts, durationParts } from "../lib/time.ts"
 import { useArtifactVersions } from "../lib/use-artifact-versions.ts"
 import { useOptimisticSidebar } from "../lib/optimistic-boards.ts"
@@ -102,6 +102,11 @@ export function RoutineRunsView({
     runsData === null
       ? null
       : deriveRuns(runsData.receipts, routine.schedule ?? null, runsData.capped)
+  // Suppressed entirely when nothing in the list carries a price: a "≈$0.00"
+  // beside a routine that has simply never reported its cost is a wrong claim,
+  // not an empty one.
+  const total = runViews == null ? null : totalRunCost(runViews)
+  const costTotal = total != null && total.priced > 0 ? total : null
   // The routine's runner, or the repo owner for home pools — the same rule
   // the pool table applies (ADR-0025).
   const owner = routine.runner ?? repo.full.split("/")[0]
@@ -298,6 +303,23 @@ export function RoutineRunsView({
                   : t("runs.count", { n: runsData.receipts.length })}
               </span>
             )}
+            {/* What the listed runs cost together. Stated with its reach when
+                only some carry a price — a sum over 8 of 12 rows presented as
+                the total would read as the routine being cheaper than it is. */}
+            {costTotal != null && (
+              <span
+                className="font-mono text-xs text-ink-dim"
+                title={t("runs.costHint")}
+              >
+                {costTotal.priced === costTotal.runs
+                  ? t("runs.costTotal", { usd: usdLabel(costTotal.usd) })
+                  : t("runs.costTotalPartial", {
+                      usd: usdLabel(costTotal.usd),
+                      n: costTotal.priced,
+                      m: costTotal.runs,
+                    })}
+              </span>
+            )}
           </div>
           {canCompare && (
             <Button
@@ -469,6 +491,15 @@ function RunsBody({
             >
               {t("runs.colBy")}
             </th>
+            {/* Folded away with By on small screens: an estimate is the first
+                thing a narrow table can afford to lose. */}
+            <th
+              scope="col"
+              className="hidden py-1.5 pr-3 font-normal sm:table-cell"
+              title={t("runs.costHint")}
+            >
+              {t("runs.colCost")}
+            </th>
             <th scope="col" className="py-1.5 pr-3 font-normal">
               {t("runs.colReceipt")}
             </th>
@@ -597,6 +628,25 @@ function RunRow({
         )}
       </td>
 
+      {/* What the run spent, off its own publish commit. A receipt from before
+          routines wrote the trailers has nothing to say here, which is most of
+          any existing history — the dash is the resting state, not an error. */}
+      <td className="hidden py-2 pr-3 align-top font-mono text-xs text-ink-dim sm:table-cell">
+        {run.cost == null ? (
+          <span aria-hidden className="text-ink-dim">
+            —
+          </span>
+        ) : (
+          <span title={t("runs.costHint")}>
+            {run.cost.usd == null
+              ? // No rate for a model the run used. The token count survives
+                // that gap, and saying "4.6M tok" beats saying nothing.
+                t("runs.costTokens", { n: tokensLabel(run.cost.tokens) })
+              : t("runs.costTotal", { usd: usdLabel(run.cost.usd) })}
+          </span>
+        )}
+      </td>
+
       {/* The receipt itself — the commit on GitHub, where the published
           diff can be inspected (git is visible, not hidden). */}
       <td className="py-2 pr-3 align-top">
@@ -611,6 +661,20 @@ function RunRow({
       </td>
     </tr>
   )
+}
+
+/** Dollars at the precision the figure earns: cents for a run that cost some,
+    four places below a cent so a cheap run reads as cheap rather than as free. */
+function usdLabel(usd: number): string {
+  return usd >= 0.01 ? `$${usd.toFixed(2)}` : `$${usd.toFixed(4)}`
+}
+
+/** Tokens in the unit that fits. Runs spend millions, and "14009812" is a
+    number the eye has to count digits on. */
+function tokensLabel(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`
+  if (tokens >= 1_000) return `${Math.round(tokens / 1_000)}k`
+  return String(tokens)
 }
 
 function gapLabel(gapMs: number, t: Translate): string {

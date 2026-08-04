@@ -188,7 +188,15 @@ export const en = {
   "runs.colRan": "Ran",
   "runs.colGap": "After",
   "runs.colBy": "By",
+  "runs.colCost": "Cost",
   "runs.colReceipt": "Receipt",
+  // Cost rides in the publish commit's own trailers, so it is a floor priced
+  // off a rate card — say both, rather than let a ≈ carry the whole caveat.
+  "runs.costHint":
+    "Tokens the run spent, priced at API list rates. Cloud runs bill against the runner's subscription, so this is an estimate, not a charge — and it excludes the publishing turns.",
+  "runs.costTokens": "{n} tok",
+  "runs.costTotal": "≈{usd}",
+  "runs.costTotalPartial": "≈{usd} · {n} of {m} priced",
   "runs.count": "{n} runs",
   "runs.capped": "last {n} runs",
   "runs.firstTag": "first run",

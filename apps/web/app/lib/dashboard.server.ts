@@ -16,7 +16,7 @@ import {
 
 import { data } from "react-router"
 
-import type { RunReceipt } from "./runs.ts"
+import { parseRunCost, type RunReceipt } from "./runs.ts"
 import type { DiscoveredTemplate } from "./templates.ts"
 import {
   type Collaborator,
@@ -909,11 +909,15 @@ export async function loadRoutineRuns(
       "artifacts",
       RUNS_LIMIT,
     )
+    // The cost is parsed here rather than shipped as a raw commit message:
+    // the receipts stream to the client (ADR-0030), and a message body per
+    // row is a lot of wire for two numbers.
     const receipts = (commits ?? []).map((commit) => ({
       sha: commit.sha,
       htmlUrl: commit.htmlUrl,
       at: commit.date,
       author: commit.author,
+      cost: parseRunCost(commit.message),
     }))
     return { receipts, capped: receipts.length >= RUNS_LIMIT }
   } catch {

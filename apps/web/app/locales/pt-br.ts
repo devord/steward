@@ -166,7 +166,13 @@ export const ptBR: Messages = {
   "runs.colRan": "Rodou",
   "runs.colGap": "Após",
   "runs.colBy": "Por",
+  "runs.colCost": "Custo",
   "runs.colReceipt": "Recibo",
+  "runs.costHint":
+    "Tokens que a execução gastou, precificados pela tabela da API. Execuções na nuvem consomem a assinatura de quem roda, então isto é uma estimativa, não uma cobrança — e não inclui os turnos da publicação.",
+  "runs.costTokens": "{n} tok",
+  "runs.costTotal": "≈{usd}",
+  "runs.costTotalPartial": "≈{usd} · {n} de {m} precificadas",
   "runs.count": "{n} execuções",
   "runs.capped": "últimas {n} execuções",
   "runs.firstTag": "primeira execução",

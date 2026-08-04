@@ -23,12 +23,16 @@ const pulse: Routine = {
   schedule: "0 */4 * * *",
 }
 
-function receipt(hoursAgo: number): RunReceipt {
+function receipt(
+  hoursAgo: number,
+  cost: RunReceipt["cost"] = null,
+): RunReceipt {
   return {
     sha: `${hoursAgo}abc0000deadbeef`,
     htmlUrl: `https://github.com/${HOME_REPO}/commit/${hoursAgo}abc`,
     at: new Date(NOW - hoursAgo * HOUR).toISOString(),
     author: "Claude",
+    cost,
   }
 }
 
@@ -171,6 +175,54 @@ describe("RoutineRunsView", () => {
   it("labels a capped listing as the last N runs", async () => {
     await renderView({ runs: { receipts, capped: true } })
     await waitForText("last 3 runs")
+  })
+
+  it("prices each run that reported a cost, and totals them", async () => {
+    await renderView({
+      runs: {
+        receipts: [
+          receipt(2, { tokens: 5_487_635, usd: 12.1518 }),
+          receipt(6, { tokens: 1_000_000, usd: 2.5 }),
+        ],
+        capped: false,
+      },
+    })
+    await waitForText("$12.15")
+    const text = document.body.textContent ?? ""
+    expect(text).toContain("$2.50")
+    // Every run priced, so the total stands alone — no reach to qualify.
+    expect(text).toContain("≈$14.65")
+    expect(text).not.toContain("of 2 priced")
+  })
+
+  it("shows tokens for a run whose models had no rate", async () => {
+    await renderView({
+      runs: {
+        receipts: [receipt(2, { tokens: 4_600_000, usd: null })],
+        capped: false,
+      },
+    })
+    await waitForText("4.6M tok")
+    // A token-only run isn't priced, so there's no total to claim at all.
+    expect(document.body.textContent ?? "").not.toContain("≈$")
+  })
+
+  it("states the total's reach when only some runs carry a price", async () => {
+    await renderView({
+      runs: {
+        receipts: [receipt(2, { tokens: 1_000, usd: 3 }), receipt(6)],
+        capped: false,
+      },
+    })
+    await waitForText("1 of 2 priced")
+  })
+
+  it("leaves cost blank for receipts published before routines reported it", async () => {
+    // The whole of any existing history — the column must read as empty, not
+    // as free.
+    await renderView({})
+    await waitForText("first run")
+    expect(document.body.textContent ?? "").not.toContain("≈$")
   })
 
   it("opens a run's published artifact in a full-size frame", async () => {
