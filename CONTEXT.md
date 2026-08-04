@@ -56,7 +56,8 @@ A cell on a dashboard grid: a routine reference plus a position and a
 layout file. The widget's body is a sandboxed iframe rendering the
 routine's artifact. Any dashboard may arrange any routine from its repo's
 pool.
-_Avoid_: card, tile, panel
+_Avoid_: card, tile, panel; also a cell on someone else's dashboard product
+(monitoring tools call those widgets too) — here the word is always ours
 
 **Category** (and its **band**):
 What a widget _is_, grouped: "Project Management", "Engineering". The third
@@ -77,7 +78,9 @@ thing a widget renders. Addressed by convention, never by URL:
 `artifacts` branch of the owner's data repo, path `w/<slug>/index.html`
 (ADR-0002). Must follow the widget standard (no external requests, gruvbox
 tokens, media-query responsive).
-_Avoid_: report, page, output file
+_Avoid_: report, page, output file; also the error-tracker sense of the
+word, where a "release artifact" is an uploaded source map — never one of
+these
 
 **Shared repo** (`steward`):
 This repository, the product. The web app, `packages/schema`, the contract
@@ -225,6 +228,14 @@ payloads, execute that routine's template (hard-failing on a bad
 reference, ADR-0021/0022) with its `instructions` and `params`, enforce
 the widget standard, publish. Keeps the cloud routine's prompt down to
 one stable line (ADR-0005).
+
+**Degrade**:
+What a failed GitHub read becomes instead of a crash: a dead token turns
+into a re-auth screen, and every transient failure — outage, rate limit,
+timeout, network blip — into a refreshable "try again" page that the next
+load usually clears. A reader never meets a stack trace on a path the app
+expected to fail.
+_Avoid_: fail, error out, fallback
 
 ## How a widget stays fresh
 

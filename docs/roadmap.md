@@ -137,6 +137,33 @@ as the mitigation for injected CSS reaching published artifacts; deferred on
 the strength of the fix-vs-restructure rule, which is a discipline rather than
 a mechanism), and whether a data repo can ship its own kit components.
 
+## M9 — Steward can see its own failures ✅ (code)
+
+Implements ADR-0059 (built 2026-08-03). `apps/web` reports to Sentry — errors,
+full tracing on both sides in one distributed trace, Logs, and Replay on error
+only. Scope is the web app: the CLI runs on other people's machines and cloud
+routines have no guaranteed egress.
+
+Rollout is config, not code: no `SENTRY_DSN` and the SDK never initializes and
+the browser never downloads it, so local dev and PR previews are inert by
+construction; the sample-rate table keyed on `VERCEL_ENV` fails closed behind
+it. Every event names the viewer's GitHub login and the Steward nouns —
+`data_repo`, `dashboard`, `routine` — derived once in root middleware. The
+session cookie is a GitHub token (ADR-0004), so cookies, the `authorization`
+header and query strings are refused twice over.
+
+The load-bearing addition beyond "we added Sentry": the **degrade** path logs.
+A thrown `Response` is control flow to React Router, so the whole class was
+invisible to error reporting — and it is where the rate-limit watch item below
+would surface. Transient failures are now Logs (`[degrade]`), never Issues; a
+dead token stays silent.
+
+Accepted blind spots: artifact JavaScript cannot report (opaque-origin
+`srcdoc` iframes, ADR-0002/0028 working as designed) and Replay will not
+record widget content. Still open: the Sentry project itself is provisioned by
+hand — org/project slugs and the DSN are dashboard steps, and until they exist
+every environment is inert.
+
 ## Watch items
 
 - **GitHub API rate limit** (5k/h authed): batch loader fetches, ETags.

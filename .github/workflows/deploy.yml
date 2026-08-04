@@ -18,6 +18,9 @@ env:
   # Exact pin: vercel build must be reproducible, and dlx keeps the CLI out
   # of ad-hoc global installs (zizmor: adhoc-packages).
   VERCEL_CLI: vercel@55.0.0
+  # Same treatment for the source-map uploader — deploy-only, so it stays out
+  # of apps/web's dependency tree (it ships a ~20MB platform binary).
+  SENTRY_CLI: "@sentry/cli@3.6.2"
 
 jobs:
   preview:
@@ -76,6 +79,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # Hoisted to the job so `vercel build` inherits them: apps/web's vite
+    # config emits source maps only when SENTRY_AUTH_TOKEN is present, which
+    # ties "maps are built" to "maps can be uploaded" with one variable.
+    # Absent — before the Sentry project is provisioned — nothing is built,
+    # the upload step is skipped, and the deploy is unchanged (ADR-0059).
+    # The preview job deliberately gets none of this: previews are inert.
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -87,4 +100,17 @@ jobs:
           cache: pnpm
       - run: pnpm dlx "$VERCEL_CLI" pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
       - run: pnpm dlx "$VERCEL_CLI" build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      # An explicit step rather than the Vite plugin's `sentryOnBuildEnd`:
+      # @vercel/react-router's preset already owns a `buildEnd` hook that
+      # assembles .vercel/output, and the ordering between the two is
+      # unverified. Losing that race means the maps either never upload or
+      # *do* ship to production. This runs after the output exists and before
+      # it is deployed, so it cannot lose (ADR-0059).
+      - name: Upload source maps to Sentry
+        if: env.SENTRY_AUTH_TOKEN != ''
+        run: |
+          pnpm dlx "$SENTRY_CLI" sourcemaps inject .vercel/output
+          pnpm dlx "$SENTRY_CLI" sourcemaps upload --release="$GITHUB_SHA" .vercel/output
+          # The maps are Sentry's now, not the browser's.
+          find .vercel/output -name '*.map' -delete
       - run: pnpm dlx "$VERCEL_CLI" deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

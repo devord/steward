@@ -161,6 +161,18 @@ function sessionExpired401(): never {
 function degradeGitHubError(error: unknown): never {
   if (error instanceof GitHubError) {
     if (error.status === 401) sessionExpired401()
+    // A thrown Response is control flow to React Router, so `handleError`
+    // never sees this branch and the whole degrade path would otherwise be
+    // invisible to error reporting (ADR-0059). Given every board paint is N
+    // GitHub reads against a 5k/hour budget, the likeliest real incident
+    // this app has would produce no report at all. So it logs — searchable
+    // and graphable through consoleLoggingIntegration — and stays out of the
+    // Issue stream, because an outage nobody here can fix should not be able
+    // to fill an inbox. The 401 above stays silent on purpose: a dead token
+    // is one person's ordinary re-auth, not signal.
+    console.warn(
+      `[degrade] GitHub read failed (${error.status}): ${error.message}`,
+    )
     githubOutage503()
   }
   throw error

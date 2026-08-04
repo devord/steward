@@ -10,12 +10,41 @@ import {
   touchDrag,
 } from "./app/mocks/pointer-commands.ts"
 
+// Source maps are built only when there is somewhere to send them: the
+// production deploy job holds SENTRY_AUTH_TOKEN and nothing else does, so a
+// local `pnpm build` and a preview build stay map-free. `hidden` emits the
+// maps without a `sourceMappingURL` comment — sentry-cli links them by debug
+// ID instead, and the CI step deletes them before upload so they never ship
+// (ADR-0058).
+const sourcemap = process.env.SENTRY_AUTH_TOKEN ? ("hidden" as const) : false
+
+// The Sentry release: the deploy commit, baked in so it matches what the
+// source maps were uploaded under — only the build knows that, so a runtime
+// variable could disagree. Empty outside CI ⇒ events carry no release, which
+// is the honest answer for a build nobody uploaded. Forced empty under
+// vitest: GitHub Actions always sets GITHUB_SHA, and a release that exists
+// only in CI is a test that only fails there.
+const release =
+  process.env.VITEST || !process.env.GITHUB_SHA ? "" : process.env.GITHUB_SHA
+
 export default defineConfig({
-  // react-grid-layout's react-draggable reads `process.env.DRAGGABLE_DEBUG`
-  // at drag start; the client bundle has no `process`, so without this the
-  // first drag throws "process is not defined". Replace the read with a
-  // literal so it compiles away (in the app build and both test projects).
-  define: { "process.env.DRAGGABLE_DEBUG": "false" },
+  define: {
+    // react-grid-layout's react-draggable reads `process.env.DRAGGABLE_DEBUG`
+    // at drag start; the client bundle has no `process`, so without this the
+    // first drag throws "process is not defined". Replace the read with a
+    // literal so it compiles away (in the app build and both test projects).
+    "process.env.DRAGGABLE_DEBUG": "false",
+    "process.env.SENTRY_RELEASE": JSON.stringify(release),
+  },
+  // Vite 8 builds the client and SSR environments separately and the
+  // top-level `build.sourcemap` does not reliably reach the per-environment
+  // client build — set it on both, or sentry-cli finds maps for only one
+  // half of every stack trace.
+  build: { sourcemap },
+  environments: {
+    client: { build: { sourcemap } },
+    ssr: { build: { sourcemap } },
+  },
   // The React Router framework plugin expects its react-refresh preamble
   // and full app context; under vitest (unit and browser projects alike)
   // plain Vite's esbuild JSX transform is all the tests need.

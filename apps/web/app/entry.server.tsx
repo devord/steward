@@ -1,6 +1,19 @@
+// Must be the first import in the file: it calls Sentry.init (ADR-0059).
+// `react-router-serve` never runs on Vercel, so the usual
+// `NODE_OPTIONS='--import …'` loader hook isn't available and this is
+// Sentry's serverless direct-import path instead — see instrument.server.ts
+// for why that costs almost nothing here.
+import "./lib/monitoring/instrument.server.ts"
+
 import { PassThrough } from "node:stream"
 
 import { createReadableStreamFromReadable } from "@react-router/node"
+import {
+  createSentryHandleError,
+  createSentryServerInstrumentation,
+  getMetaTagTransformer,
+  wrapSentryHandleRequest,
+} from "@sentry/react-router"
 import { isbot } from "isbot"
 import type { RenderToPipeableStreamOptions } from "react-dom/server"
 import { renderToPipeableStream } from "react-dom/server"
@@ -20,7 +33,34 @@ import { ServerRouter } from "react-router"
  */
 export const streamTimeout = 30_000
 
-export default function handleRequest(
+/**
+ * Loader, action, and render throws become Issues (ADR-0059).
+ *
+ * `logErrors: false` because `consoleLoggingIntegration` is on: logging what
+ * has just been filed as an Issue would file the same failure twice, once in
+ * each stream. Thrown `Response`s never reach here — React Router treats them
+ * as control flow — which is why the degrade path logs for itself
+ * (`dashboard.server.ts`).
+ */
+export const handleError = createSentryHandleError({ logErrors: false })
+
+/**
+ * React Router's own instrumentation hook, which is what puts middleware and
+ * loader spans inside the request span. Without it a board trace is one flat
+ * `http.server` bar and the GitHub reads hanging off it, with no way to see
+ * which loader spent the time — tracing that decorates rather than answers.
+ *
+ * `captureErrors: false` because `handleError` above already files every
+ * loader and action throw; leaving it on would file each one twice.
+ */
+export const instrumentations = [
+  createSentryServerInstrumentation({ captureErrors: false }),
+]
+
+// `async` only so the signature matches wrapSentryHandleRequest's
+// `Promise<unknown>` contract; the HEAD branch below is still synchronous
+// work.
+async function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
@@ -72,7 +112,11 @@ export default function handleRequest(
 
           responseHeaders.set("Content-Type", "text/html")
 
-          pipe(body)
+          // Render into a transform that injects `sentry-trace` and
+          // `baggage` meta tags before `</head>`, so the browser's pageload
+          // continues the SSR trace instead of starting its own (ADR-0059).
+          // Inert with no DSN: the tags come out empty.
+          pipe(getMetaTagTransformer(body))
 
           resolve(
             new Response(stream, {
@@ -88,6 +132,13 @@ export default function handleRequest(
           responseStatusCode = 500
           // Log streaming rendering errors from inside the shell. Errors
           // during initial shell rendering reject above and get logged there.
+          // `handleError` never sees these — they are React's, not the
+          // router's — so they become Sentry Logs rather than Issues
+          // (consoleLoggingIntegration). Kept that way deliberately: the
+          // reader already has their page and a boundary, and the failure
+          // this most often is — a deferred artifact read outliving the 30s
+          // budget above — is the same GitHub trouble the degrade seam files
+          // as a Log too (ADR-0059).
           if (shellRendered) {
             console.error(error)
           }
@@ -96,3 +147,12 @@ export default function handleRequest(
     )
   })
 }
+
+/**
+ * Wrapped rather than replaced. `createSentryHandleRequest` would supply its
+ * own handler, and with it react-router's stock ~5s stream cap — the exact
+ * thing `streamTimeout` above exists to raise. `wrapSentryHandleRequest`
+ * only renames the request's root span after the matched route pattern and
+ * flushes on the way out, so the 30s budget survives intact.
+ */
+export default wrapSentryHandleRequest(handleRequest)

@@ -1,0 +1,143 @@
+---
+title: Monitoring & error reporting
+description: "How Steward reports its own failures: the DSN off switch, what every event carries, what is deliberately a Log instead of an Issue, and what can never be seen at all."
+---
+
+Steward reports to Sentry from `apps/web` only — the browser and the
+server that renders it. The CLI runs on other people's machines and cloud
+routines have no guaranteed network egress, so neither reports anywhere.
+ADR-0059 records the decisions; this page is how to work with them.
+
+## The off switch is a variable
+
+Nothing initializes without `SENTRY_DSN`. On the server the SDK starts
+disabled; in the browser it is never even downloaded, because the DSN
+travels to the page as a `<meta>` tag the server writes from its own
+environment, and `entry.client.tsx` imports the SDK only if that tag is
+there. So one build serves every tier, rotating a DSN needs no rebuild,
+and local dev and PR previews are inert by construction.
+
+A second gate sits behind the first. Sample rates come from a table keyed
+by `VERCEL_ENV` that fails closed: a tier not in the table collects
+nothing, errors included. Both gates have to be open, which is why making
+a **local** run report takes two variables, not one:
+
+```bash
+SENTRY_DSN=https://…   # the ingest endpoint
+VERCEL_ENV=development # the tier that has non-zero rates
+```
+
+Previews get neither, deliberately.
+
+## What every event carries
+
+Everyone past the landing page is signed in, so events are named:
+
+| Field                       | Value                                  |
+| --------------------------- | -------------------------------------- |
+| `user.id` / `user.username` | GitHub login                           |
+| `user.name`                 | display name, when the session has one |
+| `data_repo`                 | `owner/repo` in view                   |
+| `dashboard`                 | board slug                             |
+| `routine`                   | routine slug                           |
+
+No email, and no IP. The tags are derived once, in root middleware, from
+the URL — every repo-scoped path is
+`/r/:owner/:repo/[:dashboard | routines/:slug]` — falling back to the
+viewer's home repo elsewhere, so `/settings` and the resource routes
+(`/sync`, `/run`, `/dashboards`) are named too.
+
+Filtering by `data_repo` is usually the fastest first move in triage: a
+Steward failure is nearly always one repo's config or one routine's
+artifact, and the repo narrows both.
+
+## The session cookie is a credential
+
+`__steward_session` carries the viewer's GitHub token, so redaction here
+is the gate rather than hygiene. Two layers, because the first is a
+library default and defaults move:
+
+1. The SDK's `dataCollection` options refuse cookies, query params, the
+   `authorization` header and request bodies outright.
+2. `before-send.ts` deletes them again, and strips query strings
+   **wholesale** rather than by key — so a parameter nobody has thought of
+   yet cannot leak the way `?code=` would.
+
+The second layer is not merely belt-and-braces: the deny-list in layer one
+filters span attributes, while an event's `request.headers` is only
+trimmed of `cookie`. Deleting `authorization` is layer two's job alone.
+
+If you add a route with a sensitive path **segment** rather than a query
+param, that is the case neither layer covers — say so in review.
+
+## Degrades are Logs, not Issues
+
+A failed GitHub read becomes a **degrade**: a thrown `Response` that
+React Router treats as control flow, which means `handleError` never sees
+it and the whole class would be invisible by default. Given every board
+paint is N reads against a 5,000/hour budget, the likeliest real incident
+this app has would otherwise produce no report at all.
+
+So the transient branch logs and the dead-token branch stays silent:
+
+| Branch                   | What happens                                    |
+| ------------------------ | ----------------------------------------------- |
+| 503 — outage, rate limit | `console.warn` → Sentry **Log**, never an Issue |
+| 401 — dead token         | nothing; one person's ordinary re-auth          |
+
+Search Logs for `[degrade]` to see them. Graph the rate; do not alert on a
+single one. An outage nobody here can fix should not be able to fill an
+inbox.
+
+The streamed-render `console.error` in `entry.server.tsx` is a Log for the
+same reason: it fires after the shell response was handed back, past the
+point an Issue could name anyone.
+
+## The noise filter
+
+`before-send.ts` drops what is environment rather than defect: browser
+extensions, revalidation `AbortError`s (`use-poll-revalidate` cancels the
+in-flight one on every tick it supersedes), the 15s GitHub read timeout,
+`ResizeObserver loop` from the grid drag and the artifact fit pass, and
+offline blips.
+
+The list is deliberately short — Steward loads no third-party scripts, so
+most of a public site's noise surface does not exist here. Grow it from
+the real inbox: **one pattern, one test** in `before-send.test.ts`. A
+pattern with no test is a pattern nobody can safely change later.
+
+## What is structurally invisible
+
+Two blind spots are accepted, not bugs to close.
+
+**Artifact JavaScript cannot report.** Widget tiles are `srcdoc` iframes
+with an opaque origin — nothing inside can reach the parent SDK. That is
+the sandbox contract working (see [Security &
+privacy](/docs/architecture/security)); artifact bugs will never appear in
+Sentry, and are found by opening the artifact.
+
+**Replay records the chrome only.** Sessions are recorded on error and
+never otherwise. Replay blocks `iframe[srcdoc]` because its masking cannot
+run inside one, so every widget replays as a grey box, and `maskAllText`
+hides repo and routine names besides. The `unblock` escape hatch exists
+and is deliberately not taken: it would record private repo contents
+unmasked. Replay is here for the drag, the dialogs and the rail.
+
+## Tracing
+
+Full sampling on both sides, and one trace end to end: the SSR span
+propagates into the browser pageload through meta tags injected before
+`</head>`. Server spans cover middleware, loaders and actions (React
+Router's instrumentation API) plus every outgoing GitHub `fetch`.
+
+The request span ends when the HTTP response closes, not when the shell is
+handed back — so the deferred artifact reads (ADR-0002), which are the
+slowest thing the board does, are inside it rather than after it.
+
+## Source maps
+
+Uploaded from the production deploy job only, keyed on the commit SHA,
+which is baked into the build as the release. Maps are built only when
+`SENTRY_AUTH_TOKEN` is present and deleted from the output before the
+deploy, so they reach Sentry and never the browser. A local `pnpm build`
+produces no maps at all.
