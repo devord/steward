@@ -1,5 +1,6 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { X } from "lucide-react"
+import { useRef } from "react"
 
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
@@ -50,6 +51,7 @@ export function WidgetLightbox({
   context,
 }: WidgetLightboxProps) {
   const t = useT()
+  const frameRef = useRef<HTMLIFrameElement>(null)
   // The artifact can't call onOpenChange directly; it posts CLOSE_MESSAGE and
   // the bridge hook translates that into the same close the chrome triggers.
   useArtifactEscape(open, () => onOpenChange(false))
@@ -60,6 +62,15 @@ export function WidgetLightbox({
         <DialogOverlay />
         <DialogPrimitive.Popup
           data-slot="widget-lightbox"
+          // The artifact takes the opening focus, not the close button Base UI
+          // would otherwise land on. Keys are how a long report gets read —
+          // PageDown, arrows, space — and they only reach the artifact when
+          // the frame holds focus; parked on the chrome they went nowhere,
+          // since the page behind is scroll-locked. Space was worse than
+          // nothing there: it activated Close, so reaching for the next
+          // screenful shut the panel. Escape still closes from inside the
+          // frame — that is what the escape bridge is for.
+          initialFocus={frameRef}
           // Fills the viewport minus a margin, capped so the artifact reads
           // like a page — not stretched edge-to-edge — on ultrawide monitors.
           // `translate` (centering) and `transform` (zoom animation) are
@@ -119,6 +130,7 @@ export function WidgetLightbox({
             </div>
           </header>
           <SandboxedArtifact
+            ref={frameRef}
             html={html}
             title={name}
             className="min-h-0 flex-1"

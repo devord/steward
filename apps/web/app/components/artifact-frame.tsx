@@ -1,3 +1,4 @@
+import type * as React from "react"
 import { useEffect } from "react"
 
 import { cn } from "~/lib/utils"
@@ -44,13 +45,17 @@ export function SandboxedArtifact({
   html,
   title,
   className,
+  ref,
 }: {
   html: string
   title: string
   className?: string
+  /** For the surrounding dialog to hand the artifact its opening focus. */
+  ref?: React.Ref<HTMLIFrameElement>
 }) {
   return (
     <iframe
+      ref={ref}
       srcDoc={html + ESCAPE_BRIDGE}
       sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
       title={title}

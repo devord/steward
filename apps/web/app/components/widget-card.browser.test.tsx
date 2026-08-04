@@ -1,6 +1,7 @@
 import type { Routine, Widget } from "@steward/schema"
 import { describe, expect, it } from "vitest"
 import { createMemoryRouter, RouterProvider } from "react-router"
+import { userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 
 import "../app.css"
@@ -402,6 +403,55 @@ describe("WidgetCard expand affordance", () => {
     await expect
       .poll(() => document.querySelector('[data-slot="widget-lightbox"]'))
       .not.toBe(null)
+  })
+
+  it("opens with the artifact holding focus, not the close button", async () => {
+    await renderCard(
+      inCell(
+        <WidgetCard
+          widget={widget}
+          routine={routine({ name: "Repo pulse" })}
+          artifact={artifact({ html: '<div style="height:5000px">live</div>' })}
+          now={Date.now()}
+          committed
+        />,
+      ),
+    )
+    document
+      .querySelector<HTMLButtonElement>('h2 > button[aria-label^="Expand"]')
+      ?.click()
+    const frame = () =>
+      document.querySelector('[data-slot="widget-lightbox"] iframe')
+    await expect.poll(frame).not.toBe(null)
+    // Keys are how a long report gets read, and they only reach a sandboxed
+    // artifact while its frame holds focus. Parked on the chrome they went
+    // nowhere — the page behind is scroll-locked — so the panel opened
+    // unscrollable until a click into it happened to hand focus over.
+    await expect.poll(() => document.activeElement).toBe(frame())
+  })
+
+  it("keeps the panel open when space scrolls the artifact", async () => {
+    await renderCard(
+      inCell(
+        <WidgetCard
+          widget={widget}
+          routine={routine({ name: "Repo pulse" })}
+          artifact={artifact({ html: '<div style="height:5000px">live</div>' })}
+          now={Date.now()}
+          committed
+        />,
+      ),
+    )
+    document
+      .querySelector<HTMLButtonElement>('h2 > button[aria-label^="Expand"]')
+      ?.click()
+    const panel = () => document.querySelector('[data-slot="widget-lightbox"]')
+    await expect.poll(panel).not.toBe(null)
+    // With focus on the close button, space activated it: reaching for the
+    // next screenful shut the panel. It belongs to the artifact now.
+    await userEvent.keyboard(" ")
+    await new Promise((r) => setTimeout(r, 150))
+    expect(panel()).not.toBe(null)
   })
 
   it("leaves the name plain when nothing was ever published", async () => {
