@@ -82,6 +82,17 @@ _Avoid_: report, page, output file; also the error-tracker sense of the
 word, where a "release artifact" is an uploaded source map — never one of
 these
 
+**Form** (and its **look**):
+What shape a chart takes — a burn-up, a ranked bar, a quadrant scatter, a
+slope. The **routine** chooses the form, because only the routine knows what
+its data means (ADR-0062). The **look** is everything else about how that form
+draws — hue, weight, dash, type size, marker, legend — and the **kit** owns it
+without exception, so a board of seventeen widgets reads as one product rather
+than seventeen. The seam is enforced by construction, not by instruction:
+whatever a routine asks for is normalized to kit tokens before it renders.
+_Avoid_: chart type (that is flint's word for the input, not ours), style,
+theme (a theme is the viewer's palette preference, one tier up)
+
 **Shared repo** (`steward`):
 This repository, the product. The web app, `packages/schema`, the contract
 skills (`run-routine`, `widget-artifact`, `publish-widget`), the generic
