@@ -195,6 +195,56 @@ describe("RoutineRunsView", () => {
     expect(text).not.toContain("of 2 priced")
   })
 
+  it("states what a run of this routine costs on average", async () => {
+    await renderView({
+      runs: {
+        receipts: [
+          receipt(2, { tokens: 5_487_635, usd: 12.1518 }),
+          receipt(6, { tokens: 1_000_000, usd: 2.5 }),
+        ],
+        capped: false,
+      },
+    })
+    await waitForText("≈$14.65")
+    // Scoped to the runs listed above, which the count beside it names — so
+    // this and the pool ledger's 30-day average can differ without either
+    // being wrong.
+    expect(document.body.textContent ?? "").toContain("≈$7.33 each")
+  })
+
+  it("scales each run's cost tick against this routine's dearest run", async () => {
+    await renderView({
+      runs: {
+        receipts: [
+          receipt(2, { tokens: 5_487_635, usd: 12.1518 }),
+          receipt(6, { tokens: 1_000_000, usd: 2.5 }),
+        ],
+        capped: false,
+      },
+    })
+    await waitForText("≈$14.65")
+    const widths = [
+      ...document.querySelectorAll<HTMLElement>(".bg-ink-faint"),
+    ].map((el) => el.style.width)
+    // The dearest run is the full bar; the column reads as this routine's own
+    // spend history rather than against some other routine's scale.
+    expect(widths).toContain("100%")
+    expect(widths).toHaveLength(2)
+  })
+
+  it("draws no cost tick for a token-only run", async () => {
+    // Tokens are not dollars; a bar for them would put two units in one
+    // column of bars.
+    await renderView({
+      runs: {
+        receipts: [receipt(2, { tokens: 4_600_000, usd: null })],
+        capped: false,
+      },
+    })
+    await waitForText("4.6M tok")
+    expect(document.querySelectorAll(".bg-ink-faint")).toHaveLength(0)
+  })
+
   it("shows tokens for a run whose models had no rate", async () => {
     await renderView({
       runs: {

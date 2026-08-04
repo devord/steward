@@ -34,6 +34,19 @@ interface Failure {
 /** `${repo}:${path}` → injected failure for contents/commits requests. */
 const failures = new Map<string, Failure>()
 
+/** One commit on the artifacts branch, as the branch-wide listing serves it —
+    the publish receipts a repo's cost scan reads (publish-ledger.ts). */
+export interface MockPublish {
+  date: string
+  message: string
+  sha?: string
+}
+
+/** repo → its artifacts-branch history, newest first. Only seeded repos serve
+    the branch-wide listing; everything else keeps the single-commit
+    per-path behaviour every other test relies on. */
+const publishLogs = new Map<string, MockPublish[]>()
+
 /**
  * Repo-level metadata the registry endpoints serve (ADR-0023): visibility,
  * the viewer's permission slice, topics, collaborators. Defaults model the
@@ -147,6 +160,7 @@ export const githubStats = { full: 0, conditional: 0 }
 
 export function resetGitHub() {
   repos.clear()
+  publishLogs.clear()
   failures.clear()
   repoMeta.clear()
   pendingTrees.clear()
@@ -223,6 +237,12 @@ export function seedRepo(
     store.set(`${ref}:${path}`, file)
   }
   repos.set(repo, store)
+}
+
+/** Seed a repo's artifacts-branch history (newest first) for the branch-wide
+    commits listing — the one request that prices every routine at once. */
+export function seedPublishLog(repo: string, commits: MockPublish[]) {
+  publishLogs.set(repo, commits)
 }
 
 /**
@@ -529,6 +549,27 @@ export const githubHandlers = [
       const failure = takeFailure(repo, path, "commits")
       if (failure) return failureResponse(failure)
       const ref = url.searchParams.get("sha") ?? "main"
+      // Branch-wide listing (no `path`): the whole publish history, paged as
+      // the real API pages it. Only for repos that seeded one, so every
+      // existing per-path case keeps its single-commit answer.
+      const log = publishLogs.get(repo)
+      if (!path && log) {
+        const perPage = Number(url.searchParams.get("per_page") ?? "30")
+        const page = Number(url.searchParams.get("page") ?? "1")
+        const slice = log.slice((page - 1) * perPage, page * perPage)
+        return json(
+          request,
+          slice.map((commit, i) => ({
+            sha: commit.sha ?? `${(page - 1) * perPage + i}`.padStart(40, "c"),
+            html_url: `https://github.com/${repo}/commit/${commit.sha ?? i}`,
+            commit: {
+              committer: { date: commit.date },
+              author: { name: "Claude" },
+              message: commit.message,
+            },
+          })),
+        )
+      }
       const file = repos.get(repo)?.get(`${ref}:${path}`)
       if (!file) return new HttpResponse(null, { status: 404 })
       if (!file.lastCommit) return json(request, [])

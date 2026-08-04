@@ -16,6 +16,7 @@ import {
 
 import { data } from "react-router"
 
+import { type PublishLedger, toEntries } from "./publish-ledger.ts"
 import { parseRunCost, type RunReceipt } from "./runs.ts"
 import type { DiscoveredTemplate } from "./templates.ts"
 import {
@@ -28,6 +29,7 @@ import {
   listCollaborators,
   listDirectory,
   listPathCommits,
+  listPublishLedger,
   type RepoFile,
   repoExists,
 } from "./github.server.ts"
@@ -922,6 +924,75 @@ export async function loadRoutineRuns(
     return { receipts, capped: receipts.length >= RUNS_LIMIT }
   } catch {
     return { receipts: [], capped: false, unreachable: true }
+  }
+}
+
+/**
+ * The window every cost surface reads, and the ceiling on getting there.
+ *
+ * 30 days is the shortest window that holds a weekly routine's several runs
+ * and a four-hourly one's few hundred; 10 pages (~1000 receipts) is the cost
+ * ceiling for a repo busy enough to fill it. A scan that stops on the ceiling
+ * marks itself `capped`, and the surfaces say so rather than presenting a
+ * partial window as the whole.
+ */
+export const SPEND_WINDOW_DAYS = 30
+const SPEND_MAX_PAGES = 10
+/** Spend only moves when a run publishes, so a few minutes behind is
+    invisible next to re-paging the branch on every navigation. */
+const SPEND_TTL_MS = 5 * 60_000
+
+/**
+ * Every publish receipt in the repo's window — the app's single source of
+ * what runs cost (ADR-0060), read once per repo and shared by the pool
+ * ledger's average and the spend page. Two surfaces reading two windows
+ * would disagree about the same word, which is the failure this shape exists
+ * to prevent.
+ *
+ * Streamed and swr-cached (ADR-0030); degrades in band, so the promise never
+ * rejects and an unreachable scan is never cached as an answer.
+ */
+export function streamRepoSpend(
+  token: string,
+  repo: string,
+): Promise<PublishLedger> {
+  return swr(
+    `spend:${tokenKey(token)}:${repo}`,
+    SPEND_TTL_MS,
+    () => loadRepoSpend(token, repo),
+    SPEND_TTL_MS * 10,
+    (value) => value.unreachable !== true,
+  ).catch(() => ({
+    entries: [],
+    capped: false,
+    since: null,
+    unreachable: true,
+  }))
+}
+
+export async function loadRepoSpend(
+  token: string,
+  repo: string,
+): Promise<PublishLedger> {
+  const sinceMs = Date.now() - SPEND_WINDOW_DAYS * 24 * 3_600_000
+  try {
+    const page = await listPublishLedger(token, repo, {
+      sinceMs,
+      maxPages: SPEND_MAX_PAGES,
+    })
+    if (page == null) {
+      return { entries: [], capped: false, since: null, unreachable: true }
+    }
+    const entries = toEntries(page.commits)
+    return {
+      entries,
+      capped: page.capped,
+      // The oldest receipt actually read — the true left edge, whether the
+      // scan stopped on the window or ran out of pages before reaching it.
+      since: entries[entries.length - 1]?.at ?? null,
+    }
+  } catch {
+    return { entries: [], capped: false, since: null, unreachable: true }
   }
 }
 
