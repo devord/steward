@@ -152,8 +152,13 @@ describe("compileCharts", () => {
     // the browser, and takes its 12px type down with it. A page-only band
     // still renders on a raw page at 340px, where the column is 300px.
     const wide = bars(12)
-    const { charts } = await compileCharts([{ id: "c1", spec: wide }])
+    const { charts, failures } = await compileCharts([{ id: "c1", spec: wide }])
     const c = charts.get("c1")
+    // Asserted first: a dropped chart yields "" for every tier, and `?? 0`
+    // would then satisfy every budget below. The test would pass by measuring
+    // nothing.
+    expect(failures).toEqual([])
+    expect(c).toBeDefined()
     for (const tier of ["page", "detail", "narrow"] as const) {
       const w = Number(
         /width="(\d+(?:\.\d+)?)"/.exec(c?.[tier] ?? "")?.[1] ?? 0,

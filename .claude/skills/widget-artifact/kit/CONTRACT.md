@@ -482,11 +482,16 @@ this would be the one region of the page the board's theme override cannot
 re-point — wrong for every reader not on gruvbox dark, and unreachable by any
 future design fix.
 
-**Plot a population you can name.** The chart is legible to a few dozen points
-and your data may run to hundreds, so choose the cut deliberately — the rows
-above a threshold, the top group, the window — and say which cut it is and how
-many fall outside it, on `note`. Silently plotting the first N and letting the
-chart imply it drew everything is the difference between a sample and a claim.
+**Plot a population you can name, and cut it yourself.** The chart is legible
+to a few dozen points and your data may run to hundreds, so choose the cut
+deliberately — the rows above a threshold, the top group, the window.
+
+**`data.values` must already be the cut.** The kit does not sample: a block
+whose rows exceed `maxRows` is dropped whole, so emitting the full census with
+a well-worded `note` gets you no chart at all. Emit the selected rows, keep
+`data.values.length <= maxRows`, and say on `note` which cut it is and how many
+fall outside it. Silently plotting the first N and letting the chart imply it
+drew everything is the difference between a sample and a claim.
 
 ### `blocks[]` — series and matrix
 

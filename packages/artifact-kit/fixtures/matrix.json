@@ -267,7 +267,7 @@
       "kind": "chart",
       "id": "hotspots",
       "label": "Churn against interface width",
-      "note": "Hot and wide is the upper right \u2014 a change there costs most. The 12 modules above the hot line; 124 quieter ones are not plotted.",
+      "note": "Hot and wide is the upper right \u2014 a change there costs most. The 12 most-changed modules; 124 quieter ones are not plotted.",
       "spec": {
         "data": {
           "values": [

@@ -74,6 +74,32 @@ describe("the co-change field through flint", () => {
     expect(forward).toBe(back)
   })
 
+  it("rings a named pair rather than filling over it", async () => {
+    // The fill already spends itself on magnitude; marking significance with
+    // more of the same fill makes two claims in one channel and the reader
+    // cannot tell which one a dark cell is making (ADR-0047).
+    //
+    // `filled: false` does NOT do this — it only decides which channel the
+    // colour encoding lands on. Measured before the fix: this layer painted
+    // solid rectangles straight over the cells it was meant to outline.
+    const { svg } = await render()
+    const layers = [
+      ...(svg?.page ?? "").matchAll(
+        /<g class="(mark-rect[^"]*)"[^>]*>(.*?)<\/g>/gs,
+      ),
+    ]
+    const ring = layers.find((l) => l[1].includes("layer_1"))
+    expect(ring).toBeDefined()
+    const paths = [...(ring?.[2] ?? "").matchAll(/<path[^>]*>/g)].map(
+      (m) => m[0],
+    )
+    expect(paths.length).toBeGreaterThan(0)
+    for (const path of paths) {
+      expect(path).not.toMatch(/\sfill="(?!none)/)
+      expect(path).toContain(`stroke="${PALETTE.ink}"`)
+    }
+  })
+
   it("leaves the diagonal blank rather than drawing a self-pair", async () => {
     // A module co-changes with itself on every commit. Drawing that puts the
     // darkest cells on the one axis carrying no information.
