@@ -200,7 +200,15 @@ for (const file of files) {
     // *crops* it instead of shortening it. Hit three times during the migration
     // — the verdict band, the rails, and very nearly the day grid — which is
     // why it is an error rather than a warning.
-    if (html.includes("data-fit-list") && !html.includes("data-fit-item")) {
+    //
+    // Checked against the markup only, not `html`: `tiers.css` names
+    // `[data-fit-list] > thead` as a plain CSS selector, and that literal
+    // substring is in every kit stylesheet whether or not this document has
+    // any element carrying the attribute. Scanning the inlined `<style>` text
+    // made a throughput-only artifact — no queue, rail, verdict, or noted
+    // section — fail on content that was never markup.
+    const markup = html.replace(/<style[\s\S]*?<\/style>/g, " ")
+    if (markup.includes("data-fit-list") && !markup.includes("data-fit-item")) {
       errors.push(
         "[data-fit-list] with no [data-fit-item] inside — the injected pass " +
           "has nothing to trim, so the tile will clip instead of degrading",
