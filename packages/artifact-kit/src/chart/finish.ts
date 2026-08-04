@@ -107,16 +107,6 @@ export function quantizeColourRamps(node: unknown): void {
   }
 }
 
-/** Dash patterns, so identity never rests on colour alone. */
-export const SERIES_DASH: readonly (readonly number[])[] = [
-  [1, 0],
-  [1, 0],
-  [6, 4],
-  [2, 3],
-  [4, 2],
-  [1, 2],
-]
-
 /**
  * Clamp every type size to the artifact floor.
  *
