@@ -212,11 +212,20 @@ Monday. Everything held back is counted on a `count` and detailed in context.
 
 - **A `chart` block, "Churn against interface width"** — the hotspot plot the
   ranking is derived from, as a `Scatter Plot`: commits on x, exports-per-file
-  on y, one point per censused module. Tornhill's quadrant, and the reason the
-  list is ordered the way it is — hot and wide is the upper right, and a
-  reader who can see the cloud can see whether the top row is an outlier or
-  the first of many. Page tier only, and it goes **after** the ledger: the
-  named rows are the finding, the field is the evidence for their ordering.
+  on y. Tornhill's quadrant, and the reason the list is ordered the way it is
+  — hot and wide is the upper right, and a reader who can see the cloud can
+  see whether the top row is an outlier or the first of many. Page tier only,
+  and it goes **after** the ledger: the named rows are the finding, the field
+  is the evidence for their ordering.
+
+  **Plot one stated population, and state it.** A census runs to hundreds of
+  modules and the plot is legible to a few dozen, so the point set is **every
+  module at or above the hot line** — the same cut that gates the ledger, so
+  the chart and the list are answering one question about one population. The
+  `note` says which cut it is and how many modules fall outside it ("the 12
+  modules above the hot line; 124 quieter ones are not plotted"). Never take
+  the first N of a census and let the chart imply it drew the whole thing:
+  the held-back count is the difference between a sample and a claim.
 
 - **The `matrix` block, "Co-change"** — page tier only, which is the kit's
   default for it. Top 8 **by co-change strength**, not by score: the field

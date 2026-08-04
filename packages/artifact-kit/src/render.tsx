@@ -4,10 +4,9 @@ import { Throughput, type ThroughputSpec } from "./components/Throughput.tsx"
 import { type BottomLine, BottomLineBand } from "./components/BottomLine.tsx"
 import { Chart } from "./components/Chart.tsx"
 import type { ChartSpec, CompiledChart } from "./chart/compile.ts"
-import {
-  CouplingMatrix,
-  type MatrixSpec,
-} from "./components/CouplingMatrix.tsx"
+import { seriesHasShape, type SeriesSpec } from "./chart/forms/series.ts"
+import { matrixHasField, type MatrixSpec } from "./chart/forms/matrix.ts"
+import { chartRequests } from "./chart/requests.ts"
 import { EmptyState } from "./components/EmptyState.tsx"
 import { Prose, type ProseItem } from "./components/Prose.tsx"
 import { ProvenanceLine } from "./components/ProvenanceLine.tsx"
@@ -18,7 +17,6 @@ import {
   type ViewerGroups,
 } from "./components/QueueTable.tsx"
 import { Rail } from "./components/Rail.tsx"
-import { Series, type SeriesSpec } from "./components/Series.tsx"
 import { type Stage, StageStrip } from "./components/StageStrip.tsx"
 import { type DaySpec, TimeGrid } from "./components/TimeGrid.tsx"
 import { Section } from "./components/Section.tsx"
@@ -133,10 +131,15 @@ export interface ProgressBlock extends BlockBase {
 }
 
 /**
- * A chart band. Page only by default, and for the same reason prose is: a
+ * The burn-up. Page only by default, and for the same reason prose is: a
  * four-column tile is 1200px and still not a reading surface, and tiles never
  * scroll, so a chart there either steals the ledger's rows or opens into the
  * clipped region.
+ *
+ * Since ADR-0062 this compiles through flint like any other chart — the schema
+ * is unchanged, so no data repo has to know that. `id` is optional here only
+ * because published routines predate the requirement; one is derived when it
+ * is absent (see `chartRequests`).
  */
 export interface SeriesBlock extends BlockBase {
   kind: "series"
@@ -190,15 +193,18 @@ export type Block =
   | ChartBlock
 
 /** Whether a band has anything to render — an empty one is never drawn. */
-function filled(b: Block, charts: ArtifactCharts): boolean {
+function filled(b: Block, charts: ArtifactCharts, keyOf: ChartKeyMap): boolean {
   // A chart that failed to compile, blew its cardinality ceiling, or painted
   // outside the palette has no entry, and a band with no chart in it is an
   // empty band. The reason travels on the provenance line instead — dropping
   // one band is not a reason to publish nothing (ADR-0062).
-  if (b.kind === "chart") return charts.has(b.id)
+  if (b.kind === "chart") return charts.has(keyOf.get(b) ?? "")
   if (b.kind === "prose") return b.items.length > 0
-  // Two points is the floor for a line. One is a dot claiming a trend.
-  if (b.kind === "series") return b.spec.lines.some((l) => l.points.length > 1)
+  // Two points is the floor for a line; one is a dot claiming a trend. Both
+  // conditions matter: shape is about the data, the map entry is about whether
+  // the render survived conformance.
+  if (b.kind === "series")
+    return seriesHasShape(b.spec) && charts.has(keyOf.get(b) ?? "")
   // One person on one day is not a ranking. The chart's whole claim is
   // relative standing over time, and it needs both to make it.
   if (b.kind === "throughput")
@@ -208,8 +214,8 @@ function filled(b: Block, charts: ArtifactCharts): boolean {
   if (b.kind === "progress")
     return b.rails.length > 0 || (b.stages ?? []).length > 0
   if (b.kind === "day") return b.spec.blocks.length > 0
-  // Four is the floor for a field. Below it the squares do not read as one.
-  if (b.kind === "matrix") return b.spec.labels.length >= 4
+  if (b.kind === "matrix")
+    return matrixHasField(b.spec) && charts.has(keyOf.get(b) ?? "")
   return (
     (b.rows?.length ?? 0) > 0 || (b.groups ?? []).some((g) => g.rows.length > 0)
   )
@@ -282,14 +288,21 @@ export type ArtifactCharts = ReadonlyMap<string, CompiledChart>
 
 const NO_CHARTS: ArtifactCharts = new Map()
 
+/** Block → the key its compiled chart is stored under. See chart/requests.ts. */
+export type ChartKeyMap = ReadonlyMap<object, string> | WeakMap<object, string>
+
+const EMPTY_SVG = { page: "", detail: "", narrow: "" }
+
 function Band({
   block,
   index,
   charts,
+  keyOf,
 }: {
   block: Block
   index: number
   charts: ArtifactCharts
+  keyOf: ChartKeyMap
 }) {
   return (
     <Section
@@ -315,7 +328,7 @@ function Band({
     >
       {block.kind === "chart" ? (
         <Chart
-          svg={charts.get(block.id) ?? { page: "", tile: "" }}
+          svg={charts.get(keyOf.get(block) ?? "") ?? EMPTY_SVG}
           label={block.label}
         />
       ) : block.kind === "queue" ? (
@@ -327,11 +340,17 @@ function Band({
           trimFirst={block.trimFirst}
         />
       ) : block.kind === "series" ? (
-        <Series spec={block.spec} />
+        <Chart
+          svg={charts.get(keyOf.get(block) ?? "") ?? EMPTY_SVG}
+          label={block.label}
+        />
       ) : block.kind === "throughput" ? (
         <Throughput spec={block.spec} />
       ) : block.kind === "matrix" ? (
-        <CouplingMatrix spec={block.spec} />
+        <Chart
+          svg={charts.get(keyOf.get(block) ?? "") ?? EMPTY_SVG}
+          label={block.label}
+        />
       ) : block.kind === "day" ? (
         <TimeGrid spec={block.spec} />
       ) : block.kind === "progress" ? (
@@ -367,7 +386,10 @@ function Document({
   doc: ArtifactDoc
   charts: ArtifactCharts
 }) {
-  const blocks = (doc.blocks ?? []).filter((b) => filled(b, charts))
+  // The same walk the compiler ran, so a block and its SVG agree on a key
+  // whatever the filtering below does to their order.
+  const { keyOf } = chartRequests(doc.blocks ?? [])
+  const blocks = (doc.blocks ?? []).filter((b) => filled(b, charts, keyOf))
   const main = blocks.filter((b) => !b.rail)
   const rail = blocks.filter((b) => b.rail)
   const bands = (list: Block[], offset = 0) =>
@@ -377,6 +399,7 @@ function Document({
         block={b}
         index={offset + i}
         charts={charts}
+        keyOf={keyOf}
       />
     ))
   return (

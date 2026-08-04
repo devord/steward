@@ -482,11 +482,23 @@ this would be the one region of the page the board's theme override cannot
 re-point — wrong for every reader not on gruvbox dark, and unreachable by any
 future design fix.
 
-### `blocks[]` — matrix
+**Plot a population you can name.** The chart is legible to a few dozen points
+and your data may run to hundreds, so choose the cut deliberately — the rows
+above a threshold, the top group, the window — and say which cut it is and how
+many fall outside it, on `note`. Silently plotting the first N and letting the
+chart imply it drew everything is the difference between a sample and a claim.
 
-Prefer this over `chart` for a **co-change field specifically** — it is built
-around labelled pairs and a held-back count. For anything else two-dimensional,
-reach for `chart`.
+### `blocks[]` — series and matrix
+
+Both still exist and both take the schemas they always did — a routine emits
+`from`/`to`/`today`/`max`/`lines` for a burn-up, or `labels`/`cells`/`marks`
+for a co-change field. Since ADR-0062 they compile through flint like any other
+chart, which changes nothing you write.
+
+Reach for them when they fit — they carry judgments a generic chart cannot:
+the burn-up steps its ceiling and excludes a target slope from the y scale; the
+field blanks its diagonal, mirrors its triangle and rings a named pair. For
+anything else, use `chart`.
 
 ```json
 {

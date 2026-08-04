@@ -13,6 +13,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { compileCharts } from "./chart/compile.ts"
+import { chartRequests } from "./chart/requests.ts"
 import { renderArtifact } from "./render.tsx"
 import { reviewDoc, validateDoc } from "./validate-doc.ts"
 
@@ -55,9 +56,7 @@ for (const note of reviewDoc(doc)) console.error(`note: ${note}`)
 // fatal — the rest of the artifact is still worth publishing, which is the
 // same reasoning the advisories above run on.
 const { charts, failures } = await compileCharts(
-  (doc.blocks ?? [])
-    .filter((b) => b?.kind === "chart" && b.id && b.spec)
-    .map((b) => ({ id: b.id, spec: b.spec })),
+  chartRequests(doc.blocks ?? []).requests,
 )
 for (const { id, problems } of failures)
   for (const p of problems) console.error(`note: chart ${id} dropped — ${p}`)

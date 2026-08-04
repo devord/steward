@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { PALETTE } from "../tokens/palette.ts"
-import { type ChartSpec, compileCharts } from "./compile.ts"
+import { type ChartSpec, compileCharts, TIER_BUDGET } from "./compile.ts"
 import { conformChart, TYPE_FLOOR } from "./conform.ts"
 import { clampType, SERIES_INK } from "./finish.ts"
 import { monoWidth, MONO_ADVANCE } from "./measure.ts"
@@ -66,9 +66,23 @@ describe("conformChart", () => {
     expect(conformChart(`<svg><image href="a.png"/></svg>`).join()).toContain(
       "external",
     )
-    expect(conformChart(`<svg><rect fill="url(#p)"/></svg>`).join()).toContain(
-      "external",
-    )
+    expect(
+      conformChart(`<svg><rect fill="url(https://x/p.svg)"/></svg>`).join(),
+    ).toContain("external")
+    expect(
+      conformChart(`<svg><a href="/somewhere">x</a></svg>`).join(),
+    ).toContain("external")
+  })
+
+  it("allows same-document fragments, which every clipped plot uses", () => {
+    // Vega clips every plot with clip-path="url(#clipN)" and points legend
+    // symbols at xlink:href="#...". A blanket url(/href= rejection failed most
+    // of the catalogue for a rule that is about network access.
+    expect(
+      conformChart(
+        `<svg><g clip-path="url(#clip1)"/><use xlink:href="#sym"/></svg>`,
+      ),
+    ).toEqual([])
   })
 })
 
@@ -118,18 +132,34 @@ describe("compileCharts", () => {
     ])
     expect(failures).toEqual([])
     const c = charts.get("c1")
-    expect(c?.page).toContain("<svg")
-    expect(c?.tile).toContain("<svg")
-    // The whole safety claim, asserted on the artifact that would ship.
-    expect(conformChart(c?.page ?? "")).toEqual([])
-    expect(conformChart(c?.tile ?? "")).toEqual([])
+    // The whole safety claim, asserted on every artifact that would ship.
+    for (const tier of ["page", "detail", "narrow"] as const) {
+      expect(c?.[tier]).toContain("<svg")
+      expect(conformChart(c?.[tier] ?? "", tier, TIER_BUDGET[tier])).toEqual([])
+    }
   })
 
-  it("renders the two tiers at different sizes, never one scaled", async () => {
+  it("renders each tier at its own size, never one scaled", async () => {
     const { charts } = await compileCharts([{ id: "c1", spec: bars() }])
     const width = (s: string) => Number(/width="(\d+)"/.exec(s)?.[1] ?? 0)
     const c = charts.get("c1")
-    expect(width(c?.page ?? "")).toBeGreaterThan(width(c?.tile ?? ""))
+    expect(width(c?.page ?? "")).toBeGreaterThan(width(c?.detail ?? ""))
+    expect(width(c?.detail ?? "")).toBeGreaterThan(width(c?.narrow ?? ""))
+  })
+
+  it("fits every tier inside the column it will be shown in", async () => {
+    // The floor CodeRabbit caught: a render wider than its column is scaled by
+    // the browser, and takes its 12px type down with it. A page-only band
+    // still renders on a raw page at 340px, where the column is 300px.
+    const wide = bars(12)
+    const { charts } = await compileCharts([{ id: "c1", spec: wide }])
+    const c = charts.get("c1")
+    for (const tier of ["page", "detail", "narrow"] as const) {
+      const w = Number(
+        /width="(\d+(?:\.\d+)?)"/.exec(c?.[tier] ?? "")?.[1] ?? 0,
+      )
+      expect(w).toBeLessThanOrEqual(TIER_BUDGET[tier])
+    }
   })
 
   it("drops a chart whose data outgrew the form, and says why", async () => {

@@ -120,18 +120,29 @@ A chart band therefore emits **two renders, CSS-gated** — one sized for the
 tile, one for the page. See "What the spike settled": the fixed-and-capped
 alternative this ADR originally chose does not survive contact.
 
-## What this is not
+## What migrates, and what does not
 
-It is not a smaller kit. That was the original framing and it does not survive
-the numbers. `Series.tsx` (391), `CouplingMatrix.tsx` (165) and `Sparkline.tsx`
-(57) come out — 613 lines. The normaliser, the `textMetrics` override, the
-theme layer and the conformance harness go in, at 300–500. `Throughput` stays:
-its 421-line behaviour layer (toggles, scrub) has no flint equivalent and would
-have to be rewritten against Vega's scenegraph to migrate, which is a worse
-trade than leaving it alone.
+`Series.tsx` (391 lines) and `CouplingMatrix.tsx` (165) are gone, replaced by
+form modules that hand flint a spec and decorate what comes back. Both block
+schemas are **unchanged**, so no data repo learns that anything happened.
 
-The kit gets more capable at about the same source size, with a bundle nine
-times larger. That is the trade.
+Two do not move, and the reasons are worth stating so nobody re-opens them:
+
+- **`Sparkline`** (57 lines) is not a band. It is a cell inside `QueueTable`,
+  drawn per row from a `spark` column. Migrating it means one Vega compile per
+  table row — dozens per artifact — and an async compile inside a synchronous
+  table render. A trend line 60px wide gains nothing from a layout engine.
+- **`Throughput`** (362 lines, plus a 421-line behaviour layer) carries
+  toggles and a scrub. Flint does no interaction, so migrating the plot would
+  strand the behaviour against a scenegraph it was not written for. The static
+  half is not the expensive half.
+
+So the kit is _not_ smaller. `Series` and `CouplingMatrix` come out at 556
+lines; the normaliser, the `textMetrics` override, the finish layer, the
+conformance gate, the fit loop and two form modules go in at rather more. What
+it buys is 38+ forms a routine can reach for without touching this repo, one
+theme layer instead of one per component, and a chart that cannot ship
+off-palette or under the type floor.
 
 ## What the spike settled
 
@@ -173,6 +184,24 @@ the "multiplies artifact bytes" objection this ADR originally raised against it.
 "Jun 24, 2026" under UTC-3. A routine's runner and its reader are rarely in the
 same zone, so dates are stamped at midday UTC and scales are declared
 `type: "utc"`. `Series.tsx` parses UTC deliberately; nothing in flint does.
+
+**Two tiers were still one too few.** A page-only band renders on a raw page at
+_any_ width, so the 464px tile render met a 340px page's 300px content column
+and was scaled to 8.8px type — the exact failure this ADR lists as rejected,
+arrived at by way of `max-width: 100%`. There are three tiers now, cut at the
+kit's own breakpoints, and each render is followed by a **fit loop**: the
+emitted width is the plot _plus_ whatever axis and legend chrome the data
+needed, so the box cannot be chosen in advance. A tier that still will not fit
+is dropped by conformance rather than scaled.
+
+**A continuous colour ramp cannot be themed, so the kit does not draw one.**
+The first heatmap through the pipeline was rejected naming five colours —
+`rgb(167, 99, 51)` and friends — that Vega had _interpolated_ between two
+tokens. An interpolated colour is in no palette, so the board's theme override
+cannot re-point it. Sequential scales are therefore quantized to four palette
+steps, which is also the better chart: a banded field can be read off a legend,
+where a gradient asks the reader to judge lightness differences they cannot
+reliably see. ADR-0047's rule — one hue, light to dark — is kept exactly.
 
 ## First cut
 

@@ -162,12 +162,15 @@ writeFileSync(
  * holds every emitted colour inside this set.
  */
 export const PALETTE = {
-${ARTIFACT_TOKENS.map(
-  ([cssVar, role]) =>
-    `  ${JSON.stringify(cssVar.replace(/^--color-/, ""))}: ${JSON.stringify(
-      anchor.tokens[role],
-    )},`,
-).join("\n")}
+${ARTIFACT_TOKENS.map(([cssVar, role]) => {
+  const name = cssVar.replace(/^--color-/, "")
+  // Quote only what has to be quoted. The formatter strips redundant quotes
+  // from object keys, so emitting them unconditionally makes the generated
+  // file fail `vp check` the moment it is written — and CI regenerates this
+  // and diffs, so "generated" has to mean "already formatted".
+  const key = /^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name)
+  return `  ${key}: ${JSON.stringify(anchor.tokens[role])},`
+}).join("\n")}
 } as const
 
 export type PaletteName = keyof typeof PALETTE
