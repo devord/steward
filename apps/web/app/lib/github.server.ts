@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import type { LedgerCommit } from "./publish-ledger.ts"
+
 /**
  * Thin GitHub REST client. Every call runs with the signed-in user's token —
  * GitHub itself enforces that a token can't read someone else's private data
@@ -520,6 +522,68 @@ export async function listArtifactPublishDates(
     if (date && slug && !dates.has(slug)) dates.set(slug, date)
   }
   return dates
+}
+
+/** One commits page; the API's own ceiling. */
+const LEDGER_PER_PAGE = 100
+
+/**
+ * The repo's publish history, branch-wide — every routine's receipts in one
+ * paged scan rather than a request per routine (publish-ledger.ts).
+ *
+ * Bounded twice over, and it reports which bound it hit: `sinceMs` is the
+ * window asked for, `maxPages` the cost ceiling that protects the request
+ * path from an old, busy repo. Whichever arrives first stops the scan, and
+ * `capped` says it was the page limit — so a total derived from a short
+ * window can state its own reach instead of passing for the whole.
+ *
+ * Paging is sequential on purpose. Pages beyond the first almost never change
+ * and come back 304 from the ETag store, costing no rate limit at all
+ * (see `gh`), so the usual scan is one live request and a stack of
+ * revalidations — cheaper than firing ten in parallel and discarding the tail.
+ */
+export async function listPublishLedger(
+  token: string,
+  repo: string,
+  { sinceMs, maxPages }: { sinceMs: number; maxPages: number },
+): Promise<{ commits: LedgerCommit[]; capped: boolean } | null> {
+  const commits: LedgerCommit[] = []
+  for (let page = 1; page <= maxPages; page++) {
+    const search = new URLSearchParams({
+      sha: "artifacts",
+      per_page: String(LEDGER_PER_PAGE),
+      page: String(page),
+    })
+    const res = await gh(token, `/repos/${repo}/commits?${search}`)
+    // No branch or an empty repo: nothing has ever published, which is an
+    // answer, not a failure.
+    if (res.status === 404 || res.status === 409) {
+      return { commits, capped: false }
+    }
+    if (!res.ok) return null
+    const entries = pathCommitsSchema.parse(await res.json())
+    for (const entry of entries) {
+      const date = entry.commit.committer?.date
+      // A dateless commit can't be placed in the window, so it can't be a
+      // receipt — dropped, exactly as listPathCommits drops it.
+      if (!date) continue
+      commits.push({
+        sha: entry.sha,
+        date,
+        message: entry.commit.message ?? null,
+      })
+    }
+    // The floor is judged on the page's oldest commit rather than per entry:
+    // history is ordered, so once a page ends before the window there is
+    // nothing older worth asking for. Entries past the floor on that page are
+    // kept — they cost nothing and make the oldest day's column complete.
+    const oldest = commits[commits.length - 1]
+    if (entries.length < LEDGER_PER_PAGE) return { commits, capped: false }
+    if (oldest && Date.parse(oldest.date) < sinceMs) {
+      return { commits, capped: false }
+    }
+  }
+  return { commits, capped: true }
 }
 
 /**

@@ -83,6 +83,12 @@ async function renderTable(
   const props: Parameters<typeof RoutinesTable>[0] = {
     routines: [daily, changelog, triage],
     artifacts,
+    // Priced by default so the column has something to render; a test
+    // overrides to cover the unpriced and in-flight states.
+    costs: {
+      "daily-plan": { usd: 2.4, priced: 8, runs: 8, mean: 0.3 },
+      changelog: { usd: 12, priced: 4, runs: 6, mean: 3 },
+    },
     boardsByRoutine: { "daily-plan": ["main"], changelog: ["main"] },
     dashboards: ["main", "ops"],
     // All three are committed by default; a test overrides to cover drafts.
@@ -146,6 +152,53 @@ describe("RoutinesTable", () => {
     )
     expect(dailyRow?.textContent).toContain("Running")
     expect(dailyRow?.textContent).not.toContain("Ran")
+  })
+
+  it("states a routine's average run cost as an approximation", async () => {
+    await renderTable()
+    const row = (name: string) =>
+      [...document.querySelectorAll("tr")].find((tr) =>
+        tr.textContent?.includes(name),
+      )
+    // The ≈ is load-bearing: ADR-0060's figure is imputed at list prices and
+    // undercounts, so it may never render as a plain price.
+    expect(row(daily.name)?.textContent).toContain("≈$0.30")
+    expect(row(changelog.name)?.textContent).toContain("≈$3.00")
+  })
+
+  it("renders a dash, never a zero, for a routine that never reported a cost", async () => {
+    // Every receipt predating ADR-0060 carries no price and none can be
+    // backfilled — so most rows read as a dash, and a $0.00 there would claim
+    // the routine runs free.
+    await renderTable()
+    const triageRow = [...document.querySelectorAll("tr")].find((tr) =>
+      tr.textContent?.includes(triage.name),
+    )
+    expect(triageRow?.textContent).not.toContain("$")
+    expect(triageRow?.textContent).toContain("—")
+  })
+
+  it("shows a skeleton, not a dash, while the cost scan is in flight", async () => {
+    // "Not read yet" and "never priced" are different answers, and only one of
+    // them is final — rendering them alike would make the column lie for the
+    // second or two the scan takes.
+    await renderTable({ costs: null })
+    const text = document.body.textContent ?? ""
+    expect(text).not.toContain("$")
+    expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
+      0,
+    )
+  })
+
+  it("scales the cost tick against the dearest routine on screen", async () => {
+    // Relative, never absolute: "expensive" can only mean "expensive next to
+    // what else you run", so the dearest row is the full bar and the rest are
+    // read against it.
+    await renderTable()
+    const fills = [...document.querySelectorAll<HTMLElement>(".bg-ink-faint")]
+    const widths = fills.map((el) => el.style.width)
+    expect(widths).toContain("100%")
+    expect(widths).toContain("10%")
   })
 
   it("surfaces orphans and links placed routines to their boards", async () => {
@@ -343,6 +396,11 @@ describe("RoutinesView read-only access", () => {
             login="alice"
             displayName="Alice"
             now={NOW}
+            spend={Promise.resolve({
+              entries: [],
+              capped: false,
+              since: null,
+            })}
             pool={{
               routines: { routines: [daily, changelog, triage] },
               baseSha: "r1",

@@ -128,6 +128,10 @@ export const ptBR: Messages = {
   "routines.new": "Nova rotina",
   "routines.colName": "Rotina",
   "routines.colState": "Estado",
+  "routines.colCost": "Custo médio",
+  "routines.costAvgHint":
+    "Custo médio de uma execução nos últimos 30 dias, entre as que informaram um.",
+  "routines.costAvgOf": "Média de {n} execuções precificadas de {m}.",
   "routines.colSchedule": "Agendamento",
   "routines.colHost": "Host",
   "routines.colOwner": "Dono",
@@ -173,6 +177,7 @@ export const ptBR: Messages = {
   "runs.costTokens": "{n} tok",
   "runs.costTotal": "≈{usd}",
   "runs.costTotalPartial": "≈{usd} · {n} de {m} precificadas",
+  "runs.costEach": "≈{usd} cada",
   "runs.count": "{n} execuções",
   "runs.capped": "últimas {n} execuções",
   "runs.firstTag": "primeira execução",

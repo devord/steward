@@ -28,6 +28,7 @@ import {
 } from "@steward/schema"
 
 import { AddRoutineDialog } from "./add-routine-dialog.tsx"
+import { CostCell } from "./cost.tsx"
 import { KeymapSheet } from "./keymap-sheet.tsx"
 import { NavShell } from "./nav-shell.tsx"
 import { ReadOnlyBadge } from "./read-only-badge.tsx"
@@ -68,6 +69,11 @@ import {
   useDraft,
 } from "../lib/draft.ts"
 import { useT, type Translate } from "../lib/i18n.tsx"
+import {
+  costBySlug,
+  type PublishLedger,
+  type RoutineCost,
+} from "../lib/publish-ledger.ts"
 import { usePendingRuns, type PendingRun } from "../lib/pending-runs.ts"
 import { useKeymap } from "../lib/keymap.ts"
 import { boardHref, routineHref } from "../lib/repos.ts"
@@ -125,6 +131,7 @@ export function RoutinesView({
   now,
   pool,
   artifacts,
+  spend,
 }: {
   repo: RepoInfo
   homeRepo: string
@@ -138,6 +145,9 @@ export function RoutinesView({
   now: number
   pool: Pool
   artifacts: Promise<Record<string, ArtifactInfo>>
+  /** Streamed: every publish receipt in the repo's window, the one cost
+      source the spend page shares (ADR-0060). Never rejects. */
+  spend: Promise<PublishLedger>
 }) {
   const t = useT()
   const navigate = useNavigate()
@@ -146,6 +156,16 @@ export function RoutinesView({
   // flash back to loading.
   const sidebarData = useOptimisticSidebar(sidebar)
   const templatesData = useStreamed(templates, `templates:${repo.full}`)
+  // Cost per routine (ADR-0060), off the same branch-wide scan the spend page
+  // reads — one window, one definition of "average", so the two surfaces can
+  // never disagree about a routine. null until it lands: the column shows its
+  // skeleton rather than a dash, since "not read yet" and "never priced" are
+  // different answers and only one of them is final.
+  const spendData = useStreamed(spend, `spend:${repo.full}`)
+  const costs = useMemo(
+    () => (spendData == null ? null : costBySlug(spendData.entries)),
+    [spendData],
+  )
   // Band defaults by template id (ADR-0044). Unlike the board, this surface
   // has no awaited copy of the built-ins and doesn't need one — a table that
   // fills a column in when the stream lands costs nothing; a grid that
@@ -447,6 +467,7 @@ export function RoutinesView({
           <RoutinesTable
             routines={effective.routines}
             artifacts={resolvedArtifacts}
+            costs={costs}
             boardsByRoutine={pool.boardsByRoutine}
             templateCategories={templateCategories}
             dashboards={pool.dashboards}
@@ -558,6 +579,7 @@ export function RoutinesView({
 export function RoutinesTable({
   routines,
   artifacts,
+  costs,
   boardsByRoutine,
   templateCategories = {},
   dashboards,
@@ -576,6 +598,10 @@ export function RoutinesTable({
   routines: Routine[]
   /** null while the artifact stream is in flight → skeleton state. */
   artifacts: Record<string, ArtifactInfo> | null
+  /** Cost per routine over the repo's spend window (ADR-0060), keyed by slug.
+      null while the scan is in flight → skeleton; a slug absent from a
+      resolved map simply never reported a price, which renders as the dash. */
+  costs: Record<string, RoutineCost> | null
   boardsByRoutine: Record<string, string[]>
   /** Band defaults by template id (ADR-0044), for the routines that inherit
       one rather than carrying their own. Empty until templates stream in,
@@ -602,6 +628,13 @@ export function RoutinesTable({
   const t = useT()
   const repoOwner = repo.full.split("/")[0]
   const readOnly = viewerCanPush === false
+  // Every tick in the column is scaled against the dearest routine on screen.
+  // Relative, not absolute: "expensive" only ever means "expensive next to
+  // what else you run" — there is no threshold an imputed figure could carry.
+  const costCeiling = Math.max(
+    0,
+    ...Object.values(costs ?? {}).map((cost) => cost.mean ?? 0),
+  )
 
   return (
     // The table bleeds 12px past the content column (NavShell's -mx idiom)
@@ -625,6 +658,17 @@ export function RoutinesTable({
             </th>
             <th scope="col" className="py-1.5 pr-3 font-normal">
               {t("routines.colState")}
+            </th>
+            {/* Cost sits beside State because both are read off the runs;
+                schedule, host, owner and band are configuration. Grouping the
+                derived facts together is what lets the eye stop scanning
+                after two columns. */}
+            <th
+              scope="col"
+              className="hidden py-1.5 pr-3 font-normal md:table-cell"
+              title={t("routines.costAvgHint")}
+            >
+              {t("routines.colCost")}
             </th>
             <th
               scope="col"
@@ -677,6 +721,9 @@ export function RoutinesTable({
                 key={routine.slug}
                 routine={routine}
                 status={artifacts === null ? null : status}
+                cost={costs === null ? null : (costs[routine.slug] ?? null)}
+                costPending={costs === null}
+                costCeiling={costCeiling}
                 lastRunAt={artifact?.lastRunAt ?? null}
                 routineId={artifact?.routineId}
                 owner={owner}
@@ -751,6 +798,9 @@ export function ScheduleText({ schedule }: { schedule: string }) {
 function RoutineRow({
   routine,
   status,
+  cost,
+  costPending,
+  costCeiling,
   lastRunAt,
   routineId,
   owner,
@@ -772,6 +822,14 @@ function RoutineRow({
   routine: Routine
   /** null → artifact stream in flight (skeleton). */
   status: WidgetStatus | null
+  /** This routine's spend over the window; null once the scan has landed and
+      found nothing for it — which is the dash, not a zero. */
+  cost: RoutineCost | null
+  /** The scan is still in flight, so `cost: null` means "unknown", not
+      "unpriced" — the two must not render alike. */
+  costPending: boolean
+  /** The dearest routine on screen, the tick's 100%. */
+  costCeiling: number
   lastRunAt: string | null
   routineId: string | undefined
   owner: string
@@ -854,6 +912,26 @@ function RoutineRow({
           up the width. */}
       <td className="py-2 pr-3 align-top whitespace-nowrap">
         <StateLabel status={status} lastRunAt={lastRunAt} now={now} />
+      </td>
+
+      {/* What a run of this routine costs on average, over the repo's spend
+          window. Most rows read as a dash for now and that is correct: every
+          receipt written before ADR-0060 carries no price and none can be
+          backfilled, because the session that knew is on claude.ai (ADR-0016). */}
+      <td className="hidden py-2 pr-3 align-top font-mono whitespace-nowrap text-ink-dim md:table-cell">
+        {costPending ? (
+          <span className="inline-block h-4 w-16 animate-pulse rounded bg-bg3" />
+        ) : (
+          <CostCell
+            usd={cost?.mean ?? null}
+            max={costCeiling}
+            title={
+              cost?.mean != null
+                ? `${t("routines.costAvgOf", { n: cost.priced, m: cost.runs })} ${t("runs.costHint")}`
+                : undefined
+            }
+          />
+        )}
       </td>
 
       <td className="hidden py-2 pr-3 align-top font-mono whitespace-nowrap text-ink-dim md:table-cell">

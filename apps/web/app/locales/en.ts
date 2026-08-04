@@ -144,6 +144,13 @@ export const en = {
   "routines.new": "New routine",
   "routines.colName": "Routine",
   "routines.colState": "State",
+  // What a run of this routine costs on average (ADR-0060). "Avg cost", not
+  // "Cost": the column is a mean over the runs that reported one, and the
+  // hint says over how many.
+  "routines.colCost": "Avg cost",
+  "routines.costAvgHint":
+    "Average cost of one run over the last 30 days, for the runs that reported one.",
+  "routines.costAvgOf": "Mean of {n} priced runs out of {m}.",
   "routines.colSchedule": "Schedule",
   "routines.colHost": "Host",
   "routines.colOwner": "Owner",
@@ -197,6 +204,9 @@ export const en = {
   "runs.costTokens": "{n} tok",
   "runs.costTotal": "≈{usd}",
   "runs.costTotalPartial": "≈{usd} · {n} of {m} priced",
+  // The per-run average, scoped to the runs listed on this page — the count
+  // beside it says which those are.
+  "runs.costEach": "≈{usd} each",
   "runs.count": "{n} runs",
   "runs.capped": "last {n} runs",
   "runs.firstTag": "first run",

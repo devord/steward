@@ -3,6 +3,7 @@ import { RoutinesView } from "../components/routines-view.tsx"
 import {
   loadArtifacts,
   loadRoutinesPoolOr503,
+  streamRepoSpend,
   streamSidebar,
 } from "../lib/dashboard.server.ts"
 import { requireDataRepo, resolveHomeRepo } from "../lib/repos.server.ts"
@@ -49,6 +50,10 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     { repo: repo.full, shared: repo.isShared, dashboard: "" },
     pool.routines,
   )
+  // What each routine costs (ADR-0060), from the one branch-wide scan the
+  // spend page shares — streamed and swr-cached, so the table paints on the
+  // config read and the cost column fills in behind it.
+  const spend = streamRepoSpend(auth.token, repo.full)
 
   return {
     login: auth.login,
@@ -66,6 +71,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
       dashboards: pool.dashboards,
     },
     artifacts,
+    spend,
   }
 }
 
@@ -82,6 +88,7 @@ export default function RoutinesRoute({ loaderData }: Route.ComponentProps) {
       now={loaderData.now}
       pool={loaderData.pool}
       artifacts={loaderData.artifacts}
+      spend={loaderData.spend}
     />
   )
 }

@@ -8,6 +8,7 @@ import {
   ArtifactVersionDialog,
   type VersionPane,
 } from "./artifact-version-dialog.tsx"
+import { CostDash, CostTick, tokensLabel, usdLabel } from "./cost.tsx"
 import { NavShell } from "./nav-shell.tsx"
 import {
   rowLinkCls,
@@ -107,6 +108,13 @@ export function RoutineRunsView({
   // not an empty one.
   const total = runViews == null ? null : totalRunCost(runViews)
   const costTotal = total != null && total.priced > 0 ? total : null
+  // Ticks down the cost column scale to this routine's own dearest run, so
+  // the column reads as its spend history — the run that blew up stands out
+  // against its neighbours rather than against some other routine's scale.
+  const costCeiling = Math.max(
+    0,
+    ...(runViews ?? []).map((run) => run.cost?.usd ?? 0),
+  )
   // The routine's runner, or the repo owner for home pools — the same rule
   // the pool table applies (ADR-0025).
   const owner = routine.runner ?? repo.full.split("/")[0]
@@ -318,6 +326,14 @@ export function RoutineRunsView({
                       n: costTotal.priced,
                       m: costTotal.runs,
                     })}
+                {" · "}
+                {/* The per-run figure the pool ledger shows for this routine,
+                    here scoped to exactly the runs listed above — which the
+                    count beside it already names ("last 30 runs"), so the two
+                    surfaces can differ without either being wrong. */}
+                {t("runs.costEach", {
+                  usd: usdLabel(costTotal.usd / costTotal.priced),
+                })}
               </span>
             )}
           </div>
@@ -366,6 +382,7 @@ export function RoutineRunsView({
             runsData={runsData}
             now={now}
             t={t}
+            costCeiling={costCeiling}
             compareMode={compareMode}
             selected={selected}
             onView={openSingle}
@@ -427,6 +444,7 @@ function RunsBody({
   runsData,
   now,
   t,
+  costCeiling,
   compareMode,
   selected,
   onView,
@@ -436,6 +454,8 @@ function RunsBody({
   runsData: RoutineRuns | null
   now: number
   t: Translate
+  /** This routine's dearest listed run — the cost tick's 100%. */
+  costCeiling: number
   compareMode: boolean
   selected: string[]
   onView: (sha: string) => void
@@ -512,6 +532,7 @@ function RunsBody({
               run={run}
               now={now}
               t={t}
+              costCeiling={costCeiling}
               compareMode={compareMode}
               checked={selected.includes(run.sha)}
               selectDisabled={
@@ -531,6 +552,7 @@ function RunRow({
   run,
   now,
   t,
+  costCeiling,
   compareMode,
   checked,
   selectDisabled,
@@ -540,6 +562,7 @@ function RunRow({
   run: RunView
   now: number
   t: Translate
+  costCeiling: number
   compareMode: boolean
   checked: boolean
   selectDisabled: boolean
@@ -633,16 +656,25 @@ function RunRow({
           any existing history — the dash is the resting state, not an error. */}
       <td className="hidden py-2 pr-3 align-top font-mono text-xs text-ink-dim sm:table-cell">
         {run.cost == null ? (
-          <span aria-hidden className="text-ink-dim">
-            —
-          </span>
+          <CostDash />
         ) : (
-          <span title={t("runs.costHint")}>
-            {run.cost.usd == null
-              ? // No rate for a model the run used. The token count survives
-                // that gap, and saying "4.6M tok" beats saying nothing.
-                t("runs.costTokens", { n: tokensLabel(run.cost.tokens) })
-              : t("runs.costTotal", { usd: usdLabel(run.cost.usd) })}
+          <span
+            className="inline-flex items-center gap-2"
+            title={t("runs.costHint")}
+          >
+            {/* The tick rides only the priced form: a token count has no
+                place on a dollar scale, and drawing it there would put two
+                different units in one column of bars. */}
+            {run.cost.usd != null && (
+              <CostTick value={run.cost.usd} max={costCeiling} />
+            )}
+            <span className="tabular-nums">
+              {run.cost.usd == null
+                ? // No rate for a model the run used. The token count survives
+                  // that gap, and saying "4.6M tok" beats saying nothing.
+                  t("runs.costTokens", { n: tokensLabel(run.cost.tokens) })
+                : t("runs.costTotal", { usd: usdLabel(run.cost.usd) })}
+            </span>
           </span>
         )}
       </td>
@@ -661,20 +693,6 @@ function RunRow({
       </td>
     </tr>
   )
-}
-
-/** Dollars at the precision the figure earns: cents for a run that cost some,
-    four places below a cent so a cheap run reads as cheap rather than as free. */
-function usdLabel(usd: number): string {
-  return usd >= 0.01 ? `$${usd.toFixed(2)}` : `$${usd.toFixed(4)}`
-}
-
-/** Tokens in the unit that fits. Runs spend millions, and "14009812" is a
-    number the eye has to count digits on. */
-function tokensLabel(tokens: number): string {
-  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`
-  if (tokens >= 1_000) return `${Math.round(tokens / 1_000)}k`
-  return String(tokens)
 }
 
 function gapLabel(gapMs: number, t: Translate): string {
