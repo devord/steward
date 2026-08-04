@@ -264,6 +264,91 @@
       ]
     },
     {
+      "kind": "chart",
+      "id": "hotspots",
+      "label": "Churn against interface width",
+      "note": "Hot and wide is the upper right — a change there costs most",
+      "spec": {
+        "data": {
+          "values": [
+            {
+              "module": "cart",
+              "commits": 34,
+              "exports": 8.9
+            },
+            {
+              "module": "checkout",
+              "commits": 28,
+              "exports": 6.2
+            },
+            {
+              "module": "catalog",
+              "commits": 22,
+              "exports": 4.1
+            },
+            {
+              "module": "pricing",
+              "commits": 19,
+              "exports": 3.8
+            },
+            {
+              "module": "account",
+              "commits": 17,
+              "exports": 8.1
+            },
+            {
+              "module": "search",
+              "commits": 11,
+              "exports": 2.9
+            },
+            {
+              "module": "nav",
+              "commits": 9,
+              "exports": 1.8
+            },
+            {
+              "module": "footer",
+              "commits": 6,
+              "exports": 1.2
+            },
+            {
+              "module": "auth",
+              "commits": 14,
+              "exports": 5.4
+            },
+            {
+              "module": "orders",
+              "commits": 12,
+              "exports": 3.1
+            },
+            {
+              "module": "profile",
+              "commits": 7,
+              "exports": 2.2
+            },
+            {
+              "module": "reviews",
+              "commits": 5,
+              "exports": 1.6
+            }
+          ]
+        },
+        "semantic_types": {
+          "module": "Category",
+          "commits": "Quantity",
+          "exports": "Quantity"
+        },
+        "chart_spec": {
+          "chartType": "Scatter Plot",
+          "encodings": {
+            "x": "commits",
+            "y": "exports"
+          }
+        },
+        "maxRows": 40
+      }
+    },
+    {
       "kind": "matrix",
       "label": "Co-change",
       "count": "top 8 by strength · 128 modules held back",

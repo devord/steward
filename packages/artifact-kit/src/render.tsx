@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server"
 
 import { Throughput, type ThroughputSpec } from "./components/Throughput.tsx"
 import { type BottomLine, BottomLineBand } from "./components/BottomLine.tsx"
+import { Chart } from "./components/Chart.tsx"
+import type { ChartSpec, CompiledChart } from "./chart/compile.ts"
 import {
   CouplingMatrix,
   type MatrixSpec,
@@ -157,6 +159,25 @@ export interface ProseBlock extends BlockBase {
   items: ProseItem[]
 }
 
+/**
+ * Any chart in flint's catalogue (ADR-0062) — the block that raises the
+ * ceiling, where the four hand-built forms could only lower it.
+ *
+ * The routine names the form and hands over its data; the kit decides every
+ * visual consequence and holds the result to the palette and the type floor
+ * before it may ship. Page only for the same reason `series` is: a chart on a
+ * tile either steals the ledger's rows or opens into the clipped region.
+ *
+ * `id` is required rather than optional here, unlike every other block: the
+ * compiled SVG is looked up by it, because charts are rendered in an async
+ * pass before this markup exists.
+ */
+export interface ChartBlock extends BlockBase {
+  kind: "chart"
+  id: string
+  spec: ChartSpec
+}
+
 /** A labelled band of content. */
 export type Block =
   | QueueBlock
@@ -166,9 +187,15 @@ export type Block =
   | ProgressBlock
   | DayBlock
   | MatrixBlock
+  | ChartBlock
 
 /** Whether a band has anything to render — an empty one is never drawn. */
-function filled(b: Block): boolean {
+function filled(b: Block, charts: ArtifactCharts): boolean {
+  // A chart that failed to compile, blew its cardinality ceiling, or painted
+  // outside the palette has no entry, and a band with no chart in it is an
+  // empty band. The reason travels on the provenance line instead — dropping
+  // one band is not a reason to publish nothing (ADR-0062).
+  if (b.kind === "chart") return charts.has(b.id)
   if (b.kind === "prose") return b.items.length > 0
   // Two points is the floor for a line. One is a dot claiming a trend.
   if (b.kind === "series") return b.spec.lines.some((l) => l.points.length > 1)
@@ -244,7 +271,26 @@ export interface ArtifactDoc {
   empty?: { headline: string; detail?: string }
 }
 
-function Band({ block, index }: { block: Block; index: number }) {
+/**
+ * Charts, compiled ahead of the markup and looked up by block id.
+ *
+ * Vega renders asynchronously and this tree does not, so charts are a
+ * compilation step rather than markup — see `chart/compile.ts` for why that
+ * is also the honest description of what they are.
+ */
+export type ArtifactCharts = ReadonlyMap<string, CompiledChart>
+
+const NO_CHARTS: ArtifactCharts = new Map()
+
+function Band({
+  block,
+  index,
+  charts,
+}: {
+  block: Block
+  index: number
+  charts: ArtifactCharts
+}) {
   return (
     <Section
       key={block.label ?? index}
@@ -260,13 +306,19 @@ function Band({ block, index }: { block: Block; index: number }) {
         (block.pageOnly ??
         (block.kind === "prose" ||
           block.kind === "series" ||
+          block.kind === "chart" ||
           block.kind === "day" ||
           block.kind === "matrix"))
           ? "hidden page-only:flex"
           : undefined
       }
     >
-      {block.kind === "queue" ? (
+      {block.kind === "chart" ? (
+        <Chart
+          svg={charts.get(block.id) ?? { page: "", tile: "" }}
+          label={block.label}
+        />
+      ) : block.kind === "queue" ? (
         <QueueTable
           rows={block.rows}
           groups={block.groups}
@@ -308,13 +360,24 @@ function Band({ block, index }: { block: Block; index: number }) {
   )
 }
 
-function Document({ doc }: { doc: ArtifactDoc }) {
-  const blocks = (doc.blocks ?? []).filter(filled)
+function Document({
+  doc,
+  charts,
+}: {
+  doc: ArtifactDoc
+  charts: ArtifactCharts
+}) {
+  const blocks = (doc.blocks ?? []).filter((b) => filled(b, charts))
   const main = blocks.filter((b) => !b.rail)
   const rail = blocks.filter((b) => b.rail)
   const bands = (list: Block[], offset = 0) =>
     list.map((b, i) => (
-      <Band key={b.label ?? offset + i} block={b} index={offset + i} />
+      <Band
+        key={b.label ?? offset + i}
+        block={b}
+        index={offset + i}
+        charts={charts}
+      />
     ))
   return (
     <>
@@ -379,7 +442,11 @@ function Document({ doc }: { doc: ArtifactDoc }) {
  * `css` is the compiled kit stylesheet, passed in rather than imported so the
  * build controls exactly which bytes get inlined.
  */
-export function renderArtifact(doc: ArtifactDoc, css: string): string {
+export function renderArtifact(
+  doc: ArtifactDoc,
+  css: string,
+  charts: ArtifactCharts = NO_CHARTS,
+): string {
   return `<!doctype html>${renderToStaticMarkup(
     <Shell
       slug={doc.slug}
@@ -389,7 +456,7 @@ export function renderArtifact(doc: ArtifactDoc, css: string): string {
       context={doc.context}
       state={doc.state}
     >
-      <Document doc={doc} />
+      <Document doc={doc} charts={charts} />
     </Shell>,
   )}`
 }

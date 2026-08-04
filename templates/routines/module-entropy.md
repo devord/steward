@@ -210,6 +210,14 @@ Monday. Everything held back is counted on a `count` and detailed in context.
   value where it is real. A `worsening` chip on eight of twelve rows is a
   chip that has stopped carrying information.
 
+- **A `chart` block, "Churn against interface width"** — the hotspot plot the
+  ranking is derived from, as a `Scatter Plot`: commits on x, exports-per-file
+  on y, one point per censused module. Tornhill's quadrant, and the reason the
+  list is ordered the way it is — hot and wide is the upper right, and a
+  reader who can see the cloud can see whether the top row is an outlier or
+  the first of many. Page tier only, and it goes **after** the ledger: the
+  named rows are the finding, the field is the evidence for their ordering.
+
 - **The `matrix` block, "Co-change"** — page tier only, which is the kit's
   default for it. Top 8 **by co-change strength**, not by score: the field
   exists to show a cluster, so it must be populated by the pairs that actually

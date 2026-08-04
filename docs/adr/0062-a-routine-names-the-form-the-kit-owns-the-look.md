@@ -96,10 +96,15 @@ dependency on a monthly release cadence; a derived one cannot.
 
 `flint-chart` has zero runtime dependencies (31.7 MB unpacked is templates and
 knowledge, not code). The weight is the renderer: `vega` 6.3.1 at 3.5 MB across
-27 transitive packages, plus `vega-lite` 6.4.3 at 5.6 MB. Bundled and minified,
-`render.mjs` goes from **284 KB to roughly 2.5 MB** — committed under
-`.claude/skills/widget-artifact/kit/` and `cpSync`'d into the published CLI
-package, because that is how it travels to an install-free run.
+27 transitive packages, plus `vega-lite` 6.4.3 at 5.6 MB.
+
+Bundled and minified, `render.mjs` goes from **284 KB to 1.24 MB** — measured,
+against an estimate of "roughly 2.5 MB" written before anything was built.
+Importing `flint-chart/vegalite` rather than the package root is most of the
+difference: the ECharts, Plotly, Chart.js and Excel backends never enter the
+graph. It is committed under `.claude/skills/widget-artifact/kit/` and
+`cpSync`'d into the published CLI package, because that is how it travels to an
+install-free run.
 
 The artifact itself carries only SVG. No runtime reaches the published file,
 and ADR-0002 and the raw-readability floor are untouched.
