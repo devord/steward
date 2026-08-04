@@ -1371,7 +1371,14 @@ describe("Avatar", () => {
 })
 
 describe("the burn-up", () => {
-  const chart = (lines: SeriesSpec["lines"], max = 40): ArtifactDoc => ({
+  // `null` omits `max` entirely, for the cases that are about what the kit
+  // derives. A default parameter cannot express that: passing `undefined`
+  // takes the default.
+  const chart = (
+    lines: SeriesSpec["lines"],
+    max: number | null = 40,
+    today?: string,
+  ): ArtifactDoc => ({
     slug: "s",
     generatedAt: "2026-07-30T09:00:00Z",
     stat: { value: 1, label: "x" },
@@ -1379,10 +1386,19 @@ describe("the burn-up", () => {
       {
         kind: "series",
         label: "Burn-up",
-        spec: { from: "2026-07-01", to: "2026-08-01", max, lines },
+        spec: {
+          from: "2026-07-01",
+          to: "2026-08-01",
+          ...(max === null ? {} : { max }),
+          ...(today ? { today } : {}),
+          lines,
+        },
       },
     ],
   })
+  /** The chart's own markup, so a shared utility class elsewhere cannot match. */
+  const figure = (doc: ArtifactDoc) =>
+    /<figure[\s\S]*?<\/figure>/.exec(renderArtifact(doc, ""))?.[0] ?? ""
   const hero: SeriesSpec["lines"][number] = {
     id: "landed",
     label: "16 landed",
@@ -1425,7 +1441,7 @@ describe("the burn-up", () => {
   it("separates end labels that would collide", () => {
     // The ghost line sits just above the hero by definition, so overlapping
     // labels are the normal case rather than the unlucky one.
-    const html = renderArtifact(
+    const fig = figure(
       chart([
         hero,
         {
@@ -1438,24 +1454,116 @@ describe("the burn-up", () => {
           ],
         },
       ]),
-      "",
     )
-    const ys = [
-      ...html.matchAll(
-        /<text x="[\d.]+" y="([\d.]+)"[^>]*>[^<]*(?:landed|review)/g,
-      ),
+    // Percent of the plot, not user units: the labels are real 12px HTML now,
+    // and the plot's height is a CSS clamp with no build-time pixel value.
+    const tops = [
+      ...fig.matchAll(/style="top:([\d.]+)%"[^>]*>[^<]*(?:landed|review)/g),
     ].map((m) => Number(m[1]))
-    expect(ys).toHaveLength(2)
-    expect(Math.abs(ys[0] - ys[1])).toBeGreaterThanOrEqual(14)
+    expect(tops).toHaveLength(2)
+    // 9% is ~14px at the clamp's 160px floor, so the gap only grows on a
+    // taller chart. Never shrinks below the one height it was calibrated at.
+    expect(Math.abs(tops[0] - tops[1])).toBeGreaterThanOrEqual(9)
   })
 
   it("anchors the marker to the point, never to the nudged label", () => {
     // The label moves to stay legible; the dot must not, or the chart reports
     // a value it did not plot.
-    const html = renderArtifact(chart([hero]), "")
-    const cy = Number(/<circle cx="[\d.]+" cy="([\d.]+)"/.exec(html)?.[1])
-    // y=16 of 40 over a 220px plot inset 12 from the top: 232 - 16/40*220.
-    expect(cy).toBeCloseTo(232 - (16 / 40) * 220, 1)
+    const fig = figure(
+      chart([
+        hero,
+        {
+          id: "inflight",
+          label: "+1 in review",
+          role: "ghost",
+          points: [
+            { x: "2026-07-01", y: 5 },
+            { x: "2026-07-30", y: 17 },
+          ],
+        },
+      ]),
+    )
+    // y=16 of 40 — the dot sits at the value, in percent down the plot.
+    const dot = /rounded-full[^"]*"[^>]*style="([^"]+)"/.exec(fig)?.[1] ?? ""
+    expect(dot).toContain(`top:${((1 - 16 / 40) * 100).toFixed(3)}%`)
+    // ...while its label was pushed clear of the ghost's above it.
+    const label = /style="top:([\d.]+)%"[^>]*>16 landed/.exec(fig)?.[1]
+    expect(Number(label)).toBeGreaterThan(60)
+  })
+
+  it("keeps every glyph out of the plot's coordinate space", () => {
+    // The regression this component was rebuilt for. A fixed viewBox scaled to
+    // `width: 100%` puts SVG text in *user units*, so `text-xs` rendered at 12
+    // × the container's scale factor — ~30px labels on a wide board, beside
+    // identical `text-xs` HTML at 12px. Strokes escape via `vector-effect`;
+    // text has no equivalent, so text does not go in there at all.
+    expect(figure(chart([hero]))).not.toContain("<text")
+  })
+
+  it("snaps the y axis to intervals somebody would choose", () => {
+    // `ceil(peak / 4)` lands on a clean number only by luck: a real run put 66
+    // in and got 0 / 17 / 34 / 51 — arithmetic nobody chose.
+    const fig = figure(
+      chart(
+        [
+          {
+            ...hero,
+            points: [
+              { x: "2026-07-01", y: 20 },
+              { x: "2026-07-30", y: 66 },
+            ],
+          },
+        ],
+        null,
+      ),
+    )
+    const axis = /class="[^"]*tabular-nums[^"]*"[^>]*>([\s\S]*?)<\/div>/.exec(
+      fig,
+    )?.[1]
+    expect(
+      [...(axis ?? "").matchAll(/>(\d+)</g)].map((m) => Number(m[1])),
+    ).toEqual([0, 20, 40, 60, 80])
+  })
+
+  it("never lets a target slope set the y scale", () => {
+    // A target is where the line *would* have to go. Scaling to it spends the
+    // top of the plot on a number nobody is claiming and squashes the two
+    // lines the chart is about. It clips at the top edge instead.
+    const fig = figure(
+      chart(
+        [
+          hero,
+          {
+            id: "pace",
+            label: "needs 40/wk",
+            role: "target",
+            points: [
+              { x: "2026-07-30", y: 16 },
+              { x: "2026-08-01", y: 60 },
+            ],
+          },
+        ],
+        null,
+      ),
+    )
+    // Scaled to the hero's 16 → a ceiling of 20, so the target's 60 plots
+    // above the plot rect and the SVG's own viewBox clip takes it.
+    const dot = /rounded-full[^"]*"[^>]*style="([^"]+)"/.exec(fig)?.[1] ?? ""
+    expect(dot).toContain(`top:${((1 - 16 / 20) * 100).toFixed(3)}%`)
+    const pace = /<path d="M[\d.]+ [\d.]+ L[\d.]+ (-[\d.]+)"/.exec(fig)?.[1]
+    expect(Number(pace)).toBeLessThan(0)
+  })
+
+  it("cannot print the today caption through the end date", () => {
+    // Three absolutely-positioned spans do not know about each other, so a
+    // `today` late in the window printed straight through the horizon —
+    // `2026-0today8-06`, on every tile narrow enough to matter. Flex items
+    // cannot overlap, so the gap is a floor rather than a hope.
+    const fig = figure(chart([hero], 40, "2026-07-25"))
+    // The caption stays on its own rule anyway: the spacer's basis backs out
+    // the start label and half of `today`, both known `ch` widths.
+    expect(fig).toMatch(/flex-basis:calc\([\d.]+% - 12\.5ch - 0\.5rem\)/)
+    expect(fig).not.toMatch(/class="[^"]*absolute[^"]*"[^>]*>today/)
   })
 
   it("carries a legend for two lines and none for one", () => {

@@ -32,6 +32,8 @@ const ROLE: Record<
    * standing convention. `dataviz` forbids dashed *gridlines and axes*; the
    * two rules get confused, and someone will eventually try to "fix" this
    * into a solid line.
+   *
+   * It is also the one role excluded from the y scale — see `peak` below.
    */
   target: { stroke: "stroke-ink", width: 2, dash: "6 4" },
   /**
@@ -67,21 +69,41 @@ export interface SeriesSpec {
   to: string
   /** The now marker. */
   today?: string
-  /** y ceiling. Defaults to the largest point across every line. */
+  /** y ceiling. Defaults to a clean step above the largest *observed* point. */
   max?: number
   lines: SeriesLine[]
   /** Axis captions, e.g. a step's net delta. */
   captions?: { x: string; text: string }[]
 }
 
-// A fixed viewBox scaled to the container. `vector-effect` keeps every stroke
-// at its specified width regardless — without it a 2px line is only 2px at one
-// container size, which is the whole point of specifying it.
-const W = 800
-const H = 260
-const PAD = { top: 12, right: 96, bottom: 28, left: 40 }
+/**
+ * The space the paths are drawn in. **Not pixels and no longer an aspect.**
+ *
+ * The SVG stretches to the plot rect (`preserveAspectRatio="none"`), so these
+ * are only the units the geometry is expressed in; the rect's real size is CSS.
+ * Every label is placed as a percentage of the same two numbers, which is why
+ * nothing here has to know the render width.
+ */
+const W = 1000
+const H = 400
+
+/**
+ * Vertical clearance between two stacked end labels, in percent of the plot.
+ *
+ * Percent because the labels are real 12px HTML and the plot is a CSS clamp —
+ * there is no build-time pixel height to work in. Calibrated at the clamp's
+ * floor: 9% of 160px is ~14px, so the gap only ever grows on a taller chart.
+ */
+const GAP = 9
 
 const day = (iso: string) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`)
+
+/** The next 1 / 2 / 5 × 10ⁿ at or above `raw`. */
+function niceStep(raw: number) {
+  const mag = 10 ** Math.floor(Math.log10(raw))
+  const norm = raw / mag
+  return (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag
+}
 
 /**
  * The burn-up: cumulative counts against a moving ceiling and a target slope.
@@ -97,22 +119,50 @@ const day = (iso: string) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`)
  * beside it. A crosshair is a SHOULD here rather than a MUST, and it would be
  * the first behaviour in a kit component that the board does not already
  * inject.
+ *
+ * **The SVG draws marks; HTML carries every glyph and rule.** That split is
+ * the whole layout, and it is not a style preference — a fixed viewBox scaled
+ * to `width: 100%` puts text in *user units*, so `text-xs` rendered at 12 × the
+ * container's scale factor: ~30px labels on a wide board, beside identical
+ * `text-xs` HTML at 12px, and a chart 2.5× taller than it was drawn. Strokes
+ * escaped that via `vector-effect`; text had no equivalent. `Throughput` and
+ * `TimeGrid` already split this way — this is the kit's pattern, not a new one.
  */
 export function Series({ spec }: { spec: SeriesSpec }) {
   const x0 = day(spec.from)
   const x1 = day(spec.to)
   const span = Math.max(1, x1 - x0)
-  const peak =
-    spec.max ??
-    Math.max(1, ...spec.lines.flatMap((l) => l.points.map((p) => p.y)))
 
-  const px = (iso: string) =>
-    PAD.left + ((day(iso) - x0) / span) * (W - PAD.left - PAD.right)
-  const py = (v: number) =>
-    H - PAD.bottom - (v / peak) * (H - PAD.top - PAD.bottom)
+  /**
+   * The y ceiling answers to the data, never to the projection.
+   *
+   * A `target` slope is where the line *would* have to go; letting it set the
+   * scale spent the top fifth of the plot on a number nobody is claiming and
+   * squashed scope and landed into the bottom third. It clips at the top edge
+   * instead, which is the honest reading — a pace that leaves the chart is off
+   * the chart. If every line is a target there is nothing else to scale to, so
+   * they set it themselves.
+   */
+  const scaled = spec.lines.filter((l) => l.role !== "target")
+  const observed = (scaled.length ? scaled : spec.lines).flatMap((l) =>
+    l.points.map((p) => p.y),
+  )
+  const raw = Math.max(1, spec.max ?? 1, ...observed)
+  // Clean intervals rather than exact maxima: a y axis labelled 0 / 17 / 34 /
+  // 51 reads as arithmetic nobody chose, and `ceil(peak / 4)` lands on a clean
+  // one only by luck. Snap the step, then lift the ceiling to a whole number
+  // of them so the top gridline frames the plot instead of floating under it.
+  const step = Math.max(1, niceStep(raw / 4))
+  const peak = spec.max ?? Math.ceil(raw / step) * step
+
+  /** 0–1 across the plot, left to right. */
+  const fx = (iso: string) => (day(iso) - x0) / span
+  /** 0–1 down the plot, so it is already a `top`. */
+  const fy = (v: number) => 1 - v / peak
+  const pct = (f: number) => `${(f * 100).toFixed(3)}%`
 
   const path = (l: SeriesLine) => {
-    const pts = l.points.map((p) => [px(p.x), py(p.y)] as const)
+    const pts = l.points.map((p) => [fx(p.x) * W, fy(p.y) * H] as const)
     if (!pts.length) return ""
     if (!ROLE[l.role].step) {
       return pts.map(([x, y], i) => `${i ? "L" : "M"}${x} ${y}`).join(" ")
@@ -127,154 +177,189 @@ export function Series({ spec }: { spec: SeriesSpec }) {
     return d
   }
 
-  // Clean intervals rather than exact maxima: a y axis labelled 0 / 13 / 27 /
-  // 40 reads as arithmetic nobody chose.
-  const step = Math.max(1, Math.ceil(peak / 4))
   const ticks: number[] = []
-  for (let v = 0; v <= peak; v += step) ticks.push(v)
+  for (let v = 0; v <= peak + 1e-9; v += step) ticks.push(v)
 
   // End labels are placed per line, so two lines running close put their
   // labels on top of each other — the ghost line sits just above the hero by
   // definition, so this is the normal case rather than the unlucky one. Walk
   // them in vertical order and push each down to clear the last.
-  //
-  // Text metrics are approximate on purpose: this only has to separate labels,
-  // and measuring glyphs would mean shipping a font table to do it exactly.
-  const GAP = 14
-  const CHAR = 4.2
   const ends = spec.lines
     .map((l) => {
       const last = l.points.at(-1)
-      return last ? { line: l, x: px(last.x), y: py(last.y), at: last } : null
+      if (!last) return null
+      // A target can end above the plot. Its label pins to the top edge; the
+      // line itself is what gets clipped.
+      return {
+        id: l.id,
+        label: l.label,
+        top: Math.min(1, Math.max(0, fy(last.y))),
+      }
     })
     .filter((e) => e !== null)
-    .sort((a, b) => a.y - b.y)
+    .sort((a, b) => a.top - b.top)
   let floor = -Infinity
   for (const e of ends) {
-    e.y = Math.max(e.y, floor + GAP)
-    floor = e.y
+    e.top = Math.max(e.top * 100, floor + GAP) / 100
+    floor = e.top * 100
   }
+
+  const hero = spec.lines.find((l) => ROLE[l.role].marker)
+  const heroAt = hero?.points.at(-1)
+
+  // `ch` in a monospace column *is* the advance width, so these are measured,
+  // not estimated. The previous guess — 4.2 user units against Geist Mono's
+  // real 7.2 at font-size 12 — is why "needs 108.5/wk" ran past the canvas and
+  // was cropped by the widget card. A column that sizes to its longest label
+  // cannot clip one.
+  const tickCh = Math.max(1, ...ticks.map((v) => String(v).length))
+  const labelCh = Math.max(1, ...spec.lines.map((l) => l.label.length))
 
   return (
     <figure className="m-0 flex flex-col gap-2">
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        width="100%"
-        className="h-auto w-full overflow-visible"
-        role="img"
-        aria-label={`Burn-up: ${spec.lines.map((l) => l.label).join(", ")}`}
-      >
-        {/* Solid hairlines one step off the surface. Never dashed — that is
-            the rule the target line is often mistaken for. */}
-        {ticks.map((v) => (
-          <g key={v}>
-            <line
-              x1={PAD.left}
-              x2={W - PAD.right}
-              y1={py(v)}
-              y2={py(v)}
-              className="stroke-border-dim"
-              strokeWidth={1}
-              vectorEffect="non-scaling-stroke"
-            />
-            <text
-              x={PAD.left - 8}
-              y={py(v) + 4}
-              textAnchor="end"
-              className="fill-ink-dim font-mono text-xs tabular-nums"
+      <div className="grid grid-cols-[auto_1fr_auto] gap-x-2">
+        {/* y axis */}
+        <div
+          className="text-ink-dim relative font-mono text-xs tabular-nums"
+          style={{ width: `${tickCh}ch` }}
+        >
+          {ticks.map((v) => (
+            <span
+              key={v}
+              className="absolute right-0 -translate-y-1/2"
+              style={{ top: pct(fy(v)) }}
             >
               {v}
-            </text>
-          </g>
-        ))}
+            </span>
+          ))}
+        </div>
 
-        {spec.today ? (
-          <g>
-            <line
-              x1={px(spec.today)}
-              x2={px(spec.today)}
-              y1={PAD.top}
-              y2={H - PAD.bottom}
-              className="stroke-ink-faint"
-              strokeWidth={1}
-              strokeDasharray="3 3"
-              vectorEffect="non-scaling-stroke"
+        {/* plot */}
+        {/* Height only, and deliberately not `aspect-ratio`. The proportion is
+            the same one the chart was drawn at — 30vw is ~10:3 — but an aspect
+            is bidirectional, and a floored one sets a *minimum width* too:
+            `min-h-40` at 16/5 demanded 512px of plot, so a 340px tile and a
+            620px tile both overflowed the grid and cropped their own end
+            labels off the right edge. A height cannot feed back into width.
+
+            `vw` is the tile's own viewport — artifacts are iframed, so this
+            reads per-tile rather than per-window. The cap keeps a wide board
+            from spending 600px on a band; the floor is what makes the band
+            tile-viable at all, and a known floor is one the fit pass can
+            reason about instead of cropping in silence (ADR-0019). */}
+        <div className="relative h-[clamp(10rem,30vw,22rem)] w-full">
+          {/* Solid hairlines one step off the surface. Never dashed — that is
+              the rule the target line is often mistaken for. Real CSS borders,
+              so they are 1px at every width and cannot be stretched by the
+              plot's aspect. */}
+          {ticks.map((v) => (
+            <div
+              key={v}
+              aria-hidden="true"
+              className="border-border-dim absolute inset-x-0 border-t"
+              style={{ top: pct(fy(v)) }}
             />
-            <text
-              x={px(spec.today)}
-              y={H - PAD.bottom + 18}
-              textAnchor="middle"
-              className="fill-ink-dim font-mono text-xs"
-            >
-              today
-            </text>
-          </g>
-        ) : null}
+          ))}
 
-        <text
-          x={PAD.left}
-          y={H - PAD.bottom + 18}
-          className="fill-ink-dim font-mono text-xs"
-        >
-          {spec.from.slice(0, 10)}
-        </text>
-        <text
-          x={W - PAD.right}
-          y={H - PAD.bottom + 18}
-          textAnchor="end"
-          className="fill-ink-dim font-mono text-xs"
-        >
-          {spec.to.slice(0, 10)}
-        </text>
+          {spec.today ? (
+            <div
+              aria-hidden="true"
+              className="border-ink-faint absolute inset-y-0 border-l border-dashed"
+              style={{ left: pct(fx(spec.today)) }}
+            />
+          ) : null}
 
-        {spec.lines.map((l) => {
-          const r = ROLE[l.role]
-          const last = l.points.at(-1)
-          const end = ends.find((e) => e.line.id === l.id)
-          const overflows = !!end && end.x + 10 + l.label.length * CHAR > W - 4
-          return (
-            <g key={l.id}>
-              <path
-                d={path(l)}
-                fill="none"
-                className={cn(r.stroke)}
-                strokeWidth={r.width}
-                strokeDasharray={r.dash}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-              />
-              {r.marker && last ? (
-                // A ring in the page surface, so the end marker stays legible
-                // where it crosses another line. Anchored to the real point,
-                // never to the nudged label.
-                <circle
-                  cx={px(last.x)}
-                  cy={py(last.y)}
-                  r={4}
-                  className="fill-orange stroke-bg1"
-                  strokeWidth={2}
+          {/* No `overflow-visible`: an SVG root clips to its viewBox by
+              default, and that clip is what keeps a target slope inside the
+              plot instead of drawing over the band above it. */}
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="none"
+            className="absolute inset-0 h-full w-full"
+            role="img"
+            aria-label={`Burn-up: ${spec.lines.map((l) => l.label).join(", ")}`}
+          >
+            {spec.lines.map((l) => {
+              const r = ROLE[l.role]
+              return (
+                <path
+                  key={l.id}
+                  d={path(l)}
+                  fill="none"
+                  className={cn(r.stroke)}
+                  strokeWidth={r.width}
+                  strokeDasharray={r.dash}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   vectorEffect="non-scaling-stroke"
                 />
-              ) : null}
-              {end ? (
-                // Direct-labelled at the endpoint. Four lines or fewer, so
-                // every one gets a label and identity never rests on colour.
-                // Flips to the inside rather than running off the plot when a
-                // long label would overflow the right margin.
-                <text
-                  x={overflows ? W - 4 : end.x + 10}
-                  y={end.y + 4}
-                  textAnchor={overflows ? "end" : undefined}
-                  className="fill-ink-dim font-mono text-xs"
-                >
-                  {l.label}
-                </text>
-              ) : null}
-            </g>
-          )
-        })}
-      </svg>
+              )
+            })}
+          </svg>
+
+          {/* A ring in the page surface, so the end marker stays legible where
+              it crosses another line. HTML rather than a `<circle>`: the plot
+              scales non-uniformly, and a circle in that space is an ellipse.
+              Anchored to the real point, never to the nudged label. */}
+          {heroAt ? (
+            <div
+              aria-hidden="true"
+              className="bg-orange ring-bg1 absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2"
+              style={{ left: pct(fx(heroAt.x)), top: pct(fy(heroAt.y)) }}
+            />
+          ) : null}
+        </div>
+
+        {/* Direct-labelled at the endpoint. Four lines or fewer, so every one
+            gets a label and identity never rests on colour. */}
+        <div
+          className="text-ink-dim relative font-mono text-xs"
+          style={{ width: `${labelCh}ch` }}
+        >
+          {ends.map((e) => (
+            <span
+              key={e.id}
+              className="absolute left-0 -translate-y-1/2 whitespace-nowrap"
+              style={{ top: pct(e.top) }}
+            >
+              {e.label}
+            </span>
+          ))}
+        </div>
+
+        {/* x axis. Flex, not three absolute spans: absolute ones do not know
+            about each other, so a `today` late in the window printed straight
+            through the end date — `2026-0today8-06` on every tile narrow
+            enough to matter. Flex items cannot overlap, so the gap is a floor
+            rather than a hope.
+
+            The spacer's basis is what keeps `today` on its own rule despite
+            that: it subtracts the start label and half of `today` (both known
+            widths, and `ch` in a mono column *is* the advance), so the label's
+            centre lands at exactly `fx` of the row. It is also the only
+            shrinkable item, so when the row runs out the caption slides off
+            the rule instead of colliding with the date. */}
+        <div />
+        <div className="text-ink-dim mt-1 flex gap-2 font-mono text-xs">
+          <span className="shrink-0">{spec.from.slice(0, 10)}</span>
+          {spec.today ? (
+            <>
+              <span
+                aria-hidden="true"
+                className="min-w-0 shrink"
+                style={{
+                  flexBasis: `calc(${(fx(spec.today) * 100).toFixed(3)}% - ${
+                    spec.from.slice(0, 10).length + 2.5
+                  }ch - 0.5rem)`,
+                }}
+              />
+              <span className="shrink-0">today</span>
+            </>
+          ) : null}
+          <span className="ml-auto shrink-0">{spec.to.slice(0, 10)}</span>
+        </div>
+        <div />
+      </div>
 
       {/* Present whenever there are two or more lines, on top of the direct
           labels and the four line styles. Three channels, so the chart
