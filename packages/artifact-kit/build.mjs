@@ -269,3 +269,27 @@ const kb = (p) => `${(statSync(p).size / 1024).toFixed(1)} KB`
 console.log(
   `built kit.css (${kb(path.join(outDir, "kit.css"))}) + render.mjs (${kb(path.join(outDir, "render.mjs"))}) + throughput.js (${kb(path.join(outDir, "throughput.js"))}) → ${path.relative(repoRoot, outDir)}`,
 )
+
+/**
+ * The picker's previews (ADR-0037) are renders of the three outputs above: they
+ * inline `kit.css` and come out of `render.mjs`. So they are stale the instant
+ * the kit is rebuilt, and regenerating them is part of building it rather than a
+ * second thing to remember.
+ *
+ * It was a second thing to remember twice, and both times it was forgotten —
+ * ea3a589 and 1502374 are the catch-up commits. The failure mode is what makes
+ * it worth wiring rather than documenting: the drift only becomes visible once
+ * something regenerates, and on a PR nothing does. Both times the gate fired on
+ * *main*, against an author who had already moved on, for a rebuild that had
+ * looked clean when they pushed it.
+ *
+ * CI still calls the generator itself, on purpose. Its job is to verify, not to
+ * trust this line — a gate that only regenerated as a side effect of the build
+ * would go quietly blind the day someone deletes it, reporting a clean tree
+ * because nothing had run.
+ */
+execFileSync(
+  process.execPath,
+  [path.join(repoRoot, "scripts", "gen-template-previews.ts")],
+  { stdio: "inherit" },
+)
