@@ -182,11 +182,11 @@ for (const file of files) {
       styled.add(sel.replace(/\\/g, ""))
     }
 
-    // Generated subtrees are exempt, and the distinction is the point: this
-    // check is worth running on markup a *routine* wrote through the Alpine
-    // escape hatch, where an off-safelist class is invisible until a reader
-    // meets it. It is worth nothing on markup the *kit* generated — the kit's
-    // own classes are already pinned at build time by `tokens.test.ts`,
+    // Generated chart markup is exempt, and the distinction is the point:
+    // this check is worth running on markup a *routine* wrote through the
+    // Alpine escape hatch, where an off-safelist class is invisible until a
+    // reader meets it. It is worth nothing on markup the *kit* generated — the
+    // kit's own classes are already pinned at build time by `tokens.test.ts`,
     // `tiers.test.ts` and `retired.test.ts`, which fail on a pull request
     // rather than at 08:00 on a cron.
     //
@@ -196,15 +196,42 @@ for (const file of files) {
     // blindly, every one reads as an unstyled class, and the artifact is
     // refused — which is exactly what happened to `corza-progress`, whose
     // burn-up never reached the board.
-    const checkable = html.replace(
-      /<figure[^>]*\sdata-kit-chart[^>]*>[\s\S]*?<\/figure>/g,
-      "",
-    )
+    //
+    // The exemption needs **both** halves, because `data-kit-chart` is just an
+    // attribute in a string and a routine can write one. On its own it would
+    // be a bypass: wrap anything in a marked `<figure>` and the check stops
+    // looking. So the marker only says *where* to relax, and Vega's own closed
+    // vocabulary says *what* may be relaxed. A class inside a chart that is not
+    // one of Vega's is still checked — which also catches Vega starting to emit
+    // something meaningful after an upgrade.
+    const CHART_SUBTREE =
+      /<figure[^>]*\sdata-kit-chart[^>]*>[\s\S]*?<\/figure>/g
+    // Vega's closed vocabulary. `mark-*` and `role-*` name the scenegraph
+    // node's kind; `marks` and `pathgroup` name a group, optionally prefixed
+    // by its position in the spec — a layered chart emits `layer_0_marks`, and
+    // `layer_1_pathgroup` once one of those layers draws lines.
+    //
+    // Both prefixed forms were missing from the first draft, and both were
+    // caught by a test rather than in production. That is the argument for a
+    // vocabulary over a blanket skip: a gap here fails loudly on a pull
+    // request, where a blanket skip fails silently forever.
+    const VEGA_STRUCTURAL =
+      /^(?:mark-[a-z]+|role-[a-z-]+|background|foreground|root|(?:[a-z]+(?:_\d+)*_)?(?:marks|pathgroup))$/
+
+    /** The document split into chart and non-chart regions, in order. */
+    const regions = []
+    let cursor = 0
+    for (const m of html.matchAll(CHART_SUBTREE)) {
+      regions.push({ text: html.slice(cursor, m.index), chart: false })
+      regions.push({ text: m[0], chart: true })
+      cursor = m.index + m[0].length
+    }
+    regions.push({ text: html.slice(cursor), chart: false })
 
     // Class attributes arrive HTML-escaped, selectors do not. An arbitrary
     // variant like `[&>svg]:h-auto` reaches the markup as
     // `[&amp;&gt;svg]:h-auto` and never matches its own rule, so the check
-    // reports a styled class as unstyled.
+    // reported a styled class as unstyled.
     const unescape = (v) =>
       v
         .replace(/&amp;/g, "&")
@@ -214,15 +241,18 @@ for (const file of files) {
         .replace(/&#x27;/g, "'")
 
     const seen = new Set()
-    for (const [, raw] of checkable.matchAll(/\sclass="([^"]*)"/g)) {
-      const list = unescape(raw)
-      for (const cls of list.split(/\s+/)) {
-        if (!cls || seen.has(cls) || styled.has(cls)) continue
-        seen.add(cls)
-        errors.push(
-          `class "${cls}" has no rule in the inlined kit stylesheet — it will ` +
-            "render unstyled (outside the kit's safelisted surface, or a typo)",
-        )
+    for (const region of regions) {
+      for (const [, raw] of region.text.matchAll(/\sclass="([^"]*)"/g)) {
+        for (const cls of unescape(raw).split(/\s+/)) {
+          if (!cls || seen.has(cls) || styled.has(cls)) continue
+          if (region.chart && VEGA_STRUCTURAL.test(cls)) continue
+          seen.add(cls)
+          errors.push(
+            `class "${cls}" has no rule in the inlined kit stylesheet — it ` +
+              "will render unstyled (outside the kit's safelisted surface, " +
+              "or a typo)",
+          )
+        }
       }
     }
 
