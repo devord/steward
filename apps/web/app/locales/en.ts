@@ -193,6 +193,31 @@ export const en = {
   // One routine's detail view (ADR-0033): its facts, then its run history —
   // the publish receipts on the artifacts branch. Voice: receipts and
   // commits are called what they are (git words plain, DESIGN.md).
+  // The repo's spend view (ADR-0061) — the pool read through what its runs
+  // cost. Every figure states its reach: a sum nobody can scope is not a fact.
+  "spend.title": "Spend",
+  "spend.subtitle":
+    "What this repo's routines cost to run, from the price each run wrote on its own publish commit.",
+  "spend.link": "Spend",
+  "spend.runsCovered": "{n} of {m} runs priced",
+  "spend.reach": "Over the last 30 days.",
+  "spend.reachCapped":
+    "Over the last {n} runs — the window reached its read limit before 30 days.",
+  "spend.perDay": "Per day",
+  "spend.byRoutine": "By routine",
+  "spend.byOwner": "By owner",
+  "spend.byCategory": "By category",
+  "spend.noBand": "No band",
+  "spend.runsOf": "{n}/{m} runs",
+  "spend.dayRuns": "{n} priced runs",
+  "spend.dayUnpriced": "{n} runs, none priced",
+  "spend.loading": "Loading spend…",
+  "spend.unreachable":
+    "GitHub unreachable — the publish history couldn't load. It retries on refresh.",
+  "spend.emptyTitle": "Nothing has run yet.",
+  "spend.emptyHint":
+    "Spend appears once a routine publishes — every run writes its own price onto its publish commit.",
+
   "runs.back": "All routines",
   "runs.heading": "Runs",
   "runs.subtitle":

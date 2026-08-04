@@ -26,7 +26,12 @@ import type {
   SidebarData,
 } from "../lib/dashboard.server.ts"
 import { useT, type Translate } from "../lib/i18n.tsx"
-import { boardHref, routineHref, routinesHref } from "../lib/repos.ts"
+import {
+  boardHref,
+  routineHref,
+  routinesHref,
+  spendHref,
+} from "../lib/repos.ts"
 import { claudeRoutineUrl, widgetStatus } from "../lib/routine-status.ts"
 import { deriveRuns, totalRunCost, type RunView } from "../lib/runs.ts"
 import { agoParts, durationParts } from "../lib/time.ts"
@@ -334,6 +339,12 @@ export function RoutineRunsView({
                 {t("runs.costEach", {
                   usd: usdLabel(costTotal.usd / costTotal.priced),
                 })}
+                {" · "}
+                {/* Back out to the repo-wide view — one page, one graph, the
+                    same reciprocity the ledgers already keep. */}
+                <Link to={spendHref(repo.full)} className={rowLinkCls}>
+                  {t("spend.link")}
+                </Link>
               </span>
             )}
           </div>

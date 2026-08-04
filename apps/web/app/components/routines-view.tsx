@@ -9,6 +9,7 @@ import { useFetcher, useNavigate, useRevalidator } from "react-router"
 
 import {
   CalendarPlus,
+  Coins,
   ExternalLink,
   LayoutGrid,
   MoreHorizontal,
@@ -76,7 +77,7 @@ import {
 } from "../lib/publish-ledger.ts"
 import { usePendingRuns, type PendingRun } from "../lib/pending-runs.ts"
 import { useKeymap } from "../lib/keymap.ts"
-import { boardHref, routineHref } from "../lib/repos.ts"
+import { boardHref, routineHref, spendHref } from "../lib/repos.ts"
 import { schedulePhraseKey } from "../lib/schedules.ts"
 import { sectionBoards } from "../lib/sidebar-sections.ts"
 import { usePollRevalidate } from "../lib/use-poll-revalidate.ts"
@@ -410,6 +411,19 @@ export function RoutinesView({
             {/* The read-only note leads the cluster: it's why the controls
                 beside it are disabled. Silent unless the viewer can't push. */}
             {readOnly && <ReadOnlyBadge />}
+            {/* The pool read through what it costs (ADR-0061). A ghost link,
+                not a button: it navigates, and the toolbar's one solid is the
+                create verb. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              nativeButton={false}
+              className="gap-2 font-mono text-xs"
+              render={<Link to={spendHref(repo.full)} />}
+            >
+              <Coins />
+              <span className="max-sm:sr-only">{t("spend.link")}</span>
+            </Button>
             {draft != null && (
               // The ledger's own state-chip idiom (StateLabel): yellow as a
               // low-alpha wash + hairline, label in full ink for AA.
