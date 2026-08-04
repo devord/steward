@@ -25,77 +25,177 @@
             {
               "id": "m1",
               "title": "cart",
-              "state": { "label": "no test seam", "tone": "bad" },
-              "detail": "28% tested · one author · couples with checkout; 9 files re-export a 10-line hook; deleting them concentrates nothing. Collapse into one module, test at its interface. (in-process)",
+              "state": {
+                "label": "no test seam",
+                "tone": "bad"
+              },
+              "detail": "9 files re-export a 10-line hook — collapse into one module and test at its interface. (in-process)",
               "values": [
+                {
+                  "label": "tested",
+                  "title": "share of the module covered by tests",
+                  "value": "28%",
+                  "numeric": true,
+                  "from": "detail"
+                },
+                {
+                  "label": "authors",
+                  "title": "distinct authors in the censused window",
+                  "value": "1",
+                  "numeric": true,
+                  "from": "page"
+                },
                 {
                   "label": "commits",
                   "title": "commits in the censused window",
                   "value": "34",
                   "meter": 34,
                   "tone": "attn",
-                  "delta": { "value": "6", "direction": "up" }
+                  "delta": {
+                    "value": "6",
+                    "direction": "up"
+                  }
                 }
               ]
             },
             {
               "id": "m2",
               "title": "checkout",
-              "state": { "label": "undeclared coupling", "tone": "bad" },
-              "detail": "41% tested · moves with cart and account, imports neither — the shared contract is a `checkout:step` string literal. Give it a named module both sides import. (local-substitutable)",
+              "state": {
+                "label": "undeclared coupling",
+                "tone": "bad"
+              },
+              "detail": "Moves with cart and account but imports neither; the shared contract is a `checkout:step` literal — give it a named module. (local-substitutable)",
               "values": [
+                {
+                  "label": "tested",
+                  "title": "share of the module covered by tests",
+                  "value": "41%",
+                  "numeric": true,
+                  "from": "detail"
+                },
+                {
+                  "label": "authors",
+                  "title": "distinct authors in the censused window",
+                  "value": "4",
+                  "numeric": true,
+                  "from": "page"
+                },
                 {
                   "label": "commits",
                   "title": "commits in the censused window",
                   "value": "28",
                   "meter": 28,
                   "tone": "attn",
-                  "delta": { "value": "3", "direction": "up" }
+                  "delta": {
+                    "value": "3",
+                    "direction": "up"
+                  }
                 }
               ]
             },
             {
               "id": "m3",
               "title": "catalog",
-              "state": { "label": "rule breach", "tone": "bad" },
-              "detail": "defines its own badge primitive — packages/ui owns that. 71% tested, 3 authors, otherwise healthy. Delete the local copy, import the shared one. (in-process)",
+              "state": {
+                "label": "rule breach",
+                "tone": "bad"
+              },
+              "detail": "Defines its own badge primitive where packages/ui owns that — delete the local copy and import the shared one. (in-process)",
               "values": [
+                {
+                  "label": "tested",
+                  "title": "share of the module covered by tests",
+                  "value": "71%",
+                  "numeric": true,
+                  "from": "detail"
+                },
+                {
+                  "label": "authors",
+                  "title": "distinct authors in the censused window",
+                  "value": "3",
+                  "numeric": true,
+                  "from": "page"
+                },
                 {
                   "label": "commits",
                   "title": "commits in the censused window",
                   "value": "22",
                   "meter": 22,
-                  "delta": { "value": "1", "direction": "down" }
+                  "delta": {
+                    "value": "1",
+                    "direction": "down"
+                  }
                 }
               ]
             },
             {
               "id": "m4",
               "title": "pricing",
-              "state": { "label": "one author", "tone": "attn" },
-              "detail": "19 of 19 commits from one author · 63% tested. Nothing structural — the bus factor is the finding.",
+              "state": {
+                "label": "one author",
+                "tone": "attn"
+              },
+              "detail": "Every commit in the window from one author — the bus factor is the finding, nothing structural. (in-process)",
               "values": [
+                {
+                  "label": "tested",
+                  "title": "share of the module covered by tests",
+                  "value": "63%",
+                  "numeric": true,
+                  "from": "detail"
+                },
+                {
+                  "label": "authors",
+                  "title": "distinct authors in the censused window",
+                  "value": "1",
+                  "numeric": true,
+                  "from": "page"
+                },
                 {
                   "label": "commits",
                   "title": "commits in the censused window",
                   "value": "19",
                   "meter": 19,
-                  "delta": { "value": "0", "direction": "flat" }
+                  "delta": {
+                    "value": "0",
+                    "direction": "flat"
+                  }
                 }
               ]
             },
             {
               "id": "m5",
               "title": "account",
-              "state": { "label": "wide interface", "tone": "attn" },
-              "detail": "8.1 exports/file against a 3.4 median — a proxy, not a verdict. Read it before acting.",
+              "state": {
+                "label": "wide interface",
+                "tone": "attn"
+              },
+              "detail": "8.1 exports/file against a 3.4 median — a proxy, not a verdict. Read it before acting. (in-process)",
               "values": [
+                {
+                  "label": "tested",
+                  "title": "share of the module covered by tests",
+                  "value": "55%",
+                  "numeric": true,
+                  "from": "detail"
+                },
+                {
+                  "label": "authors",
+                  "title": "distinct authors in the censused window",
+                  "value": "6",
+                  "numeric": true,
+                  "from": "page"
+                },
                 {
                   "label": "commits",
                   "title": "commits in the censused window",
                   "value": "17",
                   "meter": 17,
-                  "delta": { "value": "4", "direction": "up" }
+                  "delta": {
+                    "value": "4",
+                    "direction": "up"
+                  }
                 }
               ]
             }
@@ -109,7 +209,10 @@
             {
               "id": "p1",
               "title": "cart and checkout",
-              "state": { "label": "no import", "tone": "bad" },
+              "state": {
+                "label": "no import",
+                "tone": "bad"
+              },
               "detail": "14 of cart's 34 commits · the contract is a `checkout:step` string literal read on both sides",
               "values": [
                 {
@@ -124,7 +227,10 @@
             {
               "id": "p2",
               "title": "catalog and account",
-              "state": { "label": "no import", "tone": "bad" },
+              "state": {
+                "label": "no import",
+                "tone": "bad"
+              },
               "detail": "14 of catalog's 22 commits · both read the `--surface-gap` CSS custom property, neither declares it",
               "values": [
                 {
@@ -139,7 +245,10 @@
             {
               "id": "p3",
               "title": "pricing and catalog",
-              "state": { "label": "no import", "tone": "attn" },
+              "state": {
+                "label": "no import",
+                "tone": "attn"
+              },
               "detail": "8 of pricing's 19 commits · shared release cadence, not a contract — probably fine",
               "values": [
                 {
@@ -170,25 +279,93 @@
           "jobs"
         ],
         "cells": [
-          { "a": 0, "b": 1, "value": 14 },
-          { "a": 0, "b": 2, "value": 1 },
-          { "a": 0, "b": 3, "value": 8 },
-          { "a": 0, "b": 6, "value": 14 },
-          { "a": 1, "b": 2, "value": 5 },
-          { "a": 1, "b": 4, "value": 14 },
-          { "a": 1, "b": 5, "value": 2 },
-          { "a": 2, "b": 3, "value": 8 },
-          { "a": 2, "b": 4, "value": 8 },
-          { "a": 2, "b": 6, "value": 2 },
-          { "a": 3, "b": 4, "value": 14 },
-          { "a": 3, "b": 5, "value": 8 },
-          { "a": 4, "b": 5, "value": 2 },
-          { "a": 4, "b": 7, "value": 8 },
-          { "a": 5, "b": 7, "value": 2 }
+          {
+            "a": 0,
+            "b": 1,
+            "value": 14
+          },
+          {
+            "a": 0,
+            "b": 2,
+            "value": 1
+          },
+          {
+            "a": 0,
+            "b": 3,
+            "value": 8
+          },
+          {
+            "a": 0,
+            "b": 6,
+            "value": 14
+          },
+          {
+            "a": 1,
+            "b": 2,
+            "value": 5
+          },
+          {
+            "a": 1,
+            "b": 4,
+            "value": 14
+          },
+          {
+            "a": 1,
+            "b": 5,
+            "value": 2
+          },
+          {
+            "a": 2,
+            "b": 3,
+            "value": 8
+          },
+          {
+            "a": 2,
+            "b": 4,
+            "value": 8
+          },
+          {
+            "a": 2,
+            "b": 6,
+            "value": 2
+          },
+          {
+            "a": 3,
+            "b": 4,
+            "value": 14
+          },
+          {
+            "a": 3,
+            "b": 5,
+            "value": 8
+          },
+          {
+            "a": 4,
+            "b": 5,
+            "value": 2
+          },
+          {
+            "a": 4,
+            "b": 7,
+            "value": 8
+          },
+          {
+            "a": 5,
+            "b": 7,
+            "value": 2
+          }
         ],
         "marks": [
-          { "a": 0, "b": 1, "label": "no import — `checkout:step` literal" },
-          { "a": 3, "b": 4, "label": "no import — `--surface-gap` CSS var" }
+          {
+            "a": 0,
+            "b": 1,
+            "label": "no import — `checkout:step` literal"
+          },
+          {
+            "a": 3,
+            "b": 4,
+            "label": "no import — `--surface-gap` CSS var"
+          }
         ]
       }
     }

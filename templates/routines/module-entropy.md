@@ -177,12 +177,29 @@ Monday. Everything held back is counted on a `count` and detailed in context.
   - **"Hot and hard to change"** — the hotspots, churn order, at most 5.
     `state` is the **worst problem's name**, and it is the chip's whole job:
     the reader scans a column of specific nouns instead of twelve repetitions
-    of `worsening`. `title` the module, `detail` its other problems and the
-    move, `values` its window commits as a **`meter`** with a `delta`.
+    of `worsening`. `title` the module. `values` in this order: **`tested`**
+    (`"30%"`, `numeric`, `from: "detail"`), **`authors`** (`"8"`, `numeric`,
+    `from: "page"`), and **`commits`** as a **`meter`** with a `delta`.
   - **"Changes together, imports nothing"** — at most 3 undeclared pairs,
     `title` as `a ↔ b`, `detail` naming the **actual shared contract** where
     the judging found it (a CSS custom property, a hand-rolled mock, a magic
     string), `values` the shared commits on the same meter scale.
+
+  **A measured fact is a column, never a sentence.** `tested` and `authors`
+  are the two numbers a reader compares _down_ the page to decide which
+  hotspot to open, and a reader cannot compare what is spelled out mid-clause
+  in five different rows. A shipped run wrote `30% tested · 8 authors` into
+  the prose of every row and left the table with one scannable column; the
+  band stopped being a table and became a list of paragraphs with a bar on
+  the end. The columns tier in (`from`) so a narrow tile still gets the chip,
+  the module and the meter, and the arithmetic appears as the frame earns it.
+
+  **`detail` is the finding and the move, in that order, and it is one
+  sentence.** Not a paragraph, and never a restatement of a column: "one
+  909-line file behind a single export — split by domain and test each
+  slice." Everything longer — which file, which exports, why the split falls
+  where it does — is what `context` is for. It is the same rule the `stat`
+  follows: the tile carries the claim, the briefing carries the argument.
 
   Commits are the meter everywhere, so one scale is honest across both groups.
   **Never meter the score** — scores cluster in fifteen points and every bar
