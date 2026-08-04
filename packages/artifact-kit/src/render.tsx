@@ -26,6 +26,16 @@ import { Shell } from "./Shell.tsx"
 import type { Tone } from "./ui/tone.ts"
 
 interface BlockBase {
+  /**
+   * A fragment target, so something else in the artifact can send a reader
+   * here — today the progress rail's figure, jumping to the ledger of what
+   * that rail is short by (ADR-0061).
+   *
+   * Only emitted when set. An id nothing links to is markup nobody reads, and
+   * deriving one from the label would mint a target that silently changes
+   * whenever the label is reworded.
+   */
+  id?: string
   label?: string
   /** Facts that are not rows — "12 held back" — ride the label. */
   count?: string
@@ -114,6 +124,8 @@ export interface ProgressBlock extends BlockBase {
     tone?: Tone
     caption?: string
     secondary?: boolean
+    /** Fragment naming the band that lists what this rail is short by. */
+    href?: string
   }[]
   stages?: Stage[]
 }
@@ -213,7 +225,12 @@ export interface ArtifactDoc {
    */
   bottomLine?: BottomLine
   blocks?: Block[]
-  provenance?: string[]
+  /**
+   * Countable facts about what the run looked at. Strings; the kit also
+   * accepts `{ label, value }` because three live widgets shipped that and
+   * rendered `[object Object]`. See ProvenanceLine.
+   */
+  provenance?: (string | { label?: string; value?: string })[]
   /** Where the underlying record lives — the sheet, the board, the register. */
   provenanceLink?: { href: string; label: string }
   /** Inert JSON the artifact carries for its own next run. See Shell. */
@@ -231,6 +248,7 @@ function Band({ block, index }: { block: Block; index: number }) {
   return (
     <Section
       key={block.label ?? index}
+      id={block.id}
       label={block.label}
       count={block.count}
       note={block.note}

@@ -33,6 +33,7 @@ import { z } from "zod"
 
 import { ARTIFACT_BUCKET_SCRIPT } from "./artifact-bucket.ts"
 import { ARTIFACT_COPY_SCRIPT } from "./artifact-copy.ts"
+import { ARTIFACT_DISCLOSE_SCRIPT } from "./artifact-disclose.ts"
 import { FIT_FACTORY, FIT_STYLE } from "./artifact-fit.ts"
 
 /** A theme's perceptual mode — drives `color-scheme` and the `.dark` class. */
@@ -1071,6 +1072,12 @@ ro=new ResizeObserver(check);ro.observe(document.body);
 mo=new MutationObserver(check);
 mo.observe(document.body,{childList:true,subtree:true,characterData:true});
 addEventListener("resize",check);
+// Folding a queue group changes height without touching childList,
+// characterData or body's border box — it only sets an attribute — so
+// neither observer above sees it. The disclosure says so itself rather than
+// widening the MutationObserver to \`attributes\`, which would re-enter on
+// every write the fit pass makes.
+addEventListener("kit:disclose",check);
 // The injected mono lands after DOMContentLoaded and grows every row a
 // little (ADR-0031); fitting only once would measure fallback metrics.
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(check);
@@ -1208,6 +1215,10 @@ export function frameArtifactHtml(
     // Kit-only: the buttons it drives exist only in kit-rendered markup, and
     // they ship hidden until this reveals them.
     (usesArtifactKit(html) ? ARTIFACT_COPY_SCRIPT : "") +
+    // Same bargain, on the queue's group headings: kit-rendered markup emits
+    // them as plain text and this upgrades them to disclosures (ADR-0061).
+    // Before the tile guard below, whose re-fit it triggers.
+    (usesArtifactKit(html) ? ARTIFACT_DISCLOSE_SCRIPT : "") +
     // Same bargain as the copy action, one band up: the chart is already drawn
     // server-side, and this adds the toggles and the scrub to it. Gated on the
     // band as well as the kit — see usesThroughputBand.

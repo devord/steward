@@ -240,3 +240,61 @@
   outline: 2px solid var(--color-orange);
   outline-offset: 2px;
 }
+
+/* Foldable queue groups (ADR-0061).
+ *
+ * The heading ships as a plain `<span data-kit-disclose>` — no affordance —
+ * and the board's injected behaviour upgrades it in place, stamping
+ * `data-kit-disclose-live`. Everything below is gated on that stamp, so a
+ * raw-opened file shows a heading that looks exactly like the heading it is
+ * and never a caret promising a fold that will not happen. Same
+ * degrade-to-honest bargain as the copy action's hidden button; a different
+ * mechanism only because this element carries the label's own text.
+ *
+ * Unlayered on purpose, like the scrub rules above: the board appends the
+ * *current* kit.css over each artifact's inlined copy (ADR-0050), and an
+ * unlayered declaration beats anything in `@layer utilities` whatever the
+ * specificity. */
+[data-kit-disclose] > .kit-disclose-caret {
+  display: none;
+}
+
+[data-kit-disclose-live] {
+  cursor: pointer;
+}
+
+[data-kit-disclose-live] > .kit-disclose-caret {
+  display: inline-block;
+  /* Drawn pointing down — open — and turned a quarter turn anticlockwise when
+     the group folds. One shape for both states, so the transition is the state
+     change rather than a swap between two glyphs. */
+  transition: transform 150ms ease-out;
+}
+
+[data-kit-disclose-live][aria-expanded="false"] > .kit-disclose-caret {
+  transform: rotate(-90deg);
+}
+
+/* The caret is the only thing that moves, and it moves 90°. Readers who ask
+   for less motion get the state without the turn. */
+@media (prefers-reduced-motion: reduce) {
+  [data-kit-disclose-live] > .kit-disclose-caret {
+    transition: none;
+  }
+}
+
+/* A span with `role="button"` gets no focus ring of its own. The heading is
+   the only control in these bands, so without this the fold is reachable by
+   keyboard and invisible while you are on it. */
+[data-kit-disclose-live]:focus-visible {
+  outline: 2px solid var(--color-orange);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Folded rows. `display: none` rather than `hidden` — the fit pass owns
+   `hidden` on `[data-fit-item]` and clears it on every re-measure, so sharing
+   the attribute would let a re-fit blow a folded group open. */
+[data-kit-group-of][data-kit-collapsed] {
+  display: none;
+}

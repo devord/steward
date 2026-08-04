@@ -97,6 +97,12 @@ const ICONS = {
     ["path", { d: "M2 12h20" }],
     ["path", { d: "m6 8-4 4 4 4" }],
   ],
+  /**
+   * The disclosure caret. Drawn pointing *down* — open — and rotated a quarter
+   * turn by CSS when its group folds, so one shape carries both states and the
+   * rotation is the state change rather than a swap between two glyphs.
+   */
+  "chevron-down": [["path", { d: "m6 9 6 6 6-6" }]],
 } satisfies Record<string, Shape[]>
 
 export type IconName = keyof typeof ICONS

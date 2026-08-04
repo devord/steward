@@ -1292,6 +1292,67 @@ describe("grouped queues", () => {
     expect(html).toContain("Has rows")
     expect(html).not.toContain("Empty")
   })
+
+  it("names each row's group, since a group cannot wrap its rows", () => {
+    // `<tbody>` does not nest and the row-plus-detail pair is already the
+    // `<tbody>`, so a group's rows are siblings of every other group's. The
+    // relationship has to ride each row or the disclosure has nothing to fold.
+    const html = renderArtifact(doc, "")
+    expect(html).toContain('data-kit-group-of="blocked"')
+    expect(html).toContain('data-kit-group-of="open"')
+  })
+
+  it("leaves an ungrouped queue's rows unstamped", () => {
+    // No heading, nothing to fold from. Stamping them anyway would put a
+    // relationship in the markup that addresses no control.
+    const html = renderArtifact(
+      {
+        ...doc,
+        blocks: [{ kind: "queue", rows: [{ id: "r", title: "r" }] }],
+      },
+      "",
+    )
+    expect(html).not.toContain("data-kit-group-of")
+  })
+
+  it("renders every group open, whatever `collapsed` asks for", () => {
+    // The load-bearing invariant (ADR-0061). `collapsed` picks the initial
+    // state of a control the board injects; the static file is what a raw
+    // reader gets, and it must never hide rows behind a control that is not
+    // there. So the markup carries the *intent* and none of the folding.
+    const html = renderArtifact(
+      {
+        ...doc,
+        blocks: [
+          {
+            kind: "queue",
+            groups: [
+              {
+                id: "todo",
+                label: "To do",
+                collapsed: true,
+                rows: [{ id: "r", title: "#1" }],
+              },
+            ],
+          },
+        ],
+      },
+      "",
+    )
+    expect(html).toContain("data-kit-disclose-init")
+    expect(html).not.toContain("data-kit-collapsed")
+    expect(html).not.toContain("data-kit-disclose-live")
+    expect(html).toContain("#1")
+  })
+
+  it("gives every labelled group a disclosure handle, not just collapsed ones", () => {
+    // One vocabulary. An opt-in would leave two kinds of group heading in the
+    // corpus, which is the inconsistency the kit exists to prevent.
+    const html = renderArtifact(doc, "")
+    expect(html).toContain('data-kit-disclose="blocked"')
+    expect(html).toContain('data-kit-disclose="open"')
+    expect(html).not.toContain("data-kit-disclose-init")
+  })
 })
 
 describe("viewer-neutral row data", () => {
@@ -1748,6 +1809,99 @@ describe("progress rails", () => {
     expect(html).toContain("bg-red")
   })
 
+  it("makes the figure a door to its ledger, at the page tier only", () => {
+    // A rail says how far; the ledger says which ones. Below the page tier
+    // that ledger has been trimmed away or was never emitted, so the jump
+    // would land on nothing — the readout stays a plain figure there.
+    const html = renderArtifact(
+      {
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [
+          {
+            kind: "progress",
+            rails: [{ id: "g", label: "gate", percent: 40, href: "#open" }],
+          },
+          {
+            kind: "queue",
+            id: "open",
+            label: "Open",
+            rows: [{ id: "r", title: "#1" }],
+          },
+        ],
+      },
+      "",
+    )
+    expect(html).toContain('href="#open"')
+    expect(html).toContain('id="open"')
+    // Same-document fragment: no new tab, so §7's rule does not apply here.
+    expect(html).not.toMatch(/href="#open"[^>]*target="_blank"/)
+    // The tile stamp, not a width. Caught in the browser: a 3-column tile on
+    // a wide board clears `tier-page`'s 900px, so a width gate shipped a live
+    // link on the one surface whose ledger is `pageOnly` and therefore absent.
+    expect(html).toContain("hidden page-only:inline")
+    expect(html).toContain("page-only:hidden")
+    expect(html).not.toContain("tier-page:inline")
+  })
+
+  it("leaves the readout alone when no ledger was named", () => {
+    const html = renderArtifact(
+      doc([{ id: "g", label: "gate", percent: 40 }]),
+      "",
+    )
+    expect(html).not.toContain("page-only:inline")
+  })
+
+  it("refuses a door onto nothing", () => {
+    // Both ends are in one document, so a fragment naming no block is
+    // checkable here rather than left for a reader to find by clicking and
+    // watching the page not move.
+    const base = {
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+    }
+    const rails = [{ id: "g", label: "gate", percent: 40, href: "#open" }]
+    expect(
+      validateDoc({ ...base, blocks: [{ kind: "progress", rails }] }).join(" "),
+    ).toContain("names no block id")
+    expect(
+      validateDoc({
+        ...base,
+        blocks: [
+          { kind: "progress", rails },
+          { kind: "queue", id: "open", rows: [{ id: "r", title: "t" }] },
+        ],
+      }),
+    ).toEqual([])
+  })
+
+  it("refuses a rail href that leaves the document", () => {
+    // An external URL here would open a page over the board with no way back.
+    // Links out are §7's job, and they carry `target="_blank"`; this does not.
+    expect(
+      validateDoc({
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [
+          {
+            kind: "progress",
+            rails: [
+              {
+                id: "g",
+                label: "g",
+                percent: 1,
+                href: "https://example.test",
+              },
+            ],
+          },
+        ],
+      }).join(" "),
+    ).toContain("must be a fragment")
+  })
+
   it("names a stage state in words beside its dot", () => {
     const html = renderArtifact(
       doc(
@@ -1783,6 +1937,74 @@ describe("progress rails", () => {
     // "nothing done yet" rather than as an error.
     const errs = validateDoc(doc([{ id: "g", label: "g", percent: "40" }]))
     expect(errs.join(" ")).toContain("percent must be a finite number")
+  })
+})
+
+describe("the provenance line", () => {
+  const withProvenance = (provenance: unknown[]): ArtifactDoc =>
+    JSON.parse(
+      JSON.stringify({
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [{ kind: "queue", rows: [{ id: "r", title: "t" }] }],
+        provenance,
+      }),
+    )
+
+  it("joins a labelled fact rather than stringifying it", () => {
+    // `corza-progress`, `corza-risk` and `ui-figma-drifts` all shipped this
+    // shape and published a line reading `[object Object] · [object Object]`.
+    const html = renderArtifact(
+      withProvenance([
+        { label: "scored population", value: "232 tickets" },
+        "48 PRs read",
+      ]),
+      "",
+    )
+    expect(html).not.toContain("[object Object]")
+    expect(html).toContain("scored population 232 tickets · 48 PRs read")
+  })
+
+  it("names the shape without failing the run", () => {
+    // A joined line is not broken; a routine that stops publishing is. So the
+    // renderer copes and the advisory channel asks for one shape.
+    const doc = withProvenance([{ label: "a", value: "b" }])
+    expect(validateDoc(doc)).toEqual([])
+    expect(reviewDoc(doc).join(" ")).toContain("provenance has 1 of 1 facts")
+  })
+})
+
+describe("foldable groups", () => {
+  const base = {
+    slug: "s",
+    generatedAt: "2026-07-30T09:00:00Z",
+    stat: { value: 1, label: "x" },
+  }
+  const withGroup = (g: object) => ({
+    ...base,
+    blocks: [
+      { kind: "queue", groups: [{ rows: [{ id: "r", title: "t" }], ...g }] },
+    ],
+  })
+
+  it("checks the flag is a boolean", () => {
+    expect(
+      validateDoc(withGroup({ id: "a", label: "A", collapsed: "yes" })).join(
+        " ",
+      ),
+    ).toContain("collapsed must be a boolean")
+  })
+
+  it("refuses to fold a group with no heading to fold from", () => {
+    // The heading is the control. Without a label the flag renders nothing and
+    // the rows ship visible — the opposite of what was asked for.
+    expect(
+      validateDoc(withGroup({ id: "a", collapsed: true })).join(" "),
+    ).toContain("needs a label to fold from")
+    expect(
+      validateDoc(withGroup({ id: "a", label: "A", collapsed: true })),
+    ).toEqual([])
   })
 })
 
