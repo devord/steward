@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 import {
   failGenerate,
   failPath,
+  seedPublishLog,
   seedRepo,
   seedRepoMeta,
 } from "../mocks/github.ts"
@@ -667,6 +668,26 @@ ${DASHBOARD_YAML}`
 
     expect(flaky.repos[0].collaborators).toBeNull()
     expect(flaky.degraded).toBe(true)
+  })
+
+  it("dates a board from a scripted publish, not only from publish-widget's", async () => {
+    // Regression: the rail matched `publish: <slug>` alone, so a routine that
+    // publishes through its own git plumbing — `widget: <slug> @ <iso>
+    // (scripted)`, which touches w/<slug>/index.html all the same — was read
+    // as never having run. Its board's dot sat at unknown forever while the
+    // routine's own detail view listed the runs.
+    seedRail()
+    seedPublishLog(DATA_REPO, [
+      {
+        date: new Date().toISOString(),
+        message: "widget: daily-plan @ 2026-08-04T12:12:39Z (scripted)",
+      },
+    ])
+
+    const sidebar = await loadSidebar("token", LOGIN)
+
+    expect(sidebar.repos[0].dashboards[0].lastRunAt).not.toBeNull()
+    expect(sidebar.degraded).toBe(false)
   })
 
   it("degrades when freshness cannot be read, rather than dating every board unknown", async () => {

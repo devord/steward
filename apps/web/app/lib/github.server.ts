@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import type { LedgerCommit } from "./publish-ledger.ts"
+import { type LedgerCommit, parsePublishSubject } from "./publish-ledger.ts"
 
 /**
  * Thin GitHub REST client. Every call runs with the signed-in user's token —
@@ -488,20 +488,27 @@ export async function getLastCommitDate(
   return commits?.[0]?.date ?? null
 }
 
-const PUBLISH_MESSAGE = /^publish:\s*(\S+)/
-
 /**
  * Last publish time per widget slug on the `artifacts` branch, from one
  * commits page — the rail's cheap freshness source (ADR-0035). Every run's
- * mandatory last step commits `publish: <slug>` touching `w/<slug>/index.html`
- * (ADR-0002/0026), one slug per commit, so the newest such message dates each
- * slug. Commits come newest-first, so the first match per slug wins.
+ * mandatory last step commits one message naming its slug and touching
+ * `w/<slug>/index.html` (ADR-0002/0026), one slug per commit, so the newest
+ * such message dates each slug. Commits come newest-first, so the first match
+ * per slug wins.
+ *
+ * The subject grammar is `parsePublishSubject`'s, shared with the cost scan —
+ * which means **both** shapes that reach this branch, not only the one
+ * `publish-widget` writes. A scripted publisher commits `widget: <slug> @
+ * <iso> (scripted)` with its own git plumbing; matching `publish:` alone read
+ * every one of those runs as no run at all, so a routine that publishes
+ * exclusively that way went permanently undated here and its rail dot showed
+ * a freshness it had already earned as unknown.
  *
  * Empty map for a missing branch / empty repo (nothing published yet). `null`
  * on any other failure so the caller degrades the whole repo's freshness to
  * "unknown" rather than lie — freshness is chrome, never a failed rail
- * (ADR-0030). A commit that breaks the `publish:` convention is simply skipped,
- * leaving its slug unknown.
+ * (ADR-0030). A commit matching neither shape is simply skipped, leaving its
+ * slug unknown.
  */
 export async function listArtifactPublishDates(
   token: string,
@@ -518,7 +525,7 @@ export async function listArtifactPublishDates(
   const dates = new Map<string, string>()
   for (const entry of pathCommitsSchema.parse(await res.json())) {
     const date = entry.commit.committer?.date
-    const slug = entry.commit.message?.match(PUBLISH_MESSAGE)?.[1]
+    const slug = parsePublishSubject(entry.commit.message)
     if (date && slug && !dates.has(slug)) dates.set(slug, date)
   }
   return dates
