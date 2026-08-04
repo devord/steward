@@ -1,5 +1,5 @@
 import { cn } from "../ui/cn.ts"
-import { Icon, type IconName } from "../ui/icon.tsx"
+import { Icon, type IconName, INLINE_GLYPH } from "../ui/icon.tsx"
 
 /** The status ladder. `pending` is "not read yet", never a fourth severity. */
 export type VerdictLevel = "good" | "attn" | "bad" | "pending"
@@ -213,10 +213,21 @@ export function VerdictBand({ verdict }: { verdict: Verdict }) {
         // reason line, where as a fourth clause it is read last if at all,
         // which is the opposite of its importance. Never the verdict's colour:
         // it qualifies the verdict rather than restating it.
-        <p className="text-ink beyond-glance:flex m-0 hidden items-baseline gap-1.5 font-sans text-sm">
-          <span className="text-ink-dim shrink-0" aria-hidden="true">
-            <Icon name="clock" />
-          </span>
+        //
+        // A run of text with the glyph set into it, NOT a flex row — the same
+        // rule the hero above obeys, and broken here for a while. A flex item
+        // ignores `vertical-align`, so `items-baseline` could only align this
+        // row on the wrapper's SYNTHESISED baseline: the glyph's bottom margin
+        // edge. Measured in the render, that hung the clock's centre 0.183em
+        // above the cap band beside it — a full 1em box sitting entirely off a
+        // line whose caps rise 0.704em — while every other glyph in the kit
+        // ran within 0.071em of its own. Inline flow plus `INLINE_GLYPH` puts
+        // it at 0.049em, in family with the rest.
+        <p className="text-ink beyond-glance:block m-0 hidden font-sans text-sm">
+          <Icon
+            name="clock"
+            className={`${INLINE_GLYPH} text-ink-dim mr-1.5`}
+          />
           {verdict.caveat}
         </p>
       ) : null}

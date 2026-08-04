@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 
 import { escapeContextBlock, footerTimestamp } from "./Shell.tsx"
@@ -62,6 +62,46 @@ describe("renderArtifact", () => {
 
   it("gives the sections a root heading", () => {
     expect(html).toMatch(/<h1 class="sr-only">/)
+  })
+
+  it("centres every drawn glyph on the type beside it", () => {
+    // A baseline-aligned box of side S has its centre at S/2 above the
+    // baseline, while the cap band it sits beside centres near 0.35em — so a
+    // glyph dropped into a line with no correction ALWAYS reads high, by more
+    // the larger it is. The kit allows exactly two corrections, and this pins
+    // that every glyph carries one of them:
+    //
+    //   1. `align-[…]` — inline flow, the shift that `INLINE_GLYPH` and the
+    //      hero word encode. The arithmetic is in `ui/icon.tsx`.
+    //   2. an `items-center` parent — flex or grid centring the box outright,
+    //      which is how QueueTable's cell icon (content, not punctuation)
+    //      stays level with its value.
+    //
+    // Anything else is the line box's default, and the default is wrong: it is
+    // what put the verdict caveat's clock 0.183em above its own sentence.
+    //
+    // Swept across every fixture, because the one the suite renders at the top
+    // of this file draws no icons at all — pinning this on `html` alone would
+    // pass vacuously.
+    const dir = new URL("../fixtures/", import.meta.url)
+    const seen: string[] = []
+    for (const name of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+      const doc = JSON.parse(readFileSync(new URL(name, dir), "utf8"))
+      const out = renderArtifact(doc, "")
+      // The `Icon` signature: lucide's 24-unit box. Sparklines, meters and the
+      // throughput chart draw their own SVGs and are sized, not set into text.
+      for (const m of out.matchAll(/<svg viewBox="0 0 24 24"[^>]*>/g)) {
+        seen.push(`${name} ${m[0]}`)
+        if (/class="[^"]*align-\[/.test(m[0])) continue
+        // Otherwise the parent must centre the box. The nearest class
+        // attribute before the glyph is the tag that opened around it.
+        const before = out.slice(Math.max(0, m.index - 240), m.index)
+        const parent = /class="([^"]*)"[^<]*$/.exec(before)?.[1] ?? ""
+        expect(parent, `${name}: ${m[0]}`).toContain("items-center")
+      }
+    }
+    // Without this the loop is vacuous if the icon markup ever changes shape.
+    expect(seen.length).toBeGreaterThan(20)
   })
 
   it("renders the standalone footer with slug and compact stamp", () => {
@@ -773,6 +813,24 @@ describe("the verdict band", () => {
       )?.[1] ?? ""
     expect(cls).toContain("text-ink")
     expect(cls).not.toContain("text-orange")
+  })
+
+  it("sets the caveat's glyph into the text run, not beside it", () => {
+    // The same rule as the gate above, one tier down, and broken here for a
+    // while: the caveat was a `flex items-baseline` row led by a wrapper span
+    // holding nothing but the clock. A flex item ignores `vertical-align`, so
+    // that row could only align on the wrapper's SYNTHESISED baseline — the
+    // glyph's bottom margin edge — which measured 0.183em of the clock's
+    // centre hanging above the cap band beside it, against 0.071em for every
+    // other glyph the kit draws.
+    const html = verdict({ caveat: "Not a full read — R2 has no input." })
+    const at = html.indexOf("Not a full read")
+    const run = html.slice(html.lastIndexOf("<p ", at), at)
+    const cls = /class="([^"]*)"/.exec(run)?.[1] ?? ""
+    expect(cls).not.toMatch(/(^|\s)(inline-)?flex(\s|$)/)
+    // And the glyph inside it carries the kit's inline shift rather than the
+    // line box's default, which is what the sweep below generalises.
+    expect(run).toContain("align-[-0.06em]")
   })
 
   it("gives the band trimmable units so a short tile cannot crop it", () => {
