@@ -1,4 +1,5 @@
 import { cn } from "~/lib/utils"
+import { useT } from "../lib/i18n.tsx"
 
 /**
  * The cost vocabulary, shared by the pool ledger, the run history and the
@@ -55,8 +56,13 @@ export function CostTick({
   max: number
   className?: string
 }) {
-  if (!(max > 0) || !(value > 0)) return null
-  const pct = Math.min(100, (value / max) * 100)
+  // Nothing to compare against: no track at all, rather than a full bar with
+  // no meaning behind it.
+  if (!(max > 0)) return null
+  // A run that genuinely priced at zero keeps its slot and draws an empty
+  // track. Dropping the box would slide its figure left of every priced
+  // neighbour, breaking the one left edge this column is built around.
+  const pct = value > 0 ? Math.min(100, (value / max) * 100) : 0
   return (
     <span
       aria-hidden
@@ -66,10 +72,12 @@ export function CostTick({
           its value is a chart that lies about ratios, and the whole point of
           the tick is that the ratio is readable without arithmetic. Spend is
           outlier-heavy, so most bars are short — that *is* the finding. */}
-      <span
-        className="block h-full min-w-[3px] bg-ink-faint"
-        style={{ width: `${pct}%` }}
-      />
+      {pct > 0 && (
+        <span
+          className="block h-full min-w-[3px] bg-ink-faint"
+          style={{ width: `${pct}%` }}
+        />
+      )}
     </span>
   )
 }
@@ -78,14 +86,25 @@ export function CostTick({
     edge as the figures around it. */
 const TRACK_CLS = "h-1.5 w-12 shrink-0"
 
-/** The resting state of every cost slot: a receipt that carried no price, a
-    routine that has not reported one yet. A dash, never a zero — absence and
-    free are different facts (ADR-0060). */
+/**
+ * The resting state of every cost slot: a receipt that carried no price, a
+ * routine that has not reported one yet. A dash, never a zero — absence and
+ * free are different facts (ADR-0060).
+ *
+ * The glyph stays decorative, since a screen reader announcing "em dash" says
+ * nothing; the state it stands for is spoken instead. Without that the cell
+ * reads as simply empty, which is the one thing this column must never
+ * suggest about a routine that has been running all week.
+ */
 export function CostDash() {
+  const t = useT()
   return (
-    <span aria-hidden className="text-ink-dim">
-      —
-    </span>
+    <>
+      <span aria-hidden className="text-ink-dim">
+        —
+      </span>
+      <span className="sr-only">{t("cost.unpriced")}</span>
+    </>
   )
 }
 
