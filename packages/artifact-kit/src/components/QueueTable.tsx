@@ -175,6 +175,17 @@ export interface QueueGroup {
   label?: string
   /** Facts that are not rows. Survives even when every row below is trimmed. */
   count?: string
+  /**
+   * Ship this group folded.
+   *
+   * The heading is a disclosure on every labelled group — one vocabulary, not
+   * an opt-in that would leave two kinds of group heading in the corpus. This
+   * flag only picks the *initial* state, and only once the board's behaviour is
+   * attached: the static markup always renders open, so a raw-opened file and
+   * anything that does not run scripts show every row rather than hiding
+   * content behind a control that is not there yet (ADR-0039).
+   */
+  collapsed?: boolean
   rows: QueueRow[]
 }
 
@@ -423,8 +434,28 @@ export function QueueTable({
                   colSpan={columnCount}
                   className="text-ink-dim pt-3 pb-1 font-mono text-xs"
                 >
-                  {g.label}
-                  {g.count ? <span> · {g.count}</span> : null}
+                  {/*
+                    A span, not a button — and this is the one place the kit
+                    departs from the copy action's "ship the control `hidden`"
+                    rule, because the element carries the heading's own text.
+                    Hiding it would hide the label; rendering a second copy
+                    beside it would put the label in the document twice. So the
+                    static file gets plain text with no affordance, and the
+                    injected behaviour *upgrades this node in place* — adding
+                    `role`, `tabindex` and `aria-expanded`, and revealing the
+                    caret. Nothing is behind a dead control at any point.
+                  */}
+                  <span
+                    data-kit-disclose={g.id}
+                    {...(g.collapsed ? { "data-kit-disclose-init": "" } : {})}
+                  >
+                    <Icon
+                      name="chevron-down"
+                      className={cn(INLINE_GLYPH, "kit-disclose-caret")}
+                    />
+                    {g.label}
+                    {g.count ? <span> · {g.count}</span> : null}
+                  </span>
                 </td>
               </tr>
             </tbody>
@@ -433,6 +464,13 @@ export function QueueTable({
             <RowPair
               key={r.id}
               row={r}
+              // Names the group each row belongs to, which is what lets the
+              // disclosure fold a run of sibling `<tbody>`s. A group's rows
+              // cannot be wrapped in one element — the row-plus-detail pair is
+              // already the `<tbody>`, and `<tbody>` does not nest — so the
+              // relationship has to be carried on each row rather than by
+              // containment.
+              groupId={g.label ? g.id : undefined}
               columns={columns}
               hasAction={hasAction}
               hasLead={hasLead}
@@ -461,6 +499,7 @@ function leadLabel(row: QueueRow): string | undefined {
 
 function RowPair({
   row,
+  groupId,
   columns,
   hasAction,
   hasLead,
@@ -468,6 +507,8 @@ function RowPair({
   meterMax,
 }: {
   row: QueueRow
+  /** The labelled group this row sits under, when there is one. */
+  groupId?: string
   /** The table's column set, so every row lines up with the header. */
   columns: QueueValue[]
   hasAction: boolean
@@ -482,6 +523,7 @@ function RowPair({
     <tbody
       data-fit-item
       {...(row.keep ? { "data-fit-keep": "" } : {})}
+      {...(groupId ? { "data-kit-group-of": groupId } : {})}
       // Relationships, not a resolved viewer. The enhancer buckets on these at
       // render time; the published file names nobody.
       {...Object.fromEntries(

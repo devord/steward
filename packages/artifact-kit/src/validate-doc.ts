@@ -134,6 +134,7 @@ export function validateDoc(doc: unknown): string[] {
         const at = `blocks[${i}]`
         if (!isObj(b)) return void errors.push(`${at} must be an object`)
         if (b.note !== undefined) str(b.note, `${at}.note`, false)
+        if (b.id !== undefined) str(b.id, `${at}.id`, false)
         if (b.rail !== undefined && typeof b.rail !== "boolean")
           errors.push(`${at}.rail must be a boolean`)
         if (b.pageOnly !== undefined && typeof b.pageOnly !== "boolean")
@@ -224,6 +225,13 @@ export function validateDoc(doc: unknown): string[] {
             tone(r.tone, `${rat}.tone`)
             str(r.verdict, `${rat}.verdict`, false)
             str(r.caption, `${rat}.caption`, false)
+            str(r.href, `${rat}.href`, false)
+            // The rail's figure jumps to a band in the *same* document. An
+            // external URL here would open a page over the board with no way
+            // back, which is what §7's `target="_blank"` rule exists to
+            // prevent — and this anchor deliberately does not carry it.
+            if (typeof r.href === "string" && !r.href.startsWith("#"))
+              errors.push(`${rat}.href must be a fragment, like "#open-gate"`)
           })
           if (b.stages === undefined) return
           if (!Array.isArray(b.stages))
@@ -396,6 +404,14 @@ export function validateDoc(doc: unknown): string[] {
             str(g.id, `${gat}.id`)
             str(g.label, `${gat}.label`, false)
             str(g.count, `${gat}.count`, false)
+            if (g.collapsed !== undefined && typeof g.collapsed !== "boolean")
+              errors.push(`${gat}.collapsed must be a boolean`)
+            // The heading is the control, so a group with no label has nothing
+            // to fold from — the flag would render exactly nothing and the
+            // rows would ship visible, which is the opposite of what was
+            // asked for.
+            if (g.collapsed === true && typeof g.label !== "string")
+              errors.push(`${gat}.collapsed needs a label to fold from`)
             if (!Array.isArray(g.rows)) {
               errors.push(`${gat}.rows must be an array`)
               continue
@@ -468,6 +484,30 @@ export function validateDoc(doc: unknown): string[] {
           }
         })
       })
+
+    // A rail's figure is a door, and a door onto nothing is worse than no
+    // door: the reader clicks, the page does not move, and the artifact has
+    // told them the ledger is missing in the one way they cannot act on. Both
+    // ends are in the same document, so this is checkable here rather than
+    // left to a reader to discover.
+    if (Array.isArray(doc.blocks)) {
+      const ids = new Set(
+        doc.blocks.flatMap((b) =>
+          isObj(b) && typeof b.id === "string" ? [b.id] : [],
+        ),
+      )
+      doc.blocks.forEach((b, i) => {
+        if (!isObj(b) || b.kind !== "progress" || !Array.isArray(b.rails))
+          return
+        b.rails.forEach((r, j) => {
+          if (!isObj(r) || typeof r.href !== "string") return
+          if (!ids.has(r.href.slice(1)))
+            errors.push(
+              `blocks[${i}].rails[${j}].href "${r.href}" names no block id`,
+            )
+        })
+      })
+    }
   }
 
   if (doc.provenance !== undefined && !Array.isArray(doc.provenance))
@@ -580,6 +620,26 @@ export function reviewDoc(doc: unknown): string[] {
       )
     }
   })
+
+  // Three live widgets published `{ label, value }` here and rendered a whole
+  // line of `[object Object]`: the field is documented as "countable facts",
+  // every other labelled thing in the contract is an object, and
+  // `provenanceLink` beside it is `{ href, label }`, so the guess was a fair
+  // one. The kit renders the pair now rather than stringifying it — this is an
+  // advisory, not an error, because a widget with a joined provenance line is
+  // not broken and a routine that stops publishing is. Named anyway, so the
+  // corpus converges on one shape instead of the renderer quietly carrying two
+  // forever.
+  if (Array.isArray(doc.provenance)) {
+    const objects = doc.provenance.filter((f) => typeof f !== "string").length
+    if (objects > 0)
+      notes.push(
+        `provenance has ${objects} of ${doc.provenance.length} facts as ` +
+          `objects. The kit joins \`{ label, value }\` rather than printing ` +
+          `"[object Object]", but the field is a list of strings — write the ` +
+          `fact as one phrase: "232 tickets scored".`,
+      )
+  }
 
   return notes
 }

@@ -30,6 +30,18 @@ export function Rail({
   caption,
   /** A quieter second horizon: thinner track, ink fill instead of accent. */
   secondary = false,
+  /**
+   * Where the tickets behind this rail are listed — a fragment naming a band
+   * in the same artifact (`#open-gate`).
+   *
+   * **Off tiles**, gated on the board's tile stamp rather than a width. A rail
+   * answers "how far"; the ledger behind it answers "which ones", and on a
+   * tile that ledger has been trimmed away or was never emitted, so the link
+   * would land on nothing. The full view is the only place both exist, which
+   * is also the only place the jump saves a reader anything — the bands sit
+   * below the burn-up and three queues.
+   */
+  href,
 }: {
   label: string
   percent: number
@@ -38,6 +50,7 @@ export function Rail({
   tone?: Tone
   caption?: string
   secondary?: boolean
+  href?: string
 }) {
   const pct = Math.max(0, Math.min(100, percent))
   const at = tick === undefined ? undefined : Math.max(0, Math.min(100, tick))
@@ -53,9 +66,39 @@ export function Rail({
       <div data-fit-item className="flex flex-col gap-1">
         <div className="flex items-baseline gap-2">
           <span className="text-ink-dim font-mono text-xs">{label}</span>
+          {/*
+            The figure is the door to its own ledger, and only where that
+            ledger exists. Below the page tier the anchor collapses to the plain
+            readout it has always been — not a dead link, no link at all. No
+            `target="_blank"`: this is a fragment in the same document, so the
+            standard's §7 new-tab rule (which is about objects that live
+            elsewhere) does not apply, and opening a tab to scroll would be
+            absurd.
+          */}
+          {href ? (
+            <a
+              href={href}
+              className={cn(
+                "ml-auto font-mono text-sm font-semibold tabular-nums",
+                "hover:decoration-current decoration-transparent underline underline-offset-2",
+                // `page-only`, the board's tile stamp — NOT `tier-page`, which
+                // is a width (900px) and cannot answer this question. A
+                // 3-column tile on a wide board clears 900px easily, and the
+                // ledger this points at is `pageOnly`, so a width gate put a
+                // live link on a tile that does not contain its target. The
+                // ledger and its door have to be gated on the same thing.
+                // QueueTable's header learned this exact lesson first.
+                "hidden page-only:inline",
+                TONE_TEXT[tone],
+              )}
+            >
+              {Math.round(pct)}%
+            </a>
+          ) : null}
           <span
             className={cn(
               "ml-auto font-mono text-sm font-semibold tabular-nums",
+              href ? "page-only:hidden" : "",
               TONE_TEXT[tone],
             )}
           >

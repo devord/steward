@@ -15,6 +15,7 @@ import { CopyAction } from "./CopyAction.tsx"
  * longer under it, which spends a row to say nothing.
  */
 export function Section({
+  id,
   label,
   count,
   note,
@@ -22,6 +23,8 @@ export function Section({
   className,
   children,
 }: {
+  /** Fragment target, when something in the artifact links here. See BlockBase. */
+  id?: string
   label?: string
   count?: string
   /**
@@ -48,6 +51,7 @@ export function Section({
 }) {
   return (
     <section
+      {...(id ? { id } : {})}
       data-fit-section
       className={cn("flex flex-col gap-1.5", className)}
     >

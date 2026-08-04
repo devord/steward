@@ -17,6 +17,7 @@ the empty state. **Never hand-write HTML or CSS for a kit-rendered routine.**
 | field            | required | what it is                                                        |
 | ---------------- | -------- | ----------------------------------------------------------------- |
 | `slug`           | yes      | the routine's slug; names the artifact in its footer              |
+| `blocks[].id`    |          | fragment target, when something in the artifact links to the band |
 | `title`          |          | document heading, screen-reader-only; defaults to the slug        |
 | `generatedAt`    | yes      | ISO-8601 UTC                                                      |
 | `stat`           | one of   | the 1×1 glance as a number — see below                            |
@@ -135,6 +136,21 @@ section and the reader would re-anchor at each heading rather than reading
 down one ledger. A group's `count` survives even when every row under it is
 trimmed, so a short tile still reports that the group exists and how big it
 is — which is why the heading is not a lie at 2×2.
+
+**Every labelled group folds**, and `collapsed: true` ships one folded
+(ADR-0061). It is one vocabulary rather than an opt-in, because an opt-in
+leaves two kinds of group heading in one corpus and a reader cannot tell by
+looking which headings answer to a click.
+
+What the flag picks is the **initial** state, and only once the board's
+behaviour is attached. The published markup always renders every row, and the
+heading is plain text with no caret: a raw-opened file, the copy on the
+`artifacts` branch, and anything that does not run scripts show the whole
+ledger rather than a count with the content behind a control that never
+arrives. So reach for it when a group is long and calm — a 120-row `To do`
+under three groups anyone would actually act on — and never to hide something
+a reader needs. Folding is a convenience for the reader who has the control,
+never a decision about what the artifact says.
 
 **`note`** is one quiet line under the band, for a fact that qualifies it
 without belonging to it — `plus 15 in own backlog · 42h` under a ledger that
@@ -459,7 +475,7 @@ look, never the only place a finding lives.
 ### `blocks[]` — progress and the day
 
 ```json
-{ "kind": "progress", "rails": [{ "id": "gate", "label": "Aug 6 gate", "percent": 40, "tick": 68, "verdict": "12d behind", "tone": "attn", "caption": "needs 11.2/wk" }],
+{ "kind": "progress", "rails": [{ "id": "gate", "label": "Aug 6 gate", "percent": 40, "tick": 68, "verdict": "12d behind", "tone": "attn", "caption": "needs 11.2/wk · 28 open", "href": "#open-gate" }],
   "stages": [{ "id": "a", "label": "Discovery", "state": "done" }] }
 
 { "kind": "day", "spec": { "from": "08:00", "to": "18:00", "now": "13:20",
@@ -470,6 +486,15 @@ look, never the only place a finding lives.
 fill should have reached: past it reads ahead, short of it reads behind, so the
 judgement arrives from geometry before a word does. The tick takes the `tone`;
 the fill never does. `secondary: true` is a quieter second horizon.
+
+**`href` makes the figure a door to the ledger of what the rail is short by**
+— a fragment naming a block's `id` in the same document, never a URL. A rail
+answers _how far_; only a list of rows answers _which ones_, and a reader who
+can see the bar and not the tickets behind it has been shown a number and
+denied its operands. **Page tier only**, because below it that ledger has been
+trimmed away or was never emitted, and a door onto nothing is worse than no
+door. Emit the target's `id` too: the renderer rejects a fragment naming no
+block rather than publishing a link that silently does nothing.
 
 **A stage strip answers _where_**, which no rail does — rails answer _how far_.
 That is the only thing that earns it a row beside one. The kit gates it on
