@@ -23,7 +23,18 @@ import type { CompiledChart } from "../chart/compile.ts"
  */
 export function Chart({ svg, label }: { svg: CompiledChart; label?: string }) {
   return (
-    <figure className="m-0 flex flex-col gap-2" aria-label={label}>
+    <figure
+      className="m-0 flex flex-col gap-2"
+      aria-label={label}
+      // Marks the subtree as *generated*, for the publish validator.
+      // Everything below is Vega's serializer output, and the classes it
+      // stamps — `role-mark`, `mark-line`, `role-axis-grid` — are structural
+      // markers rather than styling hooks: they are supposed to carry no rule.
+      // Without this the class-coverage check reports every one as an unstyled
+      // class and refuses to publish the artifact, which is what happened to
+      // `corza-progress` and is why its burn-up is missing from the board.
+      data-kit-chart=""
+    >
       {/* Cut at the kit's own breakpoints (`tiers.css`), each render sized to
           fit the narrowest frame its gate admits — so `max-w-full` is a guard
           that never fires rather than the layout mechanism. Two tiers were not

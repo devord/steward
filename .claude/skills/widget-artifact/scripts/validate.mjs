@@ -181,8 +181,41 @@ for (const file of files) {
     for (const [, sel] of html.matchAll(/\.((?:[\\][^\s]|[A-Za-z0-9_-])+)/g)) {
       styled.add(sel.replace(/\\/g, ""))
     }
+
+    // Generated subtrees are exempt, and the distinction is the point: this
+    // check is worth running on markup a *routine* wrote through the Alpine
+    // escape hatch, where an off-safelist class is invisible until a reader
+    // meets it. It is worth nothing on markup the *kit* generated — the kit's
+    // own classes are already pinned at build time by `tokens.test.ts`,
+    // `tiers.test.ts` and `retired.test.ts`, which fail on a pull request
+    // rather than at 08:00 on a cron.
+    //
+    // A chart is the case that forced it. Vega stamps `role-mark`,
+    // `mark-line`, `role-axis-grid` and a dozen more on its own SVG groups;
+    // they are structural markers that carry no rule *by design*. Checked
+    // blindly, every one reads as an unstyled class, and the artifact is
+    // refused — which is exactly what happened to `corza-progress`, whose
+    // burn-up never reached the board.
+    const checkable = html.replace(
+      /<figure[^>]*\sdata-kit-chart[^>]*>[\s\S]*?<\/figure>/g,
+      "",
+    )
+
+    // Class attributes arrive HTML-escaped, selectors do not. An arbitrary
+    // variant like `[&>svg]:h-auto` reaches the markup as
+    // `[&amp;&gt;svg]:h-auto` and never matches its own rule, so the check
+    // reports a styled class as unstyled.
+    const unescape = (v) =>
+      v
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#x27;/g, "'")
+
     const seen = new Set()
-    for (const [, list] of html.matchAll(/\sclass="([^"]*)"/g)) {
+    for (const [, raw] of checkable.matchAll(/\sclass="([^"]*)"/g)) {
+      const list = unescape(raw)
       for (const cls of list.split(/\s+/)) {
         if (!cls || seen.has(cls) || styled.has(cls)) continue
         seen.add(cls)
@@ -200,7 +233,15 @@ for (const file of files) {
     // *crops* it instead of shortening it. Hit three times during the migration
     // — the verdict band, the rails, and very nearly the day grid — which is
     // why it is an error rather than a warning.
-    if (html.includes("data-fit-list") && !html.includes("data-fit-item")) {
+    //
+    // Scanned on the *markup*, not the file. `[data-fit-list]` is also a
+    // selector in the inlined stylesheet (`:root[data-steward-tile]
+    // [data-fit-list]>thead`), so checking the whole document reports an
+    // artifact whose only band is indivisible — a lone chart, say — as missing
+    // trim targets it never had. The palette check one block down already
+    // stopped scanning the stylesheet for exactly this class of reason.
+    const markup = html.replace(/<style[\s\S]*?<\/style>/g, "")
+    if (markup.includes("data-fit-list") && !markup.includes("data-fit-item")) {
       errors.push(
         "[data-fit-list] with no [data-fit-item] inside — the injected pass " +
           "has nothing to trim, so the tile will clip instead of degrading",
