@@ -131,7 +131,10 @@ export const ptBR: Messages = {
   "routines.colCost": "Custo médio",
   "routines.costAvgHint":
     "Custo médio de uma execução nos últimos 30 dias, entre as que informaram um.",
+  "routines.costAvgHintCapped":
+    "Custo médio de uma execução, entre as que informaram um. Este repositório publica com frequência suficiente para a leitura parar antes dos 30 dias, então cobre um período mais curto.",
   "routines.costAvgOf": "Média de {n} execuções precificadas de {m}.",
+  "cost.unpriced": "Sem custo informado",
   "routines.colSchedule": "Agendamento",
   "routines.colHost": "Host",
   "routines.colOwner": "Dono",

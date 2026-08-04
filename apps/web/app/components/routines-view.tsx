@@ -166,6 +166,10 @@ export function RoutinesView({
     () => (spendData == null ? null : costBySlug(spendData.entries)),
     [spendData],
   )
+  // A scan that stopped on its page ceiling covers less than the window it
+  // asked for, so the column may not go on saying "the last 30 days" — the
+  // averages are real, their reach is shorter, and only the header can say so.
+  const costsCapped = spendData?.capped ?? false
   // Band defaults by template id (ADR-0044). Unlike the board, this surface
   // has no awaited copy of the built-ins and doesn't need one — a table that
   // fills a column in when the stream lands costs nothing; a grid that
@@ -468,6 +472,7 @@ export function RoutinesView({
             routines={effective.routines}
             artifacts={resolvedArtifacts}
             costs={costs}
+            costsCapped={costsCapped}
             boardsByRoutine={pool.boardsByRoutine}
             templateCategories={templateCategories}
             dashboards={pool.dashboards}
@@ -580,6 +585,7 @@ export function RoutinesTable({
   routines,
   artifacts,
   costs,
+  costsCapped = false,
   boardsByRoutine,
   templateCategories = {},
   dashboards,
@@ -602,6 +608,9 @@ export function RoutinesTable({
       null while the scan is in flight → skeleton; a slug absent from a
       resolved map simply never reported a price, which renders as the dash. */
   costs: Record<string, RoutineCost> | null
+  /** The scan behind `costs` stopped at its page ceiling, so it covers less
+      than the 30-day window — the header says which reach it actually has. */
+  costsCapped?: boolean
   boardsByRoutine: Record<string, string[]>
   /** Band defaults by template id (ADR-0044), for the routines that inherit
       one rather than carrying their own. Empty until templates stream in,
@@ -666,7 +675,11 @@ export function RoutinesTable({
             <th
               scope="col"
               className="hidden py-1.5 pr-3 font-normal md:table-cell"
-              title={t("routines.costAvgHint")}
+              title={t(
+                costsCapped
+                  ? "routines.costAvgHintCapped"
+                  : "routines.costAvgHint",
+              )}
             >
               {t("routines.colCost")}
             </th>

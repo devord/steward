@@ -190,6 +190,46 @@ describe("RoutinesTable", () => {
     )
   })
 
+  it("stops claiming a 30-day window once the scan hit its page ceiling", async () => {
+    // The averages stay real; their reach is shorter than asked for, and the
+    // header is the only place that can say so.
+    await renderTable({ costsCapped: true })
+    const header = [...document.querySelectorAll("th")].find((th) =>
+      th.textContent?.includes("Avg cost"),
+    )
+    expect(header?.getAttribute("title")).not.toContain("last 30 days")
+    expect(header?.getAttribute("title")).toContain("stopped short of 30 days")
+  })
+
+  it("keeps the tick slot for a run that genuinely priced at zero", async () => {
+    // Dropping the empty track would slide $0.0000 left of every priced
+    // neighbour and break the column's one left edge.
+    await renderTable({
+      costs: {
+        "daily-plan": { usd: 0, priced: 2, runs: 2, mean: 0 },
+        changelog: { usd: 12, priced: 4, runs: 6, mean: 3 },
+      },
+    })
+    const dailyRow = [...document.querySelectorAll("tr")].find((tr) =>
+      tr.textContent?.includes(daily.name),
+    )
+    expect(dailyRow?.textContent).toContain("$0.0000")
+    // The track is present and empty — a box, with no fill inside it.
+    const track = dailyRow?.querySelector(".bg-border-dim")
+    expect(track).not.toBeNull()
+    expect(track?.querySelector(".bg-ink-faint")).toBeNull()
+  })
+
+  it("speaks the unpriced state rather than leaving the cell silent", async () => {
+    await renderTable()
+    const triageRow = [...document.querySelectorAll("tr")].find((tr) =>
+      tr.textContent?.includes(triage.name),
+    )
+    // The dash itself is decorative; an empty cell would read as "no data"
+    // about a routine that has been running all week.
+    expect(triageRow?.textContent).toContain("No cost reported")
+  })
+
   it("scales the cost tick against the dearest routine on screen", async () => {
     // Relative, never absolute: "expensive" can only mean "expensive next to
     // what else you run", so the dearest row is the full bar and the rest are

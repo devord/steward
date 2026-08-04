@@ -150,7 +150,15 @@ export const en = {
   "routines.colCost": "Avg cost",
   "routines.costAvgHint":
     "Average cost of one run over the last 30 days, for the runs that reported one.",
+  // The scan stopped at its page ceiling before reaching 30 days, so the
+  // averages are real but cover a shorter stretch — say that rather than let
+  // the column keep claiming a window it never read.
+  "routines.costAvgHintCapped":
+    "Average cost of one run, for the runs that reported one. This repo publishes often enough that the read stopped short of 30 days, so it covers a shorter stretch.",
   "routines.costAvgOf": "Mean of {n} priced runs out of {m}.",
+  // Spoken in place of the dash, which is decorative: an empty cell would
+  // read as "no data here" about a routine that has been running all week.
+  "cost.unpriced": "No cost reported",
   "routines.colSchedule": "Schedule",
   "routines.colHost": "Host",
   "routines.colOwner": "Owner",
