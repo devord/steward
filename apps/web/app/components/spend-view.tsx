@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react"
 
 import type { Routine } from "@steward/schema"
 
-import { usdLabel } from "./cost.tsx"
+import { CostDash, usdLabel } from "./cost.tsx"
 import { NavShell } from "./nav-shell.tsx"
 import { rowLinkCls } from "./routines-view.tsx"
 import { Link } from "~/components/ui/link"
@@ -367,13 +367,7 @@ function Ranked({
                 </span>
               </td>
               <td className="py-2 pr-3 text-right align-middle whitespace-nowrap text-ink tabular-nums">
-                {row.priced === 0 ? (
-                  <span aria-hidden className="text-ink-dim">
-                    —
-                  </span>
-                ) : (
-                  `≈${usdLabel(row.usd)}`
-                )}
+                {row.priced === 0 ? <CostDash /> : `≈${usdLabel(row.usd)}`}
               </td>
               {!compact && (
                 <>
