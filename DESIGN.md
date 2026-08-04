@@ -162,14 +162,30 @@ is a scroll container and an outset ring on a full-bleed row is clipped at
 both edges.
 
 Chrome that floats over an artifact shares the artifact's edge, not its own.
-The tile's shell padding is `12px 14px` (widget-standard), so the widget-card
-title bar takes a 14px inline inset: the routine name sits on the same left
-edge as the artifact's first line, and the freshness readout on the same
-right edge as its content. That shared edge is what makes a frameless
-heading and a flush body read as one block — with no divider between them,
-there is nothing to excuse a different inset. Where a header is a real
-filled bar instead (the lightbox, the edit-mode drag handle), it is its own
-surface and sets its own inset.
+The artifact's tile inset is **10px** — `Shell`'s `tile:p-2.5`, exported as
+`TILE_INSET_PX` — so the widget-card title bar takes the same inset
+(`tileInsetCls`): the routine name sits on the same left edge as the
+artifact's first line, and the freshness readout on the same right edge as
+its content. The loading skeleton takes it too, so the swap to the real
+artifact doesn't slide. The band heading above adds the cell's 1px frame
+(`bandIndentCls`, 11px) because it heads those titles from outside the cell
+they sit inside. That shared edge is what makes a frameless heading and a
+flush body read as one block — with no divider between them, there is
+nothing to excuse a different inset. Where a header is a real filled bar
+instead (the lightbox, the edit-mode drag handle), it is its own surface and
+sets its own inset.
+
+**The artifact owns the number; chrome follows it.** This read `12px 14px`
+for the pre-kit shell and the chrome still held 14 after ADR-0050 moved
+artifacts to a uniform 10 — a 4px miss on both edges of every tile, and a 4px
+lurch each time a skeleton gave way to its artifact. The direction is not
+symmetric: each artifact inlines the kit stylesheet at publish time and the
+board only _appends_ the current one, so a rule present solely in an old
+file's inlined sheet has nothing overriding it. Raising the kit would leave
+every published artifact at the old inset until its routine reran, while
+chrome and new artifacts moved — a split corpus instead of a fixed one.
+`tile-inset.test.ts` now pins the chrome literals to the kit's constant, since
+Tailwind needs class names at build time and cannot read a runtime number.
 
 ## Typography
 

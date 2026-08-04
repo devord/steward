@@ -1,7 +1,7 @@
 import type { Widget } from "@steward/schema"
 
 import { Skeleton } from "~/components/ui/skeleton"
-import { cn } from "~/lib/utils"
+import { cn, tileInsetCls } from "~/lib/utils"
 
 /**
  * A widget cell while its artifact streams in from GitHub (ADR-0002). The
@@ -18,7 +18,12 @@ export function WidgetSkeleton({ widget }: { widget: Widget }) {
       aria-hidden
       className="flex size-full flex-col overflow-hidden border border-transparent"
     >
-      <div className="flex min-h-8 items-center justify-between gap-2 px-3.5 py-1.5">
+      <div
+        className={cn(
+          "flex min-h-8 items-center justify-between gap-2 py-1.5",
+          tileInsetCls,
+        )}
+      >
         <Skeleton className="h-2.5 w-24" />
         <Skeleton className="h-2.5 w-12" />
       </div>
@@ -45,11 +50,15 @@ export function WidgetSkeletonBody({
   return (
     <div
       aria-hidden
-      // Inset matched to the artifact's own tile padding (`12px 14px`), the
-      // same edge the title bar above now takes — so the pending lines sit
-      // exactly where the real content will, and the swap doesn't slide.
+      // Inset matched to the artifact's own tile padding (`tileInsetCls`), the
+      // same edge the title bar above takes — so the pending lines sit exactly
+      // where the real content will, and the swap doesn't slide. It sat at 14px
+      // against the kit's 10px, so every tile shifted its body 4px left the
+      // moment the artifact painted: the one place this drift was not merely
+      // static misalignment but visible motion.
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2.5 px-3.5 py-3",
+        "flex min-h-0 flex-1 flex-col gap-2.5 py-3",
+        tileInsetCls,
         className,
       )}
     >

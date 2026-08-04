@@ -75,7 +75,7 @@ import {
 // here: a plain import lands unlayered, and unlayered CSS outranks every layer
 // — which silently voided the whole "Dashboard grid" block in app.css.
 
-import { bandHeadingCls, cn } from "~/lib/utils"
+import { bandHeadingCls, bandIndentCls, cn } from "~/lib/utils"
 import { writeCollapsedBands } from "../lib/band-collapse.ts"
 import {
   buildBands,
@@ -278,16 +278,17 @@ function BandHeading({
           // Distinguishes a band heading from every other aria-expanded control
           // on the board (menus, popovers) for tests and styling alike.
           data-band-heading={category}
-          // pl-[15px] puts the band name on the same left edge as the widget
-          // titles under it: a cell's 1px frame plus the title bar's 14px
-          // inset, which is itself the artifact's own body padding
-          // (widget-standard § shell). DESIGN.md § Shape builds the tile on
-          // that shared edge; a heading indented 7px *past* its own content —
-          // which is where an in-flow chevron and gap put it — is the drift
-          // that rule exists to catch. pr-8 reserves the ⋯ column so the
-          // hairline stops short of the glyph instead of running under it.
+          // bandIndentCls puts the band name on the same left edge as the
+          // widget titles under it: a cell's 1px frame plus the title bar's
+          // inset, which is itself the artifact's own tile padding (the kit's
+          // TILE_INSET_PX). DESIGN.md § Shape builds the tile on that shared
+          // edge; a heading indented 7px *past* its own content — which is
+          // where an in-flow chevron and gap put it — is the drift that rule
+          // exists to catch. pr-8 reserves the ⋯ column so the hairline stops
+          // short of the glyph instead of running under it.
           className={cn(
-            "flex w-full items-center gap-2 pl-[15px] text-left",
+            "flex w-full items-center gap-2 text-left",
+            bandIndentCls,
             hasMenu && "pr-8",
           )}
         >
@@ -299,13 +300,21 @@ function BandHeading({
               centred in the same 14px box), so a box flush at 0 left the open
               band — the default — with 4.5px before the name against the
               folded one's 6.25px. That reads glued, and tighter than the count
-              sitting 8px off the word's other side. -2px opens them to 6.5 and
-              8.25: a point needs more measured air than a wedge to read as the
-              same air, so one static offset serves both states. */}
+              sitting 8px off the word's other side. The offset opens them to
+              6.5 and 8.25: a point needs more measured air than a wedge to read
+              as the same air, so one static offset serves both states.
+
+              -6px, not the -2px this shipped with, because the label moved 4px
+              left with the artifact's inset — the marker travels with the name
+              it marks, so both measures above survive unchanged. It now hangs
+              past the cell frame rather than resting on it; that coincidence
+              was never designed, and the content column the reader actually
+              scans outranks where a faint 3.5px caret lands. The board's own
+              gutter is 16px (24 at sm), so the outdent has room. */}
           <ChevronRight
             aria-hidden
             className={cn(
-              "absolute top-1/2 -left-0.5 size-3.5 -translate-y-1/2 text-ink-faint transition-[transform,color] group-hover/band:text-ink-dim",
+              "absolute top-1/2 -left-1.5 size-3.5 -translate-y-1/2 text-ink-faint transition-[transform,color] group-hover/band:text-ink-dim",
               !collapsed && "rotate-90",
             )}
           />

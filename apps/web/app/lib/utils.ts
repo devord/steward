@@ -46,3 +46,35 @@ export const railCaptionCls =
  */
 export const bandHeadingCls =
   "font-mono text-sm font-semibold tracking-wider text-foreground uppercase"
+
+/**
+ * The tile's shared left edge (DESIGN.md § Shape) — the artifact's own inline
+ * inset, worn by the chrome that floats over it.
+ *
+ * A board cell has no fill: the artifact paints flush to the board and the
+ * cell's hairline is its only frame, so the widget title bar sits *on* the
+ * artifact with no divider between them. Nothing excuses a different inset
+ * there — the shared edge is what makes a frameless heading and a flush body
+ * read as one block, and 4px of drift reads as a mistake rather than as
+ * hierarchy.
+ *
+ * The value belongs to the artifact, not to chrome: it is `TILE_INSET_PX`
+ * (10px, `Shell`'s `tile:p-2.5`), which is baked into every artifact already
+ * published to the artifacts branch. Chrome follows it; it does not get a vote.
+ * `tile-inset.test.ts` pins this literal to the kit's constant, since Tailwind
+ * needs a class name at build time and cannot take a runtime number.
+ */
+export const tileInsetCls = "px-2.5"
+
+/**
+ * The band heading's indent — {@link tileInsetCls} plus the cell's 1px frame.
+ *
+ * A band heads the widget *titles* under it, so its name has to hold the same
+ * column they do; the titles sit inside the cell's border, and the heading sits
+ * outside it, which is the whole of the extra pixel. The disclosure chevron
+ * outdents into the gutter beside this (`-left-1.5` in `dashboard-board.tsx`)
+ * rather than pushing the label right — the label has to hold the content
+ * column, and a heading indented past its own content is exactly the drift the
+ * shared edge exists to catch.
+ */
+export const bandIndentCls = "pl-[11px]"

@@ -88,7 +88,13 @@ export function Shell({
         {/* No max-width and no centering. Content sizes to what it needs and
             surplus width lands as one trailing gutter — which is what a
             shrink-to-fit table does anyway. Capping the page would reintroduce
-            the mid-row hole the column work exists to remove. */}
+            the mid-row hole the column work exists to remove.
+
+            `tile:p-2.5` is {@link TILE_INSET_PX}, and it is a shared edge, not
+            a local choice: the board's widget title, skeleton and band heading
+            all inset to match, because chrome floating over a flush artifact
+            has no divider to excuse a different one. Keep the literal and the
+            constant in step — `tile-inset.test.ts` fails if they part. */}
         <main className="tile:p-2.5 page-only:p-5 flex flex-col gap-3">
           <h1 className="sr-only">{title ?? slug}</h1>
           {children}

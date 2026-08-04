@@ -32,7 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { cn } from "~/lib/utils"
+import { cn, tileInsetCls } from "~/lib/utils"
 import type { ArtifactInfo } from "../lib/dashboard.server.ts"
 import {
   artifactContextMessage,
@@ -361,18 +361,28 @@ export function WidgetCard({
              weight/size jump are the block's separation; there is no divider.
              State reads as pills, not prose (ADR-0009).
 
-             The 14px inline inset is not a chrome-local choice: it is the
-             artifact's own tile body padding (`12px 14px`, widget-standard §
-             shell), so the name shares one left edge with the artifact's first
-             line and the freshness readout shares the right edge with its
-             content. A frameless heading floating over flush content has no
-             divider to excuse a different inset — the shared edge *is* what
-             makes the two read as one block. Fix it here rather than by
-             flattening the artifact's padding: that padding is a published
-             contract every artifact (and the raw page) already ships with, and
-             zeroing it would only move the misalignment, gluing content to the
-             hover border. */
-          <header className="@container/bar flex min-h-8 items-center gap-2 px-3.5 py-1.5">
+             The inline inset is not a chrome-local choice: it is the artifact's
+             own tile padding (`tileInsetCls`, which is the kit's
+             `TILE_INSET_PX`), so the name shares one left edge with the
+             artifact's first line and the freshness readout shares the right
+             edge with its content. A frameless heading floating over flush
+             content has no divider to excuse a different inset — the shared
+             edge *is* what makes the two read as one block.
+
+             Chrome follows the artifact here, never the reverse. This bar sat
+             at 14px against the kit's 10px for the kit's whole life: a 4px miss
+             on both edges of every tile, invisible to every test because no
+             test spanned the two packages. Raising the artifact to meet chrome
+             instead would have split the corpus — each artifact inlines the kit
+             stylesheet at publish time and the board only *appends* the current
+             one, so published files keep their own inset until their routine
+             runs again. */
+          <header
+            className={cn(
+              "@container/bar flex min-h-8 items-center gap-2 py-1.5",
+              tileInsetCls,
+            )}
+          >
             <WidgetTitle
               name={routine.name}
               clipped={clipped}
@@ -597,7 +607,7 @@ function WidgetTitle({
         aria-label={t("widget.expand", { name })}
         title={t("widget.expandShort")}
         className={cn(
-          // No inline padding: the name keeps the 14px inset it shares with
+          // No inline padding: the name keeps the tile inset it shares with
           // the artifact's first line (DESIGN.md § Shape), so the hit area
           // starts on that same edge. `-mx-1 px-1` would buy target width at
           // the cost of the shared edge; the edge wins.
