@@ -161,6 +161,23 @@ describe("the burn-up through flint", () => {
     }
   })
 
+  it("draws an unrecognised role as context rather than throwing", async () => {
+    // `role` arrives from a routine's JSON and validateDoc does not constrain
+    // it to the four names, so a typo — or a role a data repo's template grew
+    // before this one did — must not cost the whole burn-up.
+    const odd: SeriesSpec = {
+      ...spec,
+      lines: spec.lines.map((l, i) =>
+        i === 0
+          ? { ...l, role: "cieling" as SeriesSpec["lines"][number]["role"] }
+          : l,
+      ),
+    }
+    const { svg, failures } = await render(odd)
+    expect(failures).toEqual([])
+    expect(svg?.page).toContain("<svg")
+  })
+
   it("still draws when there is no now-marker to place", async () => {
     const { today: _t, ...noToday } = spec
     const { svg, failures } = await render(noToday)
