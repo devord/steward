@@ -164,6 +164,29 @@ export const ptBR: Messages = {
   "routines.emptyHint":
     "Uma rotina produz um widget — adicione uma e coloque-a num painel.",
 
+  "spend.title": "Custos",
+  "spend.subtitle":
+    "Quanto custa rodar as rotinas deste repositório, pelo preço que cada execução gravou no próprio commit de publicação.",
+  "spend.link": "Custos",
+  "spend.runsCovered": "{n} de {m} execuções precificadas",
+  "spend.reach": "Nos últimos 30 dias.",
+  "spend.reachCapped":
+    "Nas últimas {n} execuções — a janela atingiu o limite de leitura antes dos 30 dias.",
+  "spend.perDay": "Por dia",
+  "spend.byRoutine": "Por rotina",
+  "spend.byOwner": "Por dono",
+  "spend.byCategory": "Por categoria",
+  "spend.noBand": "Sem faixa",
+  "spend.runsOf": "{n}/{m} execuções",
+  "spend.dayRuns": "{n} execuções precificadas",
+  "spend.dayUnpriced": "{n} execuções, nenhuma precificada",
+  "spend.loading": "Carregando custos…",
+  "spend.unreachable":
+    "GitHub indisponível — o histórico de publicações não carregou. Tenta de novo ao atualizar.",
+  "spend.emptyTitle": "Nada rodou ainda.",
+  "spend.emptyHint":
+    "Os custos aparecem quando uma rotina publica — cada execução grava o próprio preço no commit de publicação.",
+
   "runs.back": "Todas as rotinas",
   "runs.heading": "Execuções",
   "runs.subtitle":

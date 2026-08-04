@@ -26,6 +26,9 @@ export default [
     "r/:owner/:repo/routines/:slug/at/:sha",
     "routes/r.$owner.$repo.routines.$slug.at.$sha.ts",
   ),
+  // What the repo's routines cost (ADR-0061) — reserved ahead of `:dashboard`
+  // for the same reason `routines` is: a per-repo fixture, not a board.
+  route("r/:owner/:repo/spend", "routes/r.$owner.$repo.spend.tsx"),
   route("r/:owner/:repo/:dashboard", "routes/r.$owner.$repo.$dashboard.tsx"),
   // Legacy URL shapes, pre-ADR-0023 — permanent redirects to the canonical
   // `/r/:owner/:repo/:dashboard` space.

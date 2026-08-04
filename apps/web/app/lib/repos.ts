@@ -73,3 +73,9 @@ export function routinesHref(repo: string): string {
 export function routineHref(repo: string, slug: string): string {
   return `/r/${repo}/routines/${slug}`
 }
+
+/** Route of a repo's spend view (ADR-0061) — the pool read through what its
+    runs cost. `spend` is reserved the same way `routines` is. */
+export function spendHref(repo: string): string {
+  return `/r/${repo}/spend`
+}
