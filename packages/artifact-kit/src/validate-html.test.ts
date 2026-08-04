@@ -84,6 +84,30 @@ describe("a clean kit render", () => {
     // noise at that level is indistinguishable from a real finding.
     expect(validate(clean)).toEqual({ errors: 0, warnings: 0 })
   })
+
+  it("passes when the shared stylesheet mentions [data-fit-list] but no band on the page uses it", () => {
+    // tiers.css carries selectors like `[data-fit-list] > thead { ... }` for
+    // *any* band that might need them (QueueTable's), bundled unconditionally
+    // by any page that imports it (Throughput does, for its own layout). A
+    // single-block render with no table of its own — a throughput card and
+    // nothing else — pulls that CSS in without ever emitting a
+    // `data-fit-list` element itself. Matching the selector text as if it
+    // were markup would fail every such render for CSS the page never uses;
+    // caught this way because the real corza-repo-stats artifact hit exactly
+    // this shape. Rename `clean`'s own fit markup out of the way first so
+    // this reproduces "CSS only, no real usage" rather than piggybacking on
+    // the queue band's own legitimate `data-fit-item`.
+    const noRealUsage = clean
+      .split("data-fit-list")
+      .join("data-inert-list")
+      .split("data-fit-item")
+      .join("data-inert-item")
+    const html = noRealUsage.replace(
+      "</style>",
+      "[data-fit-list]>thead{display:none}</style>",
+    )
+    expect(validate(html)).toEqual({ errors: 0, warnings: 0 })
+  })
 })
 
 describe("errors", () => {

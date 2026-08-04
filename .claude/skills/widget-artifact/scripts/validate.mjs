@@ -200,7 +200,19 @@ for (const file of files) {
     // *crops* it instead of shortening it. Hit three times during the migration
     // — the verdict band, the rails, and very nearly the day grid — which is
     // why it is an error rather than a warning.
-    if (html.includes("data-fit-list") && !html.includes("data-fit-item")) {
+    //
+    // Checked outside `<style>`: the shared `tiers.css` a band like Throughput
+    // pulls in carries generic selectors written against the attribute name
+    // (`[data-fit-list] > thead { ... }`) so that *other* bands' tables degrade
+    // correctly, whether or not this particular render uses them. Matching
+    // that selector text as if it were markup made every fit-list-free render
+    // fail — including the previously-published version of this very check's
+    // own test case — for CSS the page never actually uses.
+    const htmlNoStyle = html.replace(/<style[^>]*>[\s\S]*?<\/style>/g, "")
+    if (
+      htmlNoStyle.includes("data-fit-list") &&
+      !htmlNoStyle.includes("data-fit-item")
+    ) {
       errors.push(
         "[data-fit-list] with no [data-fit-item] inside — the injected pass " +
           "has nothing to trim, so the tile will clip instead of degrading",
