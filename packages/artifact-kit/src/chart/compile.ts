@@ -41,26 +41,45 @@ export interface ChartSpec {
 }
 
 /**
- * The two boxes a chart band renders into.
+ * One render per width tier, and never one render scaled.
  *
- * Two renders rather than one scaled: uniform scaling puts the type below the
- * 12px floor at the narrow end and blows it up at the wide end, so a capped
- * single render fails widget-standard §6 the moment its frame is narrower than
- * its natural width. Measured at ~11 KB each against the 33.8 KB of `kit.css`
- * already inlined in every artifact, which is what makes this affordable.
+ * Uniform scaling is the failure this exists to avoid: a chart scaled to fit a
+ * narrower frame scales its text with it, and the type lands under
+ * widget-standard §6's 12px floor. Shipping two tiers was not enough — a
+ * page-only band still renders on a **raw page at any width**, so a 464px
+ * render met a 300px content column at 340px and scaled to 8.8px type. Three
+ * tiers, cut at the kit's own breakpoints (`tiers.css`).
+ *
+ * `box` is the plot rectangle handed to Vega; `budget` is the widest the
+ * *emitted* SVG may be, which is the plot plus however much axis and legend
+ * chrome the data turned out to need. `main` is padded `p-5` on a page, so the
+ * budget is the viewport at that breakpoint less 40px.
  */
-const BOXES = {
-  page: { width: 820, height: 300 },
-  tile: { width: 420, height: 220 },
+const TIER_FIT = {
+  page: { box: { width: 780, height: 300 }, budget: 860 },
+  detail: { box: { width: 580, height: 260 }, budget: 660 },
+  narrow: { box: { width: 220, height: 200 }, budget: 300 },
 } as const
 
 /**
  * The tiers, listed rather than derived from `Object.keys`, which is typed
  * `string[]` and would need an assertion the repo forbids outside tests.
  */
-const TIERS = ["page", "tile"] as const
+const TIERS = ["page", "detail", "narrow"] as const
 
 export type ChartTier = (typeof TIERS)[number]
+
+/** What a tier's render may not exceed. Read by `conformChart`. */
+export const TIER_BUDGET: Record<ChartTier, number> = {
+  page: TIER_FIT.page.budget,
+  detail: TIER_FIT.detail.budget,
+  narrow: TIER_FIT.narrow.budget,
+}
+
+/** The width Vega actually emitted, which is the plot plus its chrome. */
+function emittedWidth(svg: string): number {
+  return Number(/<svg[^>]*\bwidth="(\d+(?:\.\d+)?)"/.exec(svg)?.[1] ?? 0)
+}
 
 /** One chart, rendered once per tier. */
 export type CompiledChart = Record<ChartTier, string>
@@ -76,21 +95,86 @@ export interface CompiledCharts {
   failures: ChartFailure[]
 }
 
+/**
+ * A kit-owned form's chance to restructure what flint assembled.
+ *
+ * Flint produces a single-view spec. A burn-up needs three layers — the lines,
+ * a now-marker rule, the hero's end dot — and flint has no vocabulary for
+ * annotation; its docs send you to post-compile editing, warning that the
+ * result is "no longer a portable Flint spec". Portable there means swappable
+ * to ECharts or Excel, which we never do, so the warning costs us nothing and
+ * this hook is the whole reason a flint chart can look designed rather than
+ * merely correct.
+ *
+ * Runs after `assembleVegaLite` and before `finish`, so the kit's palette and
+ * type floor still land on whatever a form built.
+ */
+export type Decorator = (
+  spec: unknown,
+  ctx: { width: number; height: number; tier: ChartTier },
+) => unknown
+
+export interface ChartRequest {
+  id: string
+  spec: ChartSpec
+  decorate?: Decorator
+}
+
 async function renderOne(
-  spec: ChartSpec,
+  req: ChartRequest,
   box: { width: number; height: number },
+  tier: ChartTier,
 ): Promise<string> {
   useMonoMetrics(vega)
   // `assembleVegaLite` is declared to return `any`, so the finished spec keeps
   // that type all the way into `compile` — which is what lets this boundary
   // stay free of the assertions the repo forbids outside tests.
   const assembled = assembleVegaLite({
-    data: spec.data,
-    semantic_types: spec.semantic_types,
-    chart_spec: { ...spec.chart_spec, baseSize: box },
+    data: req.spec.data,
+    semantic_types: req.spec.semantic_types,
+    chart_spec: { ...req.spec.chart_spec, baseSize: box },
   })
-  const compiled = compileVegaLite(finish(assembled, box)).spec
+  const shaped = req.decorate
+    ? req.decorate(assembled, { ...box, tier })
+    : assembled
+  const compiled = compileVegaLite(finish(shaped, box)).spec
   return await new vega.View(vega.parse(compiled), { renderer: "none" }).toSVG()
+}
+
+/**
+ * Render a tier, shrinking the plot until the whole SVG fits the tier's
+ * budget.
+ *
+ * The plot rectangle is what Vega is told; the emitted width is that plus
+ * however much axis and legend chrome the *data* turned out to need — long
+ * category names, a four-entry legend, a five-digit tick. So the box alone
+ * cannot be picked to fit, and a chart whose labels ran long would silently
+ * overflow its column and get scaled back under the type floor by the browser.
+ *
+ * Two corrections at most. Each one subtracts the measured overflow, so the
+ * first is usually exact and the second is for chrome that re-flowed; past
+ * that the chart is not going to fit and `conformChart` rejects it, which is
+ * the honest outcome — a dropped band with a stated reason beats a chart
+ * nobody can read.
+ */
+async function fitToBudget(
+  req: ChartRequest,
+  tier: ChartTier,
+): Promise<string> {
+  const { box, budget } = TIER_FIT[tier]
+  let width: number = box.width
+  let svg = ""
+  for (let attempt = 0; attempt < 3; attempt++) {
+    svg = await renderOne(req, { width, height: box.height }, tier)
+    const over = emittedWidth(svg) - budget
+    if (over <= 0) return svg
+    // A floor, so a chart with enormous chrome stops rather than spiralling
+    // into a zero-width plot that renders as an axis and nothing else.
+    const next = Math.max(80, width - over - 2)
+    if (next === width) break
+    width = next
+  }
+  return svg
 }
 
 /**
@@ -107,15 +191,13 @@ async function renderOne(
  * publishing nothing is the worse outcome.
  */
 export async function compileCharts(
-  blocks: {
-    id: string
-    spec: ChartSpec
-  }[],
+  blocks: ChartRequest[],
 ): Promise<CompiledCharts> {
   const charts = new Map<string, CompiledChart>()
   const failures: ChartFailure[] = []
 
-  for (const { id, spec } of blocks) {
+  for (const req of blocks) {
+    const { id, spec } = req
     const rows = spec.data?.values?.length ?? 0
     const ceiling = spec.maxRows ?? 40
     if (rows > ceiling) {
@@ -131,15 +213,18 @@ export async function compileCharts(
     try {
       const problems: string[] = []
       const draw = async (tier: ChartTier) => {
-        const svg = await renderOne(spec, BOXES[tier])
-        problems.push(...conformChart(svg, `${id} (${tier})`))
+        const svg = await fitToBudget(req, tier)
+        problems.push(
+          ...conformChart(svg, `${id} (${tier})`, TIER_BUDGET[tier]),
+        )
         return svg
       }
       // Built whole rather than filled in a loop, so the record is complete by
       // construction and needs no assertion to say so.
       const rendered: CompiledChart = {
         page: await draw("page"),
-        tile: await draw("tile"),
+        detail: await draw("detail"),
+        narrow: await draw("narrow"),
       }
       if (problems.length) failures.push({ id, problems })
       else charts.set(id, rendered)

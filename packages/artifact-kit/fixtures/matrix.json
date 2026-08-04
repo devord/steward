@@ -14,7 +14,7 @@
     {
       "kind": "queue",
       "label": "Where your next change costs",
-      "count": "5 of 21 hot modules · 136 censused",
+      "count": "5 of 21 hot modules \u00b7 136 censused",
       "showHeader": true,
       "groups": [
         {
@@ -29,7 +29,7 @@
                 "label": "no test seam",
                 "tone": "bad"
               },
-              "detail": "9 files re-export a 10-line hook — collapse into one module and test at its interface. (in-process)",
+              "detail": "9 files re-export a 10-line hook, so collapse them into one in-process module and test at its interface.",
               "values": [
                 {
                   "label": "tested",
@@ -65,7 +65,7 @@
                 "label": "undeclared coupling",
                 "tone": "bad"
               },
-              "detail": "Moves with cart and account but imports neither; the shared contract is a `checkout:step` literal — give it a named module. (local-substitutable)",
+              "detail": "It moves with cart and account but imports neither, so give the `checkout:step` literal they share a named module both sides can substitute locally.",
               "values": [
                 {
                   "label": "tested",
@@ -101,7 +101,7 @@
                 "label": "rule breach",
                 "tone": "bad"
               },
-              "detail": "Defines its own badge primitive where packages/ui owns that — delete the local copy and import the shared one. (in-process)",
+              "detail": "It defines its own badge primitive where packages/ui owns that, so delete the local copy and import the shared one in-process.",
               "values": [
                 {
                   "label": "tested",
@@ -136,7 +136,7 @@
                 "label": "one author",
                 "tone": "attn"
               },
-              "detail": "Every commit in the window from one author — the bus factor is the finding, nothing structural. (in-process)",
+              "detail": "Every commit in the window came from one author, so the in-process finding is the bus factor rather than anything structural.",
               "values": [
                 {
                   "label": "tested",
@@ -171,7 +171,7 @@
                 "label": "wide interface",
                 "tone": "attn"
               },
-              "detail": "8.1 exports/file against a 3.4 median — a proxy, not a verdict. Read it before acting. (in-process)",
+              "detail": "8.1 exports/file against a 3.4 median is a proxy rather than a verdict, so read the in-process module before acting on it.",
               "values": [
                 {
                   "label": "tested",
@@ -213,7 +213,7 @@
                 "label": "no import",
                 "tone": "bad"
               },
-              "detail": "14 of cart's 34 commits · the contract is a `checkout:step` string literal read on both sides",
+              "detail": "14 of cart's 34 commits \u00b7 the contract is a `checkout:step` string literal read on both sides",
               "values": [
                 {
                   "label": "commits",
@@ -231,7 +231,7 @@
                 "label": "no import",
                 "tone": "bad"
               },
-              "detail": "14 of catalog's 22 commits · both read the `--surface-gap` CSS custom property, neither declares it",
+              "detail": "14 of catalog's 22 commits \u00b7 both read the `--surface-gap` CSS custom property, neither declares it",
               "values": [
                 {
                   "label": "commits",
@@ -249,7 +249,7 @@
                 "label": "no import",
                 "tone": "attn"
               },
-              "detail": "8 of pricing's 19 commits · shared release cadence, not a contract — probably fine",
+              "detail": "8 of pricing's 19 commits \u00b7 shared release cadence, not a contract \u2014 probably fine",
               "values": [
                 {
                   "label": "commits",
@@ -267,7 +267,7 @@
       "kind": "chart",
       "id": "hotspots",
       "label": "Churn against interface width",
-      "note": "Hot and wide is the upper right — a change there costs most",
+      "note": "Hot and wide is the upper right \u2014 a change there costs most. The 12 modules above the hot line; 124 quieter ones are not plotted.",
       "spec": {
         "data": {
           "values": [
@@ -351,7 +351,7 @@
     {
       "kind": "matrix",
       "label": "Co-change",
-      "count": "top 8 by strength · 128 modules held back",
+      "count": "top 8 by strength \u00b7 128 modules held back",
       "spec": {
         "labels": [
           "cart",
@@ -444,19 +444,19 @@
           {
             "a": 0,
             "b": 1,
-            "label": "no import — `checkout:step` literal"
+            "label": "no import \u2014 `checkout:step` literal"
           },
           {
             "a": 3,
             "b": 4,
-            "label": "no import — `--surface-gap` CSS var"
+            "label": "no import \u2014 `--surface-gap` CSS var"
           }
         ]
       }
     }
   ],
   "provenance": [
-    "corza · 90d",
+    "corza \u00b7 90d",
     "136 modules censused",
     "hot line at 15 commits (p75)",
     "all 5 signals available"
@@ -465,5 +465,5 @@
     "headline": "No history in the window",
     "detail": "The repository has no commits in the last 90 days."
   },
-  "context": "## The hot line\n\n21 of 136 modules sit at or above the 75th percentile of window churn, which resolved to 15 commits. Everything below it is excluded whatever its score — a module nobody touches costs nothing to leave alone.\n\n## Every hot module\n\nAll 21, with the problems that fired and the composite score as a tie-break.\n\n## Co-change, in full\n\nAll 7 undeclared pairs with file-level evidence and commit counts.\n\n## Ask me about\n\nWhether `cart` really fails the deletion test, whether `pricing and catalog` is real coupling or shared release cadence, and whether the hot line belongs at p75 for this repo.\n\n## Handoff\n\n`app/lib · cart` — in-process. 9 files re-export a 10-line hook; 34 commits, 28% tested, couples with `checkout` on 14 commits with no import. Move: collapse into one module and test at its interface. Ready for `/improve-codebase-architecture`."
+  "context": "## The hot line\n\n21 of 136 modules sit at or above the 75th percentile of window churn, which resolved to 15 commits. Everything below it is excluded whatever its score \u2014 a module nobody touches costs nothing to leave alone.\n\n## Every hot module\n\nAll 21, with the problems that fired and the composite score as a tie-break.\n\n## Co-change, in full\n\nAll 7 undeclared pairs with file-level evidence and commit counts.\n\n## Ask me about\n\nWhether `cart` really fails the deletion test, whether `pricing and catalog` is real coupling or shared release cadence, and whether the hot line belongs at p75 for this repo.\n\n## Handoff\n\n`app/lib \u00b7 cart` \u2014 in-process. 9 files re-export a 10-line hook; 34 commits, 28% tested, couples with `checkout` on 14 commits with no import. Move: collapse into one module and test at its interface. Ready for `/improve-codebase-architecture`."
 }

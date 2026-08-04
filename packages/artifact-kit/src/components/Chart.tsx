@@ -24,11 +24,19 @@ import type { CompiledChart } from "../chart/compile.ts"
 export function Chart({ svg, label }: { svg: CompiledChart; label?: string }) {
   return (
     <figure className="m-0 flex flex-col gap-2" aria-label={label}>
-      {/* The tile render, up to the page tier. `tier-page` is 900px — the
-          width at which the page render's 820px box stops being cramped. */}
+      {/* Cut at the kit's own breakpoints (`tiers.css`), each render sized to
+          fit the narrowest frame its gate admits — so `max-w-full` is a guard
+          that never fires rather than the layout mechanism. Two tiers were not
+          enough: a page-only band still renders on a raw page at any width, and
+          a 464px render met a 340px page's 300px column and got scaled to
+          8.8px type. */}
       <div
-        className="[&>svg]:h-auto [&>svg]:max-w-full tier-page:hidden"
-        dangerouslySetInnerHTML={{ __html: svg.tile }}
+        className="tier-detail:hidden [&>svg]:h-auto [&>svg]:max-w-full"
+        dangerouslySetInnerHTML={{ __html: svg.narrow }}
+      />
+      <div
+        className="hidden tier-detail:block tier-page:hidden [&>svg]:h-auto [&>svg]:max-w-full"
+        dangerouslySetInnerHTML={{ __html: svg.detail }}
       />
       <div
         className="hidden tier-page:block [&>svg]:h-auto [&>svg]:max-w-full"

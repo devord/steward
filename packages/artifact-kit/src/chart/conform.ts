@@ -48,7 +48,21 @@ const FONT_SIZE = /font-size(?:\s*[:=]\s*|=)"?\s*([\d.]+)/gi
  * every conforming chart as non-mono.
  */
 const FONT_FAMILY = /font-family\s*=\s*"([^"]*)"|font-family\s*:\s*([^;"]+)/gi
-const EXTERNAL = /(?:\bhref\s*=|\burl\(|<image\b)/i
+
+/**
+ * A reference that leaves the document.
+ *
+ * **Same-document fragments are exempt**, and that exemption is load-bearing
+ * rather than a nicety: Vega clips every plot with `clip-path="url(#clipN)"`
+ * and marks legend symbols with `xlink:href="#..."`. A blanket `url(`/`href=`
+ * rejection therefore fails any chart with a clip — most of the catalogue —
+ * for a rule about *network* access that a fragment never touches.
+ *
+ * So the test is for a scheme, a protocol-relative prefix, or a path: anything
+ * the sandbox would have to fetch, and nothing it already has.
+ */
+const EXTERNAL =
+  /(?:\b(?:xlink:)?href\s*=\s*"(?!#)|\burl\(\s*['"]?(?!#)|<image\b)/i
 
 /** `&quot;` and friends, so a family reads as its text rather than its markup. */
 function decodeEntities(s: string): string {
@@ -66,8 +80,26 @@ function decodeEntities(s: string): string {
  * which is a bundle executing as bare `node` in a routine environment with no
  * `node_modules`, and every property here is decidable on the text.
  */
-export function conformChart(svg: string, at = "chart"): string[] {
+export function conformChart(
+  svg: string,
+  at = "chart",
+  budget?: number,
+): string[] {
   const problems: string[] = []
+
+  // The last line of defence for the type floor. Everything above holds the
+  // *declared* sizes at 12px; this holds the *rendered* ones, because a render
+  // wider than its column gets scaled down by the browser and takes its text
+  // with it. A chart that will not fit is dropped rather than shrunk.
+  if (budget !== undefined) {
+    const width = Number(
+      /<svg[^>]*\bwidth="(\d+(?:\.\d+)?)"/.exec(svg)?.[1] ?? 0,
+    )
+    if (width > budget)
+      problems.push(
+        `${at} renders ${width}px wide against a ${budget}px column — it would be scaled to fit, taking its type under the ${TYPE_FLOOR}px floor`,
+      )
+  }
 
   const literals = [
     ...(svg.match(HEX) ?? []),

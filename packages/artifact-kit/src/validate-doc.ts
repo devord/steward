@@ -171,9 +171,16 @@ export function validateDoc(doc: unknown): string[] {
           }
           if (
             cs.maxRows !== undefined &&
-            (typeof cs.maxRows !== "number" || cs.maxRows < 1)
+            (typeof cs.maxRows !== "number" ||
+              !Number.isInteger(cs.maxRows) ||
+              cs.maxRows < 1)
           )
-            errors.push(`${at}.spec.maxRows must be a positive number`)
+            // Integer, not merely positive: the compiler drops a chart when
+            // `rows > maxRows`, so `0.5` silently drops every chart that has
+            // any rows at all — a band that vanishes for a typo.
+            errors.push(
+              `${at}.spec.maxRows must be a positive whole number of rows`,
+            )
           return
         }
 
@@ -545,6 +552,21 @@ export function validateDoc(doc: unknown): string[] {
         })
       })
     }
+  }
+
+  // Chart ids are the keys the compiled SVGs are stored under, so a repeat is
+  // not a cosmetic clash: the second render overwrites the first and *both*
+  // bands then draw the second chart, with nothing anywhere saying so.
+  if (Array.isArray(doc.blocks)) {
+    const seen = new Set<string>()
+    doc.blocks.forEach((b, i) => {
+      if (!isObj(b) || b.kind !== "chart" || typeof b.id !== "string") return
+      if (seen.has(b.id))
+        errors.push(
+          `blocks[${i}].id "${b.id}" is already used by another chart — ids are how compiled charts are matched to their band`,
+        )
+      seen.add(b.id)
+    })
   }
 
   if (doc.provenance !== undefined && !Array.isArray(doc.provenance))

@@ -44,6 +44,69 @@ export const SERIES_INK: readonly string[] = [
   PALETTE.blue,
 ]
 
+/**
+ * The sequential ramp, in **discrete palette steps**.
+ *
+ * Not two endpoints with Vega interpolating between them, and that is not a
+ * stylistic preference — a continuous scale emits the colours it computed, and
+ * an interpolated `rgb(167, 99, 51)` is in no palette, so the board's theme
+ * override cannot re-point it and the conformance gate rejects the whole
+ * chart. The first heatmap through this pipeline was dropped for exactly that,
+ * naming five interpolated colours.
+ *
+ * Quantizing is also the better chart. A banded field can be read off a
+ * legend; a continuous one asks the reader to judge lightness differences they
+ * cannot reliably see. Magnitude is still the only thing encoded, one hue,
+ * light to dark — ADR-0047's rule, kept.
+ */
+export const RAMP: readonly string[] = [
+  PALETTE.bg3,
+  PALETTE.border,
+  PALETTE["orange-deep"],
+  PALETTE.orange,
+]
+
+/**
+ * Force any quantitative colour encoding onto the quantized ramp.
+ *
+ * Reaches into the spec because there is no `config` knob for "never
+ * interpolate": `config.range.heatmap` supplies the colours but the *scale
+ * type* decides whether Vega uses them as stops or as bins. A generic `chart`
+ * block naming `"Heatmap"` gets a continuous scale from flint and would be
+ * dropped by conformance without this.
+ *
+ * Only touches encodings that have not asked for something specific, so a form
+ * that set its own scale keeps it.
+ */
+export function quantizeColourRamps(node: unknown): void {
+  if (Array.isArray(node)) {
+    for (const v of node) quantizeColourRamps(v)
+    return
+  }
+  if (typeof node !== "object" || node === null) return
+  for (const [k, v] of Object.entries(node)) {
+    if (
+      k === "color" &&
+      typeof v === "object" &&
+      v !== null &&
+      Reflect.get(v, "type") === "quantitative"
+    ) {
+      const scale: unknown = Reflect.get(v, "scale")
+      const hasRange =
+        typeof scale === "object" &&
+        scale !== null &&
+        Reflect.get(scale, "range") !== undefined
+      if (!hasRange)
+        Reflect.set(v, "scale", {
+          ...(typeof scale === "object" && scale !== null ? scale : {}),
+          type: "quantize",
+          range: [...RAMP],
+        })
+    }
+    quantizeColourRamps(v)
+  }
+}
+
 /** Dash patterns, so identity never rests on colour alone. */
 export const SERIES_DASH: readonly (readonly number[])[] = [
   [1, 0],
@@ -141,9 +204,9 @@ export function kitConfig(): Record<string, unknown> {
       // Flint derives a categorical range and reaches for tableau10. Replacing
       // the ranges here is what stops that from ever reaching a scale.
       category: [...SERIES_INK],
-      ordinal: [PALETTE.bg3, PALETTE.orange],
-      ramp: [PALETTE.bg3, PALETTE.orange],
-      heatmap: [PALETTE.bg3, PALETTE.orange],
+      ordinal: [...RAMP],
+      ramp: [...RAMP],
+      heatmap: [...RAMP],
       diverging: [PALETTE.blue, PALETTE.bg3, PALETTE.orange],
     },
   }
@@ -176,8 +239,12 @@ function deepMerge(
   const out: Record<string, unknown> = { ...base }
   for (const [k, v] of Object.entries(over)) {
     const b = out[k]
-    out[k] =
-      isPlainObject(b) && isPlainObject(v) ? deepMerge(b, v) : (v ?? out[k])
+    if (isPlainObject(b) && isPlainObject(v)) out[k] = deepMerge(b, v)
+    // `null` is a value here, not an absence, and `??` was silently discarding
+    // it: `view.stroke: null` and `background: null` are how Vega-Lite is told
+    // to draw *nothing*, so a flint spec that set either kept its own. Only
+    // `undefined` means "the kit is silent, keep what flint chose".
+    else if (v !== undefined) out[k] = v
   }
   return out
 }
@@ -188,11 +255,26 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 
 export function finish<T>(spec: T, size: { width: number; height: number }): T {
   clampType(spec)
+  quantizeColourRamps(spec)
   if (typeof spec === "object" && spec !== null) {
     const own: unknown = Reflect.get(spec, "config")
+    // A form may fix its own plot rectangle by leaving `_kitSize` behind. Only
+    // the matrix does, and it has to: a co-change field is read as a grid of
+    // squares, and a heatmap stretched to a 780x300 box draws cells nearly
+    // three times wider than they are tall, which reads as stripes rather than
+    // as a field. The key is removed here so it never reaches Vega.
+    const fixed: unknown = Reflect.get(spec, "_kitSize")
+    const sized =
+      typeof fixed === "object" && fixed !== null
+        ? {
+            width: Number(Reflect.get(fixed, "width")) || size.width,
+            height: Number(Reflect.get(fixed, "height")) || size.height,
+          }
+        : size
+    Reflect.deleteProperty(spec, "_kitSize")
     Object.assign(spec, {
-      width: size.width,
-      height: size.height,
+      width: sized.width,
+      height: sized.height,
       background: null,
       // Flint's config first, the kit's over it: flint contributes what the
       // kit is silent about, and never the other way round.

@@ -5,7 +5,8 @@ import { escapeContextBlock, footerTimestamp } from "./Shell.tsx"
 import { type ArtifactDoc, type Block, renderArtifact } from "./render.tsx"
 import type { BottomLine } from "./components/BottomLine.tsx"
 import type { QueueRow } from "./components/QueueTable.tsx"
-import type { SeriesSpec } from "./components/Series.tsx"
+import { compileCharts } from "./chart/compile.ts"
+import { chartRequests } from "./chart/requests.ts"
 import type { Verdict } from "./components/VerdictBand.tsx"
 import { reviewDoc, validateDoc } from "./validate-doc.ts"
 
@@ -1471,14 +1472,10 @@ describe("Avatar", () => {
 })
 
 describe("the burn-up", () => {
-  // `null` omits `max` entirely, for the cases that are about what the kit
-  // derives. A default parameter cannot express that: passing `undefined`
-  // takes the default.
-  const chart = (
-    lines: SeriesSpec["lines"],
-    max: number | null = 40,
-    today?: string,
-  ): ArtifactDoc => ({
+  // The chart itself is compiled asynchronously and tested in
+  // `chart/forms/series.test.ts`. What belongs here is the *band*: how the
+  // document places a series block, which is still synchronous markup.
+  const doc: ArtifactDoc = {
     slug: "s",
     generatedAt: "2026-07-30T09:00:00Z",
     stat: { value: 1, label: "x" },
@@ -1489,248 +1486,63 @@ describe("the burn-up", () => {
         spec: {
           from: "2026-07-01",
           to: "2026-08-01",
-          ...(max === null ? {} : { max }),
-          ...(today ? { today } : {}),
-          lines,
+          max: 40,
+          lines: [
+            {
+              id: "landed",
+              label: "16 landed",
+              role: "hero",
+              points: [
+                { x: "2026-07-01", y: 4 },
+                { x: "2026-07-30", y: 16 },
+              ],
+            },
+          ],
         },
       },
     ],
-  })
-  /** The chart's own markup, so a shared utility class elsewhere cannot match. */
-  const figure = (doc: ArtifactDoc) =>
-    /<figure[\s\S]*?<\/figure>/.exec(renderArtifact(doc, ""))?.[0] ?? ""
-  const hero: SeriesSpec["lines"][number] = {
-    id: "landed",
-    label: "16 landed",
-    role: "hero",
-    points: [
-      { x: "2026-07-01", y: 4 },
-      { x: "2026-07-30", y: 16 },
-    ],
   }
 
-  it("is page-only without asking", () => {
+  it("is page-only without asking", async () => {
     // A four-column tile is 1200px and still not a reading surface, and tiles
-    // never scroll — a chart there steals the ledger's rows or opens into the
-    // clipped region.
-    expect(renderArtifact(chart([hero]), "")).toContain("hidden page-only:flex")
+    // never scroll — so a chart there either steals the ledger's rows or opens
+    // into the clipped region.
+    const { requests, keyOf } = chartRequests(doc.blocks ?? [])
+    const { charts } = await compileCharts(requests)
+    const html = renderArtifact(doc, "", charts)
+    expect(html).toContain("hidden page-only:flex")
+    expect(keyOf.get(doc.blocks?.[0] ?? {})).toBe("series-0")
   })
 
-  it("draws a ceiling as steps, not a slope", () => {
-    // A membership count holds until the next recorded change. Interpolating
-    // draws a gradual scope change that never happened.
-    const html = renderArtifact(
-      chart([
-        {
-          id: "scope",
-          label: "40 scope",
-          role: "ceiling",
-          points: [
-            { x: "2026-07-01", y: 32 },
-            { x: "2026-07-30", y: 40 },
-          ],
-        },
-      ]),
-      "",
-    )
-    const d = /<path d="([^"]+)"/.exec(html)?.[1] ?? ""
-    // Two segments per step: across at the old value, then up.
-    expect((d.match(/L/g) ?? []).length).toBe(2)
+  it("draws nothing when the chart did not compile", () => {
+    // No compiled charts passed, so the band has no SVG and is not drawn —
+    // the reason travels on provenance instead (ADR-0062).
+    expect(renderArtifact(doc, "")).not.toContain("<figure")
   })
 
-  it("separates end labels that would collide", () => {
-    // The ghost line sits just above the hero by definition, so overlapping
-    // labels are the normal case rather than the unlucky one.
-    const fig = figure(
-      chart([
-        hero,
-        {
-          id: "inflight",
-          label: "+1 in review",
-          role: "ghost",
-          points: [
-            { x: "2026-07-01", y: 5 },
-            { x: "2026-07-30", y: 17 },
-          ],
-        },
-      ]),
-    )
-    // Percent of the plot, not user units: the labels are real 12px HTML now,
-    // and the plot's height is a CSS clamp with no build-time pixel value.
-    const tops = [
-      ...fig.matchAll(/style="top:([\d.]+)%"[^>]*>[^<]*(?:landed|review)/g),
-    ].map((m) => Number(m[1]))
-    expect(tops).toHaveLength(2)
-    // 9% is ~14px at the clamp's 160px floor, so the gap only grows on a
-    // taller chart. Never shrinks below the one height it was calibrated at.
-    expect(Math.abs(tops[0] - tops[1])).toBeGreaterThanOrEqual(9)
-  })
-
-  it("anchors the marker to the point, never to the nudged label", () => {
-    // The label moves to stay legible; the dot must not, or the chart reports
-    // a value it did not plot.
-    const fig = figure(
-      chart([
-        hero,
-        {
-          id: "inflight",
-          label: "+1 in review",
-          role: "ghost",
-          points: [
-            { x: "2026-07-01", y: 5 },
-            { x: "2026-07-30", y: 17 },
-          ],
-        },
-      ]),
-    )
-    // y=16 of 40 — the dot sits at the value, in percent down the plot.
-    const dot = /rounded-full[^"]*"[^>]*style="([^"]+)"/.exec(fig)?.[1] ?? ""
-    expect(dot).toContain(`top:${((1 - 16 / 40) * 100).toFixed(3)}%`)
-    // ...while its label was pushed clear of the ghost's above it.
-    const label = /style="top:([\d.]+)%"[^>]*>16 landed/.exec(fig)?.[1]
-    expect(Number(label)).toBeGreaterThan(60)
-  })
-
-  it("keeps every glyph out of the plot's coordinate space", () => {
-    // The regression this component was rebuilt for. A fixed viewBox scaled to
-    // `width: 100%` puts SVG text in *user units*, so `text-xs` rendered at 12
-    // × the container's scale factor — ~30px labels on a wide board, beside
-    // identical `text-xs` HTML at 12px. Strokes escape via `vector-effect`;
-    // text has no equivalent, so text does not go in there at all.
-    expect(figure(chart([hero]))).not.toContain("<text")
-  })
-
-  it("snaps the y axis to intervals somebody would choose", () => {
-    // `ceil(peak / 4)` lands on a clean number only by luck: a real run put 66
-    // in and got 0 / 17 / 34 / 51 — arithmetic nobody chose.
-    const fig = figure(
-      chart(
-        [
-          {
-            ...hero,
-            points: [
-              { x: "2026-07-01", y: 20 },
-              { x: "2026-07-30", y: 66 },
-            ],
-          },
-        ],
-        null,
-      ),
-    )
-    const axis = /class="[^"]*tabular-nums[^"]*"[^>]*>([\s\S]*?)<\/div>/.exec(
-      fig,
-    )?.[1]
-    expect(
-      [...(axis ?? "").matchAll(/>(\d+)</g)].map((m) => Number(m[1])),
-    ).toEqual([0, 20, 40, 60, 80])
-  })
-
-  it("never lets a target slope set the y scale", () => {
-    // A target is where the line *would* have to go. Scaling to it spends the
-    // top of the plot on a number nobody is claiming and squashes the two
-    // lines the chart is about. It clips at the top edge instead.
-    const fig = figure(
-      chart(
-        [
-          hero,
-          {
-            id: "pace",
-            label: "needs 40/wk",
-            role: "target",
-            points: [
-              { x: "2026-07-30", y: 16 },
-              { x: "2026-08-01", y: 60 },
-            ],
-          },
-        ],
-        null,
-      ),
-    )
-    // Scaled to the hero's 16 → a ceiling of 20, so the target's 60 plots
-    // above the plot rect and the SVG's own viewBox clip takes it.
-    const dot = /rounded-full[^"]*"[^>]*style="([^"]+)"/.exec(fig)?.[1] ?? ""
-    expect(dot).toContain(`top:${((1 - 16 / 20) * 100).toFixed(3)}%`)
-    const pace = /<path d="M[\d.]+ [\d.]+ L[\d.]+ (-[\d.]+)"/.exec(fig)?.[1]
-    expect(Number(pace)).toBeLessThan(0)
-  })
-
-  it("cannot print the today caption through the end date", () => {
-    // Three absolutely-positioned spans do not know about each other, so a
-    // `today` late in the window printed straight through the horizon —
-    // `2026-0today8-06`, on every tile narrow enough to matter. Flex items
-    // cannot overlap, so the gap is a floor rather than a hope.
-    const fig = figure(chart([hero], 40, "2026-07-25"))
-    // The caption stays on its own rule anyway: the spacer's basis backs out
-    // the start label and half of `today`, both known `ch` widths.
-    expect(fig).toMatch(/flex-basis:calc\([\d.]+% - 12\.5ch - 0\.5rem\)/)
-    expect(fig).not.toMatch(/class="[^"]*absolute[^"]*"[^>]*>today/)
-  })
-
-  it("carries a legend for two lines and none for one", () => {
-    // A single series needs no legend box — the band label names it.
-    expect(renderArtifact(chart([hero]), "")).not.toContain("<figcaption")
-    expect(
-      renderArtifact(chart([hero, { ...hero, id: "b", role: "target" }]), ""),
-    ).toContain("<figcaption")
-  })
-
-  it("draws nothing for a line that is a single dot", () => {
-    // One point is not a trend, and a band that renders one is a chart making
-    // a claim from a single observation.
-    const html = renderArtifact(
-      { ...chart([{ ...hero, points: [{ x: "2026-07-01", y: 4 }] }]) },
-      "",
-    )
-    expect(html).not.toContain("Burn-up")
-  })
-
-  it("names a bad point rather than dropping the line", () => {
-    // A non-numeric y plots as NaN, which SVG discards silently — the line
-    // just stops mid-chart with no error anywhere.
-    const errs = validateDoc({
-      slug: "s",
-      generatedAt: "2026-07-30T09:00:00Z",
-      stat: { value: 1, label: "x" },
+  it("draws nothing for a single point, which is a dot claiming a trend", () => {
+    const one: ArtifactDoc = {
+      ...doc,
       blocks: [
         {
           kind: "series",
+          label: "Burn-up",
           spec: {
             from: "2026-07-01",
             to: "2026-08-01",
             lines: [
               {
-                id: "a",
-                label: "a",
+                id: "landed",
+                label: "1 landed",
                 role: "hero",
-                points: [{ x: "2026-07-01", y: "4" }],
+                points: [{ x: "2026-07-01", y: 4 }],
               },
             ],
           },
         },
       ],
-    })
-    expect(errs.join(" ")).toContain("points[0].y must be a finite number")
-  })
-
-  it("rejects a role the kit has no encoding for", () => {
-    const errs = validateDoc({
-      slug: "s",
-      generatedAt: "2026-07-30T09:00:00Z",
-      stat: { value: 1, label: "x" },
-      blocks: [
-        {
-          kind: "series",
-          spec: {
-            from: "2026-07-01",
-            to: "2026-08-01",
-            lines: [{ id: "a", label: "a", role: "secondary", points: [] }],
-          },
-        },
-      ],
-    })
-    expect(errs.join(" ")).toContain(
-      "role must be one of hero, ceiling, target, ghost",
-    )
+    }
+    expect(renderArtifact(one, "")).not.toContain("Burn-up")
   })
 })
 
@@ -2093,84 +1905,42 @@ describe("the day grid", () => {
 })
 
 describe("the co-change field", () => {
-  const labels = ["a", "b", "c", "d"]
-  const doc = (cells: object[], marks?: object[]): ArtifactDoc =>
-    JSON.parse(
-      JSON.stringify({
-        slug: "s",
-        generatedAt: "2026-07-30T09:00:00Z",
-        stat: { value: 1, label: "x" },
-        blocks: [
-          {
-            kind: "matrix",
-            label: "Co-change",
-            spec: { labels, cells, marks },
-          },
-        ],
-      }),
-    )
-
-  it("mirrors a triangle rather than making the emitter say it twice", () => {
-    const html = renderArtifact(doc([{ a: 0, b: 2, value: 9 }]), "")
-    expect(html).toContain("a and c: 9")
-    expect(html).toContain("c and a: 9")
+  // The field itself is compiled asynchronously and tested in
+  // `chart/forms/matrix.test.ts`. What belongs here is the band.
+  const doc = (labels: string[]): ArtifactDoc => ({
+    slug: "m",
+    generatedAt: "2026-07-30T09:00:00Z",
+    stat: { value: 1, label: "x" },
+    blocks: [
+      {
+        kind: "matrix",
+        label: "Co-change",
+        spec: {
+          labels,
+          cells: [
+            { a: 0, b: 1, value: 9 },
+            { a: 1, b: 2, value: 4 },
+          ],
+          marks: [{ a: 0, b: 1, label: "a and b" }],
+        },
+      },
+    ],
   })
 
-  it("leaves the diagonal blank rather than drawing a self-pair", () => {
-    // A module co-changes with itself on every commit. Drawing that puts the
-    // darkest cells on the one axis carrying no information, and sets the
-    // scale against a number that means nothing.
-    const html = renderArtifact(doc([{ a: 0, b: 1, value: 4 }]), "")
-    expect(html).not.toContain("a and a")
+  it("is page-only without asking", async () => {
+    const d = doc(["a", "b", "c", "d"])
+    const { requests } = chartRequests(d.blocks ?? [])
+    const { charts } = await compileCharts(requests)
+    expect(renderArtifact(d, "", charts)).toContain("hidden page-only:flex")
   })
 
-  it("marks a named pair with a ring, not a hotter fill", () => {
-    // The fill already spends itself on magnitude; a second claim in the same
-    // channel leaves a dark cell ambiguous.
-    const html = renderArtifact(
-      doc(
-        [{ a: 0, b: 1, value: 4 }],
-        [{ a: 0, b: 1, label: "no declared import" }],
-      ),
-      "",
-    )
-    expect(html).toContain("ring-ink")
-    expect(html).toContain("no declared import")
-  })
-
-  it("needs four labels to read as a field", () => {
-    const small = doc([{ a: 0, b: 1, value: 4 }])
-    const block = small.blocks?.[0]
-    if (block?.kind === "matrix") block.spec.labels = ["a", "b"]
-    expect(renderArtifact(small, "")).not.toContain("Co-change")
-  })
-
-  it("rejects an index outside the label set", () => {
-    // Out of range addresses no cell, so the pair silently does not appear and
-    // the field looks sparser than the data is.
-    expect(validateDoc(doc([{ a: 0, b: 9, value: 4 }])).join(" ")).toContain(
-      "b must be an index into spec.labels",
-    )
-  })
-
-  it("names both axes, so a hot cell is a fact the reader can repeat", () => {
-    // Shipped for months with row headers only: a reader could see the cluster
-    // and not say which pair any cell was. ADR-0047 specified `scope`-carrying
-    // row *and column* headers; only half of it was built.
-    const html = renderArtifact(doc([{ a: 0, b: 2, value: 9 }]), "")
-    expect(html).toContain('scope="col"')
-    expect(html).toContain('scope="row"')
-  })
-
-  it("draws every cell, including the empty ones", () => {
-    // The grid is the structure the eye reads a cluster against. Empty pairs
-    // left at 6% opacity on the surface colour turned the field into floating
-    // dots — which is not a sparser matrix, it is no matrix at all.
-    const html = renderArtifact(doc([{ a: 0, b: 2, value: 9 }]), "")
-    expect(html).toContain("a and b: 0")
+  it("does not draw below four labels, where squares stop reading as a field", async () => {
+    const d = doc(["a", "b", "c"])
+    const { requests } = chartRequests(d.blocks ?? [])
+    const { charts } = await compileCharts(requests)
+    expect(renderArtifact(d, "", charts)).not.toContain("Co-change")
   })
 })
-
 describe("sparklines", () => {
   const row = (spark: number[]): ArtifactDoc => ({
     slug: "s",
