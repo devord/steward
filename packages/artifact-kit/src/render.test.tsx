@@ -164,6 +164,48 @@ describe("QueueTable columns", () => {
     // The row missing "one" still occupies that column, empty.
     expect(bodies[1][1]).toContain("B")
   })
+
+  it("shows a glyph's word from its own column's tier, floored at detail", () => {
+    // The word used to be a constant `tier-page`, whatever tier the column
+    // itself appeared at. A 2-column tile on a wide board sits around 890px —
+    // past `detail` (701px), short of `page` (900px) — so the state column
+    // rendered a bare clock beside ~575px of empty title column, and the only
+    // reader served the word was the screen reader.
+    const doc: ArtifactDoc = {
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [
+        {
+          kind: "queue",
+          rows: [
+            {
+              id: "a",
+              title: "first",
+              values: [
+                { label: "review", value: "review required", icon: "clock" },
+                {
+                  label: "size",
+                  value: "approved",
+                  icon: "check",
+                  from: "page",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const out = renderArtifact(doc, "")
+    // An `always` column earns its word at `detail`, not at `page`.
+    expect(out).toContain('class="hidden tier-detail:inline">review required')
+    expect(out).toContain('class="tier-detail:hidden sr-only">review required')
+    // A column that does not exist before `page` cannot show a word earlier.
+    expect(out).toContain('class="hidden tier-page:inline">approved')
+    // Never dropped, only hidden: both renderings of both words ship.
+    expect(out.match(/review required/g)).toHaveLength(2)
+    expect(out.match(/>approved/g)).toHaveLength(2)
+  })
 })
 
 describe("the ledger's width", () => {

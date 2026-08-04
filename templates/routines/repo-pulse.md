@@ -72,10 +72,26 @@ and render it with the kit.
   | size   | `page`   | `+adds −dels`, U+2212 minus                                                             |
   | review | `always` | `icon`: `check` approved · `circle-x` changes requested · `pencil` draft · `clock` else |
   | ci     | `always` | `icon`: `check` passing · `circle-x` failing · `clock` pending; omit when no checks     |
-  | age    | `always` | numeric                                                                                 |
+  | age    | `always` | numeric, **`ageDays` with its unit** — `"20d"`, never a bare `20`                       |
 
   **Tone only what is actionable.** A passing check and an approval take no
   tone — the column reads as texture until something is wrong.
+
+  **A number carries its unit in the value.** The column header that would say
+  `age` only appears from the page tier (900px), and most of a tile's life is
+  spent below it, so a bare `20` in a 2-column tile is an unlabelled quantity —
+  and `age` would not have said _days_ anyway. The same goes for the `icon`
+  columns' `value`: it is the word a reader sees beside the glyph wherever
+  there is room, so write `"changes requested"`, not `"x"`.
+
+  **No `detail` line on these rows.** The raw title belongs in the title's
+  tooltip, which is where this template already puts it. Setting it as `detail`
+  instead prints `morning briefing` over
+  `skill(corza-good-morning): morning briefing` — the conventional-commit
+  prefix that `displayTitle` just stripped, restated as a second line, at
+  roughly half the ledger's height on a tile that clips. Spend `detail` on a
+  fact the row does not already carry (which repo, who was asked) or leave it
+  unset.
 
 - **`viewerGroups`** — `{reviewer: "Needs your review", author: "Yours",
 rest: "Open"}`, so the board re-buckets per signed-in viewer at render time.

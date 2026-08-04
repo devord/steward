@@ -17,6 +17,9 @@ coverage
 
 # Personal impeccable skill copy (installed by npx impeccable update)
 .claude/skills/impeccable/
+# Its critique snapshots — local backlog for the skill's own commands, and
+# markdown the formatter would otherwise claim as repo content.
+.impeccable/
 
 # Transient harness worktree copies of the repo
 .claude/worktrees/

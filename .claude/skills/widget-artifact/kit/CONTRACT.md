@@ -190,6 +190,29 @@ widget exists for collapses entirely before one housekeeping row goes.
 `from` decides the tier a column first appears at: `always` `compact` `detail`
 `page`. Order columns by what earns space soonest.
 
+**A value carries its own unit.** Column headers appear only from the page
+tier (900px), and a 2-column tile on a wide board lands just under it, so most
+of a ledger's life is spent with no header row at all: `"20"` in an `age`
+column is an unlabelled quantity, and the header would not have said _days_
+anyway. Write `"20d"`, `"1.4k"`, `"3 files"`. Where the qualifier is too long
+to ride the value, put it on **`title`** — hover text plus an sr-only phrase,
+which exists for exactly this.
+
+**`icon` renders the glyph, and `value` is the word beside it** — shown from
+this column's own tier (floored at `detail`), screen-reader-only below that.
+So `value` has to be the state in words: `{ icon: "circle-x", value: "changes
+requested" }`, never `"x"` and never the glyph's own name. A shape alone is
+not a state a reader can decode; the glyph is the compression a narrow tile
+falls back to, not the meaning.
+
+**`detail` must say something the row does not already say.** It costs a
+second line on every row, in a ledger the fit pass trims from the bottom, and
+a `detail` that restates the title — `morning briefing` over
+`skill(corza-good-morning): morning briefing` — measured 52% of one shipped
+tile's ledger height to print a conventional-commit prefix. A raw string the
+title was derived from belongs in the title's tooltip. Leave `detail` unset
+unless it carries new evidence.
+
 **`delta`** puts movement on a value — `{ value: "3d", direction: "up" }`
 beside `12d behind`, rendered as `12d behind ↑3d`. `direction` is `up` `down`
 `flat`; it is the arrow's geometry, not a judgement, so a rising bad number and
