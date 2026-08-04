@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { mkdtempSync, writeFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -125,5 +125,38 @@ describe("a chart-bearing artifact is publishable", () => {
     // owns the fix.
     expect(report).toContain("0 error(s)")
     expect(report).not.toMatch(/role-mark|mark-line|role-axis/)
+  }, 60_000)
+
+  it("does not let the chart marker excuse a class Vega never wrote", () => {
+    // `data-kit-chart` is an attribute in a string, and a routine can write
+    // one through the Alpine escape hatch. On its own the marker would be a
+    // bypass: wrap anything in a marked <figure> and the coverage check stops
+    // looking. It says only *where* to relax; Vega's own closed vocabulary
+    // says *what* may be relaxed.
+    const dir = mkdtempSync(path.join(tmpdir(), "steward-bypass-"))
+    const data = path.join(dir, "data.json")
+    const html = path.join(dir, "index.html")
+    writeFileSync(data, JSON.stringify(doc))
+    execFileSync(process.execPath, [render, data, html], { stdio: "pipe" })
+
+    const smuggled = readFileSync(html, "utf8").replace(
+      "</main>",
+      '<figure data-kit-chart=""><div class="routine-invented-class">x</div></figure></main>',
+    )
+    const bypass = path.join(dir, "bypass.html")
+    writeFileSync(bypass, smuggled)
+
+    let report = ""
+    try {
+      report = execFileSync(process.execPath, [validate, bypass], {
+        encoding: "utf8",
+        stdio: "pipe",
+      })
+    } catch (e) {
+      report = String(
+        e && typeof e === "object" && "stdout" in e ? e.stdout : e,
+      )
+    }
+    expect(report).toContain("routine-invented-class")
   }, 60_000)
 })
