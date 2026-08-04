@@ -219,13 +219,16 @@ Monday. Everything held back is counted on a `count` and detailed in context.
   is the evidence for their ordering.
 
   **Plot one stated population, and state it.** A census runs to hundreds of
-  modules and the plot is legible to a few dozen, so the point set is **every
-  module at or above the hot line** — the same cut that gates the ledger, so
-  the chart and the list are answering one question about one population. The
-  `note` says which cut it is and how many modules fall outside it ("the 12
-  modules above the hot line; 124 quieter ones are not plotted"). Never take
-  the first N of a census and let the chart imply it drew the whole thing:
-  the held-back count is the difference between a sample and a claim.
+  modules and the plot is legible to a few dozen, so the point set is the
+  **most-changed modules, at most 40**, ranked by the same churn that orders
+  the ledger. Deliberately _not_ the hot line: a quadrant is read by seeing
+  where the hot ones sit against the quiet ones, and cutting at the threshold
+  removes exactly the cloud that makes the top-right corner mean anything.
+  The `note` states the cut and how many modules fall outside it ("the 12
+  most-changed modules; 124 quieter ones are not plotted"), and the two
+  numbers must agree with the points actually emitted. Never take the first N
+  of a census and let the chart imply it drew the whole thing: the held-back
+  count is the difference between a sample and a claim.
 
 - **The `matrix` block, "Co-change"** — page tier only, which is the kit's
   default for it. Top 8 **by co-change strength**, not by score: the field

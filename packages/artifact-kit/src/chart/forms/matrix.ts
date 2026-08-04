@@ -56,6 +56,11 @@ function cells(spec: MatrixSpec): Cell[] {
     const a = spec.labels[c.a]
     const b = spec.labels[c.b]
     if (a === undefined || b === undefined || c.a === c.b) continue
+    // Same reason as the index guard above, one field over: a `NaN` or an
+    // `Infinity` lands outside every `quantize` band, so Vega paints it in a
+    // colour the token set does not contain and conformance drops the whole
+    // field for one bad cell.
+    if (!Number.isFinite(c.value)) continue
     const ring = marked.has(`${Math.min(c.a, c.b)}:${Math.max(c.a, c.b)}`)
       ? 1
       : 0
@@ -128,9 +133,15 @@ function decorate(spec: MatrixSpec): Decorator {
         // the same fill makes two claims in one channel.
         {
           transform: [{ filter: "datum.marked === 1" }],
+          // `fill: null`, not `filled: false`. `filled` only decides which
+          // channel the *colour* encoding lands on; it does not remove the
+          // fill. Measured: this layer came out painting solid #fe8019 and
+          // #a89984 rectangles straight over the cells they were meant to
+          // outline — which is the "two claims in one channel" failure
+          // ADR-0047 warns about, wearing the comment that forbids it.
           mark: {
             type: "rect",
-            filled: false,
+            fill: null,
             stroke: PALETTE.ink,
             strokeWidth: 2,
           },
