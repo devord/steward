@@ -100,6 +100,8 @@ function install(root: HTMLElement): void {
   let view = viewOf(viewKey)
   let index = Math.max(0, view.days.length - 1)
   let ceiling = axisMax(view.days, view.authors, mode, windowDays)
+  /** False until the first draw has landed — see the FLIP block in `draw`. */
+  let attached = false
 
   // The server's own column, kept before anything mutates it, as the only
   // definition of a column's markup.
@@ -186,8 +188,36 @@ function install(root: HTMLElement): void {
 
     // FLIP: where every column sits now…
     const before = new Map<string, number>()
-    for (const [key, el] of columns)
-      before.set(key, el.getBoundingClientRect().left)
+    if (attached)
+      for (const [key, el] of columns)
+        before.set(key, el.getBoundingClientRect().left)
+
+    // …the scale decision, taken here rather than at the end of the draw, and
+    // the position in the sequence is the whole of why it works.
+    //
+    // Value labels above each column collide into an unreadable digit run once
+    // columns get narrow — 30 people in a one-column tile, which is the normal
+    // case rather than the overflow case. Measured rather than guessed at from
+    // a breakpoint. Hiding them is what promotes the y-axis (`tiers.css`), and
+    // the axis is a 38px column in the plot's own row: this line moves the
+    // plot's left edge.
+    //
+    // Between the record and the invert, that move is just another delta the
+    // FLIP absorbs, and the plot glides to its new edge along with the reorder.
+    // Taken after the invert — where it used to sit — the same move lands as a
+    // 38px jump on top of an animation that has already been measured, which is
+    // the reason the axis used to be blanked in place rather than removed.
+    //
+    // Measured against the layout the *current* gutter produces, so the two
+    // states are hysteretic rather than oscillating: showing the labels widens
+    // the columns that justified showing them, hiding them narrows the ones
+    // that did not.
+    const probe = columns.get(frame.order[0] ?? "")
+    if (probe)
+      plot.classList.toggle(
+        "kit-throughput-nolabels",
+        probe.getBoundingClientRect().width < LEGIBLE_COLUMN_PX,
+      )
 
     // …then the update, including the re-order…
     frame.order.forEach((key, rank) => {
@@ -207,19 +237,28 @@ function install(root: HTMLElement): void {
     })
 
     // …then invert to where they were and release, so the swap glides.
-    for (const [key, el] of columns) {
-      const dx = (before.get(key) ?? 0) - el.getBoundingClientRect().left
-      if (dx) {
-        el.style.transition = "none"
-        el.style.transform = `translateX(${dx}px)`
+    //
+    // Skipped on the first draw, which is the frame the server already
+    // rendered: there is no previous position to come from, and the one thing
+    // that *does* move on attach — a narrow tile promoting its axis, because
+    // the server cannot know the tile's width — should land as part of the page
+    // arriving, not as the chart flinching once it has.
+    if (attached) {
+      for (const [key, el] of columns) {
+        const dx = (before.get(key) ?? 0) - el.getBoundingClientRect().left
+        if (dx) {
+          el.style.transition = "none"
+          el.style.transform = `translateX(${dx}px)`
+        }
       }
+      requestAnimationFrame(() => {
+        for (const el of columns.values()) {
+          el.style.transition = ""
+          el.style.transform = ""
+        }
+      })
     }
-    requestAnimationFrame(() => {
-      for (const el of columns.values()) {
-        el.style.transition = ""
-        el.style.transform = ""
-      }
-    })
+    attached = true
 
     const date = q(root, "[data-kit-throughput-date]")
     if (date) date.textContent = shortDate(frame.date)
@@ -232,16 +271,6 @@ function install(root: HTMLElement): void {
     if (axis) axis.textContent = String(ceiling)
     const legendOpen = q(root, "[data-kit-throughput-legend-open]")
     if (legendOpen) legendOpen.textContent = openWord
-
-    // Value labels collide into an unreadable digit run once columns get
-    // narrow — which is the normal case, not the corner case: 30 people in a
-    // one-column tile. Measured rather than guessed at from a breakpoint.
-    const probe = columns.get(frame.order[0] ?? "")
-    if (probe)
-      plot.classList.toggle(
-        "kit-throughput-nolabels",
-        probe.getBoundingClientRect().width < LEGIBLE_COLUMN_PX,
-      )
   }
 
   function rescale(): void {

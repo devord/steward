@@ -243,7 +243,15 @@ export function Throughput({ spec }: { spec: ThroughputSpec }) {
               the column's own three rows here is what keeps the two honest;
               the spacers are the value row and the face, and `-my-1.5` lets
               each tick centre on the line it names instead of hanging inside
-              it. */}
+              it.
+
+              Emitted always and gated in `tiers.css`, which is also where it
+              is taken *out of flow* while the per-column numbers are showing —
+              the plot starts on the artifact's own left edge, like every other
+              row of the band, and only gives up 38px to an axis that is the
+              only scale left. The runtime is what measures for that; the
+              static render below is the ungated state, so a raw-opened file
+              keeps the numbers it can fit. */}
           <div
             data-kit-throughput-scale=""
             className="text-ink-dim flex w-8 shrink-0 flex-col gap-1 text-right font-mono text-xs leading-none"

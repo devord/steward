@@ -77,7 +77,7 @@
   visibility: hidden;
 }
 
-/* One scale at a time.
+/* One scale at a time, and the one that is not showing costs nothing.
  *
  * The band prints two: a number over every column, and a `ceiling … 0` axis
  * beside the track. While both show, they are two encodings of one fact, and
@@ -88,12 +88,18 @@
  *
  * So the axis appears exactly when it is the only scale left: when the runtime
  * has measured the columns below the legible floor and hidden the per-column
- * numbers. `visibility` rather than `display`, at the cost of a gutter nothing
- * is standing in while the labels show: the plot's left edge is where every
- * column's baseline starts, and the label state flips on a *view* switch — a
- * roster of 40 reviewers where there were 18 authors — so `display` would slide
- * the whole plot 38px sideways in the middle of the reorder the switch is
- * already animating. A still frame beats a reclaimed margin.
+ * numbers. `display`, not `visibility`. Blanking it left the 32px column and
+ * its 6px gap standing empty, and that gutter is not neutral: every other row
+ * of the band — the date, the toggles, the legend, the scrub — starts on the
+ * artifact's own left edge, so a blanked axis made the plot the single row
+ * inset from it, by a margin holding nothing. Measured on a 900px tile: 38px.
+ *
+ * `visibility` was chosen to keep the plot's left edge still, because the label
+ * state can flip mid-life. It can, and both moments are moments the plot is
+ * already changing wholesale — a resize, or a view switch that rebuilds every
+ * column against a different roster. The runtime takes the decision inside its
+ * FLIP now, so the gutter opening or closing is carried by the same glide as
+ * the reorder rather than landing as a jump beside it.
  *
  * Dropped wholesale where `:has()` is unsupported, which leaves both scales
  * showing — the state this shipped in, not a broken one. */
@@ -101,7 +107,34 @@
     [data-kit-throughput-plot]:not(.kit-throughput-nolabels)
   )
   [data-kit-throughput-scale] {
-  visibility: hidden;
+  display: none;
+}
+
+/* The glide the band's runtime has always measured for and never had.
+ *
+ * `behaviour/throughput.ts` runs a textbook FLIP on every draw: it records each
+ * column's position, re-ranks them, inverts them back onto the old positions
+ * with a transform, and releases on the next frame. Released against no
+ * transition, which is what the columns carried — the transform simply cleared
+ * and every column was already at its destination. Measured on a rendered
+ * artifact: `transition-property: all`, `transition-duration: 0s`. So the
+ * ranking the scrubber exists to show you moving snapped between frames, and
+ * nobody could follow a person past whoever they overtook.
+ *
+ * On the attribute rather than a utility class, so it reaches every repo-stats
+ * already on the artifacts branch (ADR-0050) — their columns carry the seam,
+ * and the board injects this sheet over the one they inlined.
+ *
+ * 150ms and ease-out-quart: inside the 200ms the brand allows itself, and the
+ * only thing moving is a swap. Everything whose rank held is still. */
+[data-kit-throughput-col] {
+  transition: transform 150ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-kit-throughput-col] {
+    transition: none;
+  }
 }
 
 /* Every button in an artifact is a pointer target.

@@ -332,6 +332,58 @@ describe("the throughput band", () => {
     expect(remote).not.toContain("https://x/a.png")
   })
 
+  it("gives the axis gutter back when the axis is not in it", () => {
+    // The plot was the one row of the band not starting on the artifact's own
+    // left edge. Every other row — the date, the toggles, the legend, the
+    // scrub, and the artifact's headline above them — begins at the tile
+    // inset; the plot began 38px in, because the y-axis column was blanked
+    // with `visibility` and kept its 32px box and its 6px gap standing empty.
+    // Blank space reads as a misalignment, not as a reservation.
+    //
+    // `display` is what makes the gutter conditional rather than permanent, so
+    // this pins the declaration, not just the selector.
+    const rule = kitCss
+      .replace(/\s+/g, "")
+      .match(
+        /\[data-kit-throughput\]:has\(\[data-kit-throughput-plot\]:not\(\.kit-throughput-nolabels\)\)\[data-kit-throughput-scale\]\{([^}]*)\}/,
+      )
+    expect(
+      rule,
+      "the axis is gated on the value labels being hidden",
+    ).toBeTruthy()
+    expect(rule?.[1]).toContain("display:none")
+    expect(rule?.[1]).not.toContain("visibility")
+  })
+
+  it("gives the columns the transition its runtime has always measured for", () => {
+    // `behaviour/throughput.ts` runs a full FLIP on every draw — record,
+    // re-rank, invert, release — and released it against `transition-property:
+    // all; transition-duration: 0s`, measured on a rendered artifact. Nothing
+    // interpolated, so the ranking the scrubber exists to show you moving
+    // snapped between frames and no one could be followed past whoever they
+    // overtook. The rule is what makes that machinery do anything.
+    //
+    // On the attribute rather than a utility, so it reaches the repo-stats
+    // artifacts already on the artifacts branch (ADR-0050): their columns carry
+    // the seam, and the board injects this sheet over the one they inlined.
+    const css = kitCss.replace(/\s+/g, "")
+    const rule = css.match(/\[data-kit-throughput-col\]\{transition:([^}]*)\}/)
+    expect(rule, "columns declare a transition").toBeTruthy()
+    expect(rule?.[1]).toContain("transform")
+    // Terminal manners: no motion outliving 200ms. Read in either unit — the
+    // minifier rewrites `150ms` to `.15s`, so a test spelled in one of them
+    // passes on the source and fails on the artifact.
+    const [, n, unit] = rule?.[1].match(/([\d.]+)(ms|s)/) ?? []
+    const ms = Number(n) * (unit === "s" ? 1000 : 1)
+    expect(ms).toBeGreaterThan(0)
+    expect(ms).toBeLessThanOrEqual(200)
+    // And it is the kit's only motion, so it is also the kit's only chance to
+    // get reduced motion wrong.
+    expect(css).toContain(
+      "@media(prefers-reduced-motion:reduce){[data-kit-throughput-col]{transition:none}",
+    )
+  })
+
   it("is not drawn at all when no view has anyone in it", () => {
     const empty = renderArtifact(
       {
