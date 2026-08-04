@@ -140,6 +140,43 @@ export function validateDoc(doc: unknown): string[] {
         if (b.pageOnly !== undefined && typeof b.pageOnly !== "boolean")
           errors.push(`${at}.pageOnly must be a boolean`)
 
+        if (b.kind === "chart") {
+          // `id` carries more weight here than on any other block: the
+          // compiled SVG is looked up by it, because charts render in an async
+          // pass before the markup exists (ADR-0062). Without one the band
+          // renders empty and nothing says why.
+          str(b.id, `${at}.id`)
+          if (!isObj(b.spec))
+            return void errors.push(`${at}.spec must be an object`)
+          const cs = b.spec
+          if (!isObj(cs.data)) errors.push(`${at}.spec.data must be an object`)
+          else if (!Array.isArray(cs.data.values))
+            // The sandbox has no network and flint's own server refuses remote
+            // URLs, so a `url` source is a chart that can never draw.
+            errors.push(
+              `${at}.spec.data.values must be an array of rows — an artifact cannot fetch a data source (ADR-0002)`,
+            )
+          if (!isObj(cs.semantic_types))
+            errors.push(
+              `${at}.spec.semantic_types must map each column to a flint semantic type`,
+            )
+          if (!isObj(cs.chart_spec))
+            errors.push(`${at}.spec.chart_spec must be an object`)
+          else {
+            str(cs.chart_spec.chartType, `${at}.spec.chart_spec.chartType`)
+            if (!isObj(cs.chart_spec.encodings))
+              errors.push(
+                `${at}.spec.chart_spec.encodings must map visual channels to columns`,
+              )
+          }
+          if (
+            cs.maxRows !== undefined &&
+            (typeof cs.maxRows !== "number" || cs.maxRows < 1)
+          )
+            errors.push(`${at}.spec.maxRows must be a positive number`)
+          return
+        }
+
         if (b.kind === "matrix") {
           if (!isObj(b.spec))
             return void errors.push(`${at}.spec must be an object`)
@@ -385,7 +422,7 @@ export function validateDoc(doc: unknown): string[] {
 
         if (b.kind !== "queue")
           errors.push(
-            `${at}.kind must be "queue", "prose", "series", "throughput", "progress", "day" or "matrix"`,
+            `${at}.kind must be "queue", "prose", "series", "throughput", "progress", "day", "matrix" or "chart"`,
           )
 
         // A queue carries either loose rows or labelled groups. Both absent is

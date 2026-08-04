@@ -428,7 +428,65 @@ orphaned row of it. A tier is a viewport, not a crop.
   caveats, the run's own limits — closing with `## Ask me about`.
 - Deciding which columns matter enough to appear early.
 
+### `blocks[]` — chart
+
+Any chart in [flint](https://github.com/microsoft/flint-chart)'s catalogue —
+scatter, ranked bar, distribution, slope, heatmap, gantt, bump, boxplot and
+30-odd more. **You name the form; the kit decides everything about how it
+draws** (ADR-0062). Page only, like `series` and `matrix`.
+
+```json
+{
+  "kind": "chart",
+  "id": "hotspots",
+  "label": "Churn against interface width",
+  "note": "Hot and wide is the upper right — a change there costs most",
+  "spec": {
+    "data": { "values": [{ "module": "cart", "commits": 34, "exports": 8.9 }] },
+    "semantic_types": {
+      "module": "Category",
+      "commits": "Quantity",
+      "exports": "Quantity"
+    },
+    "chart_spec": {
+      "chartType": "Scatter Plot",
+      "encodings": { "x": "commits", "y": "exports" }
+    },
+    "maxRows": 40
+  }
+}
+```
+
+- **`id` is required** on this block and on no other. The SVG is compiled in a
+  pass ahead of the markup — Vega renders asynchronously — and looked up by it.
+- **`chartType`** is any name from flint's catalogue. Unrestricted on purpose:
+  a form the kit has to add first is a form you cannot have. Pick the one that
+  fits the claim, not the one you have seen before.
+- **`semantic_types`** is what flint derives the whole layout from — the axis
+  formats, the aggregation, the tick counts. Name every column: `"Quantity"`,
+  `"Date"`, `"Category"`, `"Percentage"`, `"Currency"`, `"YearMonth"` and the
+  rest of flint's 70-odd.
+- **`data.values` only.** A `url` source cannot work: the sandbox has no
+  network (ADR-0002), and the validator rejects it rather than letting it fail
+  at render.
+- **`maxRows`** (default 40) is the cardinality past which the form stops
+  being readable. Exceed it and the band is **dropped**, with a note on
+  provenance — this is the one chart failure no amount of configuration
+  prevents, because it depends on the data the run happened to find.
+
+**Do not set colours, fonts or sizes.** There is nowhere to put them, and that
+is deliberate. The kit replaces every scale range, every mark colour and every
+type size before the chart is compiled, then refuses to publish a chart that
+still paints outside the palette or under the 12px floor. A chart that ignored
+this would be the one region of the page the board's theme override cannot
+re-point — wrong for every reader not on gruvbox dark, and unreachable by any
+future design fix.
+
 ### `blocks[]` — matrix
+
+Prefer this over `chart` for a **co-change field specifically** — it is built
+around labelled pairs and a held-back count. For anything else two-dimensional,
+reach for `chart`.
 
 ```json
 {

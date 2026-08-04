@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { compileCharts } from "./chart/compile.ts"
 import { renderArtifact } from "./render.tsx"
 import { reviewDoc, validateDoc } from "./validate-doc.ts"
 
@@ -48,7 +49,29 @@ if (problems.length) {
 // outcome. See `reviewDoc`.
 for (const note of reviewDoc(doc)) console.error(`note: ${note}`)
 
-const html = renderArtifact(doc, css)
+// Charts compile ahead of the markup: Vega renders asynchronously and the
+// renderer does not (ADR-0062). A chart that will not draw, will not fit its
+// cardinality ceiling, or paints outside the palette is dropped rather than
+// fatal — the rest of the artifact is still worth publishing, which is the
+// same reasoning the advisories above run on.
+const { charts, failures } = await compileCharts(
+  (doc.blocks ?? [])
+    .filter((b) => b?.kind === "chart" && b.id && b.spec)
+    .map((b) => ({ id: b.id, spec: b.spec })),
+)
+for (const { id, problems } of failures)
+  for (const p of problems) console.error(`note: chart ${id} dropped — ${p}`)
+
+// The reader is told too. A band that silently vanished is a band nobody
+// knows to go looking for.
+if (failures.length) {
+  doc.provenance = [
+    ...(doc.provenance ?? []),
+    `${failures.length} chart${failures.length > 1 ? "s" : ""} omitted this run`,
+  ]
+}
+
+const html = renderArtifact(doc, css, charts)
 
 if (outPath) writeFileSync(outPath, html)
 else process.stdout.write(html)
