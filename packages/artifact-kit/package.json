@@ -24,7 +24,10 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "esbuild": "catalog:",
+    "flint-chart": "^0.4.1",
     "tailwindcss": "catalog:",
+    "vega": "^6.3.1",
+    "vega-lite": "^6.4.3",
     "vitest": "catalog:"
   }
 }
