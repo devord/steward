@@ -112,6 +112,7 @@
           "values": [
             {
               "label": "commits",
+              "title": "commits, last 7 days",
               "value": "84",
               "meter": 84
             }
@@ -124,6 +125,7 @@
           "values": [
             {
               "label": "commits",
+              "title": "commits, last 7 days",
               "value": "37",
               "meter": 37
             }
@@ -135,6 +137,7 @@
           "values": [
             {
               "label": "commits",
+              "title": "commits, last 7 days",
               "value": "12",
               "meter": 12
             }
@@ -146,6 +149,7 @@
           "values": [
             {
               "label": "commits",
+              "title": "commits, last 7 days",
               "value": "quiet 34d",
               "meter": 0
             }
@@ -292,7 +296,7 @@
           "values": [
             {
               "label": "commits",
-              "value": "84"
+              "value": "84 commits"
             },
             {
               "label": "window",
@@ -306,7 +310,7 @@
           "values": [
             {
               "label": "commits",
-              "value": "37"
+              "value": "37 commits"
             },
             {
               "label": "window",
@@ -320,7 +324,7 @@
           "values": [
             {
               "label": "commits",
-              "value": "0"
+              "value": "0 commits"
             },
             {
               "label": "window",

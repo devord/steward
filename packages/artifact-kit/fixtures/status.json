@@ -167,7 +167,7 @@
           "values": [
             {
               "label": "measured",
-              "value": "0",
+              "value": "0 breaches",
               "delta": {
                 "value": "3",
                 "direction": "down"

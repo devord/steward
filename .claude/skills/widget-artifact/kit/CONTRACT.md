@@ -190,13 +190,26 @@ widget exists for collapses entirely before one housekeeping row goes.
 `from` decides the tier a column first appears at: `always` `compact` `detail`
 `page`. Order columns by what earns space soonest.
 
-**A value carries its own unit.** Column headers appear only from the page
-tier (900px), and a 2-column tile on a wide board lands just under it, so most
-of a ledger's life is spent with no header row at all: `"20"` in an `age`
-column is an unlabelled quantity, and the header would not have said _days_
-anyway. Write `"20d"`, `"1.4k"`, `"3 files"`. Where the qualifier is too long
-to ride the value, put it on **`title`** — hover text plus an sr-only phrase,
-which exists for exactly this.
+**A value carries its own unit.** **A tile never shows the column header** —
+only the full view names the columns — so a ledger spends most of its life
+with no header row at all: `"20"` in an `age` column is an unlabelled
+quantity, and the header would not have said _days_ anyway. Write `"20d"`,
+`"1.4k"`, `"3 files"`. A comparison counts as its own basis, so a `threshold`
+column reads `"≥ 1"` and `"> 7d"`, never `"1"` and `"7"`. Where the qualifier
+is too long to ride the value, or the scale has no unit noun at all ("5
+impact" is not English), put it on **`title`** — hover text plus an sr-only
+phrase, which exists for exactly this.
+
+The renderer prints a `note:` per column that breaks this, naming the block
+and how many of its rows are bare. It is an advisory and the run continues: a
+widget carrying a bare `"3"` beats a widget three days stale. It cannot see a
+band label, so a metered column under a heading that already names the unit
+(`Activity · commits · 7 days`) is a fair use of `title` to silence it.
+
+This used to be gated at the page tier (900px) instead, which a 2-column tile
+on a `wide` board misses by about ten pixels — so whether a reader saw column
+names was decided by the board's canvas-width picker, and the lightbox itself
+lost them under a 900px viewport. The gate is the board's tile stamp now.
 
 **`icon` renders the glyph, and `value` is the word beside it** — shown from
 this column's own tier (floored at `detail`), screen-reader-only below that.

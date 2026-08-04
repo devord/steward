@@ -7,7 +7,7 @@ import type { BottomLine } from "./components/BottomLine.tsx"
 import type { QueueRow } from "./components/QueueTable.tsx"
 import type { SeriesSpec } from "./components/Series.tsx"
 import type { Verdict } from "./components/VerdictBand.tsx"
-import { validateDoc } from "./validate-doc.ts"
+import { reviewDoc, validateDoc } from "./validate-doc.ts"
 
 const fixture: ArtifactDoc = JSON.parse(
   readFileSync(new URL("../fixtures/ledger.json", import.meta.url), "utf8"),
@@ -205,6 +205,45 @@ describe("QueueTable columns", () => {
     // Never dropped, only hidden: both renderings of both words ship.
     expect(out.match(/review required/g)).toHaveLength(2)
     expect(out.match(/>approved/g)).toHaveLength(2)
+  })
+
+  it("names its columns on the stamp, not on a width", () => {
+    // `tier-page` is 900px and a 2-column tile on a `wide` board lands at
+    // ~876-890px, so the header used to turn on according to which canvas
+    // width the reader had picked — and the lightbox lost it on a viewport
+    // under 900px, which is the one surface it exists for.
+    const out = renderArtifact(
+      {
+        slug: "s",
+        generatedAt: "2026-07-30T09:00:00Z",
+        stat: { value: 1, label: "x" },
+        blocks: [
+          {
+            kind: "queue",
+            showHeader: true,
+            rows: [
+              {
+                id: "a",
+                title: "first",
+                values: [{ label: "age", value: "9d" }],
+              },
+            ],
+          },
+        ],
+      },
+      "",
+    )
+    expect(out).toContain('<thead class="hidden page-only:table-header-group">')
+    expect(out).not.toContain("tier-page:table-header-group")
+    // The lead column keeps its `w-full` — that is what stops the header and
+    // the body disagreeing about where the slack goes — and loses the word
+    // `item`, which named nothing a reader could not already see and printed
+    // once per ledger. A screen reader still gets a column name.
+    expect(out).toContain(
+      '<th class="w-full pb-1 text-left font-normal"><span class="sr-only">item</span></th>',
+    )
+    // The word itself, printed where a reader would see it, is what went.
+    expect(out).not.toContain('font-normal">item</th>')
   })
 })
 
@@ -1969,5 +2008,104 @@ describe("the context block", () => {
 describe("footerTimestamp", () => {
   it("compacts ISO-8601 to the standard's YYYY-MM-DD HH:MMZ", () => {
     expect(footerTimestamp("2026-07-30T09:00:00Z")).toBe("2026-07-30 09:00Z")
+  })
+})
+
+describe("reviewDoc", () => {
+  const doc = (values: unknown[]) => ({
+    slug: "s",
+    generatedAt: "2026-07-30T09:00:00Z",
+    stat: { value: 1, label: "x" },
+    blocks: [{ kind: "queue", rows: [{ id: "a", title: "a", values }] }],
+  })
+
+  it("flags a value that is a quantity and nothing else", () => {
+    // The defect this exists for: a tile never shows the column header, so a
+    // `threshold` column reading `3 / 0d / 5d / 1` is four numbers with no
+    // stated basis anywhere on the surface a reader is looking at.
+    const notes = reviewDoc(doc([{ label: "age", value: "20" }]))
+    expect(notes).toHaveLength(1)
+    expect(notes[0]).toContain('column "age"')
+    expect(notes[0]).toContain('"20"')
+  })
+
+  it("passes a value carrying its own unit", () => {
+    expect(reviewDoc(doc([{ label: "age", value: "20d" }]))).toEqual([])
+    expect(reviewDoc(doc([{ label: "n", value: "1.4k" }]))).toEqual([])
+    expect(reviewDoc(doc([{ label: "files", value: "3 files" }]))).toEqual([])
+    expect(reviewDoc(doc([{ label: "share", value: "40%" }]))).toEqual([])
+  })
+
+  it("passes a threshold, because the operator is the basis", () => {
+    // `≥ 1` and `> 7d` say what they are without a header. That is exactly the
+    // emit the rule wants more of, so it must not be what the rule punishes.
+    expect(reviewDoc(doc([{ label: "threshold", value: "≥ 1" }]))).toEqual([])
+    expect(reviewDoc(doc([{ label: "threshold", value: "> 0d" }]))).toEqual([])
+  })
+
+  it("accepts `title` as the documented escape hatch", () => {
+    // For a qualifier too long to ride the value, or a scale with no unit noun
+    // — "5 impact" is not English. `title` is hover text plus an sr-only
+    // phrase, so the basis still travels with the number.
+    const notes = reviewDoc(
+      doc([{ label: "impact", value: "5", title: "impact, 1-5" }]),
+    )
+    expect(notes).toEqual([])
+  })
+
+  it("reports a column once, not a cell at a time", () => {
+    // A unit is a property of the column — whoever fixes this edits one emit —
+    // and a bare column is bare on every row, so per-cell notes would print
+    // the same sentence N times and bury the columns that are fine.
+    const notes = reviewDoc({
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [
+        {
+          kind: "queue",
+          rows: [
+            { id: "a", title: "a", values: [{ label: "n", value: "1" }] },
+            { id: "b", title: "b", values: [{ label: "n", value: "2" }] },
+            { id: "c", title: "c", values: [{ label: "n", value: "3d" }] },
+          ],
+        },
+      ],
+    })
+    expect(notes).toHaveLength(1)
+    expect(notes[0]).toContain("2 of 3 rows")
+  })
+
+  it("reads rows out of groups as well as loose rows", () => {
+    const notes = reviewDoc({
+      slug: "s",
+      generatedAt: "2026-07-30T09:00:00Z",
+      stat: { value: 1, label: "x" },
+      blocks: [
+        {
+          kind: "queue",
+          groups: [
+            {
+              id: "g",
+              label: "G",
+              rows: [
+                { id: "a", title: "a", values: [{ label: "n", value: "7" }] },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    expect(notes).toHaveLength(1)
+  })
+
+  it("says nothing about the kit's own fixtures", () => {
+    // The fixtures are what every archetype's sample is rendered from, so a
+    // note here would ship as the worked example of the emit it warns about.
+    const dir = new URL("../fixtures/", import.meta.url)
+    for (const f of readdirSync(dir)) {
+      const parsed: unknown = JSON.parse(readFileSync(new URL(f, dir), "utf8"))
+      expect(reviewDoc(parsed), f).toEqual([])
+    }
   })
 })

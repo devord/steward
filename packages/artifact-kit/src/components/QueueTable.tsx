@@ -269,7 +269,11 @@ export function QueueTable({
   groups,
   /** Opt into the board's viewer-faceted regrouping. See ViewerGroups. */
   viewerGroups,
-  /** Name the columns at the page tier, where there is room to. */
+  /**
+   * Name the columns in the full view, where there is room to.
+   *
+   * The gate is the board's tile stamp, not a width (see the `<thead>` below).
+   */
   showHeader = true,
   /**
    * Give way before every other list, whatever the reading order. For a
@@ -342,15 +346,46 @@ export function QueueTable({
         : {})}
     >
       {showHeader && columns.length > 0 ? (
-        <thead className="hidden tier-page:table-header-group">
+        /**
+         * The full view names the columns; a tile never does.
+         *
+         * This was `tier-page` — a width — and a width cannot answer the
+         * question being asked. `tier-page` is 900px, and a 2-column tile on a
+         * `wide` board (dashboard-shell caps the canvas at 1800px) lands at
+         * ~876-890px, so the header turned on or off according to whether the
+         * reader had picked `wide` or `fixed` in the board's density picker.
+         * Nobody reaches for a canvas-width control to name their columns. The
+         * same accident ran the other way in the lightbox: the full view is
+         * where the header is supposed to live, and on a viewport under 900px
+         * it lost it.
+         *
+         * `page-only` is the stamp the board sets on `<html>` (ADR-0019), so
+         * this now says what it means — headers are page generosity, the same
+         * gate ADR-0027 already put that idea behind — and the answer no longer
+         * moves with the viewport at either end.
+         *
+         * That the tile has no header is the load-bearing half. It is what
+         * makes "a value carries its own unit" a rule rather than a
+         * preference: with the header reachable at *some* tile width, a bare
+         * `"3"` looked defensible to whoever emitted it. See `reviewDoc`,
+         * which now says so out loud.
+         */
+        <thead className="hidden page-only:table-header-group">
           <tr className="text-ink-dim text-xs">
             {hasLead ? (
               <th className="w-0 pr-3 pb-1 text-left font-normal" />
             ) : null}
             {/* Matches the body cell: the header has to claim the slack too,
                 or the column widths a `<thead>` participates in settle on the
-                header's own content and the two rows disagree. */}
-            <th className="w-full pb-1 text-left font-normal">item</th>
+                header's own content and the two rows disagree. That is the
+                `w-full`'s job and the whole of it — the word printed here was
+                `item`, which names nothing a reader cannot see, and printed
+                twice in any artifact carrying two ledgers. A column name a
+                screen reader still wants and the screen does not is exactly
+                what `sr-only` is for. */}
+            <th className="w-full pb-1 text-left font-normal">
+              <span className="sr-only">item</span>
+            </th>
             {columns.map((c) => (
               <th
                 key={c.label}

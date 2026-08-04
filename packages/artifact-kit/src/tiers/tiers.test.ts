@@ -112,4 +112,31 @@ describe("tier variants", () => {
     expect(css).toMatch(/:root\[data-steward-tile\] \.tile\\:p-2/)
     expect(css).toMatch(/:root:not\(\[data-steward-tile\]\) \.page-only\\:p-6/)
   })
+
+  it("hides a published ledger's header on a tile, and only a ledger's", () => {
+    // New artifacts carry `page-only:table-header-group` and need nothing
+    // here. Every file already on the artifacts branch carries the old
+    // `tier-page` class and defines it in its own inlined sheet, so on a tile
+    // over 900px — a 3-column cell on a `fixed` board is ~927px — the corpus
+    // would keep printing a header until each routine happened to rerun. The
+    // board appends this sheet over theirs (ADR-0050), so an unlayered rule is
+    // how the fix reaches them without one.
+    expect(css).toMatch(
+      /:root\[data-steward-tile\] \[data-fit-list\] > thead\s*\{[^}]*display:\s*none/,
+    )
+    // Scoped to the queue's own table. The coupling matrix's `<thead>` is its
+    // column axis and has to stay visible at every tier, and it carries no
+    // `data-fit-list` — which is what makes that attribute the right handle.
+    expect(css).not.toMatch(/:root\[data-steward-tile\] thead\s*\{/)
+    // Unlayered, or it loses to the `@layer utilities` rule those files
+    // inlined whatever the specificity. "Unlayered" is brace depth 0 at the
+    // rule's own offset — a regex cannot answer this, because it cannot count
+    // the braces between an `@layer` opening and the rule.
+    const at = css.indexOf(":root[data-steward-tile] [data-fit-list] > thead")
+    expect(at).toBeGreaterThan(-1)
+    const before = css.slice(0, at)
+    const depth =
+      (before.match(/\{/g) ?? []).length - (before.match(/\}/g) ?? []).length
+    expect(depth).toBe(0)
+  })
 })

@@ -13,7 +13,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { renderArtifact } from "./render.tsx"
-import { validateDoc } from "./validate-doc.ts"
+import { reviewDoc, validateDoc } from "./validate-doc.ts"
 
 const [dataPath, outPath] = process.argv.slice(2)
 if (!dataPath) {
@@ -41,6 +41,12 @@ if (problems.length) {
   console.error("\nSee .claude/skills/widget-artifact/kit/CONTRACT.md")
   process.exit(1)
 }
+
+// Advisories, on stderr so a `node render.mjs data.json > out.html` pipe still
+// gets clean HTML. These do not stop the run: the render is fine and the
+// caller is usually a scheduled job, where publishing nothing is the worse
+// outcome. See `reviewDoc`.
+for (const note of reviewDoc(doc)) console.error(`note: ${note}`)
 
 const html = renderArtifact(doc, css)
 

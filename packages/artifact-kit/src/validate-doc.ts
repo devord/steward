@@ -477,3 +477,87 @@ export function validateDoc(doc: unknown): string[] {
 
   return errors
 }
+
+/**
+ * A value that is a quantity and nothing else.
+ *
+ * Digits, grouping separators and a sign. No letter (`20d`, `3 files`, `1.4k`),
+ * no `%`, and no comparison operator — `≥ 1` and `> 7d` read as thresholds on
+ * their own, which is the whole point, so they are not bare.
+ *
+ * `\s` rather than a literal space: JS includes U+00A0 and U+202F in it, and a
+ * figure grouped with a non-breaking thin space is the same bare figure. Those
+ * characters written into the class directly are also invisible in review,
+ * which is its own argument.
+ */
+const BARE_QUANTITY = /^[+-]?\d[\d,._\s]*$/
+
+/**
+ * Advisories: true of the data, not fatal to the render.
+ *
+ * Separate from {@link validateDoc} because the two have different
+ * consequences. An error there means the renderer would throw or draw
+ * something broken, so the run must stop. Everything here would render
+ * perfectly and read poorly, and a routine's run is usually a scheduled cloud
+ * job whose only failure mode that matters is publishing nothing — a widget
+ * carrying a bare `"3"` beats a widget three days stale. So these print and
+ * the run continues.
+ *
+ * They are still worth emitting rather than leaving to prose in CONTRACT.md,
+ * because the reader is the agent that just wrote the file and can fix it on
+ * the next run. `validate.mjs` learned the same lesson from the other
+ * direction and its comment is the warning about warnings: thirty false ones
+ * per artifact taught everyone to ignore the channel. Keep this list short and
+ * keep every entry true.
+ */
+export function reviewDoc(doc: unknown): string[] {
+  const notes: string[] = []
+  const isObj = (v: unknown): v is Record<string, unknown> =>
+    typeof v === "object" && v !== null && !Array.isArray(v)
+  if (!isObj(doc) || !Array.isArray(doc.blocks)) return notes
+
+  doc.blocks.forEach((b, i) => {
+    if (!isObj(b) || b.kind !== "queue") return
+    const rows = Array.isArray(b.groups)
+      ? b.groups.flatMap((g) =>
+          isObj(g) && Array.isArray(g.rows) ? g.rows : [],
+        )
+      : Array.isArray(b.rows)
+        ? b.rows
+        : []
+    // Reported per column, not per cell. A unit is a property of the column —
+    // whoever fixes this edits one emit, not nine — and a ledger whose `age`
+    // column is bare is bare on every row, so per-cell notes would print the
+    // same sentence nine times and bury the other nine columns that are fine.
+    const bare = new Map<string, { seen: number; sample: string }>()
+    const total = new Map<string, number>()
+    for (const r of rows) {
+      if (!isObj(r) || !Array.isArray(r.values)) continue
+      for (const v of r.values) {
+        if (!isObj(v) || typeof v.label !== "string") continue
+        const label = v.label
+        total.set(label, (total.get(label) ?? 0) + 1)
+        if (typeof v.value !== "string") continue
+        if (!BARE_QUANTITY.test(v.value.trim())) continue
+        // `title` is the documented escape hatch — hover text plus an sr-only
+        // phrase, for a qualifier too long to ride the value. A number whose
+        // basis is invisible is an unlabelled mixture of two scales; a number
+        // whose basis is one hover away is not.
+        if (typeof v.title === "string" && v.title !== "") continue
+        const hit = bare.get(label)
+        if (hit) hit.seen += 1
+        else bare.set(label, { seen: 1, sample: v.value })
+      }
+    }
+    for (const [label, { seen, sample }] of bare) {
+      notes.push(
+        `blocks[${i}] column "${label}" is a bare quantity on ${seen} of ` +
+          `${total.get(label) ?? seen} rows (e.g. "${sample}"). A tile never shows ` +
+          `the column header, so a value has to carry its own unit — "20d", ` +
+          `"1.4k", "3 files" — or name the basis on \`title\`.`,
+      )
+    }
+  })
+
+  return notes
+}

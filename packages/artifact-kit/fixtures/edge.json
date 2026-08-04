@@ -22,7 +22,12 @@
           "href": "https://example.test/long",
           "detail": "A detail line that is also long, because the why-line spans the table by colspan and a short one never exercises that.",
           "values": [
-            { "label": "n", "value": "1", "numeric": true },
+            {
+              "label": "n",
+              "title": "rows matched",
+              "value": "1",
+              "numeric": true
+            },
             { "label": "when", "value": "2026-07-30", "from": "detail" }
           ]
         },
@@ -36,7 +41,7 @@
           "state": { "label": "none", "tone": "neutral" },
           "title": "A meter of zero against a column whose max is also zero",
           "values": [
-            { "label": "n", "value": "0", "meter": 0 },
+            { "label": "n", "title": "rows matched", "value": "0", "meter": 0 },
             { "label": "when", "value": "—", "from": "detail" }
           ]
         },
@@ -45,7 +50,13 @@
           "state": { "label": "big", "tone": "bad" },
           "title": "A four-digit magnitude, which is where a bar and its count compete for the cell",
           "values": [
-            { "label": "n", "value": "1284", "meter": 1284, "tone": "bad" },
+            {
+              "label": "n",
+              "title": "rows matched",
+              "value": "1284",
+              "meter": 1284,
+              "tone": "bad"
+            },
             { "label": "when", "value": "2026-01-02", "from": "detail" }
           ],
           "action": {

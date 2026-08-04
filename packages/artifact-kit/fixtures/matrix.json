@@ -30,6 +30,7 @@
               "values": [
                 {
                   "label": "commits",
+                  "title": "commits in the censused window",
                   "value": "34",
                   "meter": 34,
                   "tone": "attn",
@@ -45,6 +46,7 @@
               "values": [
                 {
                   "label": "commits",
+                  "title": "commits in the censused window",
                   "value": "28",
                   "meter": 28,
                   "tone": "attn",
@@ -60,6 +62,7 @@
               "values": [
                 {
                   "label": "commits",
+                  "title": "commits in the censused window",
                   "value": "22",
                   "meter": 22,
                   "delta": { "value": "1", "direction": "down" }
@@ -74,6 +77,7 @@
               "values": [
                 {
                   "label": "commits",
+                  "title": "commits in the censused window",
                   "value": "19",
                   "meter": 19,
                   "delta": { "value": "0", "direction": "flat" }
@@ -88,6 +92,7 @@
               "values": [
                 {
                   "label": "commits",
+                  "title": "commits in the censused window",
                   "value": "17",
                   "meter": 17,
                   "delta": { "value": "4", "direction": "up" }
@@ -109,6 +114,7 @@
               "values": [
                 {
                   "label": "commits",
+                  "title": "commits in the censused window",
                   "value": "14",
                   "meter": 14,
                   "tone": "attn"
@@ -123,6 +129,7 @@
               "values": [
                 {
                   "label": "commits",
+                  "title": "commits in the censused window",
                   "value": "14",
                   "meter": 14,
                   "tone": "attn"
@@ -134,7 +141,14 @@
               "title": "pricing and catalog",
               "state": { "label": "no import", "tone": "attn" },
               "detail": "8 of pricing's 19 commits · shared release cadence, not a contract — probably fine",
-              "values": [{ "label": "commits", "value": "8", "meter": 8 }]
+              "values": [
+                {
+                  "label": "commits",
+                  "value": "8",
+                  "meter": 8,
+                  "title": "commits in the censused window"
+                }
+              ]
             }
           ]
         }

@@ -137,6 +137,26 @@
   }
 }
 
+/* A tile never names its columns.
+ *
+ * The markup rule moved from `tier-page` (900px) to `page-only` (the board's
+ * tile stamp), because a width was deciding it: a 2-column tile on a `wide`
+ * board lands at ~876-890px, so a header appeared or not according to the
+ * canvas the reader had chosen. New artifacts carry the corrected class. Every
+ * artifact already on the artifacts branch carries the old one, and their own
+ * inlined sheet still defines it — so on a tile wide enough to clear 900px
+ * (a 3-column cell on a `fixed` board is ~927px) the published corpus would
+ * keep printing a header until each routine happened to rerun.
+ *
+ * Unlayered, so it beats the `@layer utilities` rule those files inlined
+ * (ADR-0050), and scoped to `[data-fit-list]` — the attribute the queue's
+ * table has always carried — so it reaches every published ledger without
+ * touching the coupling matrix, whose `<thead>` is its own column axis and is
+ * meant to be visible at every tier. */
+:root[data-steward-tile] [data-fit-list] > thead {
+  display: none;
+}
+
 /* Every button in an artifact is a pointer target.
  *
  * Tailwind v4's preflight dropped v3's `cursor: pointer` on `button` in favour
