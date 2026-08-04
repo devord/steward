@@ -80,6 +80,27 @@ const ROLE: Record<
 }
 
 /**
+ * A line's role, defaulting to `ghost` for anything unrecognised.
+ *
+ * `role` arrives from a routine's JSON, and `validateDoc` does not constrain
+ * it to the four names — so a typo, or a role added to a data repo's template
+ * before it exists here, would otherwise dereference `undefined` and throw.
+ * `compileCharts` would catch that and drop the band, but losing a whole
+ * burn-up over one misspelled word is a poor trade when the honest fallback is
+ * "draw it as context".
+ */
+const ROLES: ReadonlyMap<string, (typeof ROLE)[SeriesRole]> = new Map(
+  Object.entries(ROLE),
+)
+
+function roleOf(role: string): (typeof ROLE)[SeriesRole] {
+  // A Map lookup rather than an index read: `ROLE` is exhaustive over the four
+  // names, so indexing it with an arbitrary string needs a type assertion, and
+  // the repo forbids those outside tests.
+  return ROLES.get(role) ?? ROLE.ghost
+}
+
+/**
  * Midday UTC.
  *
  * Vega's temporal scales are local-time by default, so a UTC-midnight point
@@ -187,7 +208,7 @@ function decorate(spec: SeriesSpec): Decorator {
               filter: {
                 field: "series",
                 oneOf: spec.lines
-                  .filter((l) => Boolean(ROLE[l.role].step) === stepped)
+                  .filter((l) => Boolean(roleOf(l.role).step) === stepped)
                   .map((l) => l.label),
               },
             },
@@ -204,7 +225,7 @@ function decorate(spec: SeriesSpec): Decorator {
               type: "nominal",
               scale: {
                 domain: order,
-                range: spec.lines.map((l) => ROLE[l.role].ink),
+                range: spec.lines.map((l) => roleOf(l.role).ink),
               },
               legend: legend(ctx.tier),
             },
@@ -213,7 +234,7 @@ function decorate(spec: SeriesSpec): Decorator {
               type: "nominal",
               scale: {
                 domain: order,
-                range: spec.lines.map((l) => ROLE[l.role].dash),
+                range: spec.lines.map((l) => roleOf(l.role).dash),
               },
               // The *same* legend as colour, not `null`. Two channels over one
               // field with one domain merge into a single legend, so each entry
