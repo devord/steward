@@ -1,6 +1,7 @@
 # A routine names the form, the kit owns the look
 
-**Status**: proposed — gated on the spike in "First cut" below.
+**Status**: accepted. The burn-up spike ran; "What the spike settled" records
+what it changed.
 
 ADR-0050 split artifact authoring in two: a routine emits _content_, and the
 kit decides every visual consequence. `Series.tsx` states the reason in its own
@@ -39,14 +40,18 @@ flexoki, light, dark. A chart carrying baked hexes would be the one region on
 the page that ignores that, and the one region no future design fix reaches,
 which contradicts ADR-0050's whole injection premise.
 
-So the emitted Vega-Lite JSON is walked before compilation and every
-colour-valued leaf is rewritten to a kit token. Colour enters a Vega spec by
-exactly two routes — literals (hex, `rgb()`, CSS names) and scheme references
-(`"scheme": "blues"`) — and both are recognisable in a tree walk, which is what
-makes the transform total rather than a list of properties to keep up with.
-Flint's derived palette is discarded wholesale. That is a real loss of one of
-the things flint sells, and it is not negotiable: the board reads as one
-product or it does not.
+So colour is asserted on the **emitted SVG**, not on the spec. This is the one
+place the spike overruled the design: colour enters at three stages, not one.
+Flint's own output carried a single colour reference (`scheme: "tableau10"`);
+the literals appeared during `vl.compile`; and `#ddd`, `#888` and `#000` came
+from Vega's renderer defaults, which are in neither spec. A pre-compilation
+walk would have caught one of seven.
+
+The kit therefore sets its palette explicitly through `config` and the colour
+scale's `range`, then asserts on the rendered file that no colour outside the
+token set survived. Flint's derived palette is discarded wholesale. That is a
+real loss of one of the things flint sells, and it is not negotiable: the board
+reads as one product or it does not.
 
 **Type size — total.** Widget-standard §6 sets a 12px floor. Flint derives axis
 and legend sizes and will emit 10px and 11px. The same walk clamps every
@@ -104,10 +109,11 @@ and ADR-0002 and the raw-readability floor are untouched.
 phone-width raw open to a 2560px `wide` board. `Series.tsx` survives that by
 having no pixel geometry at all: a unitless 1000×400 viewBox stretched with
 `preserveAspectRatio="none"`, every label real 12px HTML at a percentage offset.
-A Vega SVG has one geometry and its text lives inside it, so a flint chart
-renders at a fixed size, centred, max-width capped. On a wide board it will sit
-in whitespace where today's stretches. **This is the largest concession and the
-thing the spike exists to judge.**
+A Vega SVG has one geometry and its text lives inside it.
+
+A chart band therefore emits **two renders, CSS-gated** — one sized for the
+tile, one for the page. See "What the spike settled": the fixed-and-capped
+alternative this ADR originally chose does not survive contact.
 
 ## What this is not
 
@@ -121,6 +127,47 @@ trade than leaving it alone.
 
 The kit gets more capable at about the same source size, with a bundle nine
 times larger. That is the trade.
+
+## What the spike settled
+
+The burn-up was rebuilt through flint and rendered beside `Series.tsx`. Every
+technical risk cleared on the first run: the chain renders in bare node with no
+canvas and no DOM; `vega.textMetrics.width` accepted the mono override and
+served 98 measurements; the emitted SVG carried **zero off-palette colours and
+zero sub-12px type**. Only `flint-chart/vegalite` is needed, so the ECharts,
+Plotly, Chart.js and Excel backends never enter the bundle.
+
+Four things it changed.
+
+**Flint's portability is not a property we want.** Its docs warn that a
+post-compile edit means "no longer a portable Flint spec" — portable meaning
+swappable to ECharts or Excel. We target Vega-Lite and nothing else, so that
+warning costs us nothing, and spec editing is free. This is what makes the rest
+possible: the finish is applied by the kit after flint derives the form.
+
+**Generic is not good enough, and does not have to be.** The first render was
+competent and characterless — no now-marker, no end dot, raw field names as
+axis titles, eleven dense mixed-format date ticks. Every one of those is
+recoverable through Vega-Lite's own vocabulary: the now-marker is a `rule`
+layer, the end dot a `point` layer over the last datum, the sparse axis an
+explicit `axis.values`. Declared once in the kit's finish, they apply to every
+chart rather than being drawn per component. One caution learned the hard way —
+`axis` must be **omitted** in annotation layers, never set to `null`, because a
+layered spec resolves axes across layers and an explicit null suppresses the
+shared one. Setting it cost both axes.
+
+**Two renders, not one capped.** Uniform scaling put sub-12px labels in a 700px
+frame — the failure this ADR lists as rejected, reached by accident through
+`max-width: 100%`. Fixed-and-capped only holds _above_ the chart's natural
+width; below it the options are scale, clip or re-render. So a chart band emits
+one SVG per tier. Measured at **11.1 KB and 10.9 KB** for the burn-up, against
+33.8 KB of `kit.css` already inlined in every artifact, which is what retires
+the "multiplies artifact bytes" objection this ADR originally raised against it.
+
+**Vega's temporal scales are local-time.** A `2026-06-25` point rendered as
+"Jun 24, 2026" under UTC-3. A routine's runner and its reader are rarely in the
+same zone, so dates are stamped at midday UTC and scales are declared
+`type: "utc"`. `Series.tsx` parses UTC deliberately; nothing in flint does.
 
 ## First cut
 
@@ -156,9 +203,15 @@ it is diffable against what it replaces. Two changes ride with it:
   `throughput.js`. The injected form fails ADR-0061's stated floor — "the
   static file never folds" — because an artifact opened raw off the artifacts
   branch would show a blank box where the chart is.
-- **One render per breakpoint, CSS-gated.** Would preserve true
-  responsiveness. Multiplies artifact bytes and Vega render time by three on
-  every run, to restore a property only charts lose. Available later for a
-  single chart that genuinely needs to fill the frame.
+- **One fixed-size render, centred and max-width capped.** This ADR's original
+  choice, overturned by the spike: a cap does nothing below the chart's natural
+  width, where the container falls back to scaling and breaks the type floor.
+  Superseded by the two-render rule above.
 - **Uniform scaling of one SVG.** Renders 9px axis labels at the narrow end and
-  38px at the wide end. Fails widget-standard §6 outright.
+  38px at the wide end. Fails widget-standard §6 outright — measured, not
+  assumed; it is how the capped variant failed.
+- **Flint for new forms only, keeping the four hand-rolled ones.** Considered
+  after the spike's first render came back generic, and rejected once the
+  finish layer closed that gap. Two renderers behind one theme layer and one
+  conformance test would have been defensible, but it leaves the maintenance
+  cost this exists to lower exactly where it was.
