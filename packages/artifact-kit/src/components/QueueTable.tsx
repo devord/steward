@@ -43,6 +43,52 @@ const COLUMN_TIER: Record<ColumnTier, string> = {
   page: "hidden tier-page:table-cell",
 }
 
+/**
+ * The tier a glyph's *word* joins it at: the column's own tier, floored at
+ * `detail`.
+ *
+ * It used to be the constant `tier-page` for every column, which is two rules
+ * governing one cell — `from` decided when the column appeared, and nothing
+ * decided when its word did. The gap between them is where the widget spends
+ * most of its life: a 2-column tile on a wide board lands around 890px, inside
+ * `detail` (701px) and short of `page` (900px), so the state column showed a
+ * bare clock with ~575px of empty title column beside it. A reader cannot
+ * decode `clock` = "review required" from the glyph, and the word was right
+ * there in the markup, `sr-only` — the screen reader was better served than
+ * the screen.
+ *
+ * `detail` is the floor because it is where the ledger stops being a glance:
+ * detail lines and `from: "detail"` columns already appear there, so a word is
+ * in company rather than alone. Below it the tile genuinely has no room —
+ * "changes requested" is ~135px against a 340px frame — and the glyph is the
+ * honest compression.
+ *
+ * The cost is paid between 701 and ~780px, where the widest titles now wrap to
+ * a second line to fund the word. That is the right way round: a wrapped title
+ * is still readable, an unexplained glyph is not.
+ *
+ * Written out per tier rather than derived, for the same reason `COLUMN_TIER`
+ * is — Tailwind scans source for complete class strings, so a computed
+ * `tier-${t}:inline` exists in the markup and in no stylesheet, and the word
+ * silently never appears. That failure mode is exactly what this fixes, so it
+ * would be a poor way to fix it.
+ */
+const LABEL_TIER: Record<ColumnTier, { show: string; hide: string }> = {
+  always: {
+    show: "hidden tier-detail:inline",
+    hide: "tier-detail:hidden sr-only",
+  },
+  compact: {
+    show: "hidden tier-detail:inline",
+    hide: "tier-detail:hidden sr-only",
+  },
+  detail: {
+    show: "hidden tier-detail:inline",
+    hide: "tier-detail:hidden sr-only",
+  },
+  page: { show: "hidden tier-page:inline", hide: "tier-page:hidden sr-only" },
+}
+
 export interface QueueValue {
   /** Header word at the page tier, where the columns get named. */
   label: string
@@ -71,12 +117,17 @@ export interface QueueValue {
    */
   delta?: { value: string; direction: "up" | "down" | "flat" }
   /**
-   * Render the value as a glyph, with the word beside it from the page tier
-   * and screen-reader-only below that.
+   * Render the value as a glyph, with the word beside it from this column's
+   * own tier (floored at `detail`, see {@link LABEL_TIER}) and
+   * screen-reader-only below that.
    *
    * The word is never dropped, only hidden — a review state carried by shape
    * alone is a state a screen reader cannot report. Healthy states whisper:
    * give a passing check no tone and let only the actionable ones take one.
+   *
+   * Because the word is what a sighted reader gets wherever there is room for
+   * it, `value` has to *be* the word: `"changes requested"`, never `"x"` or a
+   * repeat of the glyph's name.
    */
   icon?: IconName
   /**
@@ -479,8 +530,12 @@ function RowPair({
               ) : v?.icon ? (
                 <span className="inline-flex items-center gap-1">
                   <Icon name={v.icon} />
-                  <span className="hidden tier-page:inline">{v.value}</span>
-                  <span className="tier-page:hidden sr-only">{v.value}</span>
+                  <span className={LABEL_TIER[col.from ?? "always"].show}>
+                    {v.value}
+                  </span>
+                  <span className={LABEL_TIER[col.from ?? "always"].hide}>
+                    {v.value}
+                  </span>
                 </span>
               ) : (
                 (v?.value ?? "")
