@@ -120,6 +120,33 @@ const RETIRED = [
   // for a 12px ceiling and the floor raised to the width of the face it ends in.
   "w-6",
   "min-w-[14px]",
+  // `Series.tsx` and `CouplingMatrix.tsx`, deleted by ADR-0062 when the burn-up
+  // and the co-change field moved to flint. Every class below is one those two
+  // components wrote, and every one is still on an element of an artifact
+  // published before the migration.
+  //
+  // This is the exact case this list exists for, and it was missed on the way
+  // in: the board injects the *current* stylesheet over a file published months
+  // ago, so a class that stops being compiled does not revert to an older
+  // design — it loses its rule entirely. Measured against the live
+  // `corza-progress` and `corza-entropy` artifacts, which between them name all
+  // twelve. Without these the published burn-up renders with no plot height, no
+  // line colour and no now-marker until its next scheduled run republishes it.
+  //
+  // Retire them for real once no artifact on the `artifacts` branch names them,
+  // which is a question for that branch rather than this file.
+  "h-[clamp(10rem,30vw,22rem)]",
+  "grid-cols-[auto_1fr_auto]",
+  "stroke-orange",
+  "stroke-ink-dim",
+  "stroke-[color-mix(in_oklab,var(--color-orange)_55%,var(--color-bg1))]",
+  "border-ink-faint",
+  "border-l",
+  "inset-y-0",
+  "left-0",
+  "-translate-x-1/2",
+  "ring-bg1",
+  "mt-1",
 ]
 
 const SAFELIST = [

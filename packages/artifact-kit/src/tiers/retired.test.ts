@@ -31,11 +31,19 @@ const css = readFileSync(
   "utf8",
 )
 
-/** `.tier-detail\:text-2xl` — the escaped form Tailwind emits. */
+/**
+ * `.tier-detail\:text-2xl` — the escaped form Tailwind emits.
+ *
+ * The character class has to cover everything Tailwind escapes, not just the
+ * ones the first retired classes happened to use: an arbitrary-value utility
+ * carries parens, commas, slashes and percents too, and a matcher that misses
+ * one reports a live class as absent. `-translate-x-1/2` and
+ * `h-[clamp(10rem,30vw,22rem)]` both failed that way.
+ */
 const defines = (cls: string) =>
-  new RegExp(`\\.${cls.replace(/[:.[\]]/g, (c) => `\\\\\\${c}`)}[,{\\s]`).test(
-    css,
-  )
+  new RegExp(
+    `\\.${cls.replace(/[:.[\]()/,%]/g, (c) => `\\\\\\${c}`)}[,{\\s]`,
+  ).test(css)
 
 describe("classes retired from source but live in published artifacts", () => {
   it.each([
@@ -62,6 +70,23 @@ describe("classes retired from source but live in published artifacts", () => {
     // face each column ends in.
     "w-6",
     "min-w-[14px]",
+    // Series.tsx and CouplingMatrix.tsx, deleted by ADR-0062 when the burn-up
+    // and the co-change field moved to flint. Verified against the live
+    // `corza-progress` and `corza-entropy` artifacts, which between them name
+    // every one — the published burn-up loses its plot height, its line colour
+    // and its now-marker without these, and does so on the board immediately
+    // rather than waiting for anyone to notice.
+    "h-[clamp(10rem,30vw,22rem)]",
+    "grid-cols-[auto_1fr_auto]",
+    "stroke-orange",
+    "stroke-ink-dim",
+    "border-ink-faint",
+    "border-l",
+    "inset-y-0",
+    "left-0",
+    "-translate-x-1/2",
+    "ring-bg1",
+    "mt-1",
   ])("keeps %s in the injected stylesheet", (cls) => {
     expect(defines(cls)).toBe(true)
   })
@@ -79,5 +104,13 @@ describe("classes retired from source but live in published artifacts", () => {
       "beyond-glance:max-w-[72ch]",
     ])
       expect(defines(cls), cls).toBe(true)
+  })
+
+  it("keeps the ghost stroke, whose selector escapes further than the rest", () => {
+    // `stroke-[color-mix(in_oklab,var(--color-orange)_55%,var(--color-bg1))]`
+    // escapes parens, commas and a percent as well as the brackets, so the
+    // shared matcher above cannot express it. Checked on the emitted rule
+    // instead: the published ghost line is invisible without it.
+    expect(css).toContain("color-mix(in oklab,var(--color-orange) 55%")
   })
 })
