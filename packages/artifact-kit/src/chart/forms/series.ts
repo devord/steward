@@ -291,5 +291,3 @@ export function seriesRequest(id: string, spec: SeriesSpec): ChartRequest {
 export function seriesHasShape(spec: SeriesSpec): boolean {
   return spec.lines.some((l) => l.points.length > 1)
 }
-
-export type { ChartTier }
