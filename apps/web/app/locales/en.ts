@@ -101,7 +101,12 @@ export const en = {
   "nav.expand": "Expand sidebar",
   "nav.resize": "Resize sidebar",
   "nav.routines": "Routines",
+  // The rail's routines control is a glyph in the repo caption (ADR-0058), so
+  // its accessible name has to say which repo's pool it opens — "Routines"
+  // alone repeats once per group with nothing to tell them apart.
+  "nav.repoRoutines": "Routines in {repo}",
   "nav.unsynced": "Unsynced changes",
+  "nav.routinesUnsynced": "Routines have unsynced changes",
   "nav.runInFlight": "Run in flight",
   "nav.stale": "Stale",
   "nav.fresh": "Up to date",
@@ -247,7 +252,10 @@ export const en = {
   "switcher.label": "Dashboard",
   "switcher.personal": "Personal",
   "switcher.new": "New dashboard",
-  "switcher.newHere": "Create the first dashboard",
+  // Sits inside the empty repo's own group, so the group's caption already
+  // says which repo it creates in. "Create the first dashboard" wrapped to two
+  // lines even at the rail's default width, and a rail row is one line.
+  "switcher.newHere": "Create a dashboard",
   "switcher.addRepo": "Add data repo",
   "switcher.incomplete": "Some repos may be missing — GitHub search flaked",
 

@@ -373,6 +373,85 @@
   }
 }
 
+/* The rail's rhythm ladder, in one place (ADR-0058).
+
+   DESIGN.md § Layout states the rail's four boundaries as a nesting ladder —
+   2 / 8 / 22 / 32px — where no boundary may be tighter than one inside it and
+   each step runs ≥1.5× the step it contains. Those numbers were measured
+   against a 28px row. `pointer-coarse:min-h-11` then grew *only* the rows to
+   44px, which put 46px of text-to-text whitespace inside a group and left
+   22px between two sections: the widest boundary became the narrowest and the
+   ladder inverted on every phone.
+
+   So the ladder is five custom properties, not five utilities sprinkled over
+   five components, and the coarse-pointer override moves all of them at once.
+   That is the actual fix — a variant that touches one rung can't exist here.
+
+   Row padding, not row min-height: the rows carry the selection fill, and
+   DESIGN.md caps a fill-showing box at 36px precisely so a 44px wash can't
+   read as a slab. A full-bleed 40px row across a 288px drawer is a target no
+   thumb misses (WCAG 2.5.8's floor is 24px), and it is the padding — not a
+   min-height with the label floating mid-box — that keeps the label's
+   distance to its caption honest. */
+@layer components {
+  .rail {
+    /* Half the row's box above and below its 20px line: 32px rows. */
+    --rail-row-pad: 6px;
+    /* A caption to its own first child (repo → section/board, section → its
+       boards). The tightest boundary now that rows are contiguous. */
+    --rail-caption-gap: 8px;
+    /* Section to section inside one repo. */
+    --rail-section-gap: 24px;
+    /* Repo group to repo group — the rail's widest boundary. */
+    --rail-group-gap: 40px;
+
+    /* The three gaps above are stated **optically** — the space a reader sees
+       between two text boxes. A row's vertical padding is hit area, not
+       visual weight, so any boundary that lands on a row has to give that
+       padding back or the gap reads bigger than the number says. That is not
+       a rounding detail: a section caption sat 8px above its boards and 8px
+       below its repo, and the first of those measured 14px on screen, so the
+       tighter relationship looked looser than the one containing it. The
+       derived steps below are what the layout actually spends. */
+    --rail-caption-step: calc(var(--rail-caption-gap) - var(--rail-row-pad));
+    --rail-section-step: calc(var(--rail-section-gap) - var(--rail-row-pad));
+    --rail-group-step: calc(var(--rail-group-gap) - var(--rail-row-pad));
+    --rail-row-bleed: calc(var(--rail-row-pad) * -1);
+  }
+
+  /* One scale factor over the whole ladder, not a variant on one rung. Rows
+     grow 1.25× and so does every boundary, which is what keeps the nesting
+     ordered: before this, only the row height had a coarse variant, so 44px
+     rows put 46px of whitespace inside a group and left 22px between two
+     sections — the widest boundary became the narrowest. */
+  @media (pointer: coarse) {
+    .rail {
+      --rail-row-pad: 10px;
+      --rail-caption-gap: 10px;
+      --rail-section-gap: 28px;
+      --rail-group-gap: 44px;
+    }
+  }
+
+  /* A navigable row: the fill spans the rail edge to edge, square, with no
+     gap to its siblings — the file-tree read (ADR-0058). Captions never take
+     this, which is what makes "does it light up" answer "can I go there". */
+  .rail-row {
+    padding-block: var(--rail-row-pad);
+  }
+
+  /* The two places a row sits directly under a caption, giving its padding
+     back so the caption's declared gap is the gap you see: the row that leads
+     a repo group (a group with no sections), and every row under a section
+     label. A caption following a caption — a repo whose first child is a
+     section — needs no correction and gets none, which is the whole point of
+     keying this on what follows rather than baking it into the caption. */
+  .rail-list > :first-child:not([data-slot="rail-caption"]),
+  .rail-list > [data-slot="rail-caption"] + * {
+    margin-block-start: var(--rail-row-bleed);
+  }
+}
+
 /* Dashboard grid (docs/widget-standard.md, ADR-0041): react-grid-layout
    positions each widget by transform — the board picks the column count per
    breakpoint (its own grid.columns on desktop, 2 on tablet, 1 on phone) and a

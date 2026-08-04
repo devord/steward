@@ -115,14 +115,21 @@ export function AccountMenu({
       <DropdownMenuTrigger
         aria-label={t("account.menu")}
         className={cn(
-          "flex cursor-pointer items-center rounded-md text-sm text-ink-dim outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:bg-sidebar-accent aria-expanded:text-foreground",
-          // Block fills the rail foot and hangs the avatar on the marker spine
-          // (the boards' `left-[13px]` glyph column) so it lines up with every
-          // rail glyph above it. pl-7 (the foot tier's wider label column, one
-          // notch past the nav's pl-6): the 20px avatar is wider than the 14px
-          // glyphs, so the name needs the extra step to clear it. The compact
-          // pill packs tight for the top bar.
-          block ? "relative w-full py-1.5 pr-2.5 pl-7" : "gap-2 px-1.5 py-1",
+          "flex cursor-pointer items-center text-sm text-ink-dim outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-foreground",
+          // Block fills the rail foot edge to edge and hangs the avatar on the
+          // rail's 21px glyph column, so it lines up with every rail glyph
+          // above it. Square and full-bleed like the nav rows (ADR-0058): a
+          // rounded pill in the foot under square rows above reads as a
+          // different material, and the ring goes inset for the same reason
+          // the rows' does. `rail-row` takes its padding from the rhythm
+          // ladder, so the foot grows with the list on a coarse pointer.
+          // pl-9 (the foot tier's wider label column, one notch past the nav's
+          // pl-8): the 20px avatar is wider than the 12px glyphs, so the name
+          // needs the extra step to clear it. The compact pill packs tight for
+          // the top bar.
+          block
+            ? "rail-row relative w-full pr-3 pl-9 focus-visible:inset-ring-3 focus-visible:inset-ring-ring/50"
+            : "gap-2 rounded-md px-1.5 py-1 focus-visible:ring-3 focus-visible:ring-ring/50",
           className,
         )}
       >
@@ -130,7 +137,7 @@ export function AccountMenu({
           size={block ? "xs" : "sm"}
           className={cn(
             block &&
-              "absolute top-1/2 left-[13px] -translate-x-1/2 -translate-y-1/2",
+              "absolute top-1/2 left-[21px] -translate-x-1/2 -translate-y-1/2",
           )}
         >
           <AvatarImage src={avatarSrc} alt="" />

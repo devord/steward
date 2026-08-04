@@ -34,6 +34,46 @@ import { useNow } from "../lib/use-now.ts"
 import { useT } from "../lib/i18n.tsx"
 
 /**
+ * A navigable row (ADR-0058). The fill spans the rail edge to edge, square,
+ * with no gap to its siblings — the file-tree read the brand already claims
+ * (tmux/lazygit, and Flow's left nav). Radius signals elevation (DESIGN.md
+ * § Shape) and a nav row does not float, so the old rounded pill inset in an
+ * 8px margin was the wrong material; it also made a 44px touch row read as a
+ * floating slab the moment the selection wash filled it.
+ *
+ * Only rows carry this. Captions never take a fill, which is what lets a
+ * reader answer "is this a place I can go" by sweeping the pointer: the
+ * things that light up are exactly the things that navigate.
+ *
+ * `rail-row` (app.css) supplies the vertical padding from the rail's rhythm
+ * vars, so a coarse pointer grows the row and its boundaries together.
+ * The focus ring is inset — the nav is a scroll container, so an outset ring
+ * on a full-bleed row is clipped at both edges.
+ */
+const rowCls =
+  "rail-row relative flex w-full items-center pl-8 text-left text-sm transition-colors outline-none focus-visible:inset-ring-3 focus-visible:inset-ring-ring/50"
+
+/** The trailing inset a row needs to clear its own `⋯`, in both pointer
+    modes (the trigger floors to size-8 on coarse). Rows without a menu keep
+    the plain `pr-3`. */
+const rowMenuPad = "pr-9 pointer-coarse:pr-11"
+
+/**
+ * The `⋯` trigger's rest state on rows and section captions (ADR-0058): it
+ * holds its slot but not its ink. Nine visible menu glyphs down a 200px
+ * column made the trailing edge the busiest thing in the rail, so the trigger
+ * rests invisible and appears on row hover, on `focus-visible`, and while its
+ * menu is open. `opacity`, never `display` — the trigger keeps its tab stop
+ * either way. Coarse pointers have no hover, so there it stays visible.
+ *
+ * Its slot stays *reserved* rather than swapping in over the age: a trailing
+ * column that trades content for controls flickers down the whole list as the
+ * pointer crosses it on the way to one row.
+ */
+const rowMenuCls =
+  "text-ink-faint opacity-0 transition-[color,opacity,background-color] group-hover/nav:opacity-100 hover:bg-sidebar-accent hover:text-foreground focus-visible:opacity-100 focus-visible:text-foreground aria-expanded:opacity-100 aria-expanded:bg-sidebar-accent aria-expanded:text-foreground pointer-coarse:opacity-100"
+
+/**
  * The board navigation rail — brand, one group per discovered data repo
  * (ADR-0023, home first), a new-board affordance, and the account menu pinned
  * to the foot. Renders the same inner content in two hosts: the persistent
@@ -41,31 +81,41 @@ import { useT } from "../lib/i18n.tsx"
  * It carries no surface, width, or positioning of its own — the host owns the
  * border, background, collapse, and resize — so the two placements can't drift.
  *
- * The rail reads as three tiers (ADR-0023/0034): a repo caption (a muted
- * uppercase "icon · label · count" header — repo-group-header.tsx — the terminal
- * section-header idiom), its boards threaded below on a hairline spine as the
- * bright, primary tier, and — one step deeper — the boards of any named section
- * under a quieter sub-caption. The captions recede (small, tracked, muted); the
- * boards carry the ink. Indent plus the spine read them as the caption's
- * children.
+ * The rail reads as three tiers (ADR-0023/0034/0058), and each differs from
+ * its neighbour on at least three axes at once — the point being that no
+ * single one has to carry the hierarchy:
+ *
+ * | | data repo | section | board |
+ * |---|---|---|---|
+ * | leading glyph | exposure, roots the spine | — | — |
+ * | label x | 32 | 32 | 32, or 48 in a section |
+ * | size / case | 11px CAPS tracked | 11px CAPS tracked | 14px, the slug |
+ * | weight | semibold | medium | normal (medium active) |
+ * | ink | `foreground` | `ink-dim` | `ink` |
+ * | air above | 40px | 28px | 0 — contiguous |
+ * | takes a fill | never | never | hover + active, full-bleed |
+ *
+ * Before ADR-0058 the two captions were the same 11px tracked-caps tier in
+ * the same `ink-dim`, starting their labels at the same x, separated by a
+ * weight step and a `FolderGit2` every repo carried alike. Two landmarks in
+ * one voice means neither reads as the parent of the other, so the repo
+ * caption took full ink (ADR-0049's move, one tier down) and its glyph became
+ * the one that says something: private / shared / public.
  *
  * Board switching lives in this always-visible list: every board is one click,
  * the active one reads from across the room, and "new dashboard" is a peer of
- * the boards it joins. Each group leads with its dashboards — the group IS its
- * boards — and the repo's routine pool (ADR-0025) closes the group as the
- * spine's terminal node: unmistakably inside the repo, but in a different voice
- * (a ledger glyph + sans label vs the boards' rest-quiet dots + mono names), so
- * it never poses as one of the boards.
+ * the boards it joins. The repo's routine pool (ADR-0025) is no longer a row
+ * but a control in the repo's own caption (ADR-0058) — repo-scoped furniture
+ * beside the repo's other affordance, which returns a whole row per repo.
  *
  * A repo group with no boards keeps a create-first row in place of the board
  * list — deleting the last board must not make the repo disappear from the app.
  *
  * Rows carry honest client-local state (rail-status.ts): a yellow dot
- * ({@link UnsyncedDot}) trailing a name marks unsynced draft edits (boards and
- * the pool alike), and a client-fired run in flight pulses the pool's ledger
- * glyph in the accent — status stays in the leading marker column the way a
- * board's freshness dot does. Both read straight from localStorage — no server
- * call, and nothing decorative: no state, no marker.
+ * ({@link UnsyncedDot}) trailing a name marks unsynced draft edits, and a
+ * client-fired run in flight pulses the caption's routines glyph in the
+ * accent. Both read straight from localStorage — no server call, and nothing
+ * decorative: no state, no marker.
  */
 export function DashboardSidebar({
   activeRepo,
@@ -125,15 +175,18 @@ export function DashboardSidebar({
   const homeRepo = sidebar?.repos.find((repo) => repo.isHome)?.repo ?? ""
 
   return (
-    <div className="flex h-full flex-col">
+    // `rail` carries the rhythm ladder's five custom properties (app.css), so
+    // the coarse-pointer override moves every rung at once — the variant that
+    // grew only the row height is what inverted the ladder on phones.
+    <div className="rail flex h-full flex-col">
       {/* Brand row, exactly the board toolbar's height (h-11 + border-b) so
           the top hairline runs unbroken across both columns. */}
-      {/* pl-[11px], not px-3: the lockup's mark is 1.25em — 20px at the brand's
-          16px — and this lands its center on the rail's one glyph column
-          (the nav's p-2 + the rows' left-[13px] = 21px), so the tie, every repo
-          folder, every board dot and the foot's glyphs hang on a single
-          vertical line down the whole rail. The Link's -mx-1/px-1 pair cancels,
-          so the row's own padding is what positions the mark. */}
+      {/* pl-[11px]: the lockup's mark is 1.25em — 20px at the brand's 16px —
+          and this lands its center on the rail's one glyph column (21px), so
+          the tie, every repo's exposure glyph, the spine and the foot's glyphs
+          hang on a single vertical line down the whole rail. The Link's
+          -mx-1/px-1 pair cancels, so the row's own padding positions the
+          mark. */}
       <div className="flex h-11 shrink-0 items-center border-b border-border-dim pr-3 pl-[11px]">
         <Link
           to="/"
@@ -145,39 +198,38 @@ export function DashboardSidebar({
         </Link>
       </div>
 
-      {/* p-2, matching the foot's own inset: every hairline in the rail — the
-          brand row's, the one over "New dashboard", the foot's — then clears its
-          nearest row by the same 8px, so the frame reads as one inset instead of
-          12px at the top and 8px everywhere else. */}
+      {/* py-2 with no horizontal padding: the rows own their inset now that
+          their fill is full-bleed, and every hairline in the rail — the brand
+          row's, the one over "New dashboard", the foot's — still clears its
+          nearest row by the same 8px. */}
       <nav
         aria-label={t("nav.boards")}
-        className="flex flex-1 flex-col overflow-y-auto p-2"
+        className="flex flex-1 flex-col overflow-y-auto py-2"
       >
         {sidebar === null ? (
           <RailSkeleton />
         ) : (
           <>
-            {/* space-y-8 (32px) — the rail's top-level boundary, and the widest
-                step in its ladder: 2px between sibling rows, 8px from a caption
-                to its own content, 22px between sections inside a repo, 32px
-                between repos (DESIGN.md § Layout). It was 16px, which put the
-                outermost boundary *below* the 22px one nested inside it, so a
-                new data repo announced itself more quietly than a new section
-                did and the rail read as one flat list of captions. Each step is
-                now ≥1.5× the step it contains, which is what lets the eye find
-                the groups without reading them. */}
-            <div className="space-y-8">
+            {/* The rail's top-level boundary and the widest rung of its ladder
+                (DESIGN.md § Layout): repo group to repo group. Every rung now
+                lives in one place, `--rail-*` in app.css, so a pointer variant
+                can't move one and invert the nesting. */}
+            <div className="flex flex-col gap-(--rail-group-step)">
               {sidebar.repos.map((repoGroup) => (
                 <NavGroup
                   key={repoGroup.repo}
-                  header={<RepoGroupHeader group={repoGroup} />}
-                  foot={
-                    <PoolNavItem
-                      to={routinesHref(repoGroup.repo)}
-                      active={routinesRepo === repoGroup.repo}
-                      running={running.has(repoGroup.repo)}
-                      draft={drafts.has(poolDraftKey(repoGroup.repo))}
-                      onNavigate={onNavigate}
+                  header={
+                    <RepoGroupHeader
+                      group={repoGroup}
+                      routines={
+                        <PoolAction
+                          repo={repoGroup.repo}
+                          active={routinesRepo === repoGroup.repo}
+                          running={running.has(repoGroup.repo)}
+                          draft={drafts.has(poolDraftKey(repoGroup.repo))}
+                          onNavigate={onNavigate}
+                        />
+                      }
                     />
                   }
                 >
@@ -186,9 +238,9 @@ export function DashboardSidebar({
                       repo's authored order. A repo with no sections yields one
                       label-less section — the flat list. Rendered as a flat
                       child sequence (not nested wrappers) so the spine's one
-                      geometry and the parent's row gap both hold; a section is a
-                      quiet label followed by boards indented one step under it,
-                      the extra indent (not a wrapper) carrying the nesting. */}
+                      geometry holds; a section is a quiet label followed by
+                      boards indented one step under it, the extra indent (not a
+                      wrapper) carrying the nesting. */}
                   {sectionBoards(
                     repoGroup.dashboards,
                     repoGroup.sections,
@@ -234,8 +286,8 @@ export function DashboardSidebar({
                             // deeper than an ungrouped one, nested under its
                             // label (ADR-0034).
                             indented={section.label != null}
-                            // Freshness (ADR-0035): the leading dot's colour and
-                            // the trailing age.
+                            // Freshness (ADR-0035, rendered per ADR-0058): the
+                            // trailing age, pilled when overdue.
                             lastRunAt={board.lastRunAt}
                             stale={board.stale}
                             now={now}
@@ -263,8 +315,8 @@ export function DashboardSidebar({
                   {repoGroup.dashboards.length === 0 && (
                     // The group's only child while the repo has no boards: the
                     // next action, sitting where the first board will. The plus
-                    // takes the marker-column slot a board's dot uses, so it
-                    // reads as "a board goes here".
+                    // takes the glyph column the spine runs down, so it reads
+                    // as "a board goes here".
                     <RailAction
                       icon={Plus}
                       label={t("switcher.newHere")}
@@ -276,18 +328,17 @@ export function DashboardSidebar({
 
               {/* Discovery degraded (search rate limit, GitHub flap): say quietly
               that groups may be missing rather than render a confident lie. */}
-              {/* A prose sentence, so sans and ink-dim — mono is for
-                  identifiers, and ink-faint never carries copy the user is
-                  meant to read. */}
+              {/* A prose sentence, so ink-dim — ink-faint never carries copy
+                  the user is meant to read. */}
               {!sidebar.complete && (
-                <p className="px-2.5 text-xs text-ink-dim">
+                <p className="pr-3 pl-8 text-xs text-ink-dim">
                   {t("switcher.incomplete")}
                 </p>
               )}
             </div>
 
             {/* New board — a create verb that belongs with the boards above, so it
-            sits at the end of the list on the same marker/label column, set off
+            sits at the end of the list on the same glyph/label columns, set off
             by one hairline (a verb, not one of the nouns). The trailing space
             is empty scroll room, not a gap the actions float in. */}
             <div className="mt-2 space-y-2">
@@ -310,20 +361,18 @@ export function DashboardSidebar({
           hidden focus-guard spans beside the trigger while it's open. space-y's
           sibling margins would count them and grow the foot 2px; gap ignores
           out-of-flow children, so the foot holds still. */}
-      <div className="flex shrink-0 flex-col gap-0.5 border-t border-border-dim p-2">
-        {/* Foot tier: markers stay on the boards' `left-[13px]` spine, but the
-            label column steps out one notch (pl-7 vs the nav's pl-6) so the
-            account avatar — a 20px disc, wider than the 14px glyphs — clears its
-            name instead of crowding it. Both foot rows share that column, so
-            they align with each other; the glyphs still hang on the spine. */}
+      <div className="flex shrink-0 flex-col border-t border-border-dim py-2">
+        {/* Foot tier: glyphs stay on the rail's 21px spine column, but the
+            label column steps out one notch (pl-9 vs the nav's pl-8) so the
+            account avatar — a 20px disc, wider than the 12px glyphs — clears
+            its name instead of crowding it. Both foot rows share that column,
+            so they align with each other; the glyphs still hang on the
+            spine. */}
         <RailAction
           icon={FolderGit2}
           label={t("switcher.addRepo")}
           onClick={() => setAddingRepo(true)}
-          // py-1.5 (over RailAction's tighter py-1 default): the foot is its own
-          // tier, and this row matches the account row's height (py-1.5) so the
-          // two foot controls read as one block, not the compact board list.
-          className="pl-7 py-1.5"
+          className="pl-9"
         />
         <AccountMenu
           login={login}
@@ -389,20 +438,20 @@ export function DashboardSidebar({
 function RailSkeleton() {
   return (
     // The resolved rail's own rhythm, so the ghost's silhouette is the shape
-    // that lands: 32px between groups, 8px from a caption to its rows, and a
-    // row pitch (12px bar + 16px gap) matching the real 28px rows.
-    <div aria-hidden className="space-y-8">
+    // that lands: the group gap between groups, the caption gap from a heading
+    // to its rows, and contiguous rows on the row pitch (ADR-0058) rather than
+    // the loose ladder the old 2px-gap rows drew.
+    <div aria-hidden className="flex flex-col gap-(--rail-group-step)">
       {[3, 2].map((rows, group) => (
         <div key={group}>
-          <div className="mb-2 px-2.5 py-1">
+          <div className="mb-(--rail-caption-step) flex h-5 items-center pl-8">
             <Skeleton className="h-2.5 w-24" />
           </div>
-          <div className="flex flex-col gap-4 pl-6">
+          <div className="flex flex-col">
             {Array.from({ length: rows }, (_, row) => (
-              <Skeleton
-                key={row}
-                className={row % 2 === 0 ? "h-3 w-24" : "h-3 w-16"}
-              />
+              <div key={row} className="rail-row flex items-center pl-8">
+                <Skeleton className={row % 2 === 0 ? "h-3 w-24" : "h-3 w-16"} />
+              </div>
             ))}
           </div>
         </div>
@@ -413,10 +462,10 @@ function RailSkeleton() {
 
 /**
  * A create verb rendered on the board list's own grid: the icon sits centered
- * on the marker column (where a board's dot sits), the label on the
- * board-name column. Sharing that geometry is what keeps "new dashboard" and
- * the empty-group create-first row reading as peers of the boards they make,
- * not buttons floating on a different margin.
+ * on the glyph column the spine runs down, the label on the board-name column.
+ * Sharing that geometry is what keeps "new dashboard" and the empty-group
+ * create-first row reading as peers of the boards they make, not buttons
+ * floating on a different margin.
  */
 function RailAction({
   icon: Icon,
@@ -427,27 +476,31 @@ function RailAction({
   icon: typeof Plus
   label: string
   onClick: () => void
-  /** Extra classes (e.g. a wider `pl-*` for the foot tier), merged last. */
+  /** Extra classes (e.g. the foot tier's wider `pl-9`), merged last. */
   className?: string
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      // A rail row is one line, always: the glyph is centred on the row's box,
+      // so a label that wraps strands it between two lines and breaks the
+      // pitch every gap in the ladder is measured against. `title` keeps the
+      // whole label reachable on the narrow rail where one may truncate.
+      title={label}
       className={cn(
-        // 44px rows on coarse pointers — the drawer is primary navigation on
-        // phones, and 29px rows under a thumb are misses.
-        "relative flex w-full cursor-pointer items-center rounded-md py-1 pr-2.5 pl-6 text-left text-sm text-ink-dim transition-colors outline-none hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:min-h-11",
+        rowCls,
+        "cursor-pointer truncate pr-3 text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
         className,
       )}
     >
-      {/* size-3 (12px) — the one marker-column glyph size, shared with the repo
-          folder (repo-group-header.tsx) and the pool's ledger. It rode at 14px:
-          two pixels is invisible in isolation and obvious in a column, and the
-          `+` outweighed the folder it sits under in the foot. */}
+      {/* size-3 (12px) — the one glyph size on the rail's marker column,
+          shared with the repo caption's exposure glyph and its routines
+          control. It rode at 14px once: two pixels is invisible in isolation
+          and obvious in a column. */}
       <Icon
         aria-hidden
-        className="absolute top-1/2 left-[13px] size-3 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
+        className="absolute top-1/2 left-[21px] size-3 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
       />
       {label}
     </button>
@@ -456,35 +509,36 @@ function RailAction({
 
 /**
  * A dashboard section's sub-heading (ADR-0034) — the repo caption's idiom one
- * tier in: the shared caption tier (`railCaptionCls`) at medium weight where
- * the repo is semibold, glyph-less where the repo has one, and indented to the
- * board-name column with its own boards a step deeper. Same terminal-caption
- * voice, read as subordinate by weight, the missing glyph, and the indent — not
- * by being smaller than the boards it heads (the inversion the caption idiom
- * avoids). It stays `ink-dim`, never `ink-faint` — the user reads it to steer,
- * so it must clear AA at this size.
+ * tier in, and deliberately quieter on three axes at once (ADR-0058): medium
+ * where the repo is semibold, `ink-dim` where the repo took full ink, and
+ * glyph-less where the repo roots the spine. It stays at the board-name column
+ * with its own boards a step deeper, so the indent carries the nesting.
+ *
+ * It stays `ink-dim`, never `ink-faint` — the user reads it to steer, so it
+ * must clear AA at this size. And it stays in the caption tier rather than
+ * dropping to a smaller one: a heading smaller than what it heads is the
+ * inversion the caption idiom exists to avoid.
  *
  * It carries a count, like the repo caption above it and the band heading on
  * the board (ADR-0048). A bare word at the head of a list is decoration; the
- * count is what makes the caption navigation — you can see how much is folded
+ * count is what makes the caption navigation — you can see how much is filed
  * under a section without reading its rows.
  *
- * A generous gap opens above every section but the group's first (`mt-5`, 22px
- * with the flex `gap-0.5` it adds to) and its own boards hug it below at the
- * caption step (`mb-1.5` + that same gap = 8px). `mt-5` and not the old `mt-3`
- * because the rhythm law (ADR-0048) wants the between-group gap to read as
- * roughly three times the within-group one; at 12px the sections blurred into
- * the ~28px row pitch and the rail read as a single undifferentiated ladder.
+ * A generous gap opens above every section but the group's first
+ * (`--rail-section-gap`) and its own boards hug it below at the caption step
+ * (`--rail-caption-gap`). Both are rungs of the one ladder in app.css, which
+ * is what keeps the ratio (each step ≥1.5× the step it contains) true on
+ * coarse pointers too — the ladder used to invert there because only the row
+ * height had a touch variant.
  *
  * The **`lead` section takes no top margin**: it is the repo caption's own
- * first content, so the caption's `mb-2` is the whole gap (8px, the same step
- * this label gives its boards). It used to open the full 22px there too, on the
- * theory that every section caption should sit the same distance below whatever
- * precedes it — but what precedes the first one is the heading that owns it,
- * not a peer's last board. Spending the between-groups gap inside a group
- * detached the repo caption from its own contents and flattened the rail into
- * one ladder of evenly-spaced captions. Air belongs at boundaries; the first
- * section isn't one.
+ * first content, so the caption's own gap is the whole distance. It used to
+ * open the full section gap there too, on the theory that every section
+ * caption should sit the same distance below whatever precedes it — but what
+ * precedes the first one is the heading that owns it, not a peer's last board.
+ * Spending the between-sections gap inside a group detached the repo caption
+ * from its own contents and flattened the rail into one ladder of evenly
+ * spaced captions. Air belongs at boundaries; the first section isn't one.
  *
  * The label is the viewer's own words (a display label, ADR-0026), verbatim but
  * cased up by the caption — truncated, never wrapped.
@@ -495,13 +549,10 @@ function RailAction({
  * record, so both actions are batch edits across the boards filed under it
  * (ADR-0039): Rename retitles the heading, Delete dissolves it (the boards move
  * up to the ungrouped lead, none deleted). Sized to the repo caption's `⋯`
- * (size-5), not the rows' size-6 — this is a caption tier, not a board row — and
- * rests as faint as the rest of the caption until the pointer nears. Its `⋯`
- * borrows the repo caption's trailing geometry (an in-flow button on a `pr-1.5
- * pointer-coarse:pr-1` row, height fixed to `h-5`), so the glyph lands on the
- * same trailing column the repo caption and board rows already share — in both
- * pointer modes — instead of drifting right the way a size-5 button pinned at
- * the rows' size-6 `right-1` would.
+ * (size-5), not the rows' size-6 — this is a caption tier, not a board row —
+ * and it rests invisible like every other rail `⋯` (ADR-0058), landing its
+ * glyph on the same trailing column the repo caption and board rows share in
+ * both pointer modes.
  */
 function SectionLabel({
   label,
@@ -513,7 +564,8 @@ function SectionLabel({
   label: string
   count: number
   /** This is the group's first child — the repo caption's own content, so the
-      caption's `mb-2` is the gap and the section opens no air of its own. */
+      caption's own gap is the distance and the section opens no air of its
+      own. */
   lead?: boolean
   onRename?: () => void
   onDelete?: () => void
@@ -523,16 +575,20 @@ function SectionLabel({
   return (
     <div
       data-testid="rail-section"
+      // The optical-gap rules in app.css read this slot: whatever follows a
+      // caption is a row, and it pulls its own padding back out of the gap.
+      data-slot="rail-caption"
       // h-5 + an in-flow ⋯, matching the repo caption (repo-group-header.tsx):
       // the button centers in the caption's own height rather than overhanging
-      // an auto-height text row, and pr-1.5 (pr-1 on coarse, where both buttons
-      // hit the icon-xs size-8 floor) lands the size-5 glyph on the same
-      // trailing column the size-6 board rows use.
-      // Margins add to the parent's gap-0.5 (2px): mt-5 → 22px of air above a
-      // section, mb-1.5 → the 8px caption step down to its own boards.
+      // an auto-height text row. pr-3.5 (pr-3 on coarse, where both buttons
+      // hit the icon-xs size-8 floor) lands the size-5 glyph's optical center
+      // 24px from the rail's right edge — the one trailing column every rail
+      // ⋯ shares.
       className={cn(
-        "group/section relative mb-1.5 flex h-5 items-center pr-1.5 pl-6 pointer-coarse:pr-1",
-        !lead && "mt-5",
+        "group/nav relative mb-(--rail-caption-gap) flex h-5 items-center pr-3.5 pl-8 pointer-coarse:pr-3",
+        // The section gap, less the padding of the row that precedes it — the
+        // same optical correction the rows under this caption make below.
+        !lead && "mt-(--rail-section-step)",
       )}
     >
       {/* Label and count share one flex-1 box so the ⋯ keeps its trailing
@@ -542,7 +598,8 @@ function SectionLabel({
         <span
           data-testid="rail-section-label"
           // Medium, overriding the tier's semibold: this is the repo caption's
-          // idiom one step in, and weight is what carries the subordination.
+          // idiom one step in, and weight is one of the three axes carrying
+          // the subordination (with ink and the missing glyph).
           className={cn(railCaptionCls, "min-w-0 truncate font-medium")}
         >
           {label}
@@ -566,7 +623,7 @@ function SectionLabel({
                 variant="ghost"
                 size="icon-xs"
                 aria-label={t("section.menu")}
-                className="size-5 text-ink-faint transition-colors group-hover/section:text-ink-dim hover:bg-sidebar-accent hover:text-foreground focus-visible:text-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-foreground"
+                className={cn("size-5", rowMenuCls)}
               />
             }
           >
@@ -595,78 +652,82 @@ function SectionLabel({
 /**
  * A repo heading over its board list, the boards threaded on a single hairline
  * spine — a tree indent guide (1px, neutral), not a side-stripe. The spine
- * descends from under the repo heading's own glyph (repo-group-header.tsx),
- * which roots it, and runs the height of the list, so the boards read as the
- * repo's children rather than rows floating in space. Inactive boards leave the
- * spine unbroken; the active board is an accent dot sitting on it, "you are
- * here" (see {@link NavItem}). The routine pool is the spine's terminal node:
- * the line runs down through the boards and ends at its ledger glyph ({@link
- * PoolNavItem}), so the group is closed by its fixed view instead of leaving it
- * adrift below. Boards inside a named section hang one indent deeper, off the
- * same spine.
+ * descends from under the repo heading's own exposure glyph
+ * (repo-group-header.tsx), which roots it, and runs the height of the list, so
+ * the boards read as the repo's children rather than rows floating in space.
+ * It draws *over* the rows' full-bleed fill (ADR-0058) so the guide stays
+ * continuous through the row you're on, the way a file tree's does; before
+ * that it was a beaded string of freshness dots, and the line was the only
+ * thing holding them together.
+ *
+ * Boards inside a named section hang one indent deeper off the same spine.
+ * There is deliberately no second guide for them: a two-level tree guide in a
+ * 200px column is noise, and the 16px indent step already carries the nesting.
  */
 function NavGroup({
   header,
-  foot,
   children,
 }: {
   header: React.ReactNode
-  /** The group's terminal entry on the spine — the routine pool link
-      (ADR-0025). A peer view of the boards but a different kind, so it sits
-      last, in its own voice, never as the first "board". */
-  foot?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <div>
       {header}
-      <div className="relative flex flex-col gap-0.5">
-        {/* bottom-[21px], not inset-y-1: the spine ends at the top edge of the
-            pool row's ledger glyph (last row ~29px tall, 12px glyph on its
-            center), leading into the terminal node instead of striking through
-            the icon's transparent strokes.
-            -top-1 reaches back up *into* the caption's 8px gap, so the line
-            starts 8px under the repo glyph and reads as hanging from it. Pinned
-            inside the column (top-1) it began 16px below the glyph once the
-            caption took its proper gap — far enough that the spine looked like
-            it belonged to the first section rather than to the repo. */}
+      {/* `rail-list` is what the optical-gap rules in app.css key on: a row
+          leading the group, or a row under a section caption, gives its own
+          padding back so a caption's declared gap is the gap you see. */}
+      <div className="rail-list relative flex flex-col">
+        {/* -top-1 reaches back up into the caption's own gap so the line starts
+            just under the repo glyph and reads as hanging from it. Pinned
+            inside the column it began a full gap below the glyph — far enough
+            that the spine looked like it belonged to the first section rather
+            than to the repo. It ends flush with the last row now that the pool
+            has left the list for the caption (ADR-0058). */}
+        {/* `border`, not `border-dim` (DESIGN.md § Color): dim splits the flat
+            plane, and this line is not a split — it is the structure the
+            reader follows to tell whose children these rows are. At the dim
+            tier's ≥1.2:1 it read as a rendering artifact beside the rows
+            rather than as a guide, and it now has to carry the nesting alone:
+            the freshness dots that used to bead it are gone (ADR-0058). */}
         <span
           aria-hidden
-          className="pointer-events-none absolute -top-1 bottom-[21px] left-[13px] w-px bg-border-dim"
+          className="pointer-events-none absolute -top-1 bottom-0 left-[21px] z-10 w-px bg-border"
         />
         {children}
-        {foot}
       </div>
     </div>
   )
 }
 
 /**
- * A repo's routine pool link (ADR-0025) — a peer of its boards but a different
- * kind: it lists what runs, not a grid. It closes the group as the spine's
- * terminal node, on the boards' own marker/label columns — a ledger glyph in
- * the marker slot where boards carry a dot, sized to echo the repo glyph that
- * roots the spine (12px, size-3, the same as repo-group-header.tsx). That echo
- * is deliberate: the group is bracketed by two glyphs of one weight — a folder
- * opens it (the repo), a ledger closes it (the routines) — so the glyph reads as
- * a system, not an exception looming over the boards' quiet dots. What separates
- * it from the boards is kind: the glyph rests visible where board dots rest
- * invisible (the fixed view is furniture; boards are content), and the label is
- * sans where board names are mono, with a hair of extra space setting it off.
- * Active, it lights the same accent-tinted selection as an active board, glyph
- * in accent — the same "you are here" node an active board's dot is.
+ * A repo's routine pool (ADR-0025) as a control in its caption, not a row
+ * (ADR-0058). The pool is repo-scoped furniture — what runs in this repo — so
+ * it belongs on the repo's own row beside the repo's other affordance, and
+ * moving it there returns a whole row per repo (40px each on a phone) for a
+ * view opened far less often than a board.
+ *
+ * It takes the caption's glyph size (size-3) and, when active, the app's
+ * selection vocabulary at button scale: an accent wash under an accent glyph,
+ * the same treatment the header's edit toggle wears. An in-flight client-fired
+ * run pulses it in the accent (resting solid under reduced motion), which is
+ * the state that used to ride the row's leading marker.
+ *
+ * Unlike the rows' `⋯`, this never hides: it is a destination, and a
+ * destination that appears on hover is one a touch user can't find.
  */
-function PoolNavItem({
-  to,
+function PoolAction({
+  repo,
   active,
   running,
   draft,
   onNavigate,
 }: {
-  to: string
+  repo: string
   active: boolean
   /** A client-fired run is in flight somewhere in this repo's pool
-      (rail-status.ts) — runs belong to the pool, so this is their honest row. */
+      (rail-status.ts) — runs belong to the pool, so this is their honest
+      marker. */
   running?: boolean
   /** The pool view holds unsynced routine edits (its own draft, ADR-0025). */
   draft?: boolean
@@ -674,85 +735,121 @@ function PoolNavItem({
 }) {
   const t = useT()
   return (
-    <Link
-      to={to}
-      onClick={onNavigate}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "relative mt-0.5 flex items-center rounded-md py-1 pr-2.5 pl-6 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:min-h-11",
-        active
-          ? "bg-primary/10 font-medium text-foreground"
-          : "text-ink-dim hover:bg-sidebar-accent/60 hover:text-foreground",
-      )}
-    >
-      {/* The pool's live state rides its own marker, not a trailing dot: an
-          in-flight run pulses the ledger glyph in the accent, so status sits in
-          the leading column where a board's freshness dot sits (honors reduced
-          motion by resting solid). */}
-      <ListTodo
-        aria-hidden
-        data-testid={running ? "rail-running" : undefined}
-        className={cn(
-          "absolute top-1/2 left-[13px] size-3 -translate-x-1/2 -translate-y-1/2 transition-colors",
-          active || running ? "text-primary" : "text-ink-faint",
-          running && "animate-pulse motion-reduce:animate-none",
-        )}
-      />
-      {t("nav.routines")}
-      {running && <span className="sr-only">, {t("nav.runInFlight")}</span>}
-      {draft && (
-        <span className="ml-2 flex shrink-0 items-center gap-1.5">
-          <UnsyncedDot label={t("nav.unsynced")} />
-        </span>
-      )}
-    </Link>
-  )
-}
-
-/**
- * The rail's unsynced marker — one 6px yellow dot trailing a row's name, exactly
- * the header chip's unsynced dot, on boards and the routine pool alike. It
- * trails the label rather than riding the spine's marker column, so the leading
- * column keeps its one meaning (a board's freshness / "you are here" dot, the
- * pool's ledger glyph) and the marker survives every row state (active, hover)
- * without negotiation. The trailing dot means exactly one thing — unsynced;
- * live-run state lives on the pool glyph instead. Never colour alone: the
- * sr-only label names the state for readers.
- */
-function UnsyncedDot({ label }: { label: string }) {
-  return (
     <>
-      <span
-        aria-hidden
-        data-testid="rail-draft"
-        className="size-1.5 shrink-0 rounded-full bg-yellow"
-      />
-      <span className="sr-only">, {label}</span>
+      {/* The pool's unsynced marker leads the cluster — it used to trail the
+          pool's row name, and it is the same 6px yellow dot the header chip
+          and the board rows carry, so one dot means one thing rail-wide. */}
+      {draft && <UnsyncedDot label={t("nav.routinesUnsynced")} />}
+      <Link
+        to={routinesHref(repo)}
+        onClick={onNavigate}
+        aria-current={active ? "page" : undefined}
+        title={t("nav.repoRoutines", { repo })}
+        className={cn(
+          // size-5 with the icon-xs coarse floor, matching the `⋯` beside it
+          // so the caption's two controls read as one cluster.
+          "flex size-5 shrink-0 items-center justify-center rounded-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:size-8",
+          active
+            ? "bg-primary/10 text-primary"
+            : "text-ink-faint hover:bg-sidebar-accent hover:text-foreground",
+          running && !active && "text-primary",
+        )}
+      >
+        <ListTodo
+          aria-hidden
+          data-testid={running ? "rail-running" : undefined}
+          className={cn(
+            "size-3",
+            running && "animate-pulse motion-reduce:animate-none",
+          )}
+        />
+        <span className="sr-only">
+          {t("nav.repoRoutines", { repo })}
+          {running && `, ${t("nav.runInFlight")}`}
+        </span>
+      </Link>
     </>
   )
 }
 
 /**
+ * The rail's unsynced marker — one 6px yellow dot, exactly the header chip's
+ * unsynced dot, on boards and the routine pool alike. It means exactly one
+ * thing — unsynced — and it is the only mark a fresh, idle row carries.
+ * Never colour alone: the sr-only label names the state for readers.
+ */
+function UnsyncedDot({ label }: { label: string }) {
+  return (
+    <span className="flex shrink-0 items-center">
+      <span
+        aria-hidden
+        data-testid="rail-draft"
+        className="size-1.5 rounded-full bg-yellow"
+      />
+      <span className="sr-only">, {label}</span>
+    </span>
+  )
+}
+
+/**
+ * A board's freshness readout (ADR-0035, rendered per ADR-0058). The always-on
+ * leading dot is gone: it was green on nearly every row — the idle state
+ * wearing a colour — while the board itself already rules the opposite way for
+ * the same fact (a fresh tile carries no pill; semantic colour only when it
+ * means something). The age was beside it the whole time and says strictly
+ * more than the dot did.
+ *
+ * So: the plain age in `ink-dim` when fresh, nothing when the board has never
+ * run, and — when a widget is overdue against its schedule — that age inside
+ * the **widget card's own stale pill** (`StatusPill` tone `stale`), one
+ * vocabulary for one fact across rail and board. The wash carries the tone and
+ * the label keeps full ink, because 12px semantic-coloured text misses AA on
+ * several light palettes. Never colour alone either: a pill is a form
+ * difference against every fresh row's bare age, and {@link NavItem} keeps the
+ * `sr-only` phrase that names the state in words.
+ */
+function Freshness({ age, stale }: { age: string | null; stale?: boolean }) {
+  if (!stale) {
+    return age == null ? null : (
+      <span
+        aria-hidden
+        className="font-mono text-xs text-ink-dim tabular-nums"
+        data-testid="rail-age"
+      >
+        {age}
+      </span>
+    )
+  }
+  return (
+    <span
+      aria-hidden
+      data-testid="rail-stale"
+      className="flex h-[18px] shrink-0 items-center rounded-sm border border-yellow/45 bg-yellow/10 px-1.5 font-mono text-xs text-ink tabular-nums"
+    >
+      {age}
+    </span>
+  )
+}
+
+/**
  * One board link, indented to hang off its group's spine. Boards carry full ink
- * at rest — the bright, primary tier under the muted captions. The leading slot,
- * pinned to the spine's x, is the board's **freshness dot** (ADR-0035), always
- * on: red when a widget is overdue, a quiet green when up to date, faint when
- * unknown. The active board overrides it to the accent — "you are here" outranks
- * freshness on the row you're already on — and reads as a node on the spine,
- * under the selection tint and heavier ink. To its right, a compact age
- * ("2h") reports when the board's stalest widget last ran. A board inside a
- * named section (`indented`) hangs one step deeper, its dot on a second column
- * just right of the spine — the extra indent nests it under its section label
- * (ADR-0034).
+ * at rest — the bright, primary tier under the muted captions, and the only
+ * tier that takes a fill. The active board reads by the selection wash, full
+ * `foreground` ink and a weight step; that is what the fill was always for, and
+ * it no longer has to outrank freshness for a marker column, because ADR-0058
+ * retired the marker column. To the right, a compact age ("2h") reports when
+ * the board's stalest widget last ran, pilled when it is overdue
+ * ({@link Freshness}). A board inside a named section (`indented`) hangs one
+ * step deeper — the extra indent nests it under its section label (ADR-0034).
  *
  * When `onRename`/`onDelete` are set the row carries a trailing `⋯` menu:
  * board-lifecycle actions live here, beside the board they act on, so any board
  * is actionable without switching to it first. Rename is offered on every
- * board; delete is withheld from each repo's default `main`. The menu rests
- * quiet — a faint glyph, no hover gate — and brightens as
- * the pointer nears (row, then button): present enough to find, dim enough to
- * recede against the board names. The Link is a sibling of the menu button
- * (never its parent) so no interactive control nests inside the anchor.
+ * board; delete is withheld from each repo's default `main`. The trigger rests
+ * invisible and appears with the pointer or focus (ADR-0058), but its slot is
+ * reserved either way, so the age never jumps aside for it. The Link is a
+ * sibling of the menu button (never its parent) so no interactive control nests
+ * inside the anchor.
  */
 function NavItem({
   to,
@@ -774,10 +871,9 @@ function NavItem({
       than an ungrouped board — nested under its section label (ADR-0034). */
   indented?: boolean
   /** The board's stalest widget's last publish, ISO — the age readout and,
-      with `stale`, the dot colour (ADR-0035). null → unknown (faint dot, no
-      age). */
+      with `stale`, whether it is pilled (ADR-0035). null → unknown (no age). */
   lastRunAt?: string | null
-  /** A widget is overdue against its schedule (ADR-0035) — reddens the dot. */
+  /** A widget is overdue against its schedule (ADR-0035) — pills the age. */
   stale?: boolean
   /** The rail's shared clock ({@link useNow}) the age is measured against. */
   now: number
@@ -806,49 +902,15 @@ function NavItem({
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "group relative flex min-w-0 flex-1 items-center rounded-md py-1 pr-2.5 font-mono text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:min-h-11",
-          indented ? "pl-10" : "pl-6",
-          hasMenu && "pr-8",
-          // Boards are the bright, primary tier under the muted captions (the
-          // Flow inversion: dim section headers, full-ink content). Active adds
-          // weight, the tint, and the accent dot on top of that same ink.
+          rowCls,
+          "min-w-0 flex-1 gap-2 font-mono",
+          indented && "pl-12",
+          hasMenu ? rowMenuPad : "pr-3",
           active
             ? "bg-primary/10 font-medium text-foreground"
             : "text-ink hover:bg-sidebar-accent/60",
         )}
       >
-        {/* Freshness dot (ADR-0035): active outranks freshness (accent); else
-            red = overdue, green = up to date, faint = unknown (never run or
-            beyond the scanned window). Never colour alone — the sr-only state
-            below names it for readers, and overdue differs in FORM for sighted
-            colorblind viewers: a hollow ring against every other state's solid
-            fill (red vs green alone is the classic deuteranopia confusable). */}
-        <span
-          aria-hidden
-          data-testid="freshness-dot"
-          data-freshness={
-            active
-              ? "active"
-              : stale
-                ? "stale"
-                : lastRunAt != null
-                  ? "fresh"
-                  : "unknown"
-          }
-          className={cn(
-            // One size for every freshness dot — active is marked by the accent,
-            // the selection tint, and heavier ink, not a larger dot.
-            "absolute top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors",
-            indented ? "left-[29px]" : "left-[13px]",
-            active
-              ? "bg-primary"
-              : stale
-                ? "border-[1.5px] border-red"
-                : lastRunAt != null
-                  ? "bg-green"
-                  : "bg-ink-faint/40 group-hover:bg-ink-faint",
-          )}
-        />
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {(stale || lastRunAt != null) && (
           <span className="sr-only">
@@ -861,19 +923,8 @@ function NavItem({
               }`}
           </span>
         )}
-        {(age != null || draft) && (
-          <span className="ml-2 flex shrink-0 items-center gap-2">
-            {age != null && (
-              <span
-                aria-hidden
-                className="font-mono text-xs text-ink-dim tabular-nums"
-              >
-                {age}
-              </span>
-            )}
-            {draft && <UnsyncedDot label={t("nav.unsynced")} />}
-          </span>
-        )}
+        <Freshness age={age} stale={stale} />
+        {draft && <UnsyncedDot label={t("nav.unsynced")} />}
       </Link>
       {hasMenu && (
         <DropdownMenu>
@@ -883,7 +934,7 @@ function NavItem({
                 variant="ghost"
                 size="icon-xs"
                 aria-label={t("board.menu")}
-                className="absolute right-1 size-6 text-ink-faint transition-colors group-hover/nav:text-ink-dim hover:bg-sidebar-accent hover:text-foreground focus-visible:text-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-foreground"
+                className={cn("absolute right-3 size-6", rowMenuCls)}
               />
             }
           >

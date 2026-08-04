@@ -77,13 +77,18 @@ const base = {
   displayName: "Alice",
 }
 
+/** A board row's link, matched on its *name* span — the row also carries an
+    age and an sr-only state phrase (ADR-0035/0058), so its whole textContent
+    is never just the slug. */
+const boardLink = (slug: string): HTMLAnchorElement | null =>
+  [...document.querySelectorAll<HTMLAnchorElement>("nav a")].find(
+    (a) => a.firstElementChild?.textContent?.trim() === slug,
+  ) ?? null
+
 /** The board rows are `<a>` per slug; each row's `⋯` trigger is its sibling
     button inside the same row wrapper. */
 const menuButton = (slug: string): HTMLButtonElement | null => {
-  const link = [...document.querySelectorAll("a")].find(
-    (a) => a.textContent?.trim() === slug,
-  )
-  const row = link?.parentElement ?? null
+  const row = boardLink(slug)?.parentElement ?? null
   return (
     row?.querySelector<HTMLButtonElement>(
       'button[aria-label="Dashboard options"]',
@@ -293,12 +298,45 @@ describe("DashboardSidebar per-board menu", () => {
     await renderSidebar()
 
     // A board you haven't switched to still carries its menu — the whole point
-    // of the change. And it's persistent, not opacity-gated on hover/active.
-    const inactive = requireMenuButton("test")
-    expect(getComputedStyle(inactive).opacity).toBe("1")
-
+    // of the change.
+    expect(menuButton("test")).not.toBeNull()
     // Shared repos' boards are all deletable too.
     expect(menuButton("team-ops")).not.toBeNull()
+  })
+
+  it("rests the ⋯ invisible without giving up its slot or its tab stop", async () => {
+    // ADR-0058: nine visible ⋯ down a 200px column was the busiest thing in
+    // the rail, so the trigger rests at opacity-0 and appears with the
+    // pointer or focus. Two things must survive that: it is `opacity`, never
+    // `display`, so the button keeps its box (the age never jumps aside for
+    // it) and its tab stop; and `focus-visible` reveals it for keyboard
+    // users, who have no hover to trade on.
+    await renderSidebar()
+    const button = requireMenuButton("test")
+    expect(getComputedStyle(button).opacity).toBe("0")
+    // Still laid out — a display-toggled control would measure 0×0 and let
+    // the trailing column reflow as the pointer crossed it.
+    expect(button.getBoundingClientRect().width).toBeGreaterThan(0)
+
+    button.focus()
+    await vi.waitFor(() => expect(getComputedStyle(button).opacity).toBe("1"))
+  })
+
+  it("keeps the ⋯ visible on coarse pointers, which have no hover", async () => {
+    await renderSidebar()
+    await cdp().send("Emulation.setTouchEmulationEnabled", {
+      enabled: true,
+      maxTouchPoints: 1,
+    })
+    try {
+      await vi.waitFor(() =>
+        expect(getComputedStyle(requireMenuButton("test")).opacity).toBe("1"),
+      )
+    } finally {
+      await cdp().send("Emulation.setTouchEmulationEnabled", {
+        enabled: false,
+      })
+    }
   })
 
   it("withholds delete (but not rename) from every repo's default board", async () => {
@@ -447,7 +485,7 @@ const groupHeader = (repo: string): HTMLElement | null =>
 
 const createFirstRow = (): HTMLButtonElement | null =>
   [...document.querySelectorAll("button")].find(
-    (el) => el.textContent?.trim() === "Create the first dashboard",
+    (el) => el.textContent?.trim() === "Create a dashboard",
   ) ?? null
 
 describe("DashboardSidebar repo groups", () => {
@@ -540,15 +578,84 @@ describe("DashboardSidebar repo groups", () => {
     expect(home?.textContent).not.toContain("2")
 
     // Shared but public: the globe wins the ladder — "anyone can see it"
-    // subsumes the collaborator count, so the rail shows no "2". The status
-    // is not the control (the ⋯ popover-trigger sits beside it), and the
-    // count still reaches screen readers via the sr-only label.
+    // subsumes the collaborator count, so the rail shows no "2". The count
+    // still reaches screen readers via the sr-only label beside the name.
     const shared = groupHeader(SHARED_REPO)
-    const status = shared?.querySelector('[data-testid="repo-status"]')
-    expect(status?.querySelector('[data-testid="repo-public"]')).not.toBeNull()
-    expect(status?.querySelector('[data-testid="repo-shared"]')).toBeNull()
-    expect(status?.querySelector("svg + :not(.sr-only)")).toBeNull()
-    expect(status?.textContent).toContain("2 people have access")
+    expect(shared?.querySelector('[data-testid="repo-public"]')).not.toBeNull()
+    expect(shared?.querySelector('[data-testid="repo-shared"]')).toBeNull()
+    expect(shared?.textContent).toContain("2 people have access")
+  })
+
+  it("leads the caption with the exposure glyph, ranked public → shared → private", async () => {
+    // ADR-0058 gave the rail's glyph column to the exposure ladder, because
+    // `FolderGit2` was identical on every repo — decoration holding the one
+    // slot that has to tell a repo caption from a section caption.
+    //
+    // Order is the ladder, not a null-check convenience: a *private* repo six
+    // people can push to is `Users`, not `Lock`. Reading `private` first
+    // showed a padlock on every shared team repo.
+    await renderSidebar({
+      sidebar: {
+        repos: [
+          {
+            ...base.sidebar.repos[0],
+            private: true,
+            collaborators: [
+              { login: "alice", avatarUrl: "" },
+              { login: "bob", avatarUrl: "" },
+            ],
+          },
+          base.sidebar.repos[1],
+        ],
+        complete: true,
+        degraded: false,
+      },
+    })
+    const home = groupHeader(HOME_REPO)
+    expect(home?.querySelector('[data-testid="repo-shared"]')).not.toBeNull()
+    expect(home?.querySelector('[data-testid="repo-private"]')).toBeNull()
+  })
+
+  it("falls back to the folder glyph when there is no exposure to report", async () => {
+    // The tier must never lose its leading glyph: without one, a repo caption
+    // is an 11px tracked-caps label at the same x as a section caption, and
+    // neither reads as the parent of the other.
+    await renderSidebar({
+      sidebar: {
+        repos: [
+          base.sidebar.repos[0],
+          {
+            ...base.sidebar.repos[1],
+            private: null,
+            collaborators: null,
+            viewerIsAdmin: null,
+          },
+        ],
+        complete: true,
+        degraded: false,
+      },
+    })
+    const shared = groupHeader(SHARED_REPO)
+    expect(shared?.querySelector('[data-testid="repo-glyph"]')).not.toBeNull()
+  })
+
+  it("reaches the repo's routines from its caption, not from a row", async () => {
+    // ADR-0058 moved the pool (ADR-0025) into the caption's trailing cluster:
+    // it is repo-scoped furniture, and as a row it cost a full row per repo.
+    await renderSidebar()
+    const link = groupHeader(HOME_REPO)?.querySelector<HTMLAnchorElement>(
+      `a[href*="${HOME_REPO}"]`,
+    )
+    expect(link?.getAttribute("href")).toContain("routines")
+    // Its accessible name names the repo — "Routines" alone repeats once per
+    // group with nothing to tell the two apart.
+    expect(link?.textContent).toContain(HOME_REPO)
+    // And it is gone from the board list.
+    expect(
+      [...document.querySelectorAll("nav a")].filter(
+        (a) => a.firstElementChild?.textContent?.trim() === "Routines",
+      ),
+    ).toHaveLength(0)
   })
 
   it("sets the group ⋯ glyph on the board rows' ⋯ column", async () => {
@@ -713,17 +820,19 @@ describe("DashboardSidebar repo groups", () => {
   })
 
   it("hangs the foot's actions on the boards' marker column", async () => {
-    // The rail has one glyph spine: every marker — repo headers, board rows,
-    // "New dashboard" — centers on the boards' `left-[13px]` column. The foot
-    // must join it, so "Add data repo" and the account avatar sit on the same
-    // line as the glyphs above them, not outdented in their own gutter.
+    // The rail has one glyph column: every glyph — the repo caption's
+    // exposure mark, the group spine, "New dashboard" — centers on it. The
+    // foot must join it, so "Add data repo" and the account avatar sit on the
+    // same line as the glyphs above them, not outdented in their own gutter.
     await renderSidebar()
     const centerX = (el: Element | null | undefined) => {
       if (!el) throw new Error("missing an element to measure")
       const r = el.getBoundingClientRect()
       return r.left + r.width / 2
     }
-    const spine = centerX(document.querySelector('[data-testid="repo-glyph"]'))
+    const spine = centerX(
+      document.querySelector('[data-testid="repo-private"]'),
+    )
     const addRepo = [...document.querySelectorAll("button")]
       .find((b) => b.textContent?.trim() === "Add data repo")
       ?.querySelector("svg")
@@ -772,11 +881,15 @@ describe("DashboardSidebar repo groups", () => {
   })
 })
 
-/** The board/pool row containing `label`, or null. */
+/** The board row containing `label`, or null. */
 const rowFor = (label: string): HTMLAnchorElement | null =>
   [...document.querySelectorAll<HTMLAnchorElement>("nav a")].find((a) =>
     (a.textContent ?? "").includes(label),
   ) ?? null
+
+/** A repo's caption — where its routines control lives (ADR-0058). */
+const captionFor = (repo: string): HTMLElement | null =>
+  document.querySelector<HTMLElement>(`nav div[title="${repo}"]`)
 
 const draftDots = (row: HTMLElement | null) =>
   row?.querySelectorAll('[data-testid="rail-draft"]').length ?? 0
@@ -802,30 +915,30 @@ describe("DashboardSidebar state markers", () => {
     expect(draftDots(rowFor("main"))).toBe(0)
     expect(draftDots(rowFor("team-ops"))).toBe(0)
 
-    // Exactly one Routines row marked: the shared repo's.
-    const routineRows = [
-      ...document.querySelectorAll<HTMLAnchorElement>("nav a"),
-    ].filter((a) => (a.textContent ?? "").includes("Routines"))
-    expect(routineRows.map((row) => draftDots(row))).toEqual([0, 1])
+    // The pool's draft rides its repo's caption now that the pool is a
+    // control there rather than a row (ADR-0058) — and only that repo's.
+    expect(draftDots(captionFor(SHARED_REPO))).toBe(1)
+    expect(draftDots(captionFor(HOME_REPO))).toBe(0)
 
-    // The marker names its state for readers, not color alone.
+    // The marker names its state for readers, not color alone — and the
+    // pool's says which state, since it sits on a caption rather than beside
+    // the word "Routines".
     expect(rowFor("test")?.textContent).toContain("Unsynced changes")
+    expect(captionFor(SHARED_REPO)?.textContent).toContain(
+      "Routines have unsynced changes",
+    )
   })
 
-  it("marks the repo's Routines row while a client-fired run is in flight", async () => {
+  it("marks the repo's routines control while a client-fired run is in flight", async () => {
     localStorage.setItem(
       `${PENDING_RUN_KEY_PREFIX}${HOME_REPO}:repo-pulse`,
       JSON.stringify({ firedAt: Date.now(), sha: null }),
     )
     await renderSidebar()
 
-    const routineRows = [
-      ...document.querySelectorAll<HTMLAnchorElement>("nav a"),
-    ].filter((a) => (a.textContent ?? "").includes("Routines"))
-    await vi.waitFor(() =>
-      expect(routineRows.map((row) => runningDots(row))).toEqual([1, 0]),
-    )
-    expect(routineRows[0]?.textContent).toContain("Run in flight")
+    await vi.waitFor(() => expect(runningDots(captionFor(HOME_REPO))).toBe(1))
+    expect(runningDots(captionFor(SHARED_REPO))).toBe(0)
+    expect(captionFor(HOME_REPO)?.textContent).toContain("Run in flight")
     // Board rows never claim "running" — runs belong to the pool.
     expect(runningDots(rowFor("main"))).toBe(0)
   })
@@ -882,7 +995,7 @@ describe("DashboardSidebar freshness (ADR-0035)", () => {
   const ago = (ms: number) => new Date(Date.now() - ms).toISOString()
   const HOUR = 3600_000
 
-  it("marks each board's freshness with a dot and an age", async () => {
+  it("reports freshness as the age alone, pilling only what is overdue", async () => {
     // No active board here, so the freshness colours show rather than the
     // active-accent override.
     await renderSidebar({
@@ -919,22 +1032,42 @@ describe("DashboardSidebar freshness (ADR-0035)", () => {
       },
     })
 
-    // One dot per board, in render order, coloured by state.
-    const dots = [
-      ...document.querySelectorAll('[data-testid="freshness-dot"]'),
-    ].map((d) => d.getAttribute("data-freshness"))
-    expect(dots).toEqual(["fresh", "stale", "unknown"])
+    // ADR-0058: no marker on a fresh row. The dot was green on nearly every
+    // board — the idle state wearing a colour — while the board itself
+    // already rules the opposite way for the same fact (a fresh tile carries
+    // no pill). The age was beside it the whole time and says more.
+    // One plain age, on the one fresh board: the overdue one spends its slot
+    // on the pill instead, and the never-run one has nothing to report.
+    expect(document.querySelectorAll('[data-testid="rail-age"]')).toHaveLength(
+      1,
+    )
+    expect(rowFor("fresh")?.textContent).toContain("2h")
 
-    // Ages read for known boards; the unknown board shows none.
-    expect(document.body.textContent).toContain("2h")
-    expect(document.body.textContent).toContain("6d")
+    // Only the overdue board carries colour, in the widget card's own stale
+    // pill — one vocabulary for one fact across rail and board.
+    const pills = document.querySelectorAll('[data-testid="rail-stale"]')
+    expect(pills).toHaveLength(1)
+    expect(pills[0]?.textContent).toBe("6d")
+    expect(
+      rowFor("old")?.querySelector('[data-testid="rail-stale"]'),
+    ).not.toBeNull()
+
+    // A board that has never run shows nothing at all, not a faint dot.
+    expect(rowFor("new")?.querySelector('[data-testid="rail-age"]')).toBeNull()
+    expect(
+      rowFor("new")?.querySelector('[data-testid="rail-stale"]'),
+    ).toBeNull()
+
     // The stale board names its state for readers, never colour alone.
-    expect(document.body.textContent).toContain("Stale")
+    expect(rowFor("old")?.textContent).toContain("Stale")
   })
 
-  it("overrides freshness with the accent on the active board", async () => {
-    // base's active board is HOME_REPO/main — give it a fresh timestamp and it
-    // must still read "active", not "fresh" (you-are-here outranks freshness).
+  it("marks the active board by its fill, not by outranking freshness", async () => {
+    // The dot used to override to the accent on the active row, because
+    // "you are here" and "how fresh" were competing for one marker. With the
+    // marker column retired (ADR-0058) they don't compete: the selection
+    // fill, full ink and a weight step carry the current board, and its age
+    // reads exactly as any other row's.
     await renderSidebar({
       sidebar: {
         repos: [
@@ -955,9 +1088,19 @@ describe("DashboardSidebar freshness (ADR-0035)", () => {
         degraded: false,
       },
     })
-    const active = document.querySelector(
-      '[data-testid="freshness-dot"][data-freshness="active"]',
+    const active = boardLink("main")
+    expect(active?.getAttribute("aria-current")).toBe("page")
+    expect(active?.querySelector('[data-testid="rail-age"]')?.textContent).toBe(
+      "1h",
     )
-    expect(active).not.toBeNull()
+    // The fill is what says "you are here", and it is full-bleed: the rail's
+    // rows are square and edge to edge, so the wash reaches both panel edges.
+    const railEl = document.querySelector(".rail")
+    if (!railEl || !active) throw new Error("no rail, or no active board")
+    const rail = railEl.getBoundingClientRect()
+    const box = active.getBoundingClientRect()
+    expect(box.left).toBeCloseTo(rail.left, 0)
+    expect(box.right).toBeCloseTo(rail.right, 0)
+    expect(getComputedStyle(active).borderTopLeftRadius).toBe("0px")
   })
 })

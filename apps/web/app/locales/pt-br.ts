@@ -91,7 +91,9 @@ export const ptBR: Messages = {
   "nav.expand": "Expandir a barra lateral",
   "nav.resize": "Redimensionar a barra lateral",
   "nav.routines": "Rotinas",
+  "nav.repoRoutines": "Rotinas em {repo}",
   "nav.unsynced": "Mudanças não sincronizadas",
+  "nav.routinesUnsynced": "As rotinas têm mudanças não sincronizadas",
   "nav.runInFlight": "Execução em andamento",
   "nav.stale": "Desatualizado",
   "nav.fresh": "Em dia",
@@ -226,7 +228,7 @@ export const ptBR: Messages = {
   "switcher.label": "Painel",
   "switcher.personal": "Pessoal",
   "switcher.new": "Novo painel",
-  "switcher.newHere": "Criar o primeiro painel",
+  "switcher.newHere": "Criar um painel",
   "switcher.addRepo": "Adicionar repo de dados",
   "switcher.incomplete":
     "Alguns repos podem estar faltando — a busca do GitHub falhou",

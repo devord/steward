@@ -70,9 +70,9 @@ tokyo night blue). In artifacts the accent keeps its historical
 Gruvbox is the exception, and the reason generalizes: **the accent must
 stay distinct from `green`, and it has to survive being a fill.**
 gruvbox-material's signature is its green, but it spends one color on both
-accent and success — while Steward spends `green` on the freshness dot and
-diff additions of every tile, so an olive accent would make the primary
-action the same color as the status beside it. It also can't carry a button
+accent and success — while Steward spends `green` on the routine ledger's
+up-to-date state and on diff additions, so an olive accent would make the
+primary action the same color as the status beside it. It also can't carry a button
 label: gruvbox palettes calibrate their colors to be read _as ink on the
 background_ (material's own filled surfaces are dim washes under colored
 text), so the light green drops to 3.83:1 once inverted into a solid fill,
@@ -150,6 +150,17 @@ same slot follows: the loading skeleton, the drag-and-drop placeholder
 (`app.css`), and the empty-board well; a rounded stand-in under a square
 tile flickers shape mid-load.
 
+**The rail's rows are square and full-bleed** for the same reason (ADR-0058):
+a nav row does not float, so its hover and selection washes span the rail edge
+to edge with no radius and no inter-row gap — a file-tree row, the read the
+brand already claims. The rounded pill inset in an 8px margin was the wrong
+material sitting beside square tiles, and it turned a touch-sized row into a
+floating slab the moment the selection wash filled it. **Only rows take a
+fill**; captions never do, which is what lets a reader answer "is this a place
+I can go" by sweeping the pointer. Their focus ring goes inset, since the nav
+is a scroll container and an outset ring on a full-bleed row is clipped at
+both edges.
+
 Chrome that floats over an artifact shares the artifact's edge, not its own.
 The tile's shell padding is `12px 14px` (widget-standard), so the widget-card
 title bar takes a 14px inline inset: the routine name sits on the same left
@@ -202,6 +213,28 @@ surface and sets its own inset.
   Captions carry their member count at rest (`aria-hidden`; the items are
   listed right below): a bare word heading a list is decoration, the number is
   what makes it navigation.
+- **Two captions may not nest in one voice** (ADR-0058). The rail stacks a
+  repo caption over a section caption, and both were the tier verbatim — same
+  size, same caps, same `ink-dim`, labels starting at the same x, separated by
+  a weight step and a leading glyph every repo carried alike. Neither read as
+  the parent. So the **repo caption overrides the tier's ink to full
+  `foreground`** while the section keeps `ink-dim`: ADR-0049's rule one tier
+  down — what a caption heads is what decides its prominence, and a repo heads
+  sections which head boards. It stays 11px, so its cap height still sits
+  under the 14px board names and the boards remain the bright content. The
+  rail's three tiers now differ from their neighbour on at least three axes at
+  once, so no single one has to carry the hierarchy:
+
+  |               | data repo     | section   | board                  |
+  | ------------- | ------------- | --------- | ---------------------- |
+  | leading glyph | exposure mark | —         | —                      |
+  | label x       | 32            | 32        | 32, or 48 in section   |
+  | size / case   | 11px CAPS     | 11px CAPS | 14px, the slug         |
+  | weight        | semibold      | medium    | normal (medium active) |
+  | ink           | `foreground`  | `ink-dim` | `ink`                  |
+  | air above     | 40px          | 24px      | 0 — contiguous         |
+  | takes a fill  | never         | never     | hover + active         |
+
 - **The board's band heading is not in that tier** (ADR-0049).
   `bandHeadingCls`: the same tracked UPPERCASE landmark at **`text-sm` (14px),
   semibold, full `foreground`**, its count one step down at `text-xs`. What a
@@ -508,10 +541,10 @@ finds the groups without reading them:
 
 | Boundary                      | Gap     |
 | ----------------------------- | ------- |
-| sibling rows within a group   | 2px     |
+| sibling rows within a group   | 0       |
 | a caption and its own content | 8px     |
-| a group and the next caption  | 20–22px |
-| top-level band to band        | 32px    |
+| a group and the next caption  | 24px    |
+| top-level band to band        | 32–40px |
 
 A **collapsed** band is the exception, and it proves the rule: it drops to the
 8px caption step (ADR-0049). The 32px belongs to the content it separates, and
@@ -531,13 +564,31 @@ tiers spent the same gap. A repo group's first section opened the full
 between-groups air below the repo caption (leaving the caption equidistant
 from the group above and its own contents — a heading attached to nothing),
 while the boundary _between_ repos was tighter still, at 16px. So a new data
-repo announced itself more quietly than a new section did. The rail's four
-boundaries now read 2 / 8 / 22 / 32: rows, caption-to-its-content (a repo
-caption to its first section or board, a section to its boards), section to
-section, repo group to repo group. The board's bands take the same 32px at
-their own tier. Frame insets are not rungs on this ladder: the rail's nav
-and foot both inset 8px, so every hairline in the chrome clears its nearest
-row by the same amount.
+repo announced itself more quietly than a new section did. The rail's
+boundaries read 8 / 24 / 40 (ADR-0058): caption-to-its-content (a repo caption
+to its first section or board, a section to its boards), section to section,
+repo group to repo group. Rows themselves are **contiguous** — they are
+full-bleed fills, so a gap between two of them is a seam in the surface rather
+than air, and the row's own padding is the breathing room. The board's bands
+take 32px at their own tier. Frame insets are not rungs on this ladder: the
+rail's nav and foot both inset 8px, so every hairline in the chrome clears its
+nearest row by the same amount.
+
+**Gaps are stated optically and spent net of any padding they land on**
+(ADR-0058). A row's vertical padding is hit area, not visual weight, so a
+caption sitting 8px above a padded row measures 14px on screen — and the rail
+shipped exactly that, with a section caption looking further from its own
+boards than from the repo containing them. Every boundary adjacent to a row
+gives one row-pad back.
+
+**A pointer variant may not move one rung of a ladder.** The rail's boundaries
+and its row padding are five custom properties on one element (`--rail-*` in
+app.css) with a single `@media (pointer: coarse)` block scaling all of them
+1.25×. Before that, only the row height had a touch variant
+(`pointer-coarse:min-h-11`), which put 46px of whitespace inside a group
+against 22px between two sections: the widest boundary became the narrowest,
+and the phone rail read as an evenly spaced ladder of unrelated rows. Scaling
+density is scaling the whole ladder or it is inverting it.
 
 - Dashboard grid: 4 columns desktop / 2 tablet / 1 phone, 150px row unit,
   12px gap (`.dash-grid` in app.css; placement via CSS custom properties).
@@ -566,7 +617,20 @@ row by the same amount.
   create verb goes ghost with the accent on the glyph, because a lone solid
   square out-shouts a slim header. The widget bar's hover-revealed
   actions collapse into one ⋯ menu on coarse pointers so the title
-  keeps its bar.
+  keeps its bar. A **full-bleed list row** obeys the same cap rather than
+  the 44px figure (ADR-0058): the rail's rows carry the selection wash, so
+  they land at 40px on coarse, and a 40px row spanning a 288px drawer is a
+  target no thumb misses (WCAG 2.5.8's floor is 24px). Where a row's
+  padding grows, every boundary around it grows by the same factor — see
+  the ladder rule in § Layout.
+- **Hover-revealed row actions.** A per-row `⋯` rests at `opacity-0` and
+  appears on row hover, `focus-visible`, or while open, and stays visible on
+  coarse pointers, which have no hover (ADR-0058). Two rules make it safe:
+  `opacity`, never `display`, so the trigger keeps its tab stop and its box;
+  and its **slot stays reserved** rather than swapping in over whatever the
+  row's trailing column holds — a column that trades content for controls
+  flickers down the whole list as the pointer crosses it on the way to one
+  row.
 - Dialogs: never override the base `max-w-*` (it is the phone edge
   margin). Widen with `sm:max-w-*`; tall content gets `max-h-[85svh]` + a
   scrollable middle. Width follows **what the surface holds, not how big

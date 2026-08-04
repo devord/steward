@@ -44,18 +44,42 @@ const MAX_LISTED = 12
 /**
  * A rail group's identity row (ADR-0023): the repo's display name — its
  * data/repo.yaml `name`, else "Personal" / the short repo name (ADR-0026) —
- * in the group-heading voice, then two distinct trailing marks. A **quiet
- * exposure glyph** is status, not a control: it reads at a glance and never
- * acts (a lock that secretly opened a menu was the affordance lying about
- * its job). One glyph on a private → shared → public ladder answers the only
- * at-a-glance question — who can see this: `Lock` (only you), `Users` (shared
- * with specific people), `Globe` (public, where "anyone can see it" subsumes
- * the count). The exact people — a bare "6" floats without a noun — leave the
- * rail for the popover, where avatars and logins actually read; the rail just
- * says how exposed the repo is. Beside it, a **`⋯` control** opens the
- * access popover — the same status-vs-actions split, and the same `⋯` glyph,
- * the board rows already carry one line down, so the rail teaches the idiom
- * once. The popover splits along the same seam as the rail's status-vs-actions
+ * heading its boards, with the **exposure glyph leading it** and a trailing
+ * cluster of controls.
+ *
+ * **The leading glyph is the exposure ladder** (ADR-0058), and it is status,
+ * not a control: it reads at a glance and never acts (a lock that secretly
+ * opened a menu was the affordance lying about its job). One glyph on a
+ * private → shared → public ladder answers the only at-a-glance question —
+ * who can see this: `Lock` (only you), `Users` (shared with specific people),
+ * `Globe` (public, where "anyone can see it" subsumes the count). The exact
+ * people — a bare "6" floats without a noun — leave the rail for the popover,
+ * where avatars and logins actually read.
+ *
+ * It took that column from `FolderGit2`, which every repo carried alike:
+ * decoration that doesn't inform, holding the one slot that had to tell a repo
+ * caption apart from a section caption. The folder survives only as the
+ * fallback when visibility is unknown, because the tier must never lose its
+ * glyph and collapse into the section voice. The glyph also roots the group's
+ * spine, so the line threading the boards now hangs from something that says
+ * what kind of repo they belong to.
+ *
+ * **The caption takes full `foreground` ink**, where a section caption stays
+ * `ink-dim` — ADR-0049's rule one tier down: what a caption heads is what
+ * decides its prominence, and a repo heads sections which head boards. It
+ * stays at the 11px caption tier, so its cap height still sits under the 14px
+ * board names and the boards stay the bright content.
+ *
+ * **The trailing cluster is `[unsynced?] [Routines] [⋯]`.** Routines
+ * (ADR-0025, moved here by ADR-0058) is the repo's pool of what runs — repo
+ * furniture, so it belongs on the repo's row; the caller passes it in so this
+ * component doesn't need the rail's client-local run/draft state. The `⋯`
+ * opens the access popover — the same status-vs-actions split, and the same
+ * `⋯` glyph, the board rows carry one line down, so the rail teaches the
+ * idiom once. Unlike those, this one never hides: a caption has no row fill to
+ * hover, so there is nothing for a reveal to key on.
+ *
+ * The popover splits along the same seam as the rail's status-vs-actions
  * cluster: a **read-only disclosure** up top (the full repo slug, visibility in
  * words, who has access at a readable size) sits over an **actions** row — a
  * jump to GitHub for sharing (its own screen is the source of truth), and, for
@@ -65,18 +89,22 @@ const MAX_LISTED = 12
  * RenameRepoDialog}) the way a board's rename does, never an inline field
  * wedged inside the sharing panel.
  *
- * The rail itself stays a status cluster plus one `⋯` wide — the name owns
- * the row; the people moved into the popover where 20px avatars and logins
- * actually read.
- *
  * Everything degrades to less, quietly: unlistable collaborators (plain
  * readers get a 403) drop the count and the popover's list, unknown
- * visibility drops the glyph and the visibility line. With nothing to
- * disclose at all (no status, no `⋯`), the row gives way to the bare
- * hover-revealed GitHub link — the home group then reads as just its leading
- * glyph and name, the trailing side bare.
+ * visibility falls back to the folder glyph and drops the visibility line.
+ * With nothing to disclose at all (no status, no `⋯`), the row gives way to
+ * the bare hover-revealed GitHub link.
  */
-export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
+export function RepoGroupHeader({
+  group,
+  routines,
+}: {
+  group: SidebarRepo
+  /** The repo's routines control, rendered at the head of the trailing
+      cluster (ADR-0058) — supplied by the rail, which owns the client-local
+      run and draft state it reports. */
+  routines?: React.ReactNode
+}) {
   const t = useT()
   // The ⋯ popover's own open state, so picking "Rename repo" can close the
   // disclosure before the write dialog takes over the surface.
@@ -117,87 +145,87 @@ export function RepoGroupHeader({ group }: { group: SidebarRepo }) {
     ? t("repo.manageAccess", { repo: group.repo })
     : t("repo.viewOnGitHub", { repo: group.repo })
 
+  // The exposure ladder's glyph, leading the caption and rooting the spine
+  // (ADR-0058). `FolderGit2` is the fallback, not the default: with
+  // visibility unknown *and* nothing shared there is no exposure to report,
+  // and a caption with no glyph at all would read as a section.
+  // Order is the ladder itself, not a null-check convenience: public wins
+  // outright (it subsumes any collaborator count), then sharing, then the
+  // solo lock — and only with no exposure fact at all does the folder stand
+  // in. Reading `private` before `shared` would show a lock on a repo six
+  // people can push to.
+  const [Exposure, exposureTestId] =
+    group.private === false
+      ? ([Globe, "repo-public"] as const)
+      : shared
+        ? ([Users, "repo-shared"] as const)
+        : group.private === true
+          ? ([Lock, "repo-private"] as const)
+          : ([FolderGit2, "repo-glyph"] as const)
+
   return (
     <div
-      // pr-1.5, not pr-1: the ⋯ here is size-5 while the board rows' is
-      // size-6 with right-1 — the extra 2px puts both glyphs' optical
-      // centers on one column (the buttons are invisible at rest, so the
-      // glyph, not the box edge, is what must align). On coarse pointers
-      // both buttons take the icon-xs size-8 floor, so the 2px compensation
-      // inverts: pr-1 matches the rows' right-1 exactly.
-      // pl-6 (not pl-2.5): the name now clears a leading identity glyph pinned
-      // to the marker column, so the heading joins the group's glyph column
-      // (repo → boards → pool) and roots it — the name aligns with the board
-      // names it heads, one tier up by weight and voice, not by outdent.
-      // mb-2 — the rhythm law's caption-to-its-own-content step (8px,
-      // DESIGN.md § Layout), the same one {@link SectionLabel} gives its
-      // boards. It was 2px, the row-to-row gap: at that distance the caption
-      // read as another row rather than as the head of one, and since the
-      // group's first section then had to open its own air *below* the
-      // caption, the repo heading ended up equidistant from the group above it
-      // and the section under it — a heading attached to nothing. 8px is close
-      // enough to bind, wide enough to rank.
-      className="group/repo relative mb-2 flex h-5 items-center gap-1.5 pr-1.5 pl-6 pointer-coarse:pr-1"
+      // pr-3.5, not pr-3: the ⋯ here is size-5 while the board rows' is
+      // size-6 at right-3 — the extra 2px puts both glyphs' optical
+      // centers on the one trailing column every rail ⋯ shares, 24px in from
+      // the rail's right edge (the buttons are near-invisible at rest, so the
+      // glyph, not the box edge, is what must align). On coarse pointers both
+      // buttons take the icon-xs size-8 floor, so the 2px compensation
+      // inverts: pr-3 matches the rows' right-3 exactly.
+      // pl-8: the name clears the leading exposure glyph pinned to the rail's
+      // 21px glyph column, so the heading roots that column (repo → spine →
+      // boards) — the name aligns with the board names it heads, one tier up
+      // by ink, weight and glyph, not by outdent.
+      // The caption-to-its-own-content step is a rung of the rail's one rhythm
+      // ladder (`--rail-caption-gap`, app.css), the same one {@link
+      // SectionLabel} gives its boards. It was the row-to-row gap once: at that
+      // distance the caption read as another row rather than as the head of
+      // one, and since the group's first section then had to open its own air
+      // *below* the caption, the repo heading ended up equidistant from the
+      // group above it and the section under it — a heading attached to
+      // nothing.
+      className="group/repo relative mb-(--rail-caption-gap) flex h-5 items-center gap-1.5 pr-3.5 pl-8 pointer-coarse:pr-3"
       title={group.repo}
     >
-      {/* The repo tier's anchor (ADR-0023): a repo glyph on the marker column
-          (left-[13px], the boards' own glyph x) that tops the group's spine and
-          fronts the caption — the "icon · label · count" header idiom. size-3
-          (12px) reads at the 11px caps' optical weight rather than looming over
-          them. Rhymes with the foot's "Add data repo" glyph — that makes a new
-          group; this marks each one. */}
-      <FolderGit2
+      {/* The repo tier's anchor (ADR-0023/0058): the exposure glyph on the
+          rail's 21px glyph column, topping the group's spine and fronting the
+          caption — the "icon · label · count" header idiom. Status, not a
+          control: it reads at a glance and never acts; the actions live in the
+          cluster opposite. size-3 (12px) reads at the 11px caps' optical
+          weight rather than looming over them. ink-dim, not ink-faint, because
+          the caption beside it now carries full ink and a faint glyph would
+          detach from its own label. */}
+      <Exposure
         aria-hidden
-        data-testid="repo-glyph"
-        className="absolute top-1/2 left-[13px] size-3 -translate-x-1/2 -translate-y-1/2 text-ink-faint"
+        data-testid={exposureTestId}
+        className="absolute top-1/2 left-[21px] size-3 -translate-x-1/2 -translate-y-1/2 text-ink-dim"
       />
-      {/* A caption, not a big heading — the shared caption tier (ADR-0048,
-          `railCaptionCls`): text-2xs semibold UPPERCASE, tracked, ink-dim, the
-          terminal section-header idiom (tmux/lazygit, and Flow's overview).
-          Small reads as a deliberate caption *because* it's tracked caps with a
-          glyph and a trailing count, not as a shrunk item; that lets the boards
-          below be the bright, primary tier. ink-dim clears AA at this size (the
-          user reads it to steer). The face no longer forks on prose-vs-
-          identifier: chrome is one material, and a caption that changed family
-          depending on whether the repo had a display name made the rail's own
-          heading tier look inconsistent with itself. */}
-      <span className={cn(railCaptionCls, "truncate")}>
+      {/* A caption, not a big heading — the caption tier (ADR-0048,
+          `railCaptionCls`): text-2xs semibold UPPERCASE, tracked, the terminal
+          section-header idiom (tmux/lazygit, and Flow's overview). Small reads
+          as a deliberate caption *because* it's tracked caps with a glyph and a
+          trailing count, not as a shrunk item; that lets the boards below be
+          the bright, primary tier.
+          It overrides the tier's `ink-dim` to full `foreground` (ADR-0058):
+          the section caption one tier in keeps the dim, and a repo that heads
+          sections which head boards has to outrank both. At 11px its cap
+          height still sits under the 14px board names, so the boards stay the
+          content and this stays the landmark.
+          The face no longer forks on prose-vs-identifier: chrome is one
+          material, and a caption that changed family depending on whether the
+          repo had a display name made the rail's own heading tier look
+          inconsistent with itself. */}
+      <span className={cn(railCaptionCls, "truncate text-foreground")}>
         {group.displayName ??
           (group.isHome ? t("switcher.personal") : group.name)}
       </span>
+      {/* The words and the count the single glyph can't carry. It rides the
+          label rather than the glyph so it reads in document order right after
+          the name it qualifies. */}
+      {statusLabel !== "" && <span className="sr-only">{statusLabel}</span>}
 
       <span className="ml-auto flex shrink-0 items-center gap-1">
-        {/* Status, not a control: one exposure glyph on the private → shared →
-            public ladder, resting quiet. It reads at a glance and never acts —
-            the actions live under the ⋯ beside it. Screen readers get the
-            words and the count; the glyph is the at-a-glance shorthand. */}
-        {(group.private != null || shared) && (
-          <span
-            data-testid="repo-status"
-            className="flex items-center text-ink-faint"
-          >
-            {group.private === false ? (
-              <Globe
-                aria-hidden
-                className="size-3 shrink-0"
-                data-testid="repo-public"
-              />
-            ) : shared ? (
-              <Users
-                aria-hidden
-                className="size-3 shrink-0"
-                data-testid="repo-shared"
-              />
-            ) : (
-              <Lock
-                aria-hidden
-                className="size-3 shrink-0"
-                data-testid="repo-private"
-              />
-            )}
-            <span className="sr-only">{statusLabel}</span>
-          </span>
-        )}
+        {routines}
 
         {group.private != null || shared || group.viewerCanPush ? (
           <Popover open={menuOpen} onOpenChange={setMenuOpen}>
