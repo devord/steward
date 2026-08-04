@@ -1,8 +1,11 @@
 /**
  * Generate the built-in templates' picker previews (ADR-0037) by rendering the
- * kit's archetype fixtures (ADR-0050). Run
- * `node scripts/gen-template-previews.ts` **after** the kit build; CI re-runs
- * both and fails if the working tree moves, so the output is never hand-edited.
+ * kit's archetype fixtures (ADR-0050). The kit build runs this as its last step,
+ * so a rebuild cannot leave the previews on the stylesheet before it. Run
+ * `node scripts/gen-template-previews.ts` directly only to pick up a fixture or
+ * `PREVIEWS` change against a kit that has not moved; either way the kit must be
+ * built first. CI re-runs it and fails if the working tree moves, so the output
+ * is never hand-edited.
  *
  * These files used to be authored by hand: three artifacts of 42–70 KB, each
  * one a full hand-written document of HTML, CSS and a transcribed fit script.
