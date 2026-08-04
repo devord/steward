@@ -84,6 +84,31 @@ describe("a clean kit render", () => {
     // noise at that level is indistinguishable from a real finding.
     expect(validate(clean)).toEqual({ errors: 0, warnings: 0 })
   })
+
+  it("passes a render with no data-fit-item anywhere in the markup", () => {
+    // tiers.css is @import-ed into every compiled stylesheet unconditionally,
+    // and it carries the attribute selector `[data-fit-list] > thead` — so a
+    // whole-file substring scan for "data-fit-list" is true on every render,
+    // Throughput/prose-only ones included. A `prose` block (and `throughput`,
+    // repo-stats's band) deliberately has no `data-fit-item` anywhere — there
+    // is nothing to trim — so this must not trip the fit-wiring check.
+    const css = readFileSync(path.join(kitDir, "kit", "kit.css"), "utf8")
+    const noFitMarkup = renderArtifact(
+      {
+        slug: "prose-only-probe",
+        title: "Prose-only probe",
+        generatedAt: "2026-07-30T09:00:00Z",
+        blocks: [
+          {
+            kind: "prose",
+            items: [{ id: "p1", body: "Nothing here needs trimming." }],
+          },
+        ],
+      },
+      css,
+    )
+    expect(validate(noFitMarkup).errors).toBe(0)
+  })
 })
 
 describe("errors", () => {

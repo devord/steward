@@ -200,7 +200,15 @@ for (const file of files) {
     // *crops* it instead of shortening it. Hit three times during the migration
     // — the verdict band, the rails, and very nearly the day grid — which is
     // why it is an error rather than a warning.
-    if (html.includes("data-fit-list") && !html.includes("data-fit-item")) {
+    //
+    // Scanned with the inlined `<style>` stripped out: tiers.css carries the
+    // attribute selector `[data-fit-list] > thead` unconditionally in every
+    // render, so a naive whole-file scan sees "data-fit-list" even when no
+    // element in the markup carries it. That false match went uncaught until
+    // a render with genuinely no `data-fit-item` anywhere (a chart band with
+    // no note/caveat/ledger) hit it for the first time (repo-stats).
+    const markup = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    if (markup.includes("data-fit-list") && !markup.includes("data-fit-item")) {
       errors.push(
         "[data-fit-list] with no [data-fit-item] inside — the injected pass " +
           "has nothing to trim, so the tile will clip instead of degrading",
