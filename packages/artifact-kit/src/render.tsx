@@ -291,7 +291,7 @@ const NO_CHARTS: ArtifactCharts = new Map()
 /** Block → the key its compiled chart is stored under. See chart/requests.ts. */
 export type ChartKeyMap = ReadonlyMap<object, string> | WeakMap<object, string>
 
-const EMPTY_SVG = { page: "", detail: "", narrow: "" }
+const EMPTY_SVG = { wide: "", page: "", detail: "", narrow: "" }
 
 function Band({
   block,

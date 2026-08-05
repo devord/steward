@@ -56,6 +56,14 @@ does say:
   argument is `prose`, a qualifier is `rail: true`, an auditor's appendix is
   `pageOnly: true`. A magnitude is a `meter` on a column, not a new
   component.
+- **A relationship is a `chart`** (ADR-0062), and you name the form: any of
+  flint's catalogue — scatter, ranked bar, slope, heatmap, gantt, ranged dot
+  and thirty-odd more. Reach for one when the claim is a **shape** the rows
+  cannot make: a cluster, a spread between two dates, a correlation. A ranking
+  is still a sorted `queue` with a `meter`, and a single magnitude is still a
+  `stat` — a chart of four bars is a table that got lost. Charts are page-only,
+  so they cost a tile nothing and give it nothing; put the finding in the
+  glance and let the chart carry the evidence for it.
 - **If nothing in the contract fits**, that is worth saying in the run
   rather than working around: a shape this template cannot express is a
   missing kit component, and the next routine to want it will hit the same

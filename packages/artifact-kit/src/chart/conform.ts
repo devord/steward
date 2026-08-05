@@ -18,7 +18,7 @@ import { PALETTE } from "../tokens/palette.ts"
  */
 
 /** Every colour an artifact is allowed to paint, lowercased for comparison. */
-const ALLOWED: ReadonlySet<string> = new Set(
+export const ALLOWED: ReadonlySet<string> = new Set(
   Object.values(PALETTE).map((c) => c.toLowerCase()),
 )
 

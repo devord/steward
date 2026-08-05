@@ -56,6 +56,14 @@ export interface ChartSpec {
  * budget is the viewport at that breakpoint less 40px.
  */
 const TIER_FIT = {
+  /**
+   * `tier-page` is `min-width: 900px` and open-ended, so sizing its render for
+   * 900px sized it for the *narrowest* viewport that triggers it. An expanded
+   * artifact on a wide board is 1700px and up, and got the same 860px SVG with
+   * the remainder left blank — roughly half the frame. `wide` is the tier that
+   * was missing above `page`, cut at the board's own wide breakpoint.
+   */
+  wide: { box: { width: 1420, height: 360 }, budget: 1500 },
   page: { box: { width: 780, height: 300 }, budget: 860 },
   detail: { box: { width: 580, height: 260 }, budget: 660 },
   narrow: { box: { width: 220, height: 200 }, budget: 300 },
@@ -65,12 +73,13 @@ const TIER_FIT = {
  * The tiers, listed rather than derived from `Object.keys`, which is typed
  * `string[]` and would need an assertion the repo forbids outside tests.
  */
-const TIERS = ["page", "detail", "narrow"] as const
+const TIERS = ["wide", "page", "detail", "narrow"] as const
 
 export type ChartTier = (typeof TIERS)[number]
 
 /** What a tier's render may not exceed. Read by `conformChart`. */
 export const TIER_BUDGET: Record<ChartTier, number> = {
+  wide: TIER_FIT.wide.budget,
   page: TIER_FIT.page.budget,
   detail: TIER_FIT.detail.budget,
   narrow: TIER_FIT.narrow.budget,
@@ -151,11 +160,16 @@ async function renderOne(
  * cannot be picked to fit, and a chart whose labels ran long would silently
  * overflow its column and get scaled back under the type floor by the browser.
  *
- * Two corrections at most. Each one subtracts the measured overflow, so the
- * first is usually exact and the second is for chrome that re-flowed; past
- * that the chart is not going to fit and `conformChart` rejects it, which is
- * the honest outcome — a dropped band with a stated reason beats a chart
- * nobody can read.
+ * Three corrections at most. Each one subtracts the measured overflow, so the
+ * first is usually exact and the rest are for chrome that re-flowed; past that
+ * the chart is not going to fit and `conformChart` rejects it, which is the
+ * honest outcome — a dropped band with a stated reason beats a chart nobody
+ * can read.
+ *
+ * Two corrections was one too few, and only just: `Regression` came back 868px
+ * against an 860px budget, converging on the attempt the loop did not take.
+ * The extra render costs nothing on a chart that already fits, because the
+ * loop returns on the first pass that clears.
  */
 async function fitToBudget(
   req: ChartRequest,
@@ -164,13 +178,19 @@ async function fitToBudget(
   const { box, budget } = TIER_FIT[tier]
   let width: number = box.width
   let svg = ""
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     svg = await renderOne(req, { width, height: box.height }, tier)
     const over = emittedWidth(svg) - budget
     if (over <= 0) return svg
     // A floor, so a chart with enormous chrome stops rather than spiralling
     // into a zero-width plot that renders as an axis and nothing else.
-    const next = Math.max(80, width - over - 2)
+    //
+    // The cushion grows per attempt because subtracting the measured overflow
+    // assumes the chrome is constant, and when it is not the correction
+    // approaches the budget without reaching it: `Regression` walked 868 → 865
+    // and would have kept halving. A first correction that was exact returns on
+    // the next pass and never sees this; only a re-flowing one overshoots.
+    const next = Math.max(80, width - over - 2 - attempt * 12)
     if (next === width) break
     width = next
   }
@@ -222,6 +242,7 @@ export async function compileCharts(
       // Built whole rather than filled in a loop, so the record is complete by
       // construction and needs no assertion to say so.
       const rendered: CompiledChart = {
+        wide: await draw("wide"),
         page: await draw("page"),
         detail: await draw("detail"),
         narrow: await draw("narrow"),

@@ -1,5 +1,5 @@
 import { PALETTE } from "../tokens/palette.ts"
-import { TYPE_FLOOR } from "./conform.ts"
+import { ALLOWED, TYPE_FLOOR } from "./conform.ts"
 
 /**
  * The kit's finish, applied over whatever flint derived (ADR-0062).
@@ -67,20 +67,33 @@ export const RAMP: readonly string[] = [
 ]
 
 /**
- * Force any quantitative colour encoding onto the quantized ramp.
+ * Put every colour scale onto the kit's palette — the ramp for a magnitude,
+ * the emphasis inks for a category.
  *
- * Reaches into the spec because there is no `config` knob for "never
- * interpolate": `config.range.heatmap` supplies the colours but the *scale
- * type* decides whether Vega uses them as stops or as bins. A generic `chart`
- * block naming `"Heatmap"` gets a continuous scale from flint and would be
- * dropped by conformance without this.
+ * Reaches into the spec rather than resting on `config.range`, and the two
+ * halves reach in for different reasons.
  *
- * Only touches encodings that have not asked for something specific, so a form
- * that set its own scale keeps it.
+ * **Quantitative.** There is no `config` knob for "never interpolate":
+ * `config.range.heatmap` supplies the colours but the *scale type* decides
+ * whether Vega uses them as stops or as bins, so a `"Heatmap"` gets a
+ * continuous scale from flint and is dropped by conformance without this.
+ *
+ * **Categorical.** `config.range.category` looks like it should be enough and
+ * is not: flint names a `scheme` on the scale, and a named scheme beats the
+ * config range. This is the hole that shipped ADR-0062 — every generic `chart`
+ * block with a `color` channel was dropped at publish, painting tableau10's
+ * `#4c78a8` and `#f58518`, because nothing in the finish rewrote a *nominal*
+ * colour scale. The ADR claims colour is total; it was total only for the two
+ * forms the kit builds itself, which set their own ranges and so never
+ * exercised the gap.
+ *
+ * Only touches encodings that have not asked for something specific, so
+ * `series` and `matrix` keep the ranges they set in `decorate`. A colour that
+ * carries no `field` is a constant, not a scale, and is left alone.
  */
-export function quantizeColourRamps(node: unknown): void {
+export function paletteColourScales(node: unknown): void {
   if (Array.isArray(node)) {
-    for (const v of node) quantizeColourRamps(v)
+    for (const v of node) paletteColourScales(v)
     return
   }
   if (typeof node !== "object" || node === null) return
@@ -89,21 +102,26 @@ export function quantizeColourRamps(node: unknown): void {
       k === "color" &&
       typeof v === "object" &&
       v !== null &&
-      Reflect.get(v, "type") === "quantitative"
+      Reflect.get(v, "field") !== undefined
     ) {
       const scale: unknown = Reflect.get(v, "scale")
-      const hasRange =
-        typeof scale === "object" &&
-        scale !== null &&
-        Reflect.get(scale, "range") !== undefined
-      if (!hasRange)
-        Reflect.set(v, "scale", {
-          ...(typeof scale === "object" && scale !== null ? scale : {}),
-          type: "quantize",
-          range: [...RAMP],
-        })
+      const base: Record<string, unknown> = isPlainObject(scale)
+        ? { ...scale }
+        : {}
+      if (base.range === undefined) {
+        // A named scheme is flint's choice of palette and the one thing that
+        // outranks `config.range`, so it goes with the range that replaces it.
+        delete base.scheme
+        Reflect.set(
+          v,
+          "scale",
+          Reflect.get(v, "type") === "quantitative"
+            ? { ...base, type: "quantize", range: [...RAMP] }
+            : { ...base, range: [...SERIES_INK] },
+        )
+      }
     }
-    quantizeColourRamps(v)
+    paletteColourScales(v)
   }
 }
 
@@ -169,6 +187,20 @@ export function kitConfig(): Record<string, unknown> {
       rowPadding: 4,
     },
     title: { font: MONO, fontSize: TYPE_FLOOR, color: PALETTE["ink-dim"] },
+    /**
+     * Facet headers, which have their own config block and inherit none of the
+     * above. Left out, a `column`/`row` encoding draws its strip labels in
+     * Vega's `#000` at 10px — so a routine that facets got its band dropped
+     * for two rules at once, on a channel it is perfectly entitled to name.
+     */
+    header: {
+      labelFont: MONO,
+      titleFont: MONO,
+      labelFontSize: TYPE_FLOOR,
+      titleFontSize: TYPE_FLOOR,
+      labelColor: PALETTE["ink-dim"],
+      titleColor: PALETTE["ink-dim"],
+    },
     text: { font: MONO, fontSize: TYPE_FLOOR, fill: PALETTE["ink-dim"] },
     view: { stroke: null },
     /**
@@ -243,9 +275,47 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v)
 }
 
+/** A string that names a colour, in any notation Vega will accept. */
+const COLOUR_LITERAL =
+  /^(?:#[0-9a-f]{3,8}|(?:rgba?|hsla?|lab|lch|oklab|oklch)\()/i
+
+/**
+ * Drop every off-palette ink from flint's config before the kit's lands on it.
+ *
+ * `deepMerge` lets the kit win at the leaves it *names*, which is not the same
+ * as winning outright. Vega-Lite resolves `axisX`/`axisY` **over** `axis`, and
+ * flint sets `axisX.titleColor: "#666"` — so the kit's `config.axis.titleColor`
+ * was correct, more general, and silently outranked. Every faceted chart came
+ * back painting `#666` on its axis titles and was dropped.
+ *
+ * Naming `axisX` and `axisY` in `kitConfig` would fix this instance and leave
+ * the next one — `axisTop`, `axisBand`, `headerColumn`, whatever a later flint
+ * release reaches for. So the rule is stated once as a property instead: an
+ * off-palette colour in flint's config is never something we want, at any
+ * depth, under any key. Layout knowledge — `labelLimit`, `labelAngle`, the
+ * facet caps — is untouched, which is the part of flint's config the kit
+ * genuinely wants (ADR-0062).
+ */
+function stripOffPaletteInk(
+  node: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(node)) {
+    if (isPlainObject(v)) out[k] = stripOffPaletteInk(v)
+    else if (
+      typeof v === "string" &&
+      COLOUR_LITERAL.test(v) &&
+      !ALLOWED.has(v.toLowerCase())
+    )
+      continue
+    else out[k] = v
+  }
+  return out
+}
+
 export function finish<T>(spec: T, size: { width: number; height: number }): T {
   clampType(spec)
-  quantizeColourRamps(spec)
+  paletteColourScales(spec)
   if (typeof spec === "object" && spec !== null) {
     const own: unknown = Reflect.get(spec, "config")
     // A form may fix its own plot rectangle by leaving `_kitSize` behind. Only
@@ -262,13 +332,20 @@ export function finish<T>(spec: T, size: { width: number; height: number }): T {
           }
         : size
     Reflect.deleteProperty(spec, "_kitSize")
+    // Flint's config first, the kit's over it: flint contributes what the kit
+    // is silent about, and never the other way round. Its inks are stripped
+    // beforehand and the merged result is clamped afterwards, because a
+    // narrower flint key (`axisX` over `axis`) otherwise wins on both counts.
+    const config = deepMerge(
+      stripOffPaletteInk(isPlainObject(own) ? own : {}),
+      kitConfig(),
+    )
+    clampType(config)
     Object.assign(spec, {
       width: sized.width,
       height: sized.height,
       background: null,
-      // Flint's config first, the kit's over it: flint contributes what the
-      // kit is silent about, and never the other way round.
-      config: deepMerge(isPlainObject(own) ? own : {}, kitConfig()),
+      config,
     })
   }
   return spec

@@ -50,8 +50,12 @@ export function Chart({ svg, label }: { svg: CompiledChart; label?: string }) {
         dangerouslySetInnerHTML={{ __html: svg.detail }}
       />
       <div
-        className="hidden tier-page:block [&>svg]:h-auto [&>svg]:max-w-full"
+        className="hidden tier-page:block tier-wide:hidden [&>svg]:h-auto [&>svg]:max-w-full"
         dangerouslySetInnerHTML={{ __html: svg.page }}
+      />
+      <div
+        className="hidden tier-wide:block [&>svg]:h-auto [&>svg]:max-w-full"
+        dangerouslySetInnerHTML={{ __html: svg.wide }}
       />
     </figure>
   )

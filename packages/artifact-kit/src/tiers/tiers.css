@@ -17,6 +17,12 @@
 @custom-variant tier-compact (@media (min-width: 341px));
 @custom-variant tier-detail (@media (min-width: 701px));
 @custom-variant tier-page (@media (min-width: 900px));
+/* `tier-page` is open-ended, so anything sized for its lower bound is sized for
+   900px and stops there. That is invisible for HTML bands, which fill their
+   frame, and glaring for a chart, whose SVG carries one fixed geometry: an
+   expanded artifact on a wide board drew an 860px plot in a 1700px column and
+   left the rest blank. Only charts read this tier (ADR-0062). */
+@custom-variant tier-wide (@media (min-width: 1540px));
 
 /* Height tiers. Tailwind's stock `screens` are width-only, which is why every
    artifact hand-wrote these — a one-row tile is a different design from a
