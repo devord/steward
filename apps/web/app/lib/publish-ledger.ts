@@ -56,7 +56,21 @@ export interface PublishLedger {
  * immutable — commits already written keep their shape forever, so both are
  * matched here permanently rather than for a migration window.
  */
-const PUBLISH_SUBJECT = /^(?:publish|widget):[ \t]*(\S+)/
+/**
+ * Both shapes end where the slug ends: `publish:` takes the rest of the
+ * subject only as a parenthetical note, `widget:` only as its ` @ <iso>` tail.
+ *
+ * That tail rule is load-bearing, not tidiness. A prose subject on this branch
+ * reads `publish: remove corza-stats widget (consolidated into …)`, and taking
+ * the first token blindly invented a routine named `remove` — a phantom row on
+ * the spend page, counted against a slug that never existed. Requiring `(` or
+ * end-of-line after the slug tells the two apart: a real note follows the slug
+ * immediately, prose puts bare words there first. Across 809 subjects on the
+ * Form Factory branch this drops exactly that one and keeps all 808 receipts,
+ * including the four legitimate `publish: <slug> (re-render …)` fix-ups.
+ */
+const PUBLISH_SUBJECT = /^publish:[ \t]*([a-z0-9][a-z0-9-]*)[ \t]*(?:\(.*)?$/
+const SCRIPTED_SUBJECT = /^widget:[ \t]*([a-z0-9][a-z0-9-]*)[ \t]+@[ \t]*\S/
 
 /** The routine a publish commit belongs to, or null when the message follows
     neither shape — skipped rather than guessed at. */
@@ -64,7 +78,14 @@ export function parsePublishSubject(
   message: string | null | undefined,
 ): string | null {
   if (!message) return null
-  return PUBLISH_SUBJECT.exec(message)?.[1] ?? null
+  // Subject only: the shapes are anchored to end-of-line, and a commit body
+  // carries trailers (ADR-0060) that would otherwise defeat the anchor.
+  const subject = message.split("\n", 1)[0] ?? ""
+  return (
+    PUBLISH_SUBJECT.exec(subject)?.[1] ??
+    SCRIPTED_SUBJECT.exec(subject)?.[1] ??
+    null
+  )
 }
 
 /** A commit as the API hands it over, narrowed to what a receipt needs. */

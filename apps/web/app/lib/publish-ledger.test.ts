@@ -53,6 +53,36 @@ describe("parsePublishSubject", () => {
       parsePublishSubject("chore: re-run publish: alpha by hand"),
     ).toBeNull()
   })
+
+  it("keeps a receipt that notes why it republished", () => {
+    // Hand fix-ups annotate the subject and are still publishes — dropping
+    // them would take real runs and real dollars out of every denominator.
+    expect(parsePublishSubject("publish: corza-risk (re-render)")).toBe(
+      "corza-risk",
+    )
+    expect(
+      parsePublishSubject("publish: turtle-beach-hydrogen-pulse (fix content)"),
+    ).toBe("turtle-beach-hydrogen-pulse")
+  })
+
+  it("invents no routine out of a prose subject about a routine", () => {
+    // The phantom this rule exists for: taking the first token blindly read
+    // `remove` as a slug and gave the spend page a routine that never was.
+    expect(
+      parsePublishSubject(
+        "publish: remove corza-stats widget (consolidated into corza-repo-stats)",
+      ),
+    ).toBeNull()
+    expect(
+      parsePublishSubject("publish: fix broken chart for alpha"),
+    ).toBeNull()
+  })
+
+  it("reads the subject alone, so trailers cannot defeat the anchor", () => {
+    expect(
+      parsePublishSubject("publish: alpha\n\nRun-Tokens: 10\nRun-Cost-USD: 1"),
+    ).toBe("alpha")
+  })
 })
 
 describe("toEntries", () => {
