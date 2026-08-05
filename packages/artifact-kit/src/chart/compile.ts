@@ -54,6 +54,16 @@ export interface ChartSpec {
  * *emitted* SVG may be, which is the plot plus however much axis and legend
  * chrome the data turned out to need. `main` is padded `p-5` on a page, so the
  * budget is the viewport at that breakpoint less 40px.
+ *
+ * **The box sits just under its budget, not well under it.** These were each
+ * `budget - 80`, a chrome allowance three times what real charts use: the live
+ * burn-up emits 28px of chrome, so every tier gave back ~52px of a budget it
+ * was entitled to and no correction ever claimed it — `fitToBudget` only ever
+ * shrinks. On a phone that is a 248px plot in a 359px column, and the widget
+ * reads as broken at the tile size most people see it at. A tighter allowance
+ * puts the burden on the fit loop, which is what the loop is for: a chart with
+ * a real legend overflows on the first pass and gets corrected, and one
+ * without it fills its frame.
  */
 const TIER_FIT = {
   /**
@@ -67,10 +77,10 @@ const TIER_FIT = {
    * this covers 1200 up, and the worst fill across the whole range goes from
    * 59% to 79% without a third render in every artifact.
    */
-  wide: { box: { width: 1080, height: 340 }, budget: 1160 },
-  page: { box: { width: 780, height: 300 }, budget: 860 },
-  detail: { box: { width: 580, height: 260 }, budget: 660 },
-  narrow: { box: { width: 220, height: 200 }, budget: 300 },
+  wide: { box: { width: 1130, height: 340 }, budget: 1160 },
+  page: { box: { width: 830, height: 300 }, budget: 860 },
+  detail: { box: { width: 630, height: 260 }, budget: 660 },
+  narrow: { box: { width: 270, height: 200 }, budget: 300 },
 } as const
 
 /**
