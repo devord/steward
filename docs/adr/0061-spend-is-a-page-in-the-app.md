@@ -72,7 +72,10 @@ through any window reaching back past ADR-0060, so a flat run of empties
 would claim the routines ran free on days they merely ran unpriced. The day
 axis stays continuous, so a quiet stretch keeps its width. A routine that has
 left `routines.yaml` is still named by its slug and counted — deleting the
-config entry does not un-spend the money.
+config entry does not un-spend the money. (Narrowed by ADR-0063: one that
+left `routines.yaml` _and_ never priced a run spent nothing to preserve, so
+it is dropped from the by-routine list, which then states how many it
+dropped.)
 
 **It will look thin for a while, and that is the honest state.** Of the last
 300 publishes on `steward-data-formfactory`, 9 carry a price; the rest can

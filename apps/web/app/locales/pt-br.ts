@@ -178,6 +178,8 @@ export const ptBR: Messages = {
   "spend.byCategory": "Por categoria",
   "spend.noBand": "Sem faixa",
   "spend.retired": "· removida",
+  "spend.withheld":
+    "{n} rotinas removidas que nunca informaram um custo não estão listadas ({m} execuções).",
   "spend.runsOf": "{n}/{m} execuções",
   "spend.dayRuns": "{n} execuções precificadas",
   "spend.dayUnpriced": "{n} execuções, nenhuma precificada",

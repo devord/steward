@@ -211,6 +211,10 @@ export const en = {
   // A routine that left routines.yaml still spent what it spent (ADR-0061).
   // "retired", not "deleted": the config entry is gone, the receipts are not.
   "spend.retired": "· retired",
+  // ADR-0063: the list drops retired routines that never priced a run, and
+  // says how many — their runs are still in the headline's denominator.
+  "spend.withheld":
+    "{n} retired routines that never reported a price are not listed ({m} runs).",
   "spend.runsOf": "{n}/{m} runs",
   "spend.dayRuns": "{n} priced runs",
   "spend.dayUnpriced": "{n} runs, none priced",

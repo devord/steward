@@ -159,6 +159,18 @@ export function SpendView({
             rows={summary.byRoutine}
             t={t}
             href={(key) => routineHref(repo.full, key)}
+            // Silently shortening the list would read as a complete one
+            // (ADR-0063). The runs stay in the headline's denominator, so
+            // without this line the two would not reconcile and nothing on
+            // the page would explain why.
+            note={
+              summary.withheld.rows > 0
+                ? t("spend.withheld", {
+                    n: summary.withheld.rows,
+                    m: summary.withheld.runs,
+                  })
+                : undefined
+            }
           />
 
           {/* Two short roll-ups side by side: neither fills a column alone,
@@ -311,6 +323,7 @@ function Ranked({
   href,
   compact = false,
   emptyLabel,
+  note,
 }: {
   heading: string
   rows: SpendGroup[]
@@ -321,6 +334,9 @@ function Ranked({
   compact?: boolean
   /** What an empty key is called (the unbanded bucket). */
   emptyLabel?: string
+  /** What this list leaves out, printed under it. A roll-up that drops rows
+      has to say so, the same way the headline states its window. */
+  note?: string
 }) {
   const max = Math.max(0, ...rows.map((row) => row.usd))
   if (rows.length === 0) return null
@@ -403,6 +419,7 @@ function Ranked({
           ))}
         </tbody>
       </table>
+      {note && <p className="mt-2 text-xs text-ink-dim">{note}</p>}
     </section>
   )
 }

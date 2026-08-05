@@ -107,6 +107,35 @@ describe("summarizeSpend", () => {
     expect(summary.usd).toBe(4)
   })
 
+  it("drops a retired routine that never priced a run, and says how many", () => {
+    // Retired *and* unpriced is the one inert combination (ADR-0063): no
+    // dollars, no live subject, no page to click through to.
+    const summary = summarizeSpend(
+      [entry("alpha", 1), entry("ghost", null), entry("ghost", null)],
+      routines,
+      opts,
+    )
+    expect(summary.byRoutine.map((row) => row.key)).toEqual(["alpha"])
+    expect(summary.withheld).toEqual({ rows: 1, runs: 2 })
+    // The window's reach is unchanged — the runs stay in the denominator,
+    // which is exactly why the page has to state what it withheld.
+    expect(summary.runs).toBe(3)
+  })
+
+  it("keeps a retired routine that spent, and a live one that never priced", () => {
+    // Both halves of the rule are load-bearing in opposite directions.
+    const summary = summarizeSpend(
+      [entry("ghost", 5), entry("alpha", null)],
+      routines,
+      opts,
+    )
+    expect(summary.byRoutine.map((row) => row.key).sort()).toEqual([
+      "alpha",
+      "ghost",
+    ])
+    expect(summary.withheld).toEqual({ rows: 0, runs: 0 })
+  })
+
   it("marks only the routines that have left the pool", () => {
     // The flag carries the row's whole treatment — the tag and the missing
     // link — so a live routine picking it up would strand its detail page.

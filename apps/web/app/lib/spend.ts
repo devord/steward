@@ -48,7 +48,14 @@ export interface SpendSummary {
   /** Dollars per priced run. null when nothing in the window was priced —
       which is not an average of zero. */
   mean: number | null
+  /** Retired routines that never reported a price are not here — see
+      `withheld`. Every other row is, including live routines that ran
+      unpriced. */
   byRoutine: SpendGroup[]
+  /** What `byRoutine` left out, so the list can say so instead of just being
+      shorter. `runs` is the count those rows carried, which the headline's
+      denominator still includes — the window's reach did not change. */
+  withheld: { rows: number; runs: number }
   byOwner: SpendGroup[]
   byCategory: SpendGroup[]
   /** Continuous, oldest first: one slot per calendar day across the window,
@@ -146,18 +153,29 @@ export function summarizeSpend(
     usd += entry.cost.usd
     priced += 1
   }
+  const routineRows = group(entries, usd, (entry) => ({
+    key: entry.slug,
+    label: labelFor(bySlug.get(entry.slug), entry.slug),
+    // Absent from the pool is exactly what "retired" means here — the same
+    // miss that already costs the row its name costs it its link.
+    retired: !bySlug.has(entry.slug),
+  }))
+  // Retired *and* never priced: the row carries no money and no live subject,
+  // so it is history with nothing to read off it (ADR-0063). Both halves are
+  // load-bearing — a retired routine that spent stays, because the dollars are
+  // real, and a live routine that ran unpriced stays, because it is still in
+  // the pool and "ran without saying" is a fact about it worth seeing.
+  const dropped = routineRows.filter((row) => row.retired && row.priced === 0)
   return {
     usd,
     priced,
     runs: entries.length,
     mean: priced > 0 ? usd / priced : null,
-    byRoutine: group(entries, usd, (entry) => ({
-      key: entry.slug,
-      label: labelFor(bySlug.get(entry.slug), entry.slug),
-      // Absent from the pool is exactly what "retired" means here — the same
-      // miss that already costs the row its name costs it its link.
-      retired: !bySlug.has(entry.slug),
-    })),
+    byRoutine: routineRows.filter((row) => !(row.retired && row.priced === 0)),
+    withheld: {
+      rows: dropped.length,
+      runs: dropped.reduce((n, row) => n + row.runs, 0),
+    },
     byOwner: group(entries, usd, (entry) => {
       const owner = bySlug.get(entry.slug)?.runner ?? repoOwner
       return { key: owner, label: owner }

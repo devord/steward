@@ -125,6 +125,24 @@ describe("SpendView", () => {
     )
   })
 
+  it("says what the routine list withheld rather than just being shorter", async () => {
+    // A retired routine that never priced a run is dropped (ADR-0063), but
+    // its runs stay in the headline's denominator — so the list has to
+    // account for the gap or the two figures silently disagree.
+    await renderView({
+      entries: [entry("alpha", 9), entry("ghost", null), entry("ghost", null)],
+    })
+    const rows = rowsUnder("By routine")
+    expect(rows.map((row) => row.textContent?.includes("ghost"))).not.toContain(
+      true,
+    )
+    const text = document.body.textContent ?? ""
+    expect(text).toContain("1 retired routines that never reported a price")
+    expect(text).toContain("(2 runs)")
+    // Still three runs in the window; only the row is gone.
+    expect(text).toContain("1 of 3 runs priced")
+  })
+
   it("says how many of a routine's runs were priced, not just the total", async () => {
     // Forty cheap runs and one dear one reach the same sum and are not the
     // same finding.
