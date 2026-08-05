@@ -58,12 +58,16 @@ export interface ChartSpec {
 const TIER_FIT = {
   /**
    * `tier-page` is `min-width: 900px` and open-ended, so sizing its render for
-   * 900px sized it for the *narrowest* viewport that triggers it. An expanded
-   * artifact on a wide board is 1700px and up, and got the same 860px SVG with
-   * the remainder left blank — roughly half the frame. `wide` is the tier that
-   * was missing above `page`, cut at the board's own wide breakpoint.
+   * 900px sized it for the *narrowest* viewport that triggers it, and every
+   * frame above that kept the same 860px SVG with the rest left blank.
+   *
+   * The widest frame an artifact ever gets is the lightbox, capped at 1500px
+   * (`widget-lightbox.tsx`), less `main`'s `p-5` — so 1460px of content, filled
+   * to 59%. That cap is why two bands are enough: `page` covers 900–1199 and
+   * this covers 1200 up, and the worst fill across the whole range goes from
+   * 59% to 79% without a third render in every artifact.
    */
-  wide: { box: { width: 1420, height: 360 }, budget: 1500 },
+  wide: { box: { width: 1080, height: 340 }, budget: 1160 },
   page: { box: { width: 780, height: 300 }, budget: 860 },
   detail: { box: { width: 580, height: 260 }, budget: 660 },
   narrow: { box: { width: 220, height: 200 }, budget: 300 },

@@ -19,10 +19,16 @@
 @custom-variant tier-page (@media (min-width: 900px));
 /* `tier-page` is open-ended, so anything sized for its lower bound is sized for
    900px and stops there. That is invisible for HTML bands, which fill their
-   frame, and glaring for a chart, whose SVG carries one fixed geometry: an
-   expanded artifact on a wide board drew an 860px plot in a 1700px column and
-   left the rest blank. Only charts read this tier (ADR-0062). */
-@custom-variant tier-wide (@media (min-width: 1540px));
+   frame, and glaring for a chart, whose SVG carries one fixed geometry: at the
+   lightbox's full width an 860px plot sat in a 1460px column and left 40% of
+   the frame blank. Only charts read this tier (ADR-0062).
+
+   Cut at 1200px, and the number is not free-floating: `widget-lightbox` is
+   `max-w-[1500px]`, so the expanded artifact is the *widest frame that exists*
+   and this tier has a real ceiling rather than an open end. Two bands across
+   900–1500 is what that ceiling affords — a third would buy a few percent of
+   fill for another SVG in every chart-bearing artifact. */
+@custom-variant tier-wide (@media (min-width: 1200px));
 
 /* Height tiers. Tailwind's stock `screens` are width-only, which is why every
    artifact hand-wrote these — a one-row tile is a different design from a
