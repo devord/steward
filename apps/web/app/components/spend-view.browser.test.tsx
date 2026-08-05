@@ -100,6 +100,31 @@ describe("SpendView", () => {
     expect(link?.getAttribute("href")).toBe("/r/ff/steward-data/routines/alpha")
   })
 
+  it("marks a routine that has left the pool, and stops linking it", async () => {
+    // Its receipts are commits and the money was spent (ADR-0061), so the row
+    // stays and keeps counting — but the raw slug alone read as a routine
+    // nobody had named, and the link it used to carry 404s.
+    await renderView({
+      entries: [entry("alpha", 9), entry("ghost", 3)],
+    })
+    const ghost = rowsUnder("By routine").find((row) =>
+      row.textContent?.includes("ghost"),
+    )
+    expect(ghost?.textContent).toContain("retired")
+    expect(ghost?.querySelector("a")).toBeNull()
+    // The window's total still carries it — hiding it would leave the
+    // headline and the rows disagreeing about what the repo cost.
+    expect(document.body.textContent ?? "").toContain("≈$12.00")
+    // A live routine beside it keeps its name and its link.
+    const alpha = rowsUnder("By routine").find((row) =>
+      row.textContent?.includes("Alpha Report"),
+    )
+    expect(alpha?.textContent).not.toContain("retired")
+    expect(alpha?.querySelector("a")?.getAttribute("href")).toBe(
+      "/r/ff/steward-data/routines/alpha",
+    )
+  })
+
   it("says how many of a routine's runs were priced, not just the total", async () => {
     // Forty cheap runs and one dear one reach the same sum and are not the
     // same finding.

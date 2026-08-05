@@ -294,6 +294,15 @@ function dayTitle(day: SpendDay, t: Translate): string {
  * Rows with no priced runs sort to the bottom and carry a dash, so a routine
  * that ran forty times without reporting a cost is visible as exactly that
  * rather than as absent.
+ *
+ * A routine that has left `routines.yaml` keeps its row — receipts are commits
+ * and the money was spent (ADR-0061) — but says so, because until it did, the
+ * only tell was that the label happened to be a slug, which reads as a routine
+ * someone never bothered to name. It is marked rather than filtered away: the
+ * heaviest retired row here is a quarter of the window's total, so hiding it
+ * by default would leave the headline and the visible rows disagreeing about
+ * what the repo cost. It also stops being a link — that route 404s on a slug
+ * the pool can't resolve.
  */
 function Ranked({
   heading,
@@ -329,7 +338,7 @@ function Ranked({
                 <div className="truncate text-foreground" title={row.label}>
                   {row.label === "" ? (
                     <span className="text-ink-dim">{emptyLabel ?? "—"}</span>
-                  ) : href ? (
+                  ) : href && !row.retired ? (
                     <Link
                       to={href(row.key)}
                       className={cn(rowLinkCls, "text-foreground")}
@@ -338,6 +347,14 @@ function Ranked({
                     </Link>
                   ) : (
                     row.label
+                  )}
+                  {row.retired && (
+                    // Dim, lowercase, trailing: a footnote on the row, not a
+                    // status chip. Green/amber/red are spoken for by freshness
+                    // one surface away, and "gone" is not an alarm.
+                    <span className="ml-2 text-ink-dim">
+                      {t("spend.retired")}
+                    </span>
                   )}
                 </div>
               </td>

@@ -25,6 +25,10 @@ export interface SpendGroup {
   runs: number
   /** Fraction of the window's total spend, 0–1. Zero when nothing is priced. */
   share: number
+  /** The routine spent this but has since left `routines.yaml` — so the row is
+      named by its slug, has no detail page to link to, and is marked as such.
+      Always false on the owner and band roll-ups, which key on neither. */
+  retired: boolean
 }
 
 /** One calendar day on the strip's axis. */
@@ -62,11 +66,15 @@ function labelFor(routine: Routine | undefined, slug: string): string {
 function group(
   entries: PublishEntry[],
   total: number,
-  keyOf: (entry: PublishEntry) => { key: string; label: string },
+  keyOf: (entry: PublishEntry) => {
+    key: string
+    label: string
+    retired?: boolean
+  },
 ): SpendGroup[] {
   const rows = new Map<string, SpendGroup>()
   for (const entry of entries) {
-    const { key, label } = keyOf(entry)
+    const { key, label, retired = false } = keyOf(entry)
     const row = rows.get(key) ?? {
       key,
       label,
@@ -74,6 +82,7 @@ function group(
       priced: 0,
       runs: 0,
       share: 0,
+      retired,
     }
     row.runs += 1
     if (entry.cost?.usd != null) {
@@ -145,6 +154,9 @@ export function summarizeSpend(
     byRoutine: group(entries, usd, (entry) => ({
       key: entry.slug,
       label: labelFor(bySlug.get(entry.slug), entry.slug),
+      // Absent from the pool is exactly what "retired" means here — the same
+      // miss that already costs the row its name costs it its link.
+      retired: !bySlug.has(entry.slug),
     })),
     byOwner: group(entries, usd, (entry) => {
       const owner = bySlug.get(entry.slug)?.runner ?? repoOwner

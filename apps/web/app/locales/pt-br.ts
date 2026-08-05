@@ -177,6 +177,7 @@ export const ptBR: Messages = {
   "spend.byOwner": "Por dono",
   "spend.byCategory": "Por categoria",
   "spend.noBand": "Sem faixa",
+  "spend.retired": "· removida",
   "spend.runsOf": "{n}/{m} execuções",
   "spend.dayRuns": "{n} execuções precificadas",
   "spend.dayUnpriced": "{n} execuções, nenhuma precificada",

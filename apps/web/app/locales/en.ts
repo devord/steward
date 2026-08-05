@@ -208,6 +208,9 @@ export const en = {
   "spend.byOwner": "By owner",
   "spend.byCategory": "By category",
   "spend.noBand": "No band",
+  // A routine that left routines.yaml still spent what it spent (ADR-0061).
+  // "retired", not "deleted": the config entry is gone, the receipts are not.
+  "spend.retired": "· retired",
   "spend.runsOf": "{n}/{m} runs",
   "spend.dayRuns": "{n} priced runs",
   "spend.dayUnpriced": "{n} runs, none priced",

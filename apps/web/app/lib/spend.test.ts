@@ -99,8 +99,30 @@ describe("summarizeSpend", () => {
     // Its receipts are in the window and the money was spent; deleting the
     // config entry does not un-spend it.
     const summary = summarizeSpend([entry("ghost", 4)], routines, opts)
-    expect(summary.byRoutine[0]).toMatchObject({ key: "ghost", label: "ghost" })
+    expect(summary.byRoutine[0]).toMatchObject({
+      key: "ghost",
+      label: "ghost",
+      retired: true,
+    })
     expect(summary.usd).toBe(4)
+  })
+
+  it("marks only the routines that have left the pool", () => {
+    // The flag carries the row's whole treatment — the tag and the missing
+    // link — so a live routine picking it up would strand its detail page.
+    const summary = summarizeSpend(
+      [entry("alpha", 1), entry("ghost", 2)],
+      routines,
+      opts,
+    )
+    expect(
+      Object.fromEntries(
+        summary.byRoutine.map((row) => [row.key, row.retired]),
+      ),
+    ).toEqual({ alpha: false, ghost: true })
+    // Owners and bands key on neither, so nothing there is ever retired.
+    expect(summary.byOwner.every((row) => !row.retired)).toBe(true)
+    expect(summary.byCategory.every((row) => !row.retired)).toBe(true)
   })
 
   it("gives the day axis one slot per calendar day, gaps included", () => {
