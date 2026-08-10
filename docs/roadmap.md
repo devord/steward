@@ -164,11 +164,65 @@ record widget content. Still open: the Sentry project itself is provisioned by
 hand — org/project slugs and the DSN are dashboard steps, and until they exist
 every environment is inert.
 
+## M10 — Data separates from views 🔜 (ADR-0060/0061/0062)
+
+The welded routine-artifact-widget splits into four entities with one job
+each: a **routine** produces **datasets**, a **view** is a data-less
+composition of kit components with binding slots, and a **widget** is that
+view placed with its slots filled. The board injects the data at render time,
+the way it already injects the theme and `kit.css`. ADR-0050 moved
+presentation into the kit and then welded it back to the data at publish; this
+takes the weld out, so a kit fix reaches every widget on next page load
+instead of only the ones whose routines have rerun since.
+
+Sequenced data-first, for one reason: **history you have not started
+collecting is lost forever.** Everything else here costs the same next month.
+
+1. **Datasets, write-only.** `produces:` on the routine and in template
+   frontmatter (`shape` + `kind`); `publish-widget` commits
+   `d/<name>.json` plus a dated partition _beside_ today's artifact. Nothing
+   reads them. Also closes a contradiction already at HEAD — `prior-run` says
+   `data.json` and `state.json` ride in the publish commit; `publish-widget`
+   writes only the HTML.
+2. **Dataset detail view, read-only.** Current snapshot, partition list,
+   producer, schedule, last run, Update. Load-bearing rather than nice: once
+   routines stop rendering, this is a gatherer's only glanceable evidence that
+   it ran (the ADR-0026 trust argument, rehoused).
+3. **Kit browser runtime + broker**, injected like `kit.css`, version-pinned
+   per view stamp. `data.read`, `data.history`, and `routines.trigger` scoped
+   to the view's declared bindings. No writes. Proved on one widget.
+4. **Views, slots, widget bindings.** `views/<name>.html` on `main`; the
+   `widget:` block splits (work half stays on the gather template, presentation
+   half moves to the view); `category` moves to the view; dashboard entries
+   gain `view:` + `bind:`. One view, one board.
+5. **Migrate the fleet.** `w/` retires, `artifacts` freezes as the historical
+   record, `datasets` begins as a new orphan branch. Re-point ADR-0035's rail
+   read path (one commits call, now keyed to data commits) and ADR-0038's
+   version browsing (a version becomes `view × partition`). Dry runs move onto
+   the bake path, which is the same SSR the external-sharing backlog needs.
+
+Prose survives the split by being data: a **synthesis routine** gathers
+nothing, reads datasets and writes a **judgement** carrying the figures it
+cites plus a manifest of the partitions it read (ADR-0062). Views never invoke
+a model. Widgets that look narrated are often only _derived_ — `corza-risk`'s
+drivers are thresholds against fixed text — and sorting rules from judgements
+before migrating is where the real saving is.
+
+Deferred deliberately: the raw-partition retention horizon (choose it against
+real run frequencies, not by guessing), partition retraction, row-level
+correction as a separate annotations dataset, derived rollups as a
+recomputable cache, and a template shipping a producer _and_ a default
+placement so the simple case stays one step.
+
 ## Watch items
 
 - **GitHub API rate limit** (5k/h authed): batch loader fetches, ETags.
 - **Artifacts-branch growth** (~1 commit/run): squash to depth 1 if it ever
-  bites, at the cost of version browsing.
+  bites, at the cost of version browsing. M10 changes both sides of this: a
+  partition per run is more bytes, but history moves into the tree, so a
+  squash stops destroying it (ADR-0061). Growth is linear — partitions are
+  written once, never rewritten — but git never reclaims, so pruning bounds
+  listing cost, not clone size.
 - **Cloud routine limits**: daily run caps (API-fired runs count too);
   local schedule / team runner runs the same pointer prompt when they bind.
 - **Routines fire API is research preview**: surface verified 2026-07-10

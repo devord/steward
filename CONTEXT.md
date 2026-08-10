@@ -6,6 +6,15 @@ that a scheduled **routine** regenerates. Reports that update themselves.
 Architecture decisions live in [`docs/adr/`](./docs/adr/); the artifact
 authoring contract in [`docs/widget-standard.md`](./docs/widget-standard.md).
 
+## In flight
+
+ADR-0060/0061/0062 split the welded routine-artifact-widget into four entities
+— **routine**, **dataset**, **view**, **widget** — and land across M10 in five
+steps. The decision is settled; most of it is not yet code. Entries below
+carry an **After M10** line wherever the two differ, and the four new entries
+(**Dataset**, **Partition**, **View**, **Judgement**) describe the decided end
+state throughout. Until a step lands, the unmarked text is what the code does.
+
 ## Language
 
 **Routine**:
@@ -19,6 +28,11 @@ names a `template:`; freeform ones name the `custom` built-in, whose
 whole brief is the routine's `instructions` (ADR-0022). No `schedule:` =
 **manual**, updated via the Update button or an interactive CLI run,
 staleness badge suppressed (ADR-0016).
+**After M10** (ADR-0060): a routine is a pure producer — it gathers into
+**datasets**, or reads datasets and writes a **judgement**, and owns no view.
+It gains `produces:` (what it writes), `consumes:` (what a synthesis routine
+reads) and `on:` (a dataset that triggers it, alongside or instead of
+`schedule:`).
 _Avoid_: job, cron, automation, workflow
 
 **Host** (`host: cloud | local`, default `cloud`):
@@ -40,6 +54,10 @@ receipts (ADR-0033), and reopens each receipt's render, or two side by
 side to compare (ADR-0038). A run that fails before publishing leaves no
 receipt; its session log lives on the routine's claude.ai page, which the
 app links to but cannot read (the trigger token is trigger-only, ADR-0016).
+**After M10** (ADR-0060): the receipt is still a commit, just not always the
+same path — a data commit for a gather or synthesis run, a view commit for an
+authoring run. ADR-0026's invariant holds with one word changed: **the commit
+is the receipt**.
 _Avoid_: execution, invocation, job run
 
 **Dashboard**:
@@ -56,6 +74,10 @@ A cell on a dashboard grid: a routine reference plus a position and a
 layout file. The widget's body is a sandboxed iframe rendering the
 routine's artifact. Any dashboard may arrange any routine from its repo's
 pool.
+**After M10** (ADR-0060): a widget is a **view** reference, its **bindings**
+(which dataset fills each of the view's slots), a position and a `size`. The
+same view placed twice with different bindings is two widgets about two
+subjects — no second file. Its age is its stalest bound dataset.
 _Avoid_: card, tile, panel; also a cell on someone else's dashboard product
 (monitoring tools call those widgets too) — here the word is always ours
 
@@ -69,6 +91,8 @@ renders: a labeled strip on the board with its own grid instance, ordered by
 `data/repo.yaml` `categories:`, led by the unlabeled band of uncategorized
 widgets. A board with fewer than two categories renders flat. Collapsing a band
 folds it on every board — a device preference, not data.
+**After M10** (ADR-0060): declared by the **view**, overridable at the
+placement — category says what a widget _is_, and a widget is a placed view.
 _Avoid_: tag, group (a repo's boards group into **sections**, one tier up),
 lane, swimlane
 
@@ -78,9 +102,61 @@ thing a widget renders. Addressed by convention, never by URL:
 `artifacts` branch of the owner's data repo, path `w/<slug>/index.html`
 (ADR-0002). Must follow the widget standard (no external requests, gruvbox
 tokens, media-query responsive).
+**After M10** (ADR-0060): an artifact is no longer what a routine publishes
+and no longer what a board renders — a **view** plus its **datasets** is. The
+word survives only for what the **bake** produces: the app SSRs
+`view@sha + partition` into one self-contained file on demand, for export,
+external sharing and dry runs.
 _Avoid_: report, page, output file; also the error-tracker sense of the
 word, where a "release artifact" is an uploaded source map — never one of
 these
+
+**Dataset** (ADR-0060/0061, lands in M10):
+Named data a routine produces, addressed `<subject>-<shape>` — `corza-prs`,
+`ff-people` — and never by producer slug: a dataset name is a contract, a
+routine slug an implementation. Lives on the data repo's orphan `datasets`
+branch at `d/<name>.json` (current state, overwritten each run) beside
+`d/<name>/` (its **partitions**). Carries `kind`, a schema `version` and
+`generatedAt`; a **view**'s slot matches on `kind`. Exactly one routine
+produces a given dataset, enforced at sync as a hard failure. Its fields are
+**observed** (gathered), **derived** (a deterministic function of
+observations, recomputable, never stale) or **judged** (see **Judgement**).
+_Avoid_: data source, feed, table, collection
+
+**Partition** (ADR-0061, lands in M10):
+One run's write, at `d/<name>/<timestamp>.json` — the same raw shape as the
+current file, never a summary of it, written once and never rewritten. The
+history index is a directory listing rather than a commit walk, so it costs
+one call and survives a branch squash. Retention is declared per dataset and
+compacted by the run that writes; `retain: none` writes none at all. Git never
+reclaims a deleted blob, so pruning bounds listing cost, not clone size.
+_Avoid_: snapshot (that's the current file), version, revision, point
+
+**View** (ADR-0060, lands in M10):
+A data-less composition of kit components with named binding **slots**, at
+`views/<name>.html` on `main` — code, authored in a Claude Code session
+exactly as a **routine template** is, never in the app (ADR-0022). Its body
+names components, binds them to slots and sets options; it contains no
+markup, CSS, breakpoints or row-shaping loops, so there is nothing in it to
+drift. A slot declares the dataset `kind` it accepts, and the widget
+placement fills it. The board injects the kit runtime and the bound data at
+render time, the way it already injects the theme and `kit.css`.
+_Avoid_: template (that's a routine template), layout (that's a dashboard
+file), component (that's a kit part), app
+
+**Judgement** (ADR-0062, lands in M10):
+Prose a run authored — the thing no rule produces and no view can compute.
+Stored like any other data, in its own dataset, by a **synthesis routine**: a
+routine that gathers nothing, reads datasets and writes this. It carries the
+figures it cites, denormalized, so prose and numbers agree by construction
+rather than by a rule every component has to remember; and a **manifest** of
+the exact partitions it read, for audit, recompute and detecting a retracted
+input. Judgements **nest, never juxtapose** — one headline, one authoring
+run; a widget-level verdict over three subjects is a synthesis over their
+three judgement datasets. A narrated component carries its own "as of",
+because a dated statement and a live table may legitimately disagree.
+_Avoid_: summary, narrative, analysis, insight; also **reading** (that is
+what a primitive hands back, one tier down)
 
 **Shared repo** (`steward`):
 This repository, the product. The web app, `packages/schema`, the contract
@@ -97,6 +173,11 @@ user can have any number (ADR-0023). `main` holds config
 (`data/routines.yaml`, `data/dashboards/*.yaml`), the repo's routine
 templates (`templates/routines/`, ADR-0021), and any API-trigger tokens
 (ADR-0016); the orphan `artifacts` branch holds published artifacts.
+**After M10** (ADR-0060/0061): `main` also holds the repo's **views**
+(`views/`), and a second orphan branch, `datasets`, takes every write from
+migration onward. `artifacts` freezes in place rather than being rewritten —
+pre-migration receipts stay browsable, which is the only record of what those
+widgets looked like.
 Discovered by the `steward-data` GitHub **topic**: every tagged repo the
 viewer's token can read appears in the app. Access is GitHub repo
 permissions, and there is no other access control (ADR-0001/0023).
@@ -156,6 +237,12 @@ appear (deliberately so for the `custom` built-in, whose input is the
 wizard's prompt field); a data-repo template shadows a same-named built-in.
 Templates are authored in Claude Code sessions, never in the app. The
 app's writable surface stays routines.yaml + layouts (ADR-0022).
+**After M10** (ADR-0060): templates describe **gathers**, not widgets. The
+`widget:` block splits — its work half (`params`, `connectors`,
+`subjectParam`, `kind`) stays here and gains `produces:`, one entry per
+dataset with its `shape` and `kind`; its presentation half (`sizes`,
+`category`, the artifact line) moves to the **view**. ADR-0040's slug rule is
+untouched; only what `kind` describes changes.
 _Avoid_: recipe, preset, blueprint
 
 **Skill**:
@@ -201,6 +288,10 @@ dispatcher resolves config and skills from the local working tree (dirty
 state included) and `publish-widget` writes to a local file opened in the
 browser. Nothing is pushed, and the live widget is untouched (ADR-0017).
 Launched via `pnpm routine <slug> --dry`.
+**After M10** (ADR-0060): a run produces a dataset, so there is no HTML to
+open — the dry run **bakes** instead, SSRing the view against the local
+dataset into one file. The export path and the dry-run path become one
+mechanism, which is what keeps the export path honest.
 
 **Draft**:
 Unsynced config edits, held in localStorage keyed by data repo + dashboard
@@ -220,6 +311,9 @@ The last step of every routine run: write the artifact to
 `w/<slug>/index.html` on the data repo's `artifacts` branch, commit, push
 (the `publish-widget` skill). Publishing is a git push. There is no upload,
 no CDN, no external host (ADR-0002).
+**After M10** (ADR-0060/0061): what is pushed is data — `d/<name>.json` plus
+that run's **partition**, on the `datasets` branch. Publishing is still a git
+push, and still the last step of every run.
 
 **Dispatcher** (`run-routine` skill):
 The single entry point every run goes through: resolve the slug in
@@ -251,3 +345,20 @@ _Avoid_: fail, error out, fallback
 4. The dashboard (authed with the viewer's GitHub token) fetches the file via
    the contents API and renders it in a sandboxed `srcdoc` iframe; the last
    commit touching that path becomes the "ran 2h ago" footer.
+
+## How a widget stays fresh after M10 (ADR-0060)
+
+1. A run starts the same four ways. `run-routine` follows the routine's
+   template: it composes **primitives** and writes **datasets** — or, for a
+   synthesis routine, reads datasets already gathered and writes a
+   **judgement**.
+2. `publish-widget` commits `d/<name>.json` and that run's **partition** to
+   the `datasets` branch and pushes. Nothing renders.
+3. The board loads the **view** the widget names, injects the theme, the kit
+   runtime and the bound datasets into the sandboxed iframe, and the kit
+   composes them. A data change reaches every widget bound to it on the next
+   load, with no run; a structural change needs a re-published view.
+4. The widget's age is its **stalest** bound dataset, and it is stale if any
+   of them is overdue against its own producer's schedule (ADR-0035's rule,
+   one tier down). Update fans out to every producer behind the widget and
+   reports honestly which ones it could not trigger.
