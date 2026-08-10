@@ -720,6 +720,11 @@ describe("DashboardBoard", () => {
       await renderBoard(Promise.resolve({}), { base: bandedView() })
       await expect.poll(headings).toEqual(["Project Mgmt", "Engineering"])
 
+      // Nothing is pending yet, so the header carries no unsynced chip. Pinned
+      // here so the assertion at the end is a *transition* rather than a state
+      // that might have been true all along.
+      expect(document.body.textContent).not.toContain("Unsynced changes")
+
       await openBandMenu("Engineering")
       await userEvent.click(page.getByRole("menuitem", { name: "New band…" }))
       await expect.poll(() => document.body.textContent).toContain("New band")
@@ -743,8 +748,21 @@ describe("DashboardBoard", () => {
         .poll(headings)
         .toEqual(["Project Mgmt", "Engineering", "Executive"])
       // Membership is a routine edit, so it rides the draft to Sync — never a
-      // direct commit like the order beside it.
-      await expect.poll(() => document.body.textContent).toContain("Sync")
+      // direct commit like the order beside it. The draft surfaces as the
+      // header's unsynced chip.
+      //
+      // This used to poll for the bare word `"Sync"`, which is why it flaked on
+      // CI: the only capital-S "Sync" on the page at that moment came from the
+      // band dialog's own hint — "review it in Sync before it commits" — so the
+      // assertion was passing on a string belonging to the dialog it had just
+      // dismissed. Locally the dialog was still tearing down when the first
+      // poll ran and the match landed; on a cold runner it had gone, and there
+      // was nothing left to match. Neither outcome had anything to do with the
+      // draft. Pin the chip instead, and give it room, since it is the last
+      // link in the longest async chain in the suite.
+      await expect
+        .poll(() => document.body.textContent, { timeout: 5000 })
+        .toContain("Unsynced changes")
     })
   })
 })
