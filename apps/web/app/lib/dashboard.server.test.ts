@@ -95,6 +95,7 @@ describe("loadDashboard", () => {
     expect(view.templates.map((t) => [t.id, t.source])).toEqual([
       ["daily-plan", "repo"],
       ["module-entropy", "builtin"],
+      ["react-doctor", "builtin"],
       ["repo-narrative", "builtin"],
       ["repo-pulse", "builtin"],
     ])
@@ -130,6 +131,7 @@ describe("loadDashboard", () => {
     expect(view.templates.map((t) => [t.id, t.source])).toEqual([
       ["daily-plan", "builtin"],
       ["module-entropy", "builtin"],
+      ["react-doctor", "builtin"],
       ["repo-narrative", "builtin"],
       ["repo-pulse", "builtin"],
     ])
