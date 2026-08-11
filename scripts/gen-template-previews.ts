@@ -69,6 +69,7 @@ const render = path.join(
 const PREVIEWS: Record<string, string> = {
   "daily-plan": "day",
   "module-entropy": "matrix",
+  "react-doctor": "status",
   "repo-narrative": "briefing",
   "repo-pulse": "roster",
 }
