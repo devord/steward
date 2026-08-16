@@ -11,10 +11,15 @@ import type { VersionState } from "../components/artifact-version-dialog.tsx"
  * instant; a failed fetch is dropped from the in-flight set so a later open
  * retries. `urlFor` must be stable (memoize per repo + slug).
  */
-export function useArtifactVersions(urlFor: (sha: string) => string): {
+/** The version cache's two handles: ask for a version, read its state. */
+export interface ArtifactVersions {
   load: (sha: string) => void
   stateFor: (sha: string) => VersionState
-} {
+}
+
+export function useArtifactVersions(
+  urlFor: (sha: string) => string,
+): ArtifactVersions {
   const [cache, setCache] = useState<Record<string, VersionState>>({})
   // Dedupe live and settled-ok fetches without racing on the async setState —
   // the fetch fires outside the state updater, so the guard can't live there.

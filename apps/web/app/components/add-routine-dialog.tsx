@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { KeyboardEvent, ReactNode } from "react"
+import { isJsonString } from "../lib/json.ts"
 
 import type {
   Routine,
@@ -115,7 +116,7 @@ function paramList(value: ParamValue | undefined): string[] {
 }
 
 function paramText(value: ParamValue | undefined): string {
-  return typeof value === "string" ? value : ""
+  return isJsonString(value) ? value : ""
 }
 
 /** Title-case a kebab or spaced token for a display name: `corza` →
@@ -692,6 +693,10 @@ export function AddRoutineDialog({
         ? { category: null }
         : {}
 
+    // Every optional field is *omitted* rather than written empty: the YAML
+    // this becomes is read by people, and a key carrying nothing is a key that
+    // has to be explained. Assigned one at a time so the omission is a
+    // statement rather than a spread past an empty object.
     const routine: Routine = {
       slug: isEdit ? editRoutine.slug : slug,
       name: name.trim(),
@@ -699,22 +704,17 @@ export function AddRoutineDialog({
       // template (ADR-0022).
       template: templateId ?? CUSTOM_TEMPLATE,
       ...categoryField,
-      ...(manual ? {} : { schedule: effectiveSchedule.trim() }),
-      // Cloud is the default (ADR-0012) — leave it out of the YAML.
-      ...(host === "local" ? { host } : {}),
-      ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
-      ...(Object.keys(mergedParams).length > 0 ? { params: mergedParams } : {}),
-      ...(repos.length > 0 ? { repos } : {}),
-      ...(connectors.length > 0 ? { connectors } : {}),
-      ...(isEdit
-        ? editRoutine.runner
-          ? { runner: editRoutine.runner }
-          : {}
-        : runner
-          ? { runner }
-          : {}),
       enabled: isEdit ? editRoutine.enabled : true,
     }
+    if (!manual) routine.schedule = effectiveSchedule.trim()
+    // Cloud is the default (ADR-0012) — leave it out of the YAML.
+    if (host === "local") routine.host = host
+    if (instructions.trim()) routine.instructions = instructions.trim()
+    if (Object.keys(mergedParams).length > 0) routine.params = mergedParams
+    if (repos.length > 0) routine.repos = repos
+    if (connectors.length > 0) routine.connectors = connectors
+    const chosenRunner = isEdit ? editRoutine.runner : runner
+    if (chosenRunner) routine.runner = chosenRunner
     if (isEdit) onEdit?.(routine)
     else {
       // Initial size is the template's default (wizard default for custom),
@@ -1150,7 +1150,7 @@ export function AddRoutineDialog({
                     <Select
                       value={schedule}
                       onValueChange={(next) => {
-                        if (typeof next === "string") {
+                        if (isJsonString(next)) {
                           setScheduleEdited(true)
                           setSchedule(next)
                         }
@@ -1165,7 +1165,7 @@ export function AddRoutineDialog({
                             (terminal manners: machine strings stay honest). */}
                         <SelectValue>
                           {(value) => {
-                            if (typeof value !== "string") return null
+                            if (!isJsonString(value)) return null
                             if (value === MANUAL) {
                               return t("dialog.manualShort")
                             }
@@ -1702,7 +1702,7 @@ function ParamField({
         <Select
           value={paramText(value)}
           onValueChange={(next) => {
-            if (typeof next === "string") onChange(next)
+            if (isJsonString(next)) onChange(next)
           }}
         >
           <SelectTrigger
@@ -1714,7 +1714,7 @@ function ParamField({
           >
             <SelectValue>
               {(current) =>
-                typeof current === "string" && current.length > 0 ? (
+                isJsonString(current) && current.length > 0 ? (
                   current
                 ) : (
                   <span className="text-muted-foreground">

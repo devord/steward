@@ -10,14 +10,14 @@ import type { Tone } from "../ui/tone.ts"
  * its length, and an inert magnitude has to stay quieter than the row's state
  * chip or the tile spends its accent budget on the least actionable column.
  */
-const METER_FILL: Record<Tone, string> = {
+const METER_FILL = {
   neutral: "bg-ink-faint",
   attn: "bg-orange",
   warn: "bg-yellow",
   bad: "bg-red",
   good: "bg-green",
   info: "bg-blue",
-}
+} satisfies Record<Tone, string>
 
 /**
  * A magnitude bar — the ledger's "how much", against a scale shared by every

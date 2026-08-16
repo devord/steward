@@ -94,6 +94,14 @@ export function widgetStatus(
   return { kind: "awaiting-first-run" }
 }
 
+/** The three copy-pasteable lines a routine's setup needs, or null where a
+    given host does not have one. */
+export interface SetupCommands {
+  enact: string | null
+  runOnce: string | null
+  trigger: string | null
+}
+
 /** Terminal steps to activate a routine that isn't live yet, host-specific.
     `enact` runs routines:sync (creates the cloud routine / API trigger /
     launchd plist); `runOnce` runs a local routine on demand; `trigger` mints
@@ -102,11 +110,7 @@ export function widgetStatus(
 export function setupCommands(
   routine: Routine,
   dataRepo?: string,
-): {
-  enact: string | null
-  runOnce: string | null
-  trigger: string | null
-} {
+): SetupCommands {
   const local = routineHost(routine) === "local"
   // The published CLI (ADR-0036) keeps its own clone under ~/.cache/steward/,
   // so with the repo slug known --repo makes the line copy-pasteable from

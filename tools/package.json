@@ -1,0 +1,14 @@
+{
+  "name": "@steward/oxlint-rules",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vp test --run",
+    "typecheck": "tsc"
+  },
+  "devDependencies": {
+    "@oxlint/plugins": "1.68.0",
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -414,7 +414,9 @@ export function installThroughput(scope: ParentNode = document): void {
   }
 }
 
-if (typeof document !== "undefined") {
+// `in globalThis` rather than `typeof document`: same environment test, and it
+// never names a possibly-undeclared binding to ask whether it exists.
+if ("document" in globalThis) {
   if (document.readyState === "loading")
     document.addEventListener("DOMContentLoaded", () => installThroughput())
   else installThroughput()

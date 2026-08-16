@@ -17,14 +17,14 @@ export const TONES = ["neutral", "attn", "warn", "bad", "good", "info"] as const
 export type Tone = (typeof TONES)[number]
 
 /** Tone → text colour. Shared by the stat tier and queue value columns. */
-export const TONE_TEXT: Record<Tone, string> = {
+export const TONE_TEXT = {
   neutral: "text-ink-dim",
   attn: "text-orange",
   warn: "text-yellow",
   bad: "text-red",
   good: "text-green",
   info: "text-blue",
-}
+} satisfies Record<Tone, string>
 
 /**
  * Tone → fill colour, for a mark rather than text.
@@ -38,11 +38,11 @@ export const TONE_TEXT: Record<Tone, string> = {
  * `neutral` is full ink here, not `ink-dim` — a mark is a glyph, and the text
  * ramp's dimmest step disappears against a filled track.
  */
-export const TONE_FILL: Record<Tone, string> = {
+export const TONE_FILL = {
   neutral: "bg-ink",
   attn: "bg-orange",
   warn: "bg-yellow",
   bad: "bg-red",
   good: "bg-green",
   info: "bg-blue",
-}
+} satisfies Record<Tone, string>

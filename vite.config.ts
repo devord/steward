@@ -3,6 +3,9 @@ import { defineConfig } from "vite-plus"
 export default defineConfig({
   lint: {
     plugins: ["typescript", "import", "react"],
+    jsPlugins: [
+      { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
+    ],
     rules: {
       "no-debugger": "error",
       "no-var": "error",
@@ -39,6 +42,25 @@ export default defineConfig({
         "error",
         { assertionStyle: "never" },
       ],
+      "anti-slop/no-chained-type-assertions": "error",
+      "anti-slop/no-conditional-empty-object-spread": "error",
+      "anti-slop/no-known-value-widening": "error",
+      "anti-slop/no-module-mocking": "error",
+      "anti-slop/no-object-parameters": "error",
+      "anti-slop/no-reflect-apply": "error",
+      "anti-slop/no-reflect-get": "error",
+      // `typeof` is allowed only inside a declared type guard (`v is T`).
+      // That is the discipline the rule asks for: every representation check
+      // sits in one named predicate that hands back a domain type, instead of
+      // being scattered inline across the walkers that consume it.
+      "anti-slop/no-runtime-typeof": ["error", { allowInTypeGuards: true }],
+      "anti-slop/no-shape-in-symbol-names": "error",
+      "anti-slop/no-unknown-parameters": "error",
+      "anti-slop/no-unknown-returns": "error",
+      "anti-slop/no-unknown-type-aliases": "error",
+      "anti-slop/no-unsafe-dictionary-type": "error",
+      "anti-slop/no-widen-then-assert": "error",
+      "anti-slop/require-safety-comment-for-type-assertion": "error",
     },
     ignorePatterns: [
       "**/node_modules/",
@@ -56,6 +78,23 @@ export default defineConfig({
       ".claude/skills/widget-artifact/kit/kit.css",
       ".claude/skills/widget-artifact/kit/render.mjs",
       ".claude/skills/widget-artifact/kit/throughput.js",
+      // Config other agent harnesses generate into the repo. `.claude/` is
+      // deliberately absent: this repo *owns* the skill scripts under
+      // `.claude/skills/`, so they stay linted like the rest of the source.
+      ".agent/**",
+      ".agents/**",
+      ".codex/**",
+      ".continue/**",
+      ".cursor/**",
+      ".gemini/**",
+      ".opencode/**",
+      ".pi/**",
+      ".roo/**",
+      ".windsurf/**",
+      // The anti-slop plugin is vendored from the install-anti-slop skill.
+      // It is Oxlint's own input, not repo source, and it does not follow
+      // this repo's style (tabs, its own import conventions).
+      "tools/oxlint/anti-slop/**",
     ],
     overrides: [
       {
@@ -107,6 +146,20 @@ export default defineConfig({
       // generator emits the renderer's exact bytes, the formatter rewrites
       // them, and the next `git status` reports output nobody edited.
       "docs/samples/**",
+      // Same two exclusions as `lint.ignorePatterns`: assets other agent
+      // harnesses install, and the vendored anti-slop plugin. Reformatting
+      // the plugin would only make the next skill re-install a fake diff.
+      ".agent/**",
+      ".agents/**",
+      ".codex/**",
+      ".continue/**",
+      ".cursor/**",
+      ".gemini/**",
+      ".opencode/**",
+      ".pi/**",
+      ".roo/**",
+      ".windsurf/**",
+      "tools/oxlint/anti-slop/**",
     ],
   },
   staged: {

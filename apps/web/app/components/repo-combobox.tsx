@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { isJsonString } from "../lib/json.ts"
 
 import { Combobox } from "@base-ui/react/combobox"
 
@@ -60,7 +61,7 @@ export function RepoCombobox({
       onInputValueChange={onChange}
       // Picking a suggestion commits it as the value.
       onValueChange={(next) => {
-        if (typeof next === "string") onChange(next)
+        if (isJsonString(next)) onChange(next)
       }}
       // The pool is already server-filtered by ?q=; re-filtering here would
       // hide valid suggestions.

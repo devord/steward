@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 import type { ArtifactInfo } from "./dashboard.server.ts"
+import { isJsonNumber, isJsonString, isRecord, type JsonValue } from "./json.ts"
 
 /**
  * A fired run has no server-side state to poll (ADR-0016: the server holds no
@@ -86,19 +87,11 @@ export function usePendingRuns(dataRepo: string) {
       let run: PendingRun | undefined
       try {
         const raw = localStorage.getItem(k)
-        const parsed: unknown = raw ? JSON.parse(raw) : null
-        if (
-          parsed &&
-          typeof parsed === "object" &&
-          "firedAt" in parsed &&
-          typeof parsed.firedAt === "number"
-        ) {
+        const parsed: JsonValue = raw ? JSON.parse(raw) : null
+        if (isRecord(parsed) && isJsonNumber(parsed.firedAt)) {
           // Marks written before SHA tracking carry no `sha`; treat that as a
           // null baseline (any published artifact then reads as "changed").
-          const sha =
-            "sha" in parsed && typeof parsed.sha === "string"
-              ? parsed.sha
-              : null
+          const sha = isJsonString(parsed.sha) ? parsed.sha : null
           run = { firedAt: parsed.firedAt, sha }
         }
       } catch {

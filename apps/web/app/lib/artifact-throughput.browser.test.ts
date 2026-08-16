@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest"
 
 import { renderArtifact } from "../../../../packages/artifact-kit/src/render.tsx"
+import type { ThroughputSpec } from "../../../../packages/artifact-kit/src/components/Throughput.tsx"
 import {
   ARTIFACT_THROUGHPUT_SCRIPT,
   ARTIFACT_KIT_STYLE,
@@ -73,7 +74,7 @@ const spec = {
     ana: { name: "Ana Ruiz", avatar: FACE_A },
     bo: { name: "Bo Chen", avatar: FACE_B },
   },
-} as const
+} satisfies ThroughputSpec
 
 function artifact(): string {
   return renderArtifact(
@@ -85,7 +86,7 @@ function artifact(): string {
         {
           kind: "throughput",
           label: "PRs per person",
-          spec: structuredClone(spec) as never,
+          spec: structuredClone(spec),
         },
       ],
     },
@@ -127,8 +128,8 @@ const text = (d: Document, sel: string) =>
   (d.querySelector(sel)?.textContent ?? "").trim()
 
 const columnKeys = (d: Document) =>
-  [...d.querySelectorAll("[data-kit-throughput-col]")].map(
-    (el) => (el as HTMLElement).dataset.kitThroughputCol,
+  [...d.querySelectorAll<HTMLElement>("[data-kit-throughput-col]")].map(
+    (el) => el.dataset.kitThroughputCol,
   )
 
 /** Click a toggle option the way a reader would. */
@@ -145,7 +146,8 @@ function scrubTo(d: Document, index: number) {
   const slider = d.querySelector<HTMLInputElement>("[data-kit-scrub-input]")
   if (!slider) throw new Error("no scrubber")
   slider.value = String(index)
-  const win = d.defaultView as Window & typeof globalThis
+  const win = d.defaultView
+  if (!win) throw new Error("no window")
   slider.dispatchEvent(new win.Event("input", { bubbles: true }))
 }
 
@@ -223,7 +225,8 @@ describe("the injected throughput runtime", () => {
     const painted = (v: string) => {
       const el = option(v)
       if (!el) throw new Error(`no option ${v}`)
-      const win = d.defaultView as Window & typeof globalThis
+      const win = d.defaultView
+      if (!win) throw new Error("no window")
       return win.getComputedStyle(el).backgroundColor
     }
     const before = { owner: painted("owner"), reviewer: painted("reviewer") }
@@ -282,14 +285,14 @@ describe("the injected throughput runtime", () => {
         },
       ],
       people: { ...spec.people, cy: { name: "Cy Okafor", avatar: FACE_A } },
-    }
+    } satisfies ThroughputSpec
     const d = await mount(
       renderArtifact(
         {
           slug: "repo-stats",
           generatedAt: "2026-03-03T08:00:00Z",
           stat: { value: 6, label: "merged" },
-          blocks: [{ kind: "throughput", spec: withCy as never }],
+          blocks: [{ kind: "throughput", spec: withCy }],
         },
         "",
       ),

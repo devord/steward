@@ -14,6 +14,7 @@ import {
   useRevalidator,
   useSearchParams,
 } from "react-router"
+import { isJsonString } from "../lib/json.ts"
 
 import type { DashboardFile, Routine, WidgetSize } from "@steward/schema"
 import {
@@ -2122,7 +2123,7 @@ function GridKnob({
           <SelectValue>
             {renderValue &&
               ((current) =>
-                typeof current === "string" ? renderValue(current) : null)}
+                isJsonString(current) ? renderValue(current) : null)}
           </SelectValue>
         </SelectTrigger>
       </label>

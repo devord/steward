@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises"
 
 import { describe, expect, it } from "vitest"
 
+import type { JsonValue } from "./json.ts"
+
 import {
   artifactKitStyle,
   coercePrefs,
@@ -81,7 +83,7 @@ describe("THEME_INIT_SCRIPT", () => {
    * in <head> before React exists. `new Function` parameters shadow the four
    * globals it touches, so nothing leaks into the node environment.
    */
-  function runInit(stored: unknown, systemDark: boolean) {
+  function runInit(stored: JsonValue | undefined, systemDark: boolean) {
     const metas: Record<string, string>[] = []
     const attributes: Record<string, string> = {}
     let dark = false

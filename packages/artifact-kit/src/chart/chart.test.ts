@@ -86,6 +86,11 @@ describe("conformChart", () => {
   })
 })
 
+/** What `monoWidth` reads off a vega text item. */
+interface MeasuredItem {
+  fontSize?: number
+}
+
 describe("monoWidth", () => {
   it("is the advance times the count, not an estimate", () => {
     expect(monoWidth({ fontSize: 12 }, "abcd")).toBe(4 * 12 * MONO_ADVANCE)
@@ -94,6 +99,25 @@ describe("monoWidth", () => {
   it("survives a missing size and a non-string", () => {
     expect(monoWidth({}, null)).toBe(0)
     expect(monoWidth({}, 1234)).toBeGreaterThan(0)
+  })
+
+  it("falls back to 12 for a size that is not a number", () => {
+    // `fontSize` is typed but never enforced — the item crosses from
+    // `assembleVegaLite`, which is declared `any`. A string size that reached
+    // the arithmetic would return NaN, and `useMonoMetrics` patches vega's
+    // *global* measurer, so that NaN would lay out every later chart too.
+    //
+    // Parsed rather than asserted: these are the shapes the type forbids and
+    // the runtime still delivers, and `JSON.parse` hands them over untyped.
+    const bad: MeasuredItem[] = JSON.parse(
+      '[{"fontSize":"1.2em"},{"fontSize":null},{},{"fontSize":{}}]',
+    )
+    bad.push({ fontSize: Number.NaN })
+    for (const item of bad) {
+      expect(monoWidth(item, "abcd"), JSON.stringify(item)).toBe(
+        4 * 12 * MONO_ADVANCE,
+      )
+    }
   })
 })
 

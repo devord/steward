@@ -12,6 +12,7 @@ import { createContext, useCallback, useContext, useMemo } from "react"
 
 import { en, type MessageKey, type Messages } from "../locales/en.ts"
 import { ptBR } from "../locales/pt-br.ts"
+import type { JsonValue } from "./json.ts"
 
 export const LOCALES = ["en", "pt-BR"] as const
 export type Locale = (typeof LOCALES)[number]
@@ -23,9 +24,9 @@ export const LOCALE_OPTIONS: readonly { value: Locale; label: string }[] = [
   { value: "pt-BR", label: "Português (Brasil)" },
 ]
 
-const dictionaries: Record<Locale, Messages> = { en, "pt-BR": ptBR }
+const dictionaries = { en, "pt-BR": ptBR } satisfies Record<Locale, Messages>
 
-export function isLocale(value: unknown): value is Locale {
+export function isLocale(value: JsonValue | undefined): value is Locale {
   return LOCALES.some((locale) => locale === value)
 }
 

@@ -89,14 +89,17 @@ export function parseRunCost(
   return { tokens: Number(tokens[1]), usd: usd ? Number(usd[1]) : null }
 }
 
-/** What the listed runs cost together, and how many of them that covers —
-    a mixed list (old receipts, unpriced models) must show its own reach
-    rather than pass a partial sum off as the total. */
-export function totalRunCost(runs: RunView[]): {
+/** A sum and the reach it covers: `runs` counted, `priced` of them costed. */
+export interface RunCostTotal {
   usd: number
   priced: number
   runs: number
-} {
+}
+
+/** What the listed runs cost together, and how many of them that covers —
+    a mixed list (old receipts, unpriced models) must show its own reach
+    rather than pass a partial sum off as the total. */
+export function totalRunCost(runs: RunView[]): RunCostTotal {
   let usd = 0
   let priced = 0
   for (const run of runs) {

@@ -254,10 +254,15 @@ function knotPath(r: MarkRatios): string {
   )
 }
 
+/** One button stud, in mark units. */
+export interface ButtonCircle {
+  cx: number
+  cy: number
+  rad: number
+}
+
 /** The two button studs below the bow. */
-export function buttonCircles(
-  r: MarkRatios = MARK_RATIOS,
-): { cx: number; cy: number; rad: number }[] {
+export function buttonCircles(r: MarkRatios = MARK_RATIOS): ButtonCircle[] {
   const rad = r.button / 2
   return [
     { cx: C, cy: r.buttonTop, rad },
@@ -270,11 +275,14 @@ export function buttonCircles(
  * buttons via {@link buttonCircles}. Taking ratios as an argument is what lets
  * `scripts/mark-sheet.ts` render alternative cuts side by side.
  */
-export function buildMark(r: MarkRatios = MARK_RATIOS): {
+/** The mark's three drawn paths. */
+export interface MarkPaths {
   wingL: string
   wingR: string
   knot: string
-} {
+}
+
+export function buildMark(r: MarkRatios = MARK_RATIOS): MarkPaths {
   return { wingL: wingPath(r, 1), wingR: wingPath(r, -1), knot: knotPath(r) }
 }
 
@@ -334,9 +342,7 @@ export const MARK_SPAN = {
  * `button` is a diameter; below one device pixel the two studs would render as
  * nothing, so the size gate holds them like any other mark.
  */
-export function drawnFeatures(
-  r: MarkRatios = MARK_RATIOS,
-): Record<string, number> {
+export function drawnFeatures(r: MarkRatios = MARK_RATIOS) {
   return {
     bowW: r.bowW,
     bowH: r.bowH,
@@ -412,10 +418,13 @@ export const GLYPH_INK_CAP = 0.85
  * a redraw that reproportions the bow moves the box with it instead of quietly
  * cropping or padding it.
  */
-export function chromeGlyphBox(r: MarkRatios = MARK_RATIOS): {
+/** The inline glyph's box, in em, so it scales with the text beside it. */
+export interface GlyphBox {
   height: string
   width: string
-} {
+}
+
+export function chromeGlyphBox(r: MarkRatios = MARK_RATIOS): GlyphBox {
   const cropW = r.bowW + 2 * GLYPH_AIR
   const cropH = r.bowH + 2 * GLYPH_AIR
   const height = (GLYPH_INK_CAP * WORDMARK_CAP * cropH) / r.bowH

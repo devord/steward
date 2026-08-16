@@ -1055,7 +1055,7 @@ export function StateDot({
 }) {
   const tone = status ? dotTone(status) : "skeleton"
   const base = "inline-block size-1.5 shrink-0 rounded-full"
-  const map: Record<string, string> = {
+  const map = {
     green: "bg-green",
     yellow: "bg-yellow",
     accent: "bg-primary",
@@ -1063,11 +1063,21 @@ export function StateDot({
     hollow: "border border-ink-faint",
     disabled: "border border-border",
     skeleton: "animate-pulse bg-bg3",
-  }
+  } satisfies Record<DotTone, string>
   return <span aria-hidden className={cn(base, map[tone], className)} />
 }
 
-function dotTone(status: WidgetStatus): string {
+/** The tones a status dot paints in — the keys `map` below is exhaustive over. */
+type DotTone =
+  | "green"
+  | "yellow"
+  | "accent"
+  | "red"
+  | "hollow"
+  | "disabled"
+  | "skeleton"
+
+function dotTone(status: WidgetStatus): DotTone {
   switch (status.kind) {
     case "live":
       return status.stale ? "yellow" : "green"

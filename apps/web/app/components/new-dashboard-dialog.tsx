@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useState } from "react"
 import { useFetcher, useNavigate } from "react-router"
+import { isJsonString } from "../lib/json.ts"
 
 import { SECTION_NAME_MAX, slugSchema } from "@steward/schema"
 
@@ -137,7 +138,7 @@ export function NewDashboardDialog({
               <Select
                 value={effectiveRepo}
                 onValueChange={(next) => {
-                  if (typeof next === "string" && repos.includes(next)) {
+                  if (isJsonString(next) && repos.includes(next)) {
                     setRepo(next)
                   }
                 }}

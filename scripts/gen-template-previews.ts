@@ -66,13 +66,13 @@ const render = path.join(
  * built-ins only, because it is only the built-ins that live in this repo
  * alongside the fixtures.
  */
-const PREVIEWS: Record<string, string> = {
+const PREVIEWS = {
   "daily-plan": "day",
   "module-entropy": "matrix",
   "react-doctor": "status",
   "repo-narrative": "briefing",
   "repo-pulse": "roster",
-}
+} satisfies Record<string, string>
 
 if (!existsSync(render)) {
   console.error(

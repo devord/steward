@@ -25,9 +25,9 @@ import { flushSync } from "react-dom"
 let pressedAt: { x: number; y: number } | null = null
 
 function pointOf(event: Event): { x: number; y: number } | null {
-  if (typeof MouseEvent !== "undefined" && event instanceof MouseEvent)
+  if ("MouseEvent" in globalThis && event instanceof MouseEvent)
     return { x: event.clientX, y: event.clientY }
-  if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
+  if ("TouchEvent" in globalThis && event instanceof TouchEvent) {
     const touch = event.touches[0] ?? event.changedTouches[0]
     return touch ? { x: touch.clientX, y: touch.clientY } : null
   }

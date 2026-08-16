@@ -187,13 +187,19 @@ export function SyncPanel({
   }, [raced, onConflictCommitted])
 
   function submit() {
-    const payload: Record<string, unknown> = {
+    // The wire shape `/sync` parses: the intent and repo it always needs, an
+    // optional board slug, and one entry per changed file keyed by its kind.
+    const payload: {
+      intent: "pr" | "commit"
+      repo: string
+      dashboardSlug?: string
+    } & Partial<Record<SyncKind, { yaml: string; baseSha: string | null }>> = {
       intent: asPr ? "pr" : "commit",
       repo: dataRepo,
-      // Omitted for the pool view — the /sync payload only needs a slug when a
-      // dashboard change rides along.
-      ...(dashboardSlug != null ? { dashboardSlug } : {}),
     }
+    // Omitted for the pool view — the /sync payload only needs a slug when a
+    // dashboard change rides along.
+    if (dashboardSlug != null) payload.dashboardSlug = dashboardSlug
     for (const change of changes) {
       payload[change.kind] = { yaml: change.yaml, baseSha: change.baseSha }
     }

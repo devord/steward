@@ -18,6 +18,19 @@ function args(argv) {
   return out
 }
 
+/**
+ * A JSON object: not null, not an array. `Object(v) === v` is the object test
+ * that needs no `typeof` — a primitive boxes to a new object and fails it.
+ */
+function isRecord(v) {
+  return v !== null && v !== undefined && Object(v) === v && !Array.isArray(v)
+}
+
+/** A flag's value, or null when it was passed bare — `args` yields `true`. */
+function flagValue(v) {
+  return v === true || v === undefined ? null : v
+}
+
 function die(message) {
   process.stderr.write(`jira-issues: ${message}\n`)
   process.exit(1)
@@ -154,7 +167,7 @@ try {
 } catch (error) {
   die(`cannot read ${opts.raw}: ${error.message}`)
 }
-if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+if (!isRecord(raw)) {
   die("raw.json must be an object keyed by issue key")
 }
 if (raw.reachable === false) {
@@ -166,8 +179,8 @@ if (raw.reachable === false) {
 
 const doc = enrich(raw, {
   now,
-  label: typeof opts.label === "string" ? opts.label : null,
-  base: typeof opts.base === "string" ? opts.base : null,
+  label: flagValue(opts.label),
+  base: flagValue(opts.base),
 })
 
 const file = join(String(outDir), "issues.json")

@@ -49,6 +49,19 @@ function args(argv) {
   return out
 }
 
+/**
+ * A JSON object: not null, not an array. `Object(v) === v` is the object test
+ * that needs no `typeof` — a primitive boxes to a new object and fails it.
+ */
+function isRecord(v) {
+  return v !== null && v !== undefined && Object(v) === v && !Array.isArray(v)
+}
+
+/** A flag's value, or null when it was passed bare — `args` yields `true`. */
+function flagValue(v) {
+  return v === true || v === undefined ? null : v
+}
+
 function die(message) {
   process.stderr.write(`github-prs: ${message}\n`)
   process.exit(1)
@@ -271,14 +284,14 @@ try {
 } catch (error) {
   die(`cannot read ${opts.raw}: ${error.message}`)
 }
-if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+if (!isRecord(raw)) {
   die("raw.json must be an object keyed by owner/repo")
 }
 if (Object.keys(raw).length === 0) die("raw.json names no repos")
 
 const doc = derive(raw, {
   now,
-  jira: typeof opts.jira === "string" ? opts.jira : null,
+  jira: flagValue(opts.jira),
 })
 
 // Every repo unreachable is a degraded reading, not a failure: the caller still

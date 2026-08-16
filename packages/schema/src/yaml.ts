@@ -10,17 +10,44 @@ export function parseRoutinesFile(text: string): RoutinesFile {
 }
 
 /**
+ * A parsed YAML document, before a zod schema gives it a shape.
+ *
+ * `parse` is declared to return `any`, and the key migration below runs
+ * *before* validation — so this is the only point at which the tree has a type
+ * at all. Declared here rather than shared: `@steward/schema` and the kit have
+ * no dependency on one another, and six lines is a poor reason to add one.
+ */
+type YamlValue =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly YamlValue[]
+  | YamlMapping
+
+/** A mapping in that tree. Optional values so a key can be `delete`d. */
+interface YamlMapping {
+  [key: string]: YamlValue | undefined
+}
+
+function isYamlMapping(v: YamlValue): v is YamlMapping {
+  return typeof v === "object" && v !== null && !Array.isArray(v)
+}
+
+/**
  * Rename a legacy YAML key to its canonical successor when the object carries
  * the old name but not the new one (ADR-0039: `group`→`section`,
  * `groups`→`sections`). Left untouched otherwise, so a file already using the
  * new key — or carrying both — keeps the canonical value. Serialization only
  * ever emits the new key, so any edited file rewrites forward.
  */
-function renameLegacyKey(value: unknown, from: string, to: string): unknown {
-  if (value == null || typeof value !== "object" || Array.isArray(value)) {
-    return value
-  }
-  const record: Record<string, unknown> = { ...value }
+function renameLegacyKey(
+  value: YamlValue,
+  from: string,
+  to: string,
+): YamlValue {
+  if (!isYamlMapping(value)) return value
+  const record: YamlMapping = { ...value }
   if (from in record && !(to in record)) {
     record[to] = record[from]
     delete record[from]

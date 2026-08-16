@@ -38,6 +38,14 @@ import { isStale } from "./routine-status.ts"
 import { invalidateSwr, swr, tokenKey } from "./swr.server.ts"
 import { builtinCategories, discoverTemplates } from "./templates.server.ts"
 
+/** The trigger-derived slice of {@link ArtifactInfo}: each field present only
+    when this run actually resolved it. */
+interface TriggerFields {
+  hasTrigger?: boolean
+  routineId?: string
+  claudeAccount?: string
+}
+
 export interface ArtifactInfo {
   /** null → never published: render the placeholder card (ADR-0002). */
   html: string | null
@@ -160,6 +168,10 @@ function sessionExpired401(): never {
  * network blip — is the transient class that recovers on the next refresh.
  * Non-GitHub errors are re-thrown to the generic crash boundary.
  */
+// A caught value has no domain type: `catch` hands over `unknown`, and this
+// function *is* the boundary that classifies it. A type parameter here would
+// infer to `unknown` at every call site and only hide that from the rule.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 function degradeGitHubError(error: unknown): never {
   if (error instanceof GitHubError) {
     if (error.status === 401) sessionExpired401()
@@ -334,6 +346,13 @@ async function listSidebarBoards(
     (ADR-0035). A slug not published within this window reads "unknown". */
 const FRESHNESS_COMMITS = 100
 
+/** How fresh a board reads: the oldest publish on it, and whether any
+    routine has slipped past its schedule. */
+export interface BoardFreshness {
+  lastRunAt: string | null
+  stale: boolean
+}
+
 /**
  * Roll a board's widgets up into its rail freshness (ADR-0035): the age is its
  * *stalest* widget's last publish (the most-behind content), and `stale` is
@@ -347,7 +366,7 @@ function rollUpFreshness(
   publishDates: Map<string, string> | null,
   routinesBySlug: Map<string, Routine>,
   now: number,
-): { lastRunAt: string | null; stale: boolean } {
+): BoardFreshness {
   let oldest: string | null = null
   let stale = false
   for (const slug of routineSlugs) {
@@ -700,11 +719,13 @@ export async function loadArtifacts(
           routineId = undefined
         }
       }
-      const triggerFields = {
-        ...(hasTrigger !== undefined ? { hasTrigger } : {}),
-        ...(routineId !== undefined ? { routineId } : {}),
-        ...(claudeAccount !== undefined ? { claudeAccount } : {}),
-      }
+      // Absent, not empty: a field nobody resolved must not appear at all, so
+      // a consumer can tell "no trigger" from "not looked at".
+      const triggerFields: TriggerFields = {}
+      if (hasTrigger !== undefined) triggerFields.hasTrigger = hasTrigger
+      if (routineId !== undefined) triggerFields.routineId = routineId
+      if (claudeAccount !== undefined)
+        triggerFields.claudeAccount = claudeAccount
       artifacts[slug] =
         body.status === "fulfilled"
           ? {

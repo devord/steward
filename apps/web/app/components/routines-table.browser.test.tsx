@@ -45,7 +45,7 @@ const triage = routine({
   host: "local",
 })
 
-const artifacts: Record<string, ArtifactInfo> = {
+const artifacts = {
   "daily-plan": {
     html: "<p>ok</p>",
     sha: "a1",
@@ -62,7 +62,7 @@ const artifacts: Record<string, ArtifactInfo> = {
     routineId: "rt_change_456",
   },
   "triage-brief": { html: null, sha: null, lastRunAt: null },
-}
+} satisfies Record<string, ArtifactInfo>
 
 function menuItem(label: string): HTMLElement | null {
   return (

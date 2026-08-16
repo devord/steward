@@ -6,6 +6,7 @@
  * absence of a finding is worth, where "audited the knowledge base" tells them
  * nothing. Page tier and up — it is the last thing to earn space on a tile.
  */
+import { isJsonString, isRecord } from "../json.ts"
 import { Icon, INLINE_GLYPH } from "../ui/icon.tsx"
 
 /**
@@ -23,8 +24,14 @@ import { Icon, INLINE_GLYPH } from "../ui/icon.tsx"
  * `reviewDoc` still names it, because one shape read back is easier than two.
  */
 function fact(f: string | { label?: string; value?: string }): string {
-  if (typeof f === "string") return f
-  const parts = [f?.label, f?.value].filter((p) => typeof p === "string")
+  if (isJsonString(f)) return f
+  // `validateDoc` only checks that `provenance` is an array — never its
+  // entries. So a null or a number reaches here, and neither has fields to
+  // read: `isRecord` is what the old `f?.label` was doing.
+  if (!isRecord(f)) return String(f)
+  // Strings only. A routine that emitted `{ label: null }` must not print
+  // "null" into the line.
+  const parts = [f.label, f.value].filter(isJsonString)
   return parts.length ? parts.join(" ") : String(f)
 }
 

@@ -1,5 +1,6 @@
 import {
   CATEGORY_NAME_MAX,
+  type DashboardFile,
   dashboardFileSchema,
   dashboardPath,
   parseDashboardFile,
@@ -151,7 +152,7 @@ export async function action({ request }: { request: Request }) {
         branch: "main",
         // No sha creates the file; GitHub 422s a stale one, which the catch
         // below translates into the conflict the caller retries from.
-        ...(raw ? { sha: raw.sha } : {}),
+        sha: raw?.sha,
       })
     } catch (error) {
       if (
@@ -293,13 +294,16 @@ export async function action({ request }: { request: Request }) {
 
   if (payload.intent === "create") {
     const section = payload.section?.trim()
-    const empty = serializeDashboardFile(
-      dashboardFileSchema.parse({
-        ...(section ? { section } : {}),
-        grid: {},
-        widgets: [],
-      }),
-    )
+    // The key is left out, not written empty: a board with no section belongs
+    // to the repo's unlabeled lead section, and `section: null` in the YAML
+    // would say something different.
+    // The schema's *input* type: `grid` is filled with defaults by `parse`.
+    const created: z.input<typeof dashboardFileSchema> = {
+      grid: {},
+      widgets: [],
+    }
+    if (section) created.section = section
+    const empty = serializeDashboardFile(dashboardFileSchema.parse(created))
     try {
       // No sha → create-only; GitHub 422s if the file already exists.
       await putFile(auth.token, repo, path, {
@@ -340,10 +344,9 @@ export async function action({ request }: { request: Request }) {
     // A blank value clears the section; drop the key when empty so an unset
     // section never serializes as `section: ""`.
     const section = payload.section.trim() || undefined
-    const next = serializeDashboardFile({
-      ...file,
-      ...(section ? { section } : {}),
-    })
+    const edited: DashboardFile = { ...file }
+    if (section) edited.section = section
+    const next = serializeDashboardFile(edited)
     // Name the commit for what actually changed — git is visible here
     // (principle 3): "move" when the section changed, "edit" otherwise.
     const sectionChanged = (section ?? "") !== (prevSection ?? "")

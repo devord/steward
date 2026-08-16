@@ -163,7 +163,7 @@ describe("templateKind (ADR-0040)", () => {
     id,
     name: id,
     description: "d",
-    widget: { artifact: "a", ...(kind ? { kind } : {}) },
+    widget: kind ? { artifact: "a", kind } : { artifact: "a" },
   })
 
   it("prefers an explicit kind", () => {

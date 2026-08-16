@@ -59,12 +59,12 @@ async function mount(body: string, w: number, h: number) {
 }
 
 const visible = (doc: Document) =>
-  [...doc.querySelectorAll("[data-fit-item]")].filter(
-    (el) => !(el as HTMLElement).hidden,
+  [...doc.querySelectorAll<HTMLElement>("[data-fit-item]")].filter(
+    (el) => !el.hidden,
   ).length
 
 const more = (doc: Document) =>
-  doc.querySelector("[data-fit-more]") as HTMLElement | null
+  doc.querySelector<HTMLElement>("[data-fit-more]")
 
 describe("the injected fit pass", () => {
   it("leaves everything alone when it already fits", async () => {
@@ -86,9 +86,9 @@ describe("the injected fit pass", () => {
 
   it("counts exactly what it hid", async () => {
     const doc = await mount(list(40), 340, 160)
-    const hidden = [...doc.querySelectorAll("[data-fit-item]")].filter(
-      (el) => (el as HTMLElement).hidden,
-    ).length
+    const hidden = [
+      ...doc.querySelectorAll<HTMLElement>("[data-fit-item]"),
+    ].filter((el) => el.hidden).length
     expect(more(doc)?.textContent).toBe(`+${hidden} more`)
   })
 
@@ -97,7 +97,7 @@ describe("the injected fit pass", () => {
     // the quiet ones — a repo with zero commits, a check that never ran. Left
     // untagged, the tile trims away exactly the absence the reader needed.
     const doc = await mount(list(40, { keep: [39] }), 340, 160)
-    const last = doc.querySelectorAll("[data-fit-item]")[39] as HTMLElement
+    const last = doc.querySelectorAll<HTMLElement>("[data-fit-item]")[39]
     expect(last.hidden).toBe(false)
   })
 
@@ -105,7 +105,8 @@ describe("the injected fit pass", () => {
     // A heading that names content and delivers none is the worst reading of
     // a tier, and it spends a row doing it.
     const doc = await mount(list(40, { section: true }), 340, 40)
-    const section = doc.querySelector("[data-fit-section]") as HTMLElement
+    const section = doc.querySelector<HTMLElement>("[data-fit-section]")
+    if (!section) throw new Error("no section")
     expect(section.hasAttribute("data-fit-collapsed")).toBe(true)
     expect(section.hidden).toBe(true)
   })
@@ -163,8 +164,8 @@ describe("the injected fit pass", () => {
     )
     const lists = doc.querySelectorAll("[data-fit-list]")
     const shown = (l: Element) =>
-      [...l.querySelectorAll("[data-fit-item]")].filter(
-        (el) => !(el as HTMLElement).hidden,
+      [...l.querySelectorAll<HTMLElement>("[data-fit-item]")].filter(
+        (el) => !el.hidden,
       ).length
     // The bookkeeping list gave way; the queue kept more of itself.
     expect(shown(lists[0])).toBeLessThan(shown(lists[1]))
@@ -189,13 +190,13 @@ describe("the injected fit pass", () => {
       340,
       200,
     )
-    const section = doc.querySelector("[data-fit-section]")
+    const section = doc.querySelector<HTMLElement>("[data-fit-section]")
     if (!section) throw new Error("no section")
     expect(section.hasAttribute("data-fit-label-only")).toBe(true)
     expect(section.hasAttribute("data-fit-collapsed")).toBe(false)
-    expect((section as HTMLElement).hidden).toBe(false)
+    expect(section.hidden).toBe(false)
     expect(doc.querySelector("h2")?.textContent).toBe("Reconcile")
-    expect((doc.querySelector("[data-fit-first]") as HTMLElement).hidden).toBe(
+    expect(doc.querySelector<HTMLElement>("[data-fit-first]")?.hidden).toBe(
       true,
     )
   })
@@ -210,13 +211,13 @@ describe("the injected fit pass", () => {
       340,
       60,
     )
-    const section = doc.querySelector("[data-fit-section]")
+    const section = doc.querySelector<HTMLElement>("[data-fit-section]")
     if (!section) throw new Error("no section")
     expect(section.hasAttribute("data-fit-label-only")).toBe(true)
     frames[frames.length - 1].style.height = "600px"
     await new Promise((r) => setTimeout(r, 250))
     expect(section.hasAttribute("data-fit-label-only")).toBe(false)
-    expect((doc.querySelector("[data-fit-first]") as HTMLElement).hidden).toBe(
+    expect(doc.querySelector<HTMLElement>("[data-fit-first]")?.hidden).toBe(
       false,
     )
   })

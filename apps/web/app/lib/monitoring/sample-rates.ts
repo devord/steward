@@ -85,11 +85,11 @@ const LOCAL: SampleRates = {
  * `VERCEL_ENV=development` beside a DSN — two deliberate variables, never a
  * default.
  */
-const RATES_BY_TIER: Record<string, SampleRates> = {
-  development: LOCAL,
-  preview: OFF,
-  production: LIVE,
-}
+const RATES_BY_TIER = new Map<string, SampleRates>([
+  ["development", LOCAL],
+  ["preview", OFF],
+  ["production", LIVE],
+])
 
 /**
  * Resolve the rates for a deploy tier. Unset, or any value not in the table
@@ -98,5 +98,5 @@ const RATES_BY_TIER: Record<string, SampleRates> = {
  */
 export function getSampleRates(tier?: string): SampleRates {
   if (!tier) return OFF
-  return RATES_BY_TIER[tier] ?? OFF
+  return RATES_BY_TIER.get(tier) ?? OFF
 }

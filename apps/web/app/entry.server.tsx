@@ -125,10 +125,10 @@ async function handleRequest(
             }),
           )
         },
-        onShellError(error: unknown) {
+        onShellError(error) {
           reject(error)
         },
-        onError(error: unknown) {
+        onError(error) {
           responseStatusCode = 500
           // Log streaming rendering errors from inside the shell. Errors
           // during initial shell rendering reject above and get logged there.

@@ -32,6 +32,12 @@ export function collides(
   )
 }
 
+/** A cell the grid can place a widget at. */
+export interface GridSlot {
+  col: number
+  row: number
+}
+
 /**
  * First free top-left slot that fits `size` on the desktop grid, scanning
  * row-major. The grid has unbounded rows, so this always terminates.
@@ -40,7 +46,7 @@ export function findFreeSlot(
   widgets: Widget[],
   size: WidgetSize,
   columns: number = GRID_MAX_COLS,
-): { col: number; row: number } {
+): GridSlot {
   for (let row = 1; ; row++) {
     for (let col = 1; col <= columns - size.cols + 1; col++) {
       if (!collides(widgets, { col, row, ...size })) return { col, row }

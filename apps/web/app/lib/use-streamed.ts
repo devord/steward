@@ -9,7 +9,7 @@ import { useEffect, useState } from "react"
  * client's first hydration render, where this map is still empty.
  */
 const held = new Map<string, unknown>()
-const isClient = typeof document !== "undefined"
+const isClient = "document" in globalThis
 
 /**
  * Per-namespace cap (the key segment before the first `:`), LRU by last read
@@ -19,13 +19,13 @@ const isClient = typeof document !== "undefined"
  * Artifact maps carry every widget's full HTML, so their namespace is bounded
  * to the handful of boards someone actually moves between, not a history.
  */
-const LIMITS: Record<string, number> = { artifacts: 4 }
+const LIMITS = new Map<string, number>([["artifacts", 4]])
 
 function evict(key: string): void {
   const colon = key.indexOf(":")
   if (colon < 0) return
   const namespace = key.slice(0, colon)
-  const limit = LIMITS[namespace]
+  const limit = LIMITS.get(namespace)
   if (limit === undefined) return
   const mine = [...held.keys()].filter((k) => k.startsWith(`${namespace}:`))
   // Map preserves insertion order and both read and write re-insert, so the
@@ -44,9 +44,9 @@ export function readHeld<T>(key: string): T | null {
   const value = held.get(key)
   held.delete(key)
   held.set(key, value)
-  // A key's held value is only ever written by that key's own promise, so
-  // the stored unknown is the caller's T — an invariant the type system
-  // can't carry through a shared heterogeneous map.
+  // SAFETY: a key's held value is only ever written by that key's own
+  // promise, so the stored value is the caller's T — an invariant the type
+  // system cannot carry through a shared heterogeneous map.
   // oxlint-disable-next-line typescript/consistent-type-assertions
   return (value as T | undefined) ?? null
 }

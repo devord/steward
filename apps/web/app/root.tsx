@@ -7,6 +7,7 @@ import {
   ScrollRestoration,
   useRouteLoaderData,
 } from "react-router"
+import { isJsonString } from "./lib/json.ts"
 
 import type { Route } from "./+types/root"
 import "./app.css"
@@ -148,7 +149,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         : // Loaders throw data("<human message>", { status }) for expected
           // failures (e.g. GitHub outage, dead session) — surface that over
           // statusText.
-          (typeof error.data === "string" && error.data) ||
+          (isJsonString(error.data) && error.data) ||
           error.statusText ||
           details
   } else if (import.meta.env.DEV && error && error instanceof Error) {

@@ -1,4 +1,5 @@
 import { Form, isRouteErrorResponse } from "react-router"
+import { isJsonString } from "../lib/json.ts"
 
 import { AppHeader } from "./app-header.tsx"
 import { Wordmark } from "./logo.tsx"
@@ -78,6 +79,14 @@ export function ErrorScreen({
   )
 }
 
+/** What the error screen says, and whether it offers re-auth instead of a
+    refresh. */
+interface ErrorCopy {
+  title: string
+  details: string
+  sessionExpired: boolean
+}
+
 /**
  * Derive the setup route's error screen from a thrown route error.
  *
@@ -89,17 +98,18 @@ export function ErrorScreen({
  * 404 never reaches this route boundary — it's caught at the root — so here the
  * thrown message is always the right thing to surface.
  */
-export function describeSetupError(
-  error: unknown,
-  t: Translate,
-): { title: string; details: string; sessionExpired: boolean } {
+// A caught value has no domain type: `catch` hands over `unknown`, and this
+// function *is* the boundary that classifies it. A type parameter here would
+// infer to `unknown` at every call site and only hide that from the rule.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
+export function describeSetupError(error: unknown, t: Translate): ErrorCopy {
   if (isRouteErrorResponse(error)) {
     return {
       title: t("error.title"),
       // Loaders/actions throw data("<human message>", { status }) for expected
       // failures — surface that over the bare statusText.
       details:
-        (typeof error.data === "string" && error.data) ||
+        (isJsonString(error.data) && error.data) ||
         error.statusText ||
         t("error.generic"),
       sessionExpired: error.status === 401,

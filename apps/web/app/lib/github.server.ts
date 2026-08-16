@@ -82,6 +82,20 @@ function jsonResponse(body: string): Response {
   })
 }
 
+/**
+ * The two headers that depend on the request rather than the caller: a
+ * revalidation etag, and the content type a body implies.
+ */
+function conditionalHeaders(
+  etag: string | undefined,
+  body: BodyInit | null | undefined,
+) {
+  const headers: Record<string, string> = {}
+  if (etag !== undefined) headers["If-None-Match"] = etag
+  if (body) headers["Content-Type"] = "application/json"
+  return headers
+}
+
 async function gh(token: string, path: string, init?: RequestInit) {
   // GitHub's API intermittently answers 5xx during incidents. Retrying
   // GETs (idempotent) up to twice usually rides it out; writes are never
@@ -108,8 +122,9 @@ async function gh(token: string, path: string, init?: RequestInit) {
           Authorization: `Bearer ${token}`,
           Accept: "application/vnd.github+json",
           "X-GitHub-Api-Version": "2022-11-28",
-          ...(cached ? { "If-None-Match": cached.etag } : {}),
-          ...(init?.body ? { "Content-Type": "application/json" } : {}),
+          // Conditional headers are *added*, never sent empty: an
+          // `If-None-Match:` with no etag is a header GitHub has to reject.
+          ...conditionalHeaders(cached?.etag, init?.body),
           ...init?.headers,
         },
       })
@@ -144,6 +159,15 @@ async function gh(token: string, path: string, init?: RequestInit) {
     return jsonResponse(body)
   }
   return res
+}
+
+/** The contents API's write body. `sha` present means update, absent means
+    create — GitHub 422s a create that carries one. */
+interface ContentsPut {
+  message: string
+  content: string
+  branch?: string
+  sha?: string
 }
 
 /** Encode a repo-relative path for the contents API, keeping `/` separators. */
@@ -221,12 +245,14 @@ export interface RepoMeta {
 }
 
 function toRepoMeta(raw: z.infer<typeof repoMetaSchema>): RepoMeta {
-  return {
+  const meta: RepoMeta = {
     full: raw.full_name,
     private: raw.private,
     isTemplate: raw.is_template ?? false,
-    ...(raw.permissions ? { permissions: raw.permissions } : {}),
   }
+  // Absent when GitHub did not say, which is not the same as "no permissions".
+  if (raw.permissions) meta.permissions = raw.permissions
+  return meta
 }
 
 /**
@@ -729,18 +755,21 @@ export async function putFile(
     sha?: string
   },
 ): Promise<{ contentSha: string }> {
+  // `sha` is what tells GitHub this is an update; sending it empty on a create
+  // is a 422, so it is added only when there is one.
+  const payload: ContentsPut = {
+    message: options.message,
+    content: Buffer.from(options.content, "utf8").toString("base64"),
+    branch: options.branch,
+  }
+  if (options.sha) payload.sha = options.sha
   const result = await ghJson(
     token,
     `/repos/${repo}/contents/${encodePath(path)}`,
     putResultSchema,
     {
       method: "PUT",
-      body: JSON.stringify({
-        message: options.message,
-        content: Buffer.from(options.content, "utf8").toString("base64"),
-        branch: options.branch,
-        ...(options.sha ? { sha: options.sha } : {}),
-      }),
+      body: JSON.stringify(payload),
     },
   )
   return { contentSha: result.content.sha }

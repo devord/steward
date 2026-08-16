@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { useFetcher, useNavigate } from "react-router"
+import { isJsonString } from "../lib/json.ts"
 
 import { ArrowUpRight } from "lucide-react"
 
@@ -197,7 +198,7 @@ export function AddDataRepoDialog({
                 <Select
                   value={effectiveOwner}
                   onValueChange={(next) => {
-                    if (typeof next === "string") setOwner(next)
+                    if (isJsonString(next)) setOwner(next)
                   }}
                 >
                   <SelectTrigger className="w-full font-mono">

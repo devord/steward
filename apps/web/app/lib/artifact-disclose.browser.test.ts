@@ -45,10 +45,14 @@ async function mount(kit: boolean) {
   const d = iframe.contentDocument
   if (!d) throw new Error("no iframe document")
   await new Promise((r) => setTimeout(r, 80))
-  const head = (id: string) =>
-    d.querySelector(`[data-kit-disclose="${id}"]`) as HTMLElement
-  const rows = (id: string) =>
-    [...d.querySelectorAll(`[data-kit-group-of="${id}"]`)] as HTMLElement[]
+  const head = (id: string) => {
+    const el = d.querySelector<HTMLElement>(`[data-kit-disclose="${id}"]`)
+    if (!el) throw new Error(`no disclosure heading for ${id}`)
+    return el
+  }
+  const rows = (id: string) => [
+    ...d.querySelectorAll<HTMLElement>(`[data-kit-group-of="${id}"]`),
+  ]
   return { d, head, rows }
 }
 

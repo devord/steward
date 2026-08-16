@@ -1,5 +1,6 @@
 import { parseRoutineTemplate } from "@steward/schema"
 
+import { isJsonString } from "./json.ts"
 import type { DiscoveredTemplate } from "./templates.ts"
 import { getFile, listTreePaths } from "./github.server.ts"
 import { swr, tokenKey } from "./swr.server.ts"
@@ -46,7 +47,7 @@ const builtinSampleFiles = import.meta.glob("../../../../docs/samples/*.html", {
 const builtinSamples = new Map<string, string>(
   Object.entries(builtinSampleFiles).flatMap(([path, text]) => {
     const id = /([a-z0-9-]+)\.html$/.exec(path)?.[1]
-    return id && typeof text === "string" ? [[id, text]] : []
+    return id && isJsonString(text) ? [[id, text]] : []
   }),
 )
 
@@ -54,12 +55,17 @@ const builtins: DiscoveredTemplate[] = Object.entries(builtinFiles).flatMap(
   ([path, text]) => {
     const id = /([a-z0-9-]+)\.md$/.exec(path)?.[1]
     const template =
-      id && typeof text === "string" ? parseRoutineTemplate(id, text) : null
+      id && isJsonString(text) ? parseRoutineTemplate(id, text) : null
     if (!template) return []
+    // `sample` is absent, not empty, when a built-in ships no preview — the
+    // card renders previewless rather than with a blank one.
     const sample = builtinSamples.get(template.id)
-    return [
-      { ...template, source: "builtin" as const, ...(sample && { sample }) },
-    ]
+    const discovered: DiscoveredTemplate = {
+      ...template,
+      source: "builtin" as const,
+    }
+    if (sample) discovered.sample = sample
+    return [discovered]
   },
 )
 
@@ -113,11 +119,12 @@ async function discoverFrom(
               .then((f) => f?.text)
               .catch(() => undefined)
           : undefined
-        return {
+        const discovered: DiscoveredTemplate = {
           ...template,
           source: "repo" as const,
-          ...(sample && { sample }),
         }
+        if (sample) discovered.sample = sample
+        return discovered
       } catch {
         return null
       }

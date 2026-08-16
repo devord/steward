@@ -13,13 +13,14 @@ function cell(
   template: string,
   category?: string | null,
 ): PlacedCell {
-  const routine = {
-    slug,
-    name: slug,
-    template,
-    enabled: true,
-    ...(category !== undefined && { category }),
-  } as Routine
+  const base = { slug, name: slug, template, enabled: true }
+  // Absent when the case says nothing about a band, which is a different
+  // fixture from one that explicitly clears it with `null`.
+  const withCategory = category === undefined ? base : { ...base, category }
+  // SAFETY: `Routine` carries fields this fixture has no bearing on, and the
+  // band logic under test reads only these five. A missing one would fail the
+  // assertion below, not slip through as a wrong type.
+  const routine = withCategory as Routine
   const widget: Widget = {
     routine: slug,
     position: { col: 1, row: 1 },

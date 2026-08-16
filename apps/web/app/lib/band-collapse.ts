@@ -43,6 +43,6 @@ export function collapsedBandsCookie(names: readonly string[]): string {
 
 /** Persist a toggle from the client. No-op during SSR. */
 export function writeCollapsedBands(names: readonly string[]): void {
-  if (typeof document === "undefined") return
+  if (!("document" in globalThis)) return
   document.cookie = collapsedBandsCookie(names)
 }

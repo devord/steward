@@ -169,7 +169,11 @@ describe("the burn-up through flint", () => {
       ...spec,
       lines: spec.lines.map((l, i) =>
         i === 0
-          ? { ...l, role: "cieling" as SeriesSpec["lines"][number]["role"] }
+          ? // SAFETY: the misspelling is the fixture. `role` is a closed union
+            // in the type and an open string in a routine's JSON, so the only
+            // way to stage the case `roleOf` exists to survive is to assert
+            // past the union the runtime does not enforce.
+            { ...l, role: "cieling" as SeriesSpec["lines"][number]["role"] }
           : l,
       ),
     }
