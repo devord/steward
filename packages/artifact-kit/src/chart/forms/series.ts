@@ -1,5 +1,6 @@
 import { PALETTE } from "../../tokens/palette.ts"
 import type { ChartRequest, ChartTier, Decorator } from "../compile.ts"
+import { isJsonObject } from "../../json.ts"
 
 /**
  * The burn-up, as a flint form with the kit's finish (ADR-0062).
@@ -56,10 +57,14 @@ export interface SeriesSpec {
  */
 const GHOST = PALETTE["orange-deep"]
 
-const ROLE: Record<
-  SeriesRole,
-  { ink: string; dash: number[]; step?: boolean }
-> = {
+/** How a role draws: its ink, its dash pattern, and whether it steps. */
+interface RoleInk {
+  ink: string
+  dash: number[]
+  step?: boolean
+}
+
+const ROLE = {
   /** The series that is the point. The chart's one loud line. */
   hero: { ink: PALETTE.orange, dash: [1, 0] },
   /**
@@ -77,7 +82,7 @@ const ROLE: Record<
   target: { ink: PALETTE.ink, dash: [6, 4] },
   /** Shown, never counted — the hero drawn at its optimistic ceiling. */
   ghost: { ink: GHOST, dash: [2, 3] },
-}
+} satisfies Record<SeriesRole, RoleInk>
 
 /**
  * A line's role, defaulting to `ghost` for anything unrecognised.
@@ -89,11 +94,9 @@ const ROLE: Record<
  * burn-up over one misspelled word is a poor trade when the honest fallback is
  * "draw it as context".
  */
-const ROLES: ReadonlyMap<string, (typeof ROLE)[SeriesRole]> = new Map(
-  Object.entries(ROLE),
-)
+const ROLES: ReadonlyMap<string, RoleInk> = new Map(Object.entries(ROLE))
 
-function roleOf(role: string): (typeof ROLE)[SeriesRole] {
+function roleOf(role: string): RoleInk {
   // A Map lookup rather than an index read: `ROLE` is exhaustive over the four
   // names, so indexing it with an arbitrary string needs a type assertion, and
   // the repo forbids those outside tests.
@@ -180,10 +183,19 @@ function decorate(spec: SeriesSpec): Decorator {
         grid: false,
       },
     }
+    // A domain only when there is a ceiling to state. `ceilingOf` is undefined
+    // for a spec with no countable points — every line a target, or no points
+    // at all — and `domain: [0, undefined]` is not an open-ended scale to Vega,
+    // it is a malformed one. Omitting the key lets Vega derive the extent,
+    // which is what "otherwise the largest point" meant all along.
+    const ceiling = ceilingOf(spec)
+    const yScale = { nice: spec.max === undefined }
+    const yScaled =
+      ceiling === undefined ? yScale : { ...yScale, domain: [0, ceiling] }
     const y = {
       field: "count",
       type: "quantitative",
-      scale: { domain: [0, ceilingOf(spec)], nice: spec.max === undefined },
+      scale: yScaled,
       axis: {
         title: null,
         tickCount: 4,
@@ -193,8 +205,12 @@ function decorate(spec: SeriesSpec): Decorator {
       },
     }
 
+    // Flint's own top level, kept for whatever it set that the layers below do
+    // not replace. A non-object is nothing to carry forward.
+    const base = isJsonObject(assembled) ? assembled : {}
+
     return {
-      ...(typeof assembled === "object" && assembled !== null ? assembled : {}),
+      ...base,
       mark: undefined,
       encoding: undefined,
       layer: [
@@ -213,10 +229,9 @@ function decorate(spec: SeriesSpec): Decorator {
               },
             },
           ],
-          mark: {
-            type: "line",
-            ...(stepped ? { interpolate: "step-after" } : {}),
-          },
+          mark: stepped
+            ? { type: "line", interpolate: "step-after" }
+            : { type: "line" },
           encoding: {
             x,
             y,
@@ -309,6 +324,6 @@ export function seriesRequest(id: string, spec: SeriesSpec): ChartRequest {
 }
 
 /** Two points is the floor for a line; one is a dot claiming a trend. */
-export function seriesHasShape(spec: SeriesSpec): boolean {
+export function seriesIsPlottable(spec: SeriesSpec): boolean {
   return spec.lines.some((l) => l.points.length > 1)
 }

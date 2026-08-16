@@ -98,6 +98,10 @@ function isEligible(meta: RepoMeta, login: string): boolean {
  * (401) becomes the re-auth page, every other GitHubError the 503 refresh
  * page. Non-GitHub errors re-throw to the generic boundary.
  */
+// A caught value has no domain type: `catch` hands over `unknown`, and this
+// function *is* the boundary that classifies it. A type parameter here would
+// infer to `unknown` at every call site and only hide that from the rule.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 function degradeGitHubError(error: unknown): never {
   if (error instanceof GitHubError) {
     if (error.status === 401) {

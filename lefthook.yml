@@ -9,6 +9,12 @@ pre-commit:
       stage_fixed: true
     lint:
       glob: "*.{js,ts,tsx}"
+      # Mirrors `lint.ignorePatterns` in vite.config.ts. Without it a commit
+      # touching only the vendored plugin hands oxlint a list where every file
+      # is ignored, and oxlint exits 1 on "No files found to lint" rather than
+      # succeeding as a no-op — so the hook fails on a change it never linted.
+      exclude:
+        - "tools/oxlint/anti-slop/**"
       run: pnpm exec vp lint --fix --max-warnings=0 {staged_files}
       stage_fixed: true
 
@@ -20,4 +26,6 @@ pre-push:
       run: pnpm exec vp fmt --check {push_files}
     lint:
       glob: "*.{js,ts,tsx}"
+      exclude:
+        - "tools/oxlint/anti-slop/**"
       run: pnpm exec vp lint --max-warnings=0 {push_files}

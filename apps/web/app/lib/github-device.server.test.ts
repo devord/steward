@@ -1,20 +1,18 @@
 import { http, HttpResponse } from "msw"
 import { describe, expect, it } from "vitest"
 
+import { isRecord, type JsonObject } from "./json.ts"
 import { server } from "../mocks/setup-node.ts"
 import { pollDeviceToken, requestDeviceCode } from "./github-device.server.ts"
 
 const DEVICE_CODE_URL = "https://github.com/login/device/code"
 const TOKEN_URL = "https://github.com/login/oauth/access_token"
 
-function onDeviceCode(
-  body: Record<string, unknown>,
-  init?: { status?: number },
-) {
+function onDeviceCode(body: JsonObject, init?: { status?: number }) {
   server.use(http.post(DEVICE_CODE_URL, () => HttpResponse.json(body, init)))
 }
 
-function onPoll(body: Record<string, unknown>) {
+function onPoll(body: JsonObject) {
   // GitHub answers 200 even for the pending/slow-down "errors", so the mock
   // mirrors that: the body carries the outcome, not the status code.
   server.use(http.post(TOKEN_URL, () => HttpResponse.json(body)))
@@ -120,10 +118,14 @@ describe("pollDeviceToken", () => {
   })
 
   it("sends the device_code grant, not the auth-code grant", async () => {
-    let sent: Record<string, unknown> = {}
+    let sent: JsonObject = {}
     server.use(
       http.post(TOKEN_URL, async ({ request }) => {
-        sent = (await request.json()) as Record<string, unknown>
+        const body = await request.json()
+        // msw types a request body as possibly absent; this endpoint is only
+        // ever posted a form-encoded grant, and the assertion below is what
+        // proves it arrived.
+        if (isRecord(body)) sent = body
         return HttpResponse.json({ error: "authorization_pending" })
       }),
     )

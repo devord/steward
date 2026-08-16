@@ -23,7 +23,7 @@ function SetupBoundary() {
  * actual ErrorResponse (the value only the framework can synthesize), not a
  * hand-built stand-in.
  */
-async function renderThrowing(thrown: unknown) {
+async function renderThrowing<T>(thrown: T) {
   const router = createMemoryRouter([
     {
       path: "/",

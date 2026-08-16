@@ -55,21 +55,23 @@ const SEMANTIC_TYPES = {
  * channel a routine may legitimately name, and leaving it out of the sweep is
  * how `config.header` went unnoticed.
  */
-const FIELD_FOR: Record<string, string> = {
-  x: "day",
-  y: "commits",
-  color: "kind",
-  theta: "commits",
-  size: "commits",
-  detail: "module",
-  column: "module",
-  row: "module",
-}
+const FIELD_FOR = new Map<string, string>([
+  ["x", "day"],
+  ["y", "commits"],
+  ["color", "kind"],
+  ["theta", "commits"],
+  ["size", "commits"],
+  ["detail", "module"],
+  ["column", "module"],
+  ["row", "module"],
+])
 
 function requestFor(chartType: string, channels: readonly string[]) {
   const encodings: Record<string, string> = {}
-  for (const c of channels)
-    if (FIELD_FOR[c] !== undefined) encodings[c] = FIELD_FOR[c]
+  for (const c of channels) {
+    const field = FIELD_FOR.get(c)
+    if (field !== undefined) encodings[c] = field
+  }
   return {
     id: chartType,
     spec: {
@@ -95,16 +97,16 @@ const CATALOGUE: { chart: string; channels: readonly string[] }[] =
  * which is the trade ADR-0062 already declined: the kit drops them safely, and
  * a routine that names one gets a stated reason on provenance.
  */
-const NOT_PUBLISHABLE: Record<string, string> = {
-  "Bar Table": "paints #999/#666 and overflows every tier",
-  "Candlestick Chart": "needs an open/high/low/close quartet",
-  "KPI Card": "needs metric/value/goal",
-  "Pyramid Chart": "paints #4e79a7/#e15759",
-  "Radar Chart": "paints #ddd/#e0e0e0/#555",
-  Sparkline: "paints #999/#9a9a9a",
-  "Violin Plot": "overflows the narrow budget",
-  "Waterfall Chart": "paints #93c4aa/#6b7280/#f7e0b6/#f78a64",
-}
+const NOT_PUBLISHABLE = new Map<string, string>([
+  ["Bar Table", "paints #999/#666 and overflows every tier"],
+  ["Candlestick Chart", "needs an open/high/low/close quartet"],
+  ["KPI Card", "needs metric/value/goal"],
+  ["Pyramid Chart", "paints #4e79a7/#e15759"],
+  ["Radar Chart", "paints #ddd/#e0e0e0/#555"],
+  ["Sparkline", "paints #999/#9a9a9a"],
+  ["Violin Plot", "overflows the narrow budget"],
+  ["Waterfall Chart", "paints #93c4aa/#6b7280/#f7e0b6/#f78a64"],
+])
 
 describe("the flint catalogue", () => {
   it("sweeps every form the backend registers", () => {
@@ -120,7 +122,7 @@ describe("the flint catalogue", () => {
     const { charts, failures } = await compileCharts(requests)
 
     const failed = failures.map((f) => f.id).sort()
-    const recorded = Object.keys(NOT_PUBLISHABLE).sort()
+    const recorded = [...NOT_PUBLISHABLE.keys()].sort()
 
     // The message carries the reasons, so a failure here reads as a diff
     // rather than as two bare lists.
@@ -134,7 +136,7 @@ describe("the flint catalogue", () => {
 
   it("conforms the colour channel, which is what shipped broken", async () => {
     const withColour = CATALOGUE.filter(
-      (d) => d.channels.includes("color") && !(d.chart in NOT_PUBLISHABLE),
+      (d) => d.channels.includes("color") && !NOT_PUBLISHABLE.has(d.chart),
     )
     expect(withColour.length).toBeGreaterThan(15)
 

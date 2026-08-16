@@ -66,11 +66,11 @@ export interface ThroughputSpec {
   legend?: { merged: string; open: string }
 }
 
-const WINDOW_LABEL: Record<number, string> = {
-  1: "1 day",
-  7: "1 week",
-  30: "1 month",
-}
+const WINDOW_LABEL = new Map<number, string>([
+  [1, "1 day"],
+  [7, "1 week"],
+  [30, "1 month"],
+])
 
 const MONTH = [
   "Jan",
@@ -220,7 +220,7 @@ export function Throughput({ spec }: { spec: ThroughputSpec }) {
                     value: String(windowDays),
                     options: windows.map((d) => ({
                       value: String(d),
-                      label: WINDOW_LABEL[d] ?? `${d} days`,
+                      label: WINDOW_LABEL.get(d) ?? `${d} days`,
                     })),
                   }}
                 />

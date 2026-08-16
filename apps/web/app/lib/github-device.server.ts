@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import type { JsonValue } from "./json.ts"
+
 /**
  * GitHub's OAuth device flow (ADR-0011). Unlike the redirect flow, these two
  * github.com endpoints need no callback URL — so they work on any host,
@@ -10,7 +12,7 @@ import { z } from "zod"
 
 /** Parse a JSON body, or null when GitHub answers with something else (an
     HTML 5xx page, an empty body) — so a bad response degrades, never throws. */
-async function jsonOrNull(res: Response): Promise<unknown> {
+async function jsonOrNull(res: Response): Promise<JsonValue> {
   try {
     return await res.json()
   } catch {

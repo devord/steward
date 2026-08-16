@@ -171,7 +171,7 @@ export async function action({ request }: { request: Request }) {
               ? "Clear repo display name"
               : `Set repo display name to ${name}`,
           branch: "main",
-          ...(current ? { sha: current.sha } : {}),
+          sha: current?.sha,
         })
       }
     } catch (error) {

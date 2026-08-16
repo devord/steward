@@ -125,9 +125,12 @@ describe("repoExists", () => {
     seedRepo(REPO, {})
     failPath(REPO, "", { network: true, endpoint: "repo" })
 
-    const error = await repoExists("token", REPO).catch((e) => e)
-    expect(error).toBeInstanceOf(GitHubError)
-    expect((error as GitHubError).status).toBe(503)
+    const error: unknown = await repoExists("token", REPO).catch((e) => e)
+    // `instanceof` is the assertion and the narrowing at once — a wrong class
+    // fails here rather than being asserted past.
+    if (!(error instanceof GitHubError))
+      throw new Error(`expected a GitHubError, got ${String(error)}`)
+    expect(error.status).toBe(503)
   })
 })
 

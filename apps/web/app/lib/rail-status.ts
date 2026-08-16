@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 
 import { DRAFT_EVENT, DRAFT_KEY_PREFIX } from "./draft.ts"
+import { isJsonNumber, isRecord, type JsonValue } from "./json.ts"
 import {
   PENDING_RUN_EVENT,
   PENDING_RUN_KEY_PREFIX,
@@ -40,10 +41,13 @@ function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
 /** One pass over localStorage. `expiresAt` is when the earliest in-flight
     run times out (the moment the scan's answer goes stale on its own),
     null when nothing is running. */
-export function scanRailStatus(now: number): {
+/** A scan's answer, plus when it stops being true on its own. */
+export interface RailScan {
   status: RailStatus
   expiresAt: number | null
-} {
+}
+
+export function scanRailStatus(now: number): RailScan {
   const drafts = new Set<string>()
   const running = new Set<string>()
   let expiresAt: number | null = null
@@ -60,13 +64,8 @@ export function scanRailStatus(now: number): {
       if (repo === "") continue
       let firedAt: number | null = null
       try {
-        const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? "")
-        if (
-          parsed &&
-          typeof parsed === "object" &&
-          "firedAt" in parsed &&
-          typeof parsed.firedAt === "number"
-        ) {
+        const parsed: JsonValue = JSON.parse(localStorage.getItem(key) ?? "")
+        if (isRecord(parsed) && isJsonNumber(parsed.firedAt)) {
           firedAt = parsed.firedAt
         }
       } catch {

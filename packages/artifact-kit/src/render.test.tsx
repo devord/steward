@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 
 import { escapeContextBlock, footerTimestamp } from "./Shell.tsx"
+import type { JsonObject, JsonValue } from "./json.ts"
 import { type ArtifactDoc, type Block, renderArtifact } from "./render.tsx"
 import type { BottomLine } from "./components/BottomLine.tsx"
 import type { QueueRow } from "./components/QueueTable.tsx"
@@ -950,7 +951,7 @@ describe("the verdict band", () => {
   })
 
   it("checks a value's delta", () => {
-    const doc = (delta: unknown) => ({
+    const doc = (delta: JsonValue) => ({
       ...base,
       stat: { value: 1, label: "x" },
       blocks: [
@@ -990,11 +991,14 @@ describe("the verdict band", () => {
 })
 
 describe("the bottom line", () => {
-  const base: ArtifactDoc = {
+  // `satisfies` rather than an annotation: this fixture is spread into
+  // literals handed to `validateDoc`, which takes the JSON a routine emits.
+  // The contract is still checked; the binding keeps its literal type.
+  const base = {
     slug: "s",
     generatedAt: "2026-07-30T09:00:00Z",
     verdict: { level: "attn", word: "Stalled" },
-  }
+  } satisfies ArtifactDoc
   const sentence = "Nothing has merged in 58 hours."
   const withLine = (over: Partial<BottomLine> = {}) =>
     renderArtifact({ ...base, bottomLine: { text: sentence, ...over } }, "")
@@ -1753,7 +1757,7 @@ describe("progress rails", () => {
 })
 
 describe("the provenance line", () => {
-  const withProvenance = (provenance: unknown[]): ArtifactDoc =>
+  const withProvenance = (provenance: JsonValue[]): ArtifactDoc =>
     JSON.parse(
       JSON.stringify({
         slug: "s",
@@ -1785,6 +1789,19 @@ describe("the provenance line", () => {
     expect(validateDoc(doc)).toEqual([])
     expect(reviewDoc(doc).join(" ")).toContain("provenance has 1 of 1 facts")
   })
+
+  it("renders past an entry that is not a fact at all", () => {
+    // `validateDoc` checks that `provenance` is an array and never looks at
+    // the entries, so a null or a number reaches the renderer. Neither has
+    // fields to read, and a throw here costs the whole publish — a scheduled
+    // run would go out with nothing rather than one odd-looking line.
+    const doc = withProvenance([null, 42, { label: null, value: "9" }, "real"])
+    expect(() => renderArtifact(doc, "")).not.toThrow()
+    const html = renderArtifact(doc, "")
+    expect(html).toContain("real")
+    // A non-string leaf is dropped, never printed as "null".
+    expect(html).not.toContain("null 9")
+  })
 })
 
 describe("foldable groups", () => {
@@ -1793,7 +1810,7 @@ describe("foldable groups", () => {
     generatedAt: "2026-07-30T09:00:00Z",
     stat: { value: 1, label: "x" },
   }
-  const withGroup = (g: object) => ({
+  const withGroup = (g: JsonObject) => ({
     ...base,
     blocks: [
       { kind: "queue", groups: [{ rows: [{ id: "r", title: "t" }], ...g }] },
@@ -2004,7 +2021,7 @@ describe("footerTimestamp", () => {
 })
 
 describe("reviewDoc", () => {
-  const doc = (values: unknown[]) => ({
+  const doc = (values: JsonValue[]) => ({
     slug: "s",
     generatedAt: "2026-07-30T09:00:00Z",
     stat: { value: 1, label: "x" },
@@ -2155,7 +2172,9 @@ describe("reviewDoc", () => {
     // note here would ship as the worked example of the emit it warns about.
     const dir = new URL("../fixtures/", import.meta.url)
     for (const f of readdirSync(dir)) {
-      const parsed: unknown = JSON.parse(readFileSync(new URL(f, dir), "utf8"))
+      const parsed: JsonValue = JSON.parse(
+        readFileSync(new URL(f, dir), "utf8"),
+      )
       expect(reviewDoc(parsed), f).toEqual([])
     }
   })

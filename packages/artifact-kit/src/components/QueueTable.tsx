@@ -29,19 +29,18 @@ export type ColumnTier = "always" | "compact" | "detail" | "page"
  * The word travels with the glyph, screen-reader-only. A shape alone cannot
  * report which way a number moved, and this column is the movement.
  */
-const DELTA: Record<"up" | "down" | "flat", { icon: IconName; word: string }> =
-  {
-    up: { icon: "arrow-up", word: "up" },
-    down: { icon: "arrow-down", word: "down" },
-    flat: { icon: "minus", word: "unchanged at" },
-  }
+const DELTA = {
+  up: { icon: "arrow-up", word: "up" },
+  down: { icon: "arrow-down", word: "down" },
+  flat: { icon: "minus", word: "unchanged at" },
+} satisfies Record<"up" | "down" | "flat", { icon: IconName; word: string }>
 
-const COLUMN_TIER: Record<ColumnTier, string> = {
+const COLUMN_TIER = {
   always: "table-cell",
   compact: "hidden beyond-glance:table-cell",
   detail: "hidden tier-detail:table-cell",
   page: "hidden tier-page:table-cell",
-}
+} satisfies Record<ColumnTier, string>
 
 /**
  * The tier a glyph's *word* joins it at: the column's own tier, floored at
@@ -73,7 +72,7 @@ const COLUMN_TIER: Record<ColumnTier, string> = {
  * silently never appears. That failure mode is exactly what this fixes, so it
  * would be a poor way to fix it.
  */
-const LABEL_TIER: Record<ColumnTier, { show: string; hide: string }> = {
+const LABEL_TIER = {
   always: {
     show: "hidden tier-detail:inline",
     hide: "tier-detail:hidden sr-only",
@@ -87,7 +86,7 @@ const LABEL_TIER: Record<ColumnTier, { show: string; hide: string }> = {
     hide: "tier-detail:hidden sr-only",
   },
   page: { show: "hidden tier-page:inline", hide: "tier-page:hidden sr-only" },
-}
+} satisfies Record<ColumnTier, { show: string; hide: string }>
 
 export interface QueueValue {
   /** Header word at the page tier, where the columns get named. */

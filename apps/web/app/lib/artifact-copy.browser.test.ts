@@ -40,7 +40,7 @@ async function mount(kit: boolean) {
   // Not `instanceof HTMLElement`: the node lives in the iframe's realm, whose
   // constructors are different objects from this window's, so the check fails
   // for a perfectly good element.
-  const button = d.querySelector("[data-kit-copy]") as HTMLElement | null
+  const button = d.querySelector<HTMLElement>("[data-kit-copy]")
   if (!button) throw new Error("no copy button")
   return { d, button }
 }

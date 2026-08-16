@@ -28,14 +28,15 @@ import {
   themes,
 } from "./theme.ts"
 
+/**
+ * An optional *call* rather than a key test: `"matchMedia" in window` is true
+ * for a shim that declares the key and leaves it undefined, and calling that
+ * throws on the hydration path. `?.()` short-circuits instead, so an
+ * environment without a real implementation gets the documented dark default.
+ */
 function systemPrefersDark(): boolean {
-  if (
-    typeof window === "undefined" ||
-    typeof window.matchMedia !== "function"
-  ) {
-    return true
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
+  if (!("window" in globalThis)) return true
+  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? true
 }
 
 // In-memory fallback so a failed localStorage write (private mode, quota)
@@ -46,7 +47,7 @@ let memoryPrefs: AppearancePrefs | null = null
 /** Read + coerce the stored preference; tolerates SSR and private mode. */
 export function getStoredPrefs(): AppearancePrefs {
   try {
-    if (typeof window === "undefined") return DEFAULT_APPEARANCE
+    if (!("window" in globalThis)) return DEFAULT_APPEARANCE
     const raw = window.localStorage.getItem(APPEARANCE_STORAGE_KEY)
     return raw
       ? coercePrefs(JSON.parse(raw))
@@ -87,10 +88,7 @@ function subscribe(onChange: () => void): () => void {
   }
   window.addEventListener(APPEARANCE_EVENT, notify)
   window.addEventListener("storage", notify)
-  const mq =
-    typeof window.matchMedia === "function"
-      ? window.matchMedia("(prefers-color-scheme: dark)")
-      : null
+  const mq = window.matchMedia?.("(prefers-color-scheme: dark)") ?? null
   mq?.addEventListener("change", notify)
   return () => {
     window.removeEventListener(APPEARANCE_EVENT, notify)
@@ -101,7 +99,7 @@ function subscribe(onChange: () => void): () => void {
 
 /** Stamp the document the way THEME_INIT_SCRIPT does, post-change. */
 function applyToDocument(prefs: AppearancePrefs): void {
-  if (typeof document === "undefined") return
+  if (!("document" in globalThis)) return
   const resolved = resolveTheme(prefs, systemPrefersDark())
   document.documentElement.setAttribute("data-theme", resolved)
   document.documentElement.classList.toggle(

@@ -634,9 +634,11 @@ export async function main(argv: string[]): Promise<void> {
           execFileSync("launchctl", argv, { stdio: "pipe" })
           return true
         } catch (error) {
+          // `in` narrows the binding, so the field reads directly — no
+          // reflection, and nothing asserted.
           const stderr =
             error instanceof Error && "stderr" in error
-              ? String(Reflect.get(error, "stderr")).trim()
+              ? String(error.stderr).trim()
               : String(error)
           launchctlError = stderr
           return false

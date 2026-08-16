@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { isJsonString } from "../lib/json.ts"
 
 import { http, HttpResponse } from "msw"
 import { z } from "zod"
@@ -100,6 +101,28 @@ const DEFAULT_META: MockRepoMeta = {
   collaborators: [],
 }
 
+/** The repo-metadata body GitHub serves.
+ *
+ * `permissions` is *omitted* when the mock says null rather than sent as an
+ * explicit null — that is what GitHub does for a repo the token has no stated
+ * access to, and the registry's eligibility check reads the difference. */
+interface RepoMetaBody {
+  full_name: string
+  private: boolean
+  is_template: boolean
+  permissions?: { admin: boolean; push: boolean }
+}
+
+function repoMetaBody(repo: string, meta: MockRepoMeta): RepoMetaBody {
+  const body: RepoMetaBody = {
+    full_name: repo,
+    private: meta.private,
+    is_template: meta.isTemplate,
+  }
+  if (meta.permissions) body.permissions = meta.permissions
+  return body
+}
+
 function metaFor(repo: string): MockRepoMeta {
   return { ...DEFAULT_META, ...repoMeta.get(repo) }
 }
@@ -193,7 +216,7 @@ function blobSha(ref: string, path: string, text: string): string {
  * GitHub: a matching `If-None-Match` yields a bodyless 304, everything else a
  * full 200. Every GET handler routes success through here.
  */
-function json(request: Request, value: unknown): Response {
+function json<T>(request: Request, value: T): Response {
   const body = JSON.stringify(value)
   const etag = etagFor(body)
   if (request.headers.get("If-None-Match") === etag) {
@@ -230,10 +253,9 @@ export function seedRepo(
 ) {
   const store = repos.get(repo) ?? new Map<string, MockFile>()
   for (const [path, value] of Object.entries(files)) {
-    const file =
-      typeof value === "string"
-        ? { text: value, lastCommit: null }
-        : { text: value.text, lastCommit: value.lastCommit ?? null }
+    const file = isJsonString(value)
+      ? { text: value, lastCommit: null }
+      : { text: value.text, lastCommit: value.lastCommit ?? null }
     store.set(`${ref}:${path}`, file)
   }
   repos.set(repo, store)
@@ -299,12 +321,7 @@ export const githubHandlers = [
       if (failure) return failureResponse(failure)
       if (!mockRepoExists(repo)) return new HttpResponse(null, { status: 404 })
       const meta = metaFor(repo)
-      return json(request, {
-        full_name: repo,
-        private: meta.private,
-        is_template: meta.isTemplate,
-        ...(meta.permissions ? { permissions: meta.permissions } : {}),
-      })
+      return json(request, repoMetaBody(repo, meta))
     },
   ),
 
@@ -321,15 +338,7 @@ export const githubHandlers = [
     const names = new Set([...repos.keys(), ...repoMeta.keys()])
     const items = [...names]
       .filter((repo) => topic != null && metaFor(repo).topics.includes(topic))
-      .map((repo) => {
-        const meta = metaFor(repo)
-        return {
-          full_name: repo,
-          private: meta.private,
-          is_template: meta.isTemplate,
-          ...(meta.permissions ? { permissions: meta.permissions } : {}),
-        }
-      })
+      .map((repo) => repoMetaBody(repo, metaFor(repo)))
     return json(request, { total_count: items.length, items })
   }),
 

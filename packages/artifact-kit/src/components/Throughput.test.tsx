@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs"
 
 import { describe, expect, it } from "vitest"
 
+import type { JsonValue } from "../json.ts"
 import { type ArtifactDoc, renderArtifact } from "../render.tsx"
 import { validateDoc } from "../validate-doc.ts"
 import type { ThroughputSpec } from "./Throughput.tsx"
@@ -15,7 +16,7 @@ const kitCss = readFileSync(
   "utf8",
 )
 
-const spec: ThroughputSpec = {
+const spec = {
   windows: [1, 7, 30],
   views: [
     {
@@ -58,14 +59,18 @@ const spec: ThroughputSpec = {
     ana: { name: "Ana Ruiz", url: "https://github.com/ana" },
     bo: { name: "Bo Chen" },
   },
-}
+} satisfies ThroughputSpec
 
-const doc: ArtifactDoc = {
+// `satisfies` rather than an annotation: `validateDoc` takes the JSON a
+// routine emits, and TypeScript never gives an interface the implicit index
+// signature that would make an `ArtifactDoc`-typed binding assignable to it.
+// The literal type is still checked against the contract, and still flows.
+const doc = {
   slug: "repo-stats",
   generatedAt: "2026-03-03T08:00:00Z",
   stat: { value: 7, label: "merged" },
   blocks: [{ kind: "throughput", label: "PRs per person", spec }],
-}
+} satisfies ArtifactDoc
 
 const html = renderArtifact(doc, ":root{--x:1}")
 
@@ -417,7 +422,7 @@ describe("the throughput band", () => {
 })
 
 describe("the throughput contract", () => {
-  const bad = (spec: unknown) =>
+  const bad = (spec: JsonValue) =>
     validateDoc({ ...doc, blocks: [{ kind: "throughput", spec }] })
 
   it("names the field when a delta row is short", () => {

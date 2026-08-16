@@ -1,5 +1,7 @@
 import type { Breadcrumb, ErrorEvent, EventHint } from "@sentry/react-router"
 
+import { isJsonString } from "../json.ts"
+
 /**
  * Redaction and noise filtering for every Sentry event, both seams
  * (ADR-0059).
@@ -85,8 +87,8 @@ export function beforeSend(
  * here or `/auth/callback?code=…` survives the event that dropped it.
  */
 export function beforeBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
-  const url: unknown = breadcrumb.data?.url
-  if (typeof url === "string" && breadcrumb.data) {
+  const url = breadcrumb.data?.url
+  if (isJsonString(url) && breadcrumb.data) {
     breadcrumb.data.url = redactUrl(url)
   }
   return breadcrumb
@@ -169,7 +171,7 @@ function eventText(event: ErrorEvent, hint?: EventHint): string {
     if (original.name) parts.push(original.name)
     if (original.message) parts.push(original.message)
     if (original.stack) parts.push(original.stack)
-  } else if (typeof original === "string") {
+  } else if (isJsonString(original)) {
     parts.push(original)
   }
 

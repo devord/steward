@@ -38,7 +38,9 @@ export const stewardScope: MiddlewareFunction<Response> = ({ request }, next) =>
             // `dataCollection.userInfo: false` refuses that separately.
             id: auth.login,
             username: auth.login,
-            ...(auth.name ? { name: auth.name } : {}),
+            // Absent when the session carries no name, and absent for a blank
+            // one too — a `name: ""` decorates nothing and still ships a key.
+            name: auth.name || undefined,
           }
         : null,
     )

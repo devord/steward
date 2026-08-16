@@ -1,6 +1,7 @@
 import { PALETTE } from "../../tokens/palette.ts"
 import type { ChartRequest, Decorator } from "../compile.ts"
 import { RAMP } from "../finish.ts"
+import { isJsonObject } from "../../json.ts"
 
 /**
  * The co-change field, as a flint Heatmap with the kit's finish (ADR-0062,
@@ -95,8 +96,12 @@ function decorate(spec: MatrixSpec): Decorator {
     const n = labels.length || 1
     const cell = Math.max(10, Math.min(44, Math.floor(ctx.width / n)))
 
+    // Flint's own top level, kept for whatever it set that the layers below do
+    // not replace. A non-object is nothing to carry forward.
+    const base = isJsonObject(assembled) ? assembled : {}
+
     return {
-      ...(typeof assembled === "object" && assembled !== null ? assembled : {}),
+      ...base,
       _kitSize: { width: cell * n, height: cell * n },
       mark: undefined,
       encoding: undefined,

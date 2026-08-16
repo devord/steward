@@ -135,11 +135,13 @@ function chrome(html: string, w: number, h: number, out: string, dsf: number) {
  * Pass one: every cell at its true device size on its true ground, laid out on
  * a rigid grid so pass two can crop by arithmetic rather than by search.
  */
-function truthPng(
-  rows: Row[],
-  file: string,
-  CELL: number,
-): { w: number; h: number } {
+/** The raster's pixel extent, which pass two crops against. */
+interface Raster {
+  w: number
+  h: number
+}
+
+function truthPng(rows: Row[], file: string, CELL: number): Raster {
   const w = Math.max(...rows.map((r) => r.cells.length)) * CELL
   const h = rows.length * CELL
   const cells = rows

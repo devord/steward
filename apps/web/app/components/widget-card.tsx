@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useFetcher } from "react-router"
 
+import { isRecord } from "../lib/json.ts"
+
 import type { Routine, Widget } from "@steward/schema"
 import { routineHost } from "@steward/schema"
 import {
@@ -151,8 +153,7 @@ export function WidgetCard({
       if (
         e.source == null ||
         e.source !== frameRef.current?.contentWindow ||
-        typeof data !== "object" ||
-        data === null ||
+        !isRecord(data) ||
         !("type" in data)
       ) {
         return

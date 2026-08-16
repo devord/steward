@@ -135,10 +135,13 @@ function contrast(a: string, b: string): string {
  * theme's page answers a question nobody asked. The chip takes no mode, and
  * faces all of them.
  */
-function worstGround(
-  hex: string,
-  mode?: "light" | "dark",
-): { ratio: string; where: string } {
+/** The weakest contrast a colour reaches, and the ground it reaches it on. */
+interface WorstContrast {
+  ratio: string
+  where: string
+}
+
+function worstGround(hex: string, mode?: "light" | "dark"): WorstContrast {
   let worst = { ratio: Number.POSITIVE_INFINITY, where: "" }
   for (const [name, theme] of themeEntries) {
     if (mode && theme.mode !== mode) continue
@@ -248,10 +251,10 @@ ${markBody(`fill="${fill}"`)}
  */
 function chip(opts: { bleed?: boolean; buttons?: boolean } = {}): string {
   const { tile, bow } = CHIP_IDENTITY
-  const tileShape = opts.bleed
+  const tileBody = opts.bleed
     ? `  <rect width="64" height="64" fill="${tile}"/>`
     : `  <path d="${TILE}" fill="${tile}"/>`
-  return `${tileShape}
+  return `${tileBody}
   <g transform="${chipTransform(opts.bleed ? MASK_INSET : CHIP_INSET)}">
 ${markBody(`fill="${bow}"`, { buttons: opts.buttons })}
   </g>`

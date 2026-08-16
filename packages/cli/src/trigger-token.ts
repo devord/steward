@@ -98,17 +98,14 @@ export function promptTriggerToken(slug: string, dataRepoDir: string): void {
   const relPath = triggerPath(slug)
   const absPath = path.join(dataRepoDir, relPath)
   mkdirSync(path.dirname(absPath), { recursive: true })
+  // Built in two steps rather than spread past a conditional: `account` is
+  // absent, not empty, when no account was named.
+  const trigger = account
+    ? { routine: id, token, account }
+    : { routine: id, token }
   writeFileSync(
     absPath,
-    JSON.stringify(
-      triggerFileSchema.parse({
-        routine: id,
-        token,
-        ...(account ? { account } : {}),
-      }),
-      null,
-      2,
-    ) + "\n",
+    JSON.stringify(triggerFileSchema.parse(trigger), null, 2) + "\n",
   )
   commitTrigger(dataRepoDir, relPath, `config: add API trigger for ${slug}`)
 }

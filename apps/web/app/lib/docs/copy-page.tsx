@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from "react"
 /** Resting, plus the two outcomes a clipboard write can actually have. */
 type CopyState = "idle" | "copied" | "failed"
 
-const LABELS: Record<CopyState, string> = {
+const LABELS = {
   idle: "Copy page",
   copied: "Copied",
   failed: "Failed",
-}
+} satisfies Record<CopyState, string>
 
 /**
  * Copy-for-agents: one segmented control pairing the primary action (copy

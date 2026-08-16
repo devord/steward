@@ -12,7 +12,7 @@
  * Adding one: copy its `__iconNode` out of
  * `apps/web/node_modules/lucide-react/dist/esm/icons/<name>.mjs`.
  */
-type Shape =
+type GlyphPart =
   | ["path", { d: string }]
   | ["circle", { cx: string; cy: string; r: string }]
 
@@ -103,7 +103,7 @@ const ICONS = {
    * rotation is the state change rather than a swap between two glyphs.
    */
   "chevron-down": [["path", { d: "m6 9 6 6 6-6" }]],
-} satisfies Record<string, Shape[]>
+} satisfies Record<string, GlyphPart[]>
 
 export type IconName = keyof typeof ICONS
 
@@ -149,7 +149,7 @@ export function Icon({
   name: IconName
   className?: string
 }) {
-  const shapes: readonly Shape[] = ICONS[name]
+  const parts: readonly GlyphPart[] = ICONS[name]
   return (
     <svg
       viewBox="0 0 24 24"
@@ -165,7 +165,7 @@ export function Icon({
       className={className}
       aria-hidden="true"
     >
-      {shapes.map((s, i) =>
+      {parts.map((s, i) =>
         s[0] === "circle" ? (
           <circle key={i} cx={s[1].cx} cy={s[1].cy} r={s[1].r} />
         ) : (

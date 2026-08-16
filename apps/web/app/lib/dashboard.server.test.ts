@@ -315,11 +315,16 @@ describe("loadDashboard", () => {
       endpoint: "contents",
     })
 
-    const error = await loadDashboard("token", MAIN_BOARD).catch((e) => e)
-    expect(error).toBeInstanceOf(GitHubError)
+    const error: unknown = await loadDashboard("token", MAIN_BOARD).catch(
+      (e) => e,
+    )
+    // `instanceof` is the assertion and the narrowing at once — a wrong class
+    // fails here rather than being asserted past.
+    if (!(error instanceof GitHubError))
+      throw new Error(`expected a GitHubError, got ${String(error)}`)
     // 503 is the service-unavailable contract loadDashboardStructureOr503
     // keys off — a regression to any other status would break the 503 page.
-    expect((error as GitHubError).status).toBe(503)
+    expect(error.status).toBe(503)
   })
 })
 
@@ -339,9 +344,10 @@ describe("repoExistsOr503", () => {
     seedRepo(DATA_REPO, {})
     failPath(DATA_REPO, "", { network: true, endpoint: "repo" })
 
-    const thrown = (await repoExistsOr503("token", DATA_REPO).catch(
-      (e) => e,
-    )) as { init?: ResponseInit }
+    const thrown: { init?: ResponseInit } = await repoExistsOr503(
+      "token",
+      DATA_REPO,
+    ).catch((e) => e)
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(503)
   })
@@ -355,9 +361,10 @@ describe("repoExistsOr503", () => {
     seedRepo(DATA_REPO, {})
     failPath(DATA_REPO, "", { status: 401, endpoint: "repo" })
 
-    const thrown = (await repoExistsOr503("token", DATA_REPO).catch(
-      (e) => e,
-    )) as { init?: ResponseInit }
+    const thrown: { init?: ResponseInit } = await repoExistsOr503(
+      "token",
+      DATA_REPO,
+    ).catch((e) => e)
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(401)
   })
@@ -384,12 +391,13 @@ describe("createDataRepoOr503", () => {
     // with a self-service message, never the raw GitHubError generic crash.
     failGenerate({ status: 422 })
 
-    const thrown = (await createDataRepoOr503(
-      "token",
-      TEMPLATE,
-      "daniel",
-      "steward-data-daniel",
-    ).catch((e) => e)) as { init?: ResponseInit; data?: string }
+    const thrown: { init?: ResponseInit; data?: string } =
+      await createDataRepoOr503(
+        "token",
+        TEMPLATE,
+        "daniel",
+        "steward-data-daniel",
+      ).catch((e) => e)
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(422)
     expect(thrown.data).toContain("daniel/steward-data-daniel")
@@ -401,12 +409,13 @@ describe("createDataRepoOr503", () => {
     // so it must reach the boundary as a distinct 404 that names the template.
     failGenerate({ status: 404 })
 
-    const thrown = (await createDataRepoOr503(
-      "token",
-      TEMPLATE,
-      "daniel",
-      "steward-data-daniel",
-    ).catch((e) => e)) as { init?: ResponseInit; data?: string }
+    const thrown: { init?: ResponseInit; data?: string } =
+      await createDataRepoOr503(
+        "token",
+        TEMPLATE,
+        "daniel",
+        "steward-data-daniel",
+      ).catch((e) => e)
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(404)
     expect(thrown.data).toContain(TEMPLATE)
@@ -417,12 +426,12 @@ describe("createDataRepoOr503", () => {
     // sign-out (status 401), not the transient-outage refresh.
     failGenerate({ status: 401 })
 
-    const thrown = (await createDataRepoOr503(
+    const thrown: { init?: ResponseInit } = await createDataRepoOr503(
       "token",
       TEMPLATE,
       "daniel",
       "steward-data-daniel",
-    ).catch((e) => e)) as { init?: ResponseInit }
+    ).catch((e) => e)
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(401)
   })
@@ -433,12 +442,12 @@ describe("createDataRepoOr503", () => {
     // so retrying is safe.
     failGenerate({ status: 500 })
 
-    const thrown = (await createDataRepoOr503(
+    const thrown: { init?: ResponseInit } = await createDataRepoOr503(
       "token",
       TEMPLATE,
       "daniel",
       "steward-data-daniel",
-    ).catch((e) => e)) as { init?: ResponseInit }
+    ).catch((e) => e)
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(503)
   })
@@ -449,10 +458,10 @@ describe("loadDashboardStructureOr503", () => {
     seedRepo(DATA_REPO, {})
     failPath(DATA_REPO, "data/routines.yaml", { status: 503 })
 
-    const thrown = (await loadDashboardStructureOr503(
+    const thrown: { init?: ResponseInit } = await loadDashboardStructureOr503(
       "token",
       MAIN_BOARD,
-    ).catch((e) => e)) as { init?: ResponseInit }
+    ).catch((e) => e)
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(503)
   })
@@ -461,10 +470,10 @@ describe("loadDashboardStructureOr503", () => {
     seedRepo(DATA_REPO, {})
     failPath(DATA_REPO, "data/routines.yaml", { status: 401 })
 
-    const thrown = (await loadDashboardStructureOr503(
+    const thrown: { init?: ResponseInit } = await loadDashboardStructureOr503(
       "token",
       MAIN_BOARD,
-    ).catch((e) => e)) as { init?: ResponseInit }
+    ).catch((e) => e)
     expect(thrown).not.toBeInstanceOf(GitHubError)
     expect(thrown.init?.status).toBe(401)
   })

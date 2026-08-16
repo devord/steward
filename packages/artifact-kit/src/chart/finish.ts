@@ -1,5 +1,12 @@
 import { PALETTE } from "../tokens/palette.ts"
 import { ALLOWED, TYPE_FLOOR } from "./conform.ts"
+import {
+  isJsonNumber,
+  isJsonObject,
+  isJsonString,
+  type JsonObject,
+  type JsonValue,
+} from "../json.ts"
 
 /**
  * The kit's finish, applied over whatever flint derived (ADR-0062).
@@ -91,34 +98,23 @@ export const RAMP: readonly string[] = [
  * `series` and `matrix` keep the ranges they set in `decorate`. A colour that
  * carries no `field` is a constant, not a scale, and is left alone.
  */
-export function paletteColourScales(node: unknown): void {
+export function paletteColourScales(node: JsonValue | undefined): void {
   if (Array.isArray(node)) {
     for (const v of node) paletteColourScales(v)
     return
   }
-  if (typeof node !== "object" || node === null) return
+  if (!isJsonObject(node)) return
   for (const [k, v] of Object.entries(node)) {
-    if (
-      k === "color" &&
-      typeof v === "object" &&
-      v !== null &&
-      Reflect.get(v, "field") !== undefined
-    ) {
-      const scale: unknown = Reflect.get(v, "scale")
-      const base: Record<string, unknown> = isPlainObject(scale)
-        ? { ...scale }
-        : {}
+    if (k === "color" && isJsonObject(v) && v.field !== undefined) {
+      const base: JsonObject = isJsonObject(v.scale) ? { ...v.scale } : {}
       if (base.range === undefined) {
         // A named scheme is flint's choice of palette and the one thing that
         // outranks `config.range`, so it goes with the range that replaces it.
         delete base.scheme
-        Reflect.set(
-          v,
-          "scale",
-          Reflect.get(v, "type") === "quantitative"
+        v.scale =
+          v.type === "quantitative"
             ? { ...base, type: "quantize", range: [...RAMP] }
-            : { ...base, range: [...SERIES_INK] },
-        )
+            : { ...base, range: [...SERIES_INK] }
       }
     }
     paletteColourScales(v)
@@ -133,18 +129,15 @@ export function paletteColourScales(node: unknown): void {
  * that merely enlarges the text afterwards leaves the labels positioned for
  * 10px and colliding at 12.
  */
-export function clampType(node: unknown): void {
+export function clampType(node: JsonValue | undefined): void {
   if (Array.isArray(node)) {
     for (const v of node) clampType(v)
     return
   }
-  if (typeof node !== "object" || node === null) return
-  // `Reflect.set` rather than an index write: the repo forbids type assertions
-  // outside tests (`consistent-type-assertions: never`), and a narrowed
-  // `object` has no index signature to write through.
+  if (!isJsonObject(node)) return
   for (const [k, v] of Object.entries(node)) {
-    if (/[Ff]ontSize$/.test(k) && typeof v === "number")
-      Reflect.set(node, k, Math.max(TYPE_FLOOR, v))
+    if (/[Ff]ontSize$/.test(k) && isJsonNumber(v))
+      node[k] = Math.max(TYPE_FLOOR, v)
     else clampType(v)
   }
 }
@@ -155,7 +148,7 @@ export function clampType(node: unknown): void {
  * Everything that decides ink, weight and type lives here rather than on any
  * one chart, so a design fix is one edit instead of one per form.
  */
-export function kitConfig(): Record<string, unknown> {
+export function kitConfig() {
   return {
     font: MONO,
     background: null,
@@ -231,7 +224,7 @@ export function kitConfig(): Record<string, unknown> {
       heatmap: [...RAMP],
       diverging: [PALETTE.blue, PALETTE.bg3, PALETTE.orange],
     },
-  }
+  } satisfies JsonObject
 }
 
 /**
@@ -254,14 +247,11 @@ export function kitConfig(): Record<string, unknown> {
  * key the kit does not name — which is where its layout knowledge actually
  * sits.
  */
-function deepMerge(
-  base: Record<string, unknown>,
-  over: Record<string, unknown>,
-): Record<string, unknown> {
-  const out: Record<string, unknown> = { ...base }
+function deepMerge(base: JsonObject, over: JsonObject): JsonObject {
+  const out: JsonObject = { ...base }
   for (const [k, v] of Object.entries(over)) {
     const b = out[k]
-    if (isPlainObject(b) && isPlainObject(v)) out[k] = deepMerge(b, v)
+    if (isJsonObject(b) && isJsonObject(v)) out[k] = deepMerge(b, v)
     // `null` is a value here, not an absence, and `??` was silently discarding
     // it: `view.stroke: null` and `background: null` are how Vega-Lite is told
     // to draw *nothing*, so a flint spec that set either kept its own. Only
@@ -269,10 +259,6 @@ function deepMerge(
     else if (v !== undefined) out[k] = v
   }
   return out
-}
-
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v)
 }
 
 /** A string that names a colour, in any notation Vega will accept. */
@@ -296,14 +282,12 @@ const COLOUR_LITERAL =
  * facet caps — is untouched, which is the part of flint's config the kit
  * genuinely wants (ADR-0062).
  */
-function stripOffPaletteInk(
-  node: Record<string, unknown>,
-): Record<string, unknown> {
-  const out: Record<string, unknown> = {}
+function stripOffPaletteInk(node: JsonObject): JsonObject {
+  const out: JsonObject = {}
   for (const [k, v] of Object.entries(node)) {
-    if (isPlainObject(v)) out[k] = stripOffPaletteInk(v)
+    if (isJsonObject(v)) out[k] = stripOffPaletteInk(v)
     else if (
-      typeof v === "string" &&
+      isJsonString(v) &&
       COLOUR_LITERAL.test(v) &&
       !ALLOWED.has(v.toLowerCase())
     )
@@ -313,31 +297,33 @@ function stripOffPaletteInk(
   return out
 }
 
-export function finish<T>(spec: T, size: { width: number; height: number }): T {
+export function finish<T extends JsonValue>(
+  spec: T,
+  size: { width: number; height: number },
+): T {
   clampType(spec)
   paletteColourScales(spec)
-  if (typeof spec === "object" && spec !== null) {
-    const own: unknown = Reflect.get(spec, "config")
+  if (isJsonObject(spec)) {
     // A form may fix its own plot rectangle by leaving `_kitSize` behind. Only
     // the matrix does, and it has to: a co-change field is read as a grid of
     // squares, and a heatmap stretched to a 780x300 box draws cells nearly
     // three times wider than they are tall, which reads as stripes rather than
     // as a field. The key is removed here so it never reaches Vega.
-    const fixed: unknown = Reflect.get(spec, "_kitSize")
-    const sized =
-      typeof fixed === "object" && fixed !== null
-        ? {
-            width: Number(Reflect.get(fixed, "width")) || size.width,
-            height: Number(Reflect.get(fixed, "height")) || size.height,
-          }
-        : size
-    Reflect.deleteProperty(spec, "_kitSize")
+    const fixed = spec._kitSize
+    const sized = isJsonObject(fixed)
+      ? {
+          width: Number(fixed.width) || size.width,
+          height: Number(fixed.height) || size.height,
+        }
+      : size
+    delete spec._kitSize
     // Flint's config first, the kit's over it: flint contributes what the kit
     // is silent about, and never the other way round. Its inks are stripped
     // beforehand and the merged result is clamped afterwards, because a
     // narrower flint key (`axisX` over `axis`) otherwise wins on both counts.
+    const own = spec.config
     const config = deepMerge(
-      stripOffPaletteInk(isPlainObject(own) ? own : {}),
+      stripOffPaletteInk(isJsonObject(own) ? own : {}),
       kitConfig(),
     )
     clampType(config)

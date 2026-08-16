@@ -5,6 +5,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
 
+import { isJsonString, isRecord } from "./json.ts"
 import { renderArtifact } from "./render.tsx"
 
 /**
@@ -28,8 +29,14 @@ const repoRoot = path.resolve(here, "..", "..", "..")
 const kitDir = path.join(repoRoot, ".claude", "skills", "widget-artifact")
 const validator = path.join(kitDir, "scripts", "validate.mjs")
 
+/** The two counts the validator prints on its tally line. */
+interface ValidatorTally {
+  errors: number
+  warnings: number
+}
+
 /** Run the validator over one artifact string; never throws on exit 1. */
-function validate(html: string): { errors: number; warnings: number } {
+function validate(html: string): ValidatorTally {
   const dir = mkdtempSync(path.join(tmpdir(), "steward-validate-"))
   const file = path.join(dir, "artifact.html")
   writeFileSync(file, html)
@@ -40,8 +47,7 @@ function validate(html: string): { errors: number; warnings: number } {
     })
   } catch (e) {
     // Exit 1 is how it reports errors — the output is on the error object.
-    const err = e as { stdout?: string }
-    out = err.stdout ?? ""
+    out = isRecord(e) && isJsonString(e.stdout) ? e.stdout : ""
   }
   const tally = out.match(/(\d+) error\(s\), (\d+) warning\(s\)/)
   if (!tally) throw new Error(`no tally line in validator output:\n${out}`)

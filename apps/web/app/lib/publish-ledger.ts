@@ -129,9 +129,7 @@ export interface RoutineCost {
 /** Per-routine spend, keyed by slug. Routines absent from the window simply
     don't appear — the caller renders the dash it already renders for a
     receipt that carried no price. */
-export function costBySlug(
-  entries: PublishEntry[],
-): Record<string, RoutineCost> {
+export function costBySlug(entries: PublishEntry[]) {
   const out: Record<string, RoutineCost> = {}
   for (const entry of entries) {
     const row = (out[entry.slug] ??= { usd: 0, priced: 0, runs: 0, mean: null })
@@ -146,14 +144,18 @@ export function costBySlug(
   return out
 }
 
-/** The window's totals — the headline, and the reach every figure under it
-    is qualified by. */
-export function totalCost(entries: PublishEntry[]): {
+/** The window's totals, and the reach every figure under them is qualified
+    by: `runs` seen, `priced` of them costed. */
+export interface LedgerTotal {
   usd: number
   priced: number
   runs: number
   mean: number | null
-} {
+}
+
+/** The window's totals — the headline, and the reach every figure under it
+    is qualified by. */
+export function totalCost(entries: PublishEntry[]): LedgerTotal {
   let usd = 0
   let priced = 0
   for (const entry of entries) {
@@ -167,6 +169,14 @@ export function totalCost(entries: PublishEntry[]): {
     runs: entries.length,
     mean: priced > 0 ? usd / priced : null,
   }
+}
+
+/** One day's bar in the spend chart. */
+export interface DayCost {
+  day: string
+  usd: number
+  priced: number
+  runs: number
 }
 
 /**
@@ -185,9 +195,7 @@ export function totalCost(entries: PublishEntry[]): {
  * design out. `priced` is what tells the two apart; `runs` keeps the day
  * honest about having happened at all.
  */
-export function costByDay(
-  entries: PublishEntry[],
-): { day: string; usd: number; priced: number; runs: number }[] {
+export function costByDay(entries: PublishEntry[]): DayCost[] {
   const byDay = new Map<string, { usd: number; priced: number; runs: number }>()
   for (const entry of entries) {
     const day = entry.at.slice(0, 10)

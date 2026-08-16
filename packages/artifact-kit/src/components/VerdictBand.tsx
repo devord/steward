@@ -22,12 +22,12 @@ export type VerdictLevel = "good" | "attn" | "bad" | "pending"
  * line at every size from 0.22em up, on the tile where the word IS the
  * artifact. Two marks, each carrying something the other cannot.
  */
-const LEVEL: Record<VerdictLevel, { text: string; icon: IconName }> = {
+const LEVEL = {
   good: { text: "text-green", icon: "circle-check" },
   attn: { text: "text-orange", icon: "triangle-alert" },
   bad: { text: "text-red", icon: "octagon-alert" },
   pending: { text: "text-ink-dim", icon: "clock" },
-}
+} satisfies Record<VerdictLevel, { text: string; icon: IconName }>
 
 /** One fired condition: connecting prose around a measured figure. */
 export interface VerdictClause {

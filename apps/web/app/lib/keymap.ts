@@ -72,7 +72,7 @@ let memoryEnabled: boolean | null = null
 
 function readStored(): boolean {
   try {
-    if (typeof window === "undefined") return true
+    if (!("window" in globalThis)) return true
     const raw = window.localStorage.getItem(KEYMAP_STORAGE_KEY)
     if (raw == null) return memoryEnabled ?? true
     return raw !== "off"

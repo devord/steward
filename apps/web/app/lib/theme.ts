@@ -29,9 +29,8 @@
  *    srcdoc so published gruvbox artifacts follow the active theme.
  */
 
-import { z } from "zod"
-
 import { ARTIFACT_BUCKET_SCRIPT } from "./artifact-bucket.ts"
+import { isRecord, type JsonObject, type JsonValue } from "./json.ts"
 import { ARTIFACT_COPY_SCRIPT } from "./artifact-copy.ts"
 import { ARTIFACT_DISCLOSE_SCRIPT } from "./artifact-disclose.ts"
 import { FIT_FACTORY, FIT_STYLE } from "./artifact-fit.ts"
@@ -636,7 +635,7 @@ export const themeFamilies = [
   },
 ] as const satisfies readonly ThemeFamily[]
 
-export function isThemeName(value: unknown): value is ThemeName {
+export function isThemeName(value: JsonValue | undefined): value is ThemeName {
   return (
     typeof value === "string" &&
     Object.prototype.hasOwnProperty.call(themes, value)
@@ -694,7 +693,10 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
   darkTheme: DEFAULT_DARK_THEME,
 }
 
-function coerceSlot(candidate: unknown, mode: ThemeMode): ThemeName {
+function coerceSlot(
+  candidate: JsonValue | undefined,
+  mode: ThemeMode,
+): ThemeName {
   return isThemeName(candidate) && themes[candidate].mode === mode
     ? candidate
     : mode === "light"
@@ -702,17 +704,16 @@ function coerceSlot(candidate: unknown, mode: ThemeMode): ThemeName {
       : DEFAULT_DARK_THEME
 }
 
-const rawPrefsSchema = z
-  .object({
-    mode: z.unknown().optional(),
-    lightTheme: z.unknown().optional(),
-    darkTheme: z.unknown().optional(),
-  })
-  .catch({})
-
-/** Validate + coerce anything (parsed JSON, undefined, garbage) into prefs. */
-export function coercePrefs(raw: unknown): AppearancePrefs {
-  const parsed = rawPrefsSchema.parse(raw ?? {})
+/**
+ * Validate + coerce anything (parsed JSON, undefined, garbage) into prefs.
+ *
+ * Read straight off the JSON rather than through a zod schema: the schema
+ * this replaced declared three `unknown` optional fields and a `.catch({})`,
+ * which is `isRecord` written longhand — it validated nothing, and it handed
+ * every field back as `unknown` for the coercers below to re-check anyway.
+ */
+export function coercePrefs(raw: JsonValue | undefined): AppearancePrefs {
+  const parsed: JsonObject = isRecord(raw) ? raw : {}
   return {
     mode:
       parsed.mode === "light" || parsed.mode === "dark"

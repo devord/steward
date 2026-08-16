@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url"
 
 import { describe, expect, it } from "vitest"
 
+import { isRecord } from "../json.ts"
+
 /**
  * A chart-bearing artifact has to survive the **publish** validator, not just
  * the renderer.
@@ -153,9 +155,9 @@ describe("a chart-bearing artifact is publishable", () => {
         stdio: "pipe",
       })
     } catch (e) {
-      report = String(
-        e && typeof e === "object" && "stdout" in e ? e.stdout : e,
-      )
+      // A non-zero exit is how the validator reports findings, and the report
+      // itself rides on the thrown error's `stdout`.
+      report = String(isRecord(e) && e.stdout !== undefined ? e.stdout : e)
     }
     expect(report).toContain("routine-invented-class")
   }, 60_000)

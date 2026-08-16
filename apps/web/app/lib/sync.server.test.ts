@@ -29,7 +29,10 @@ describe("performSync", () => {
     })
 
     expect(outcome.ok).toBe(true)
-    const newShas = (outcome as { newShas: Record<string, string> }).newShas
+    // `in` is the narrowing: two of the three outcomes carry `ok: true`, and
+    // only the committed one carries SHAs.
+    if (!("newShas" in outcome)) throw new Error("expected committed SHAs")
+    const newShas = outcome.newShas
     const after = await getFile("token", REPO, "data/routines.yaml", "main")
     expect(after?.text).toBe(updated)
     // The SHA handed back is authoritative — a later read agrees with it.
@@ -120,10 +123,8 @@ describe("performSync", () => {
     })
 
     expect(outcome.ok).toBe(false)
-    const conflict = outcome as {
-      conflicts: string[]
-      committed: Record<string, string>
-    }
+    if (outcome.ok) throw new Error("expected a conflict")
+    const conflict = outcome
     expect(conflict.conflicts).toEqual(["dashboard"])
     // The routines file did land first — its SHA comes back so a retry
     // doesn't false-conflict on it.
@@ -164,10 +165,8 @@ describe("performSync", () => {
     })
 
     expect(outcome.ok).toBe(false)
-    const conflict = outcome as {
-      conflicts: string[]
-      committed: Record<string, string>
-    }
+    if (outcome.ok) throw new Error("expected a conflict")
+    const conflict = outcome
     expect(conflict.conflicts).toEqual(["dashboard"])
     // The routines write landed before the 500 — its SHA must not be lost, or
     // the retry would false-conflict on a file the client already committed.

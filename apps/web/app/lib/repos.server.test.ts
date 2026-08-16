@@ -148,9 +148,12 @@ describe("listDataRepos", () => {
     seedRepo(HOME, {})
     failSearch({ status: 401 })
 
-    const error = await listDataRepos("token", LOGIN).catch((e) => e)
-    expect(error).toBeInstanceOf(GitHubError)
-    expect((error as GitHubError).status).toBe(401)
+    const error: unknown = await listDataRepos("token", LOGIN).catch((e) => e)
+    // `instanceof` is the assertion and the narrowing at once — a wrong class
+    // fails here rather than being asserted past.
+    if (!(error instanceof GitHubError))
+      throw new Error(`expected a GitHubError, got ${String(error)}`)
+    expect(error.status).toBe(401)
   })
 
   it("caches per token until invalidated", async () => {
@@ -212,11 +215,11 @@ describe("requireDataRepo", () => {
       isTemplate: true,
     })
 
-    const thrown = (await requireDataRepo(
+    const thrown: { init?: { status: number } } = await requireDataRepo(
       "token",
       LOGIN,
       "acme/steward-data-template",
-    ).catch((e) => e)) as { init?: { status: number } }
+    ).catch((e) => e)
     expect(thrown.init?.status).toBe(404)
   })
 
@@ -230,11 +233,11 @@ describe("requireDataRepo", () => {
       permissions: null,
     })
 
-    const thrown = (await requireDataRepo(
+    const thrown: { init?: { status: number } } = await requireDataRepo(
       "token",
       LOGIN,
       "stranger/evil-data",
-    ).catch((e) => e)) as { init?: { status: number } }
+    ).catch((e) => e)
     expect(thrown.init?.status).toBe(404)
   })
 
@@ -248,11 +251,11 @@ describe("requireDataRepo", () => {
     // The token could read it, but it's not part of the product surface.
     seedRepo("daniel/some-project", {})
 
-    const thrown = (await requireDataRepo(
+    const thrown: { init?: { status: number } } = await requireDataRepo(
       "token",
       LOGIN,
       "daniel/some-project",
-    ).catch((e) => e)) as { init?: { status: number } }
+    ).catch((e) => e)
     expect(thrown.init?.status).toBe(404)
   })
 
@@ -262,9 +265,11 @@ describe("requireDataRepo", () => {
     seedRepo(HOME, {})
     failSearch({ status: 401 })
 
-    const thrown = (await requireDataRepo("token", LOGIN, "acme/x").catch(
-      (e) => e,
-    )) as { init?: { status: number } }
+    const thrown: { init?: { status: number } } = await requireDataRepo(
+      "token",
+      LOGIN,
+      "acme/x",
+    ).catch((e) => e)
     expect(thrown.init?.status).toBe(401)
   })
 
@@ -275,17 +280,21 @@ describe("requireDataRepo", () => {
     await listDataRepos("token", LOGIN)
     failPath("acme/flaky", "", { status: 503, endpoint: "repo" })
 
-    const thrown = (await requireDataRepo("token", LOGIN, "acme/flaky").catch(
-      (e) => e,
-    )) as { init?: { status: number } }
+    const thrown: { init?: { status: number } } = await requireDataRepo(
+      "token",
+      LOGIN,
+      "acme/flaky",
+    ).catch((e) => e)
     expect(thrown.init?.status).toBe(503)
   })
 
   it("rejects an invisible repo and a malformed name alike, as 404", async () => {
     for (const name of ["ghost/absent", "not a repo", "a/b/c"]) {
-      const thrown = (await requireDataRepo("token", LOGIN, name).catch(
-        (e) => e,
-      )) as { init?: { status: number } }
+      const thrown: { init?: { status: number } } = await requireDataRepo(
+        "token",
+        LOGIN,
+        name,
+      ).catch((e) => e)
       expect(thrown.init?.status).toBe(404)
     }
   })

@@ -4,7 +4,7 @@ import { Throughput, type ThroughputSpec } from "./components/Throughput.tsx"
 import { type BottomLine, BottomLineBand } from "./components/BottomLine.tsx"
 import { Chart } from "./components/Chart.tsx"
 import type { ChartSpec, CompiledChart } from "./chart/compile.ts"
-import { seriesHasShape, type SeriesSpec } from "./chart/forms/series.ts"
+import { seriesIsPlottable, type SeriesSpec } from "./chart/forms/series.ts"
 import { matrixHasField, type MatrixSpec } from "./chart/forms/matrix.ts"
 import { chartRequests } from "./chart/requests.ts"
 import { EmptyState } from "./components/EmptyState.tsx"
@@ -204,7 +204,7 @@ function filled(b: Block, charts: ArtifactCharts, keyOf: ChartKeyMap): boolean {
   // conditions matter: shape is about the data, the map entry is about whether
   // the render survived conformance.
   if (b.kind === "series")
-    return seriesHasShape(b.spec) && charts.has(keyOf.get(b) ?? "")
+    return seriesIsPlottable(b.spec) && charts.has(keyOf.get(b) ?? "")
   // One person on one day is not a ranking. The chart's whole claim is
   // relative standing over time, and it needs both to make it.
   if (b.kind === "throughput")

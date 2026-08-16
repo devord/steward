@@ -59,6 +59,11 @@ function args(argv) {
   return out
 }
 
+/** A flag's value, or null when it was passed bare — `args` yields `true`. */
+function flagValue(v) {
+  return v === true || v === undefined ? null : v
+}
+
 function die(message) {
   process.stderr.write(`repo-modules: ${message}\n`)
   process.exit(1)
@@ -278,7 +283,7 @@ function enumerate(root, files, { siblings, dropped }) {
       id: `${root}#${child}`,
       root,
       name: child,
-      shape: "nested",
+      layout: "nested",
       paths: [`${root}/${child}`],
       files: list,
     })
@@ -301,7 +306,7 @@ function enumerate(root, files, { siblings, dropped }) {
         id: `${root}#${name}`,
         root,
         name,
-        shape: "route",
+        layout: "route",
         paths: list,
         files: list,
         entryPoint: true, // nothing imports a route; the router mounts it
@@ -337,7 +342,7 @@ function enumerate(root, files, { siblings, dropped }) {
       id: `${root}#${name}`,
       root,
       name,
-      shape: "flat",
+      layout: "flat",
       paths: list,
       files: list,
     })
@@ -348,7 +353,7 @@ function enumerate(root, files, { siblings, dropped }) {
       id: `${root}#other`,
       root,
       name: "other",
-      shape: "other",
+      layout: "other",
       paths: other,
       files: other,
     })
@@ -370,7 +375,7 @@ function measure(repo, ref, modules, files, { since, until }) {
   for (const mod of modules)
     for (const path of mod.files) index.set(path, mod.id)
   for (const mod of modules)
-    if (mod.shape === "nested") index.set(mod.paths[0], mod.id)
+    if (mod.layout === "nested") index.set(mod.paths[0], mod.id)
 
   const stats = new Map(
     modules.map((m) => [
@@ -656,7 +661,13 @@ function score(modules, measured, { weights, rules, ruleBreaches, shallow }) {
       id: mod.id,
       root: mod.root,
       name: mod.name,
-      shape: mod.shape,
+      // `census.json` is a published contract: routine templates in data repos
+      // read it, and a renamed key hands them `undefined` with no error. The
+      // internal name is `layout`; the emitted one stays what it has always
+      // been. The rule below matches the bare substring "shape" and offers no
+      // allowlist, so a naming lint would otherwise rewrite a wire format.
+      // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names
+      shape: mod.layout,
       score: ceiling ? Math.round((100 * raised) / ceiling) : 0,
       penalties,
       commits: s.commits,
@@ -759,12 +770,10 @@ if (!git(repo, ["rev-parse", "--git-dir"]))
   die(`${repo} is not a git repository`)
 
 const csv = (v) =>
-  typeof v === "string"
-    ? v
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : []
+  String(flagValue(v) ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
 const weights = { ...DEFAULT_WEIGHTS }
 for (const pair of csv(opts.weights)) {
   const [name, value] = pair.split("=").map((s) => s.trim())
@@ -777,10 +786,11 @@ const sum = Object.values(weights).reduce((a, b) => a + b, 0)
 if (Math.round(sum) !== 100) die(`weights must sum to 100, got ${sum}`)
 
 const rules = []
-if (typeof opts.rules === "string") {
-  const text = opts.rules.includes("::")
-    ? opts.rules
-    : readFileSync(opts.rules, "utf8")
+const rulesArg = flagValue(opts.rules)
+if (rulesArg) {
+  const text = String(rulesArg).includes("::")
+    ? String(rulesArg)
+    : readFileSync(String(rulesArg), "utf8")
   for (const line of text.split("\n")) {
     const parts = line.split("::").map((s) => s.trim())
     if (parts.length < 2 || !parts[0]) continue

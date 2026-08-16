@@ -1,3 +1,7 @@
+import type * as vega from "vega"
+
+import { isJsonNumber } from "../json.ts"
+
 /**
  * Exact text measurement for a headless Vega render (ADR-0062).
  *
@@ -33,27 +37,52 @@ interface TextItem {
   fontSize?: number
 }
 
-/** Fitted to vega's `textMetrics.width(item, text)` signature. */
-export function monoWidth(item: TextItem, text: unknown): number {
-  const size = typeof item?.fontSize === "number" ? item.fontSize : 12
+/**
+ * What vega hands the measurer: a label, or a number it will render as one.
+ * `null` and `undefined` are both "nothing to draw", and measure as empty.
+ */
+type Measurable = string | number | null | undefined
+
+/**
+ * Fitted to vega's `textMetrics.width(item, text)` signature.
+ *
+ * `fontSize` is typed but not enforced: the item crosses from
+ * `assembleVegaLite`, which is declared `any`, and `clampType` only touches
+ * sizes that are *already* numbers. A `fontSize: "1.2em"` that reached the
+ * arithmetic would return NaN — and because `useMonoMetrics` patches vega's
+ * **global** measurer, that NaN would lay out every later chart in the
+ * process too. So the size is checked, not merely defaulted.
+ */
+export function monoWidth(item: TextItem, text: Measurable): number {
+  const size = isJsonNumber(item?.fontSize) ? item.fontSize : 12
   return String(text ?? "").length * size * MONO_ADVANCE
 }
+
+/**
+ * The one corner of vega's namespace this module touches.
+ *
+ * `textMetrics` is public API that vega's shipped `.d.ts` omits, so there is
+ * nothing to import and nothing to conflict with — declaring the shape here is
+ * what the reflective read was standing in for. A `declare module`
+ * augmentation would fix it inside this package and *not* in `apps/web`, which
+ * typechecks these sources through an import and never sees the local
+ * declaration: a green build here and a red one one directory over.
+ */
+interface VegaTextMetrics {
+  width: (item: TextItem, text: Measurable) => number
+}
+
+/** Vega's own namespace, plus the member its shipped types leave out. */
+type VegaNamespace = typeof vega & { textMetrics?: VegaTextMetrics }
 
 /**
  * Point vega's measurement at the mono advance. Idempotent, so a renderer that
  * compiles several charts pays for it once.
  *
- * Takes the whole `vega` namespace and reaches for `textMetrics` reflectively,
- * rather than importing the binding. That is not indirection for its own sake:
- * `textMetrics` is public API that vega's shipped `.d.ts` omits, so a named
- * import fails to typecheck. A `declare module` augmentation fixes it inside
- * this package and *not* in `apps/web`, which typechecks these sources through
- * an import and never sees the local declaration — so the augmentation was a
- * green build here and a red one one directory over. `Reflect.get` is typed
- * `any` and needs neither.
+ * Takes the whole namespace rather than the binding, because there is no
+ * binding to import — see `VegaNamespace` above for why the shape is declared
+ * here instead.
  */
-export function useMonoMetrics(vega: object): void {
-  const metrics: unknown = Reflect.get(vega, "textMetrics")
-  if (typeof metrics === "object" && metrics !== null)
-    Reflect.set(metrics, "width", monoWidth)
+export function useMonoMetrics(vega: VegaNamespace): void {
+  if (vega.textMetrics) vega.textMetrics.width = monoWidth
 }

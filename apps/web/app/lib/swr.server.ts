@@ -33,7 +33,7 @@ export function tokenKey(token: string): string {
   return createHash("sha256").update(token).digest("hex")
 }
 
-function write(key: string, value: unknown, ttlMs: number, maxAgeMs: number) {
+function write<T>(key: string, value: T, ttlMs: number, maxAgeMs: number) {
   cache.delete(key)
   cache.set(key, {
     value,
@@ -85,9 +85,9 @@ export async function swr<T>(
         },
       )
     }
-    // The entry under a key is only ever written by that key's own load(),
-    // so the stored unknown is the caller's T — an invariant the type system
-    // can't carry through a shared heterogeneous map.
+    // SAFETY: the entry under a key is only ever written by that key's own
+    // load(), so the stored value is the caller's T — an invariant the type
+    // system cannot carry through a shared heterogeneous map.
     // oxlint-disable-next-line typescript/consistent-type-assertions
     return entry.value as T
   }

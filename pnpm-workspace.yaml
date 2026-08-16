@@ -1,6 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+  # The vendored Oxlint rules (anti-slop). A workspace package so `pnpm test`
+  # and `pnpm typecheck` reach them — the plugin gates every file in the repo,
+  # so it needs a gate of its own.
+  - "tools"
 
 # Single source of truth for versions shared across workspace packages.
 # Reference from package.json as `"<name>": "catalog:"`.

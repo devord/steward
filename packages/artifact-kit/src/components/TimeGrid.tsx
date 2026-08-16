@@ -10,14 +10,14 @@ import { cn } from "../ui/cn.ts"
  */
 export type BlockType = "deep" | "meeting" | "shallow" | "personal" | "free"
 
-const TYPE: Record<BlockType, string> = {
+const TYPE = {
   deep: "bg-orange/15 border-orange/40 text-ink",
   meeting: "bg-bg2 border-border text-ink-dim",
   shallow: "bg-bg2 border-border-dim text-ink-dim",
   personal: "bg-blue/10 border-blue/30 text-ink-dim",
   // Honest slack. A border and nothing else — it is real, and it is not work.
   free: "border-border-dim border-dashed text-ink-dim",
-}
+} satisfies Record<BlockType, string>
 
 export interface TimeBlock {
   id: string

@@ -1,4 +1,5 @@
 import { data, useFetcher } from "react-router"
+import { isJsonString } from "../lib/json.ts"
 
 import { ArrowLeft, Check } from "lucide-react"
 
@@ -65,7 +66,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 export async function action({ request }: Route.ActionArgs) {
   const form = await request.formData()
   const locale = form.get("locale")
-  if (typeof locale !== "string" || !isLocale(locale)) {
+  if (!isJsonString(locale) || !isLocale(locale)) {
     throw data("Unknown language", { status: 400 })
   }
   return data(null, { headers: { "Set-Cookie": localeCookie(locale) } })
@@ -206,8 +207,7 @@ function LanguageSettings() {
   const locale = useLocale()
   const fetcher = useFetcher()
   const pending = fetcher.formData?.get("locale")
-  const active =
-    typeof pending === "string" && isLocale(pending) ? pending : locale
+  const active = isJsonString(pending) && isLocale(pending) ? pending : locale
 
   return (
     <div

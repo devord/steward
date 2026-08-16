@@ -1,4 +1,28 @@
+import {
+  isJsonBoolean,
+  isJsonNumber,
+  isJsonObject,
+  isJsonString,
+  isRecord,
+  type JsonObject,
+  type JsonValue,
+} from "./json.ts"
+import type { ArtifactDoc } from "./render.tsx"
+
 import { TONES } from "./ui/tone.ts"
+
+/**
+ * What arrives at the two checkers below.
+ *
+ * In production it is a `JSON.parse` result (`cli.mjs`) — raw JSON, which is
+ * the whole point of validating it. In tests it is a document already built
+ * and typed, and TypeScript never gives an interface the implicit index
+ * signature that would make an `ArtifactDoc` a `JsonObject`. Naming both is
+ * what lets one signature serve both without an assertion at either end:
+ * `isRecord` narrows the union to an intersection, and an intersection *is*
+ * assignable to `JsonObject`.
+ */
+type DocCandidate = JsonValue | ArtifactDoc
 
 const TONE_NAMES: ReadonlySet<string> = new Set(TONES)
 
@@ -18,19 +42,18 @@ const DIRECTIONS = ["up", "down", "flat"]
  * in a routine environment with no `node_modules`, and everything it needs
  * here is presence and shape.
  */
-export function validateDoc(doc: unknown): string[] {
+export function validateDoc(candidate: DocCandidate): string[] {
   const errors: string[] = []
-  const isObj = (v: unknown): v is Record<string, unknown> =>
-    typeof v === "object" && v !== null && !Array.isArray(v)
 
-  if (!isObj(doc)) return ["data.json must be a JSON object"]
+  if (!isRecord(candidate)) return ["data.json must be a JSON object"]
+  const doc: JsonObject = candidate
 
-  const str = (v: unknown, at: string, required = true) => {
+  const str = (v: JsonValue | undefined, at: string, required = true) => {
     if (v === undefined) {
       if (required) errors.push(`${at} is required`)
       return
     }
-    if (typeof v !== "string" || v === "")
+    if (!isJsonString(v) || v === "")
       errors.push(`${at} must be a non-empty string`)
   }
 
@@ -38,7 +61,7 @@ export function validateDoc(doc: unknown): string[] {
   str(doc.title, "title", false)
   str(doc.generatedAt, "generatedAt")
   if (
-    typeof doc.generatedAt === "string" &&
+    isJsonString(doc.generatedAt) &&
     !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(doc.generatedAt)
   ) {
     // The footer stamp and the meta are both sliced out of this by position.
@@ -47,34 +70,28 @@ export function validateDoc(doc: unknown): string[] {
 
   // A Set of plain strings, so the membership test needs no assertion —
   // `consistent-type-assertions` is an error in this repo outside tests.
-  const tone = (v: unknown, at: string) => {
-    if (v !== undefined && !(typeof v === "string" && TONE_NAMES.has(v)))
+  const tone = (v: JsonValue | undefined, at: string) => {
+    if (v !== undefined && !(isJsonString(v) && TONE_NAMES.has(v)))
       errors.push(`${at} must be one of ${TONES.join(", ")}`)
   }
 
   // One of the two is required, because every artifact has to say something at
   // 340×160 — and only one, because two hero figures at the glance is two
   // glances.
-  if (!isObj(doc.stat) && !isObj(doc.verdict)) {
+  if (!isJsonObject(doc.stat) && !isJsonObject(doc.verdict)) {
     errors.push(
       "stat or verdict is required — it is what the 1×1 glance renders",
     )
-  } else if (isObj(doc.stat) && isObj(doc.verdict)) {
+  } else if (isJsonObject(doc.stat) && isJsonObject(doc.verdict)) {
     errors.push("stat and verdict are alternatives — set one, not both")
-  } else if (isObj(doc.stat)) {
-    if (
-      typeof doc.stat.value !== "number" &&
-      typeof doc.stat.value !== "string"
-    )
+  } else if (isJsonObject(doc.stat)) {
+    if (!isJsonNumber(doc.stat.value) && !isJsonString(doc.stat.value))
       errors.push("stat.value must be a number or a string")
     str(doc.stat.label, "stat.label")
     tone(doc.stat.tone, "stat.tone")
-  } else if (isObj(doc.verdict)) {
+  } else if (isJsonObject(doc.verdict)) {
     const LEVELS = ["good", "attn", "bad", "pending"]
-    if (
-      typeof doc.verdict.level !== "string" ||
-      !LEVELS.includes(doc.verdict.level)
-    )
+    if (!isJsonString(doc.verdict.level) || !LEVELS.includes(doc.verdict.level))
       errors.push(`verdict.level must be one of ${LEVELS.join(", ")}`)
     // The word is not derived from the level: the level picks the colour and
     // the glyph, the routine picks the vocabulary it publishes.
@@ -88,7 +105,8 @@ export function validateDoc(doc: unknown): string[] {
       else
         doc.verdict.clauses.forEach((c, i) => {
           const cat = `verdict.clauses[${i}]`
-          if (!isObj(c)) return void errors.push(`${cat} must be an object`)
+          if (!isJsonObject(c))
+            return void errors.push(`${cat} must be an object`)
           str(c.value, `${cat}.value`)
           str(c.lead, `${cat}.lead`, false)
           str(c.tail, `${cat}.tail`, false)
@@ -97,7 +115,8 @@ export function validateDoc(doc: unknown): string[] {
             return void errors.push(`${cat}.refs must be an array`)
           c.refs.forEach((r, k) => {
             const rf = `${cat}.refs[${k}]`
-            if (!isObj(r)) return void errors.push(`${rf} must be an object`)
+            if (!isJsonObject(r))
+              return void errors.push(`${rf} must be an object`)
             str(r.label, `${rf}.label`)
             str(r.href, `${rf}.href`, false)
           })
@@ -106,7 +125,7 @@ export function validateDoc(doc: unknown): string[] {
   }
 
   if (doc.bottomLine !== undefined) {
-    if (!isObj(doc.bottomLine)) {
+    if (!isJsonObject(doc.bottomLine)) {
       // A bare string is the shape an author reaches for first, and it would
       // otherwise render as nothing at all — the exact failure this field
       // exists to fix.
@@ -119,7 +138,8 @@ export function validateDoc(doc: unknown): string[] {
         else
           doc.bottomLine.refs.forEach((r, i) => {
             const rf = `bottomLine.refs[${i}]`
-            if (!isObj(r)) return void errors.push(`${rf} must be an object`)
+            if (!isJsonObject(r))
+              return void errors.push(`${rf} must be an object`)
             str(r.label, `${rf}.label`)
             str(r.href, `${rf}.href`, false)
           })
@@ -132,12 +152,12 @@ export function validateDoc(doc: unknown): string[] {
     else
       doc.blocks.forEach((b, i) => {
         const at = `blocks[${i}]`
-        if (!isObj(b)) return void errors.push(`${at} must be an object`)
+        if (!isJsonObject(b)) return void errors.push(`${at} must be an object`)
         if (b.note !== undefined) str(b.note, `${at}.note`, false)
         if (b.id !== undefined) str(b.id, `${at}.id`, false)
-        if (b.rail !== undefined && typeof b.rail !== "boolean")
+        if (b.rail !== undefined && !isJsonBoolean(b.rail))
           errors.push(`${at}.rail must be a boolean`)
-        if (b.pageOnly !== undefined && typeof b.pageOnly !== "boolean")
+        if (b.pageOnly !== undefined && !isJsonBoolean(b.pageOnly))
           errors.push(`${at}.pageOnly must be a boolean`)
 
         if (b.kind === "chart") {
@@ -146,32 +166,33 @@ export function validateDoc(doc: unknown): string[] {
           // pass before the markup exists (ADR-0062). Without one the band
           // renders empty and nothing says why.
           str(b.id, `${at}.id`)
-          if (!isObj(b.spec))
+          if (!isJsonObject(b.spec))
             return void errors.push(`${at}.spec must be an object`)
           const cs = b.spec
-          if (!isObj(cs.data)) errors.push(`${at}.spec.data must be an object`)
+          if (!isJsonObject(cs.data))
+            errors.push(`${at}.spec.data must be an object`)
           else if (!Array.isArray(cs.data.values))
             // The sandbox has no network and flint's own server refuses remote
             // URLs, so a `url` source is a chart that can never draw.
             errors.push(
               `${at}.spec.data.values must be an array of rows — an artifact cannot fetch a data source (ADR-0002)`,
             )
-          if (!isObj(cs.semantic_types))
+          if (!isJsonObject(cs.semantic_types))
             errors.push(
               `${at}.spec.semantic_types must map each column to a flint semantic type`,
             )
-          if (!isObj(cs.chart_spec))
+          if (!isJsonObject(cs.chart_spec))
             errors.push(`${at}.spec.chart_spec must be an object`)
           else {
             str(cs.chart_spec.chartType, `${at}.spec.chart_spec.chartType`)
-            if (!isObj(cs.chart_spec.encodings))
+            if (!isJsonObject(cs.chart_spec.encodings))
               errors.push(
                 `${at}.spec.chart_spec.encodings must map visual channels to columns`,
               )
           }
           if (
             cs.maxRows !== undefined &&
-            (typeof cs.maxRows !== "number" ||
+            (!isJsonNumber(cs.maxRows) ||
               !Number.isInteger(cs.maxRows) ||
               cs.maxRows < 1)
           )
@@ -185,7 +206,7 @@ export function validateDoc(doc: unknown): string[] {
         }
 
         if (b.kind === "matrix") {
-          if (!isObj(b.spec))
+          if (!isJsonObject(b.spec))
             return void errors.push(`${at}.spec must be an object`)
           const sp = b.spec
           if (!Array.isArray(sp.labels))
@@ -196,38 +217,34 @@ export function validateDoc(doc: unknown): string[] {
             return void errors.push(`${at}.spec.cells must be an array`)
           return void sp.cells.forEach((c, j) => {
             const cat = `${at}.spec.cells[${j}]`
-            if (!isObj(c)) return void errors.push(`${cat} must be an object`)
+            if (!isJsonObject(c))
+              return void errors.push(`${cat} must be an object`)
             // An index outside the label set silently addresses no cell, so
             // the pair simply does not appear and the field looks sparser
             // than the data is.
             for (const k of ["a", "b"]) {
               const v = c[k]
-              if (
-                typeof v !== "number" ||
-                !Number.isInteger(v) ||
-                v < 0 ||
-                v >= n
-              )
+              if (!isJsonNumber(v) || !Number.isInteger(v) || v < 0 || v >= n)
                 errors.push(`${cat}.${k} must be an index into spec.labels`)
             }
-            if (typeof c.value !== "number" || !Number.isFinite(c.value))
+            if (!isJsonNumber(c.value) || !Number.isFinite(c.value))
               errors.push(`${cat}.value must be a finite number`)
           })
         }
 
         if (b.kind === "day") {
-          if (!isObj(b.spec))
+          if (!isJsonObject(b.spec))
             return void errors.push(`${at}.spec must be an object`)
           const sp = b.spec
           // `HH:MM` and nothing else: the grid derives its whole scale from
           // these, and a value it cannot parse positions every block at the
           // top of the day rather than failing.
-          const hhmm = (v: unknown, at2: string, req = true) => {
+          const hhmm = (v: JsonValue | undefined, at2: string, req = true) => {
             if (v === undefined) {
               if (req) errors.push(`${at2} is required`)
               return
             }
-            if (typeof v !== "string" || !/^\d{1,2}:\d{2}$/.test(v))
+            if (!isJsonString(v) || !/^\d{1,2}:\d{2}$/.test(v))
               errors.push(`${at2} must be HH:MM`)
           }
           hhmm(sp.from, `${at}.spec.from`)
@@ -238,13 +255,14 @@ export function validateDoc(doc: unknown): string[] {
           const TYPES = ["deep", "meeting", "shallow", "personal", "free"]
           return void sp.blocks.forEach((k, j) => {
             const kat = `${at}.spec.blocks[${j}]`
-            if (!isObj(k)) return void errors.push(`${kat} must be an object`)
+            if (!isJsonObject(k))
+              return void errors.push(`${kat} must be an object`)
             str(k.id, `${kat}.id`)
             str(k.label, `${kat}.label`)
             str(k.note, `${kat}.note`, false)
             hhmm(k.start, `${kat}.start`)
             hhmm(k.end, `${kat}.end`)
-            if (typeof k.type !== "string" || !TYPES.includes(k.type))
+            if (!isJsonString(k.type) || !TYPES.includes(k.type))
               errors.push(`${kat}.type must be one of ${TYPES.join(", ")}`)
           })
         }
@@ -254,16 +272,17 @@ export function validateDoc(doc: unknown): string[] {
             return void errors.push(`${at}.rails must be an array`)
           b.rails.forEach((r, j) => {
             const rat = `${at}.rails[${j}]`
-            if (!isObj(r)) return void errors.push(`${rat} must be an object`)
+            if (!isJsonObject(r))
+              return void errors.push(`${rat} must be an object`)
             str(r.id, `${rat}.id`)
             str(r.label, `${rat}.label`)
             // Clamped at render, but a non-number is a different mistake: it
             // draws a zero-width fill that reads as "nothing done yet".
-            if (typeof r.percent !== "number" || !Number.isFinite(r.percent))
+            if (!isJsonNumber(r.percent) || !Number.isFinite(r.percent))
               errors.push(`${rat}.percent must be a finite number`)
             if (
               r.tick !== undefined &&
-              (typeof r.tick !== "number" || !Number.isFinite(r.tick))
+              (!isJsonNumber(r.tick) || !Number.isFinite(r.tick))
             )
               errors.push(`${rat}.tick must be a finite number`)
             tone(r.tone, `${rat}.tone`)
@@ -274,7 +293,7 @@ export function validateDoc(doc: unknown): string[] {
             // external URL here would open a page over the board with no way
             // back, which is what §7's `target="_blank"` rule exists to
             // prevent — and this anchor deliberately does not carry it.
-            if (typeof r.href === "string" && !r.href.startsWith("#"))
+            if (isJsonString(r.href) && !r.href.startsWith("#"))
               errors.push(`${rat}.href must be a fragment, like "#open-gate"`)
           })
           if (b.stages === undefined) return
@@ -283,50 +302,52 @@ export function validateDoc(doc: unknown): string[] {
           const STATES = ["done", "now", "next"]
           return void b.stages.forEach((g, j) => {
             const gat = `${at}.stages[${j}]`
-            if (!isObj(g)) return void errors.push(`${gat} must be an object`)
+            if (!isJsonObject(g))
+              return void errors.push(`${gat} must be an object`)
             str(g.id, `${gat}.id`)
             str(g.label, `${gat}.label`)
-            if (typeof g.state !== "string" || !STATES.includes(g.state))
+            if (!isJsonString(g.state) || !STATES.includes(g.state))
               errors.push(`${gat}.state must be one of ${STATES.join(", ")}`)
           })
         }
 
         if (b.kind === "series") {
-          if (!isObj(b.spec))
+          if (!isJsonObject(b.spec))
             return void errors.push(`${at}.spec must be an object`)
           const sp = b.spec
           str(sp.from, `${at}.spec.from`)
           str(sp.to, `${at}.spec.to`)
           str(sp.today, `${at}.spec.today`, false)
-          if (sp.max !== undefined && typeof sp.max !== "number")
+          if (sp.max !== undefined && !isJsonNumber(sp.max))
             errors.push(`${at}.spec.max must be a number`)
           if (!Array.isArray(sp.lines))
             return void errors.push(`${at}.spec.lines must be an array`)
           const ROLES = ["hero", "ceiling", "target", "ghost"]
           return void sp.lines.forEach((l, j) => {
             const lat = `${at}.spec.lines[${j}]`
-            if (!isObj(l)) return void errors.push(`${lat} must be an object`)
+            if (!isJsonObject(l))
+              return void errors.push(`${lat} must be an object`)
             str(l.id, `${lat}.id`)
             str(l.label, `${lat}.label`)
-            if (typeof l.role !== "string" || !ROLES.includes(l.role))
+            if (!isJsonString(l.role) || !ROLES.includes(l.role))
               errors.push(`${lat}.role must be one of ${ROLES.join(", ")}`)
             if (!Array.isArray(l.points))
               return void errors.push(`${lat}.points must be an array`)
             l.points.forEach((pt, k) => {
               const pat = `${lat}.points[${k}]`
-              if (!isObj(pt))
+              if (!isJsonObject(pt))
                 return void errors.push(`${pat} must be an object`)
               str(pt.x, `${pat}.x`)
               // A non-numeric y plots as NaN, which SVG drops silently — the
               // line simply stops, mid-chart, with no error anywhere.
-              if (typeof pt.y !== "number" || !Number.isFinite(pt.y))
+              if (!isJsonNumber(pt.y) || !Number.isFinite(pt.y))
                 errors.push(`${pat}.y must be a finite number`)
             })
           })
         }
 
         if (b.kind === "throughput") {
-          if (!isObj(b.spec))
+          if (!isJsonObject(b.spec))
             return void errors.push(`${at}.spec must be an object`)
           const sp = b.spec
           if (sp.windows !== undefined) {
@@ -334,7 +355,7 @@ export function validateDoc(doc: unknown): string[] {
               errors.push(`${at}.spec.windows must be an array of day counts`)
             else
               sp.windows.forEach((w, j) => {
-                if (typeof w !== "number" || !Number.isInteger(w) || w < 1)
+                if (!isJsonNumber(w) || !Number.isInteger(w) || w < 1)
                   errors.push(
                     `${at}.spec.windows[${j}] must be a positive whole number of days`,
                   )
@@ -346,10 +367,11 @@ export function validateDoc(doc: unknown): string[] {
             )
           return void sp.views.forEach((v, j) => {
             const vat = `${at}.spec.views[${j}]`
-            if (!isObj(v)) return void errors.push(`${vat} must be an object`)
+            if (!isJsonObject(v))
+              return void errors.push(`${vat} must be an object`)
             str(v.key, `${vat}.key`)
             str(v.label, `${vat}.label`)
-            if (!isObj(v.series))
+            if (!isJsonObject(v.series))
               return void errors.push(`${vat}.series must be an object`)
             const s = v.series
             if (!Array.isArray(s.authors))
@@ -358,7 +380,7 @@ export function validateDoc(doc: unknown): string[] {
             // wrong does not throw — it silently renders a chart of the wrong
             // length or dated to 1970, which is exactly the class of failure
             // this whole band was migrated out of a frozen template to stop.
-            if (typeof s.n !== "number" || !Number.isInteger(s.n) || s.n < 0)
+            if (!isJsonNumber(s.n) || !Number.isInteger(s.n) || s.n < 0)
               errors.push(`${vat}.series.n must be a whole number of days`)
             if (!/^\d{4}-\d{2}-\d{2}$/.test(String(s.from)))
               errors.push(`${vat}.series.from must be an ISO date (YYYY-MM-DD)`)
@@ -377,10 +399,10 @@ export function validateDoc(doc: unknown): string[] {
               // row dated beyond it is dropped rather than misplaced — that
               // person's work simply never appears.
               if (
-                typeof day !== "number" ||
+                !isJsonNumber(day) ||
                 !Number.isInteger(day) ||
                 day < 0 ||
-                (typeof s.n === "number" && day >= s.n)
+                (isJsonNumber(s.n) && day >= s.n)
               )
                 errors.push(
                   `${cat}[0] must be a day index within the axis (0 to ${String(s.n)} exclusive)`,
@@ -404,7 +426,7 @@ export function validateDoc(doc: unknown): string[] {
                 (d) =>
                   !Array.isArray(d) ||
                   d.length !== 3 ||
-                  d.some((x) => typeof x !== "number" || !Number.isFinite(x)),
+                  d.some((x) => !isJsonNumber(x) || !Number.isFinite(x)),
               )
               if (bad !== -1)
                 errors.push(
@@ -419,7 +441,8 @@ export function validateDoc(doc: unknown): string[] {
             return void errors.push(`${at}.items must be an array`)
           return void b.items.forEach((it, j) => {
             const iat = `${at}.items[${j}]`
-            if (!isObj(it)) return void errors.push(`${iat} must be an object`)
+            if (!isJsonObject(it))
+              return void errors.push(`${iat} must be an object`)
             str(it.id, `${iat}.id`)
             str(it.title, `${iat}.title`, false)
             str(it.body, `${iat}.body`)
@@ -435,26 +458,26 @@ export function validateDoc(doc: unknown): string[] {
         // A queue carries either loose rows or labelled groups. Both absent is
         // the shape error worth naming, because the renderer would draw an
         // empty table rather than fail.
-        const rows: unknown[] = []
+        const rows: JsonValue[] = []
         if (b.groups !== undefined) {
           if (!Array.isArray(b.groups))
             return void errors.push(`${at}.groups must be an array`)
           for (const [k, g] of b.groups.entries()) {
             const gat = `${at}.groups[${k}]`
-            if (!isObj(g)) {
+            if (!isJsonObject(g)) {
               errors.push(`${gat} must be an object`)
               continue
             }
             str(g.id, `${gat}.id`)
             str(g.label, `${gat}.label`, false)
             str(g.count, `${gat}.count`, false)
-            if (g.collapsed !== undefined && typeof g.collapsed !== "boolean")
+            if (g.collapsed !== undefined && !isJsonBoolean(g.collapsed))
               errors.push(`${gat}.collapsed must be a boolean`)
             // The heading is the control, so a group with no label has nothing
             // to fold from — the flag would render exactly nothing and the
             // rows would ship visible, which is the opposite of what was
             // asked for.
-            if (g.collapsed === true && typeof g.label !== "string")
+            if (g.collapsed === true && !isJsonString(g.label))
               errors.push(`${gat}.collapsed needs a label to fold from`)
             if (!Array.isArray(g.rows)) {
               errors.push(`${gat}.rows must be an array`)
@@ -469,7 +492,8 @@ export function validateDoc(doc: unknown): string[] {
         }
         rows.forEach((r, j) => {
           const rat = `${at}.rows[${j}]`
-          if (!isObj(r)) return void errors.push(`${rat} must be an object`)
+          if (!isJsonObject(r))
+            return void errors.push(`${rat} must be an object`)
           str(r.id, `${rat}.id`)
           str(r.title, `${rat}.title`)
           if (r.state !== undefined) {
@@ -478,7 +502,7 @@ export function validateDoc(doc: unknown): string[] {
             // gate: not an object, so nothing here read it, and `state.label`
             // came back undefined at render, so the row drew a bordered void
             // and dropped the word it was published to carry.
-            if (!isObj(r.state))
+            if (!isJsonObject(r.state))
               errors.push(`${rat}.state must be an object — { label, tone }`)
             else {
               // A chip is a word with a border round it. Without the word it
@@ -491,7 +515,8 @@ export function validateDoc(doc: unknown): string[] {
             }
           }
           if (r.face !== undefined) {
-            if (!isObj(r.face)) errors.push(`${rat}.face must be an object`)
+            if (!isJsonObject(r.face))
+              errors.push(`${rat}.face must be an object`)
             else {
               // `name` is required because the avatar derives its initial from
               // it. Without this check a face carrying only a src rendered as
@@ -503,20 +528,20 @@ export function validateDoc(doc: unknown): string[] {
               str(r.face.href, `${rat}.face.href`, false)
             }
           }
-          if (r.data !== undefined && !isObj(r.data))
+          if (r.data !== undefined && !isJsonObject(r.data))
             errors.push(`${rat}.data must be an object of strings`)
           if (r.values !== undefined && !Array.isArray(r.values))
             errors.push(`${rat}.values must be an array`)
           for (const [k, v] of Object.entries(r.values ?? {})) {
-            if (!isObj(v)) continue
+            if (!isJsonObject(v)) continue
             const vat = `${rat}.values[${k}]`
             tone(v.tone, `${vat}.tone`)
             // A meter that is not a number renders a bar of width NaN%, which
             // the browser drops — a silently absent bar rather than an error.
-            if (v.meter !== undefined && typeof v.meter !== "number")
+            if (v.meter !== undefined && !isJsonNumber(v.meter))
               errors.push(`${vat}.meter must be a number`)
             if (v.delta === undefined) continue
-            if (!isObj(v.delta)) {
+            if (!isJsonObject(v.delta)) {
               errors.push(`${vat}.delta must be { value, direction }`)
               continue
             }
@@ -537,14 +562,18 @@ export function validateDoc(doc: unknown): string[] {
     if (Array.isArray(doc.blocks)) {
       const ids = new Set(
         doc.blocks.flatMap((b) =>
-          isObj(b) && typeof b.id === "string" ? [b.id] : [],
+          isJsonObject(b) && isJsonString(b.id) ? [b.id] : [],
         ),
       )
       doc.blocks.forEach((b, i) => {
-        if (!isObj(b) || b.kind !== "progress" || !Array.isArray(b.rails))
+        if (
+          !isJsonObject(b) ||
+          b.kind !== "progress" ||
+          !Array.isArray(b.rails)
+        )
           return
         b.rails.forEach((r, j) => {
-          if (!isObj(r) || typeof r.href !== "string") return
+          if (!isJsonObject(r) || !isJsonString(r.href)) return
           if (!ids.has(r.href.slice(1)))
             errors.push(
               `blocks[${i}].rails[${j}].href "${r.href}" names no block id`,
@@ -560,7 +589,7 @@ export function validateDoc(doc: unknown): string[] {
   if (Array.isArray(doc.blocks)) {
     const seen = new Set<string>()
     doc.blocks.forEach((b, i) => {
-      if (!isObj(b) || b.kind !== "chart" || typeof b.id !== "string") return
+      if (!isJsonObject(b) || b.kind !== "chart" || !isJsonString(b.id)) return
       if (seen.has(b.id))
         errors.push(
           `blocks[${i}].id "${b.id}" is already used by another chart — ids are how compiled charts are matched to their band`,
@@ -609,17 +638,17 @@ const BARE_QUANTITY = /^[+-]?\d[\d,._\s]*$/
  * per artifact taught everyone to ignore the channel. Keep this list short and
  * keep every entry true.
  */
-export function reviewDoc(doc: unknown): string[] {
+export function reviewDoc(candidate: DocCandidate): string[] {
   const notes: string[] = []
-  const isObj = (v: unknown): v is Record<string, unknown> =>
-    typeof v === "object" && v !== null && !Array.isArray(v)
-  if (!isObj(doc) || !Array.isArray(doc.blocks)) return notes
+  if (!isRecord(candidate)) return notes
+  const doc: JsonObject = candidate
+  if (!Array.isArray(doc.blocks)) return notes
 
   doc.blocks.forEach((b, i) => {
-    if (!isObj(b) || b.kind !== "queue") return
+    if (!isJsonObject(b) || b.kind !== "queue") return
     const rows = Array.isArray(b.groups)
       ? b.groups.flatMap((g) =>
-          isObj(g) && Array.isArray(g.rows) ? g.rows : [],
+          isJsonObject(g) && Array.isArray(g.rows) ? g.rows : [],
         )
       : Array.isArray(b.rows)
         ? b.rows
@@ -631,18 +660,18 @@ export function reviewDoc(doc: unknown): string[] {
     const bare = new Map<string, { seen: number; sample: string }>()
     const total = new Map<string, number>()
     for (const r of rows) {
-      if (!isObj(r) || !Array.isArray(r.values)) continue
+      if (!isJsonObject(r) || !Array.isArray(r.values)) continue
       for (const v of r.values) {
-        if (!isObj(v) || typeof v.label !== "string") continue
+        if (!isJsonObject(v) || !isJsonString(v.label)) continue
         const label = v.label
         total.set(label, (total.get(label) ?? 0) + 1)
-        if (typeof v.value !== "string") continue
+        if (!isJsonString(v.value)) continue
         if (!BARE_QUANTITY.test(v.value.trim())) continue
         // `title` is the documented escape hatch — hover text plus an sr-only
         // phrase, for a qualifier too long to ride the value. A number whose
         // basis is invisible is an unlabelled mixture of two scales; a number
         // whose basis is one hover away is not.
-        if (typeof v.title === "string" && v.title !== "") continue
+        if (isJsonString(v.title) && v.title !== "") continue
         const hit = bare.get(label)
         if (hit) hit.seen += 1
         else bare.set(label, { seen: 1, sample: v.value })
@@ -666,9 +695,9 @@ export function reviewDoc(doc: unknown): string[] {
     // and the missing column is indistinguishable from a ledger that never
     // offered one. Only the emit knows, so this says so at the emit.
     if (
-      isObj(b.action) &&
+      isJsonObject(b.action) &&
       rows.length > 0 &&
-      !rows.some((r) => isObj(r) && r.action)
+      !rows.some((r) => isJsonObject(r) && r.action)
     ) {
       notes.push(
         `blocks[${i}] has a band-level \`action\` ("copy all") but not one of ` +
@@ -690,7 +719,7 @@ export function reviewDoc(doc: unknown): string[] {
   // corpus converges on one shape instead of the renderer quietly carrying two
   // forever.
   if (Array.isArray(doc.provenance)) {
-    const objects = doc.provenance.filter((f) => typeof f !== "string").length
+    const objects = doc.provenance.filter((f) => !isJsonString(f)).length
     if (objects > 0)
       notes.push(
         `provenance has ${objects} of ${doc.provenance.length} facts as ` +

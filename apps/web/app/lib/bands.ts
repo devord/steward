@@ -122,7 +122,7 @@ export function moveCategory(
 export function mergeTemplateCategories(
   builtin: Record<string, string>,
   streamed: { id: string; widget: { category?: string } }[] | null,
-): Record<string, string> {
+) {
   if (!streamed?.length) return builtin
   const merged = { ...builtin }
   for (const template of streamed) {

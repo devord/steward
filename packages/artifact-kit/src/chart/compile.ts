@@ -4,6 +4,7 @@ import * as vega from "vega"
 
 import { conformChart } from "./conform.ts"
 import { finish } from "./finish.ts"
+import type { JsonValue } from "../json.ts"
 import { useMonoMetrics } from "./measure.ts"
 
 /**
@@ -92,12 +93,12 @@ const TIERS = ["wide", "page", "detail", "narrow"] as const
 export type ChartTier = (typeof TIERS)[number]
 
 /** What a tier's render may not exceed. Read by `conformChart`. */
-export const TIER_BUDGET: Record<ChartTier, number> = {
+export const TIER_BUDGET = {
   wide: TIER_FIT.wide.budget,
   page: TIER_FIT.page.budget,
   detail: TIER_FIT.detail.budget,
   narrow: TIER_FIT.narrow.budget,
-}
+} satisfies Record<ChartTier, number>
 
 /** The width Vega actually emitted, which is the plot plus its chrome. */
 function emittedWidth(svg: string): number {
@@ -133,9 +134,9 @@ export interface CompiledCharts {
  * type floor still land on whatever a form built.
  */
 export type Decorator = (
-  spec: unknown,
+  spec: JsonValue,
   ctx: { width: number; height: number; tier: ChartTier },
-) => unknown
+) => JsonValue
 
 export interface ChartRequest {
   id: string
@@ -157,10 +158,10 @@ async function renderOne(
     semantic_types: req.spec.semantic_types,
     chart_spec: { ...req.spec.chart_spec, baseSize: box },
   })
-  const shaped = req.decorate
+  const decorated = req.decorate
     ? req.decorate(assembled, { ...box, tier })
     : assembled
-  const compiled = compileVegaLite(finish(shaped, box)).spec
+  const compiled = compileVegaLite(finish(decorated, box)).spec
   return await new vega.View(vega.parse(compiled), { renderer: "none" }).toSVG()
 }
 
@@ -255,12 +256,12 @@ export async function compileCharts(
       }
       // Built whole rather than filled in a loop, so the record is complete by
       // construction and needs no assertion to say so.
-      const rendered: CompiledChart = {
+      const rendered = {
         wide: await draw("wide"),
         page: await draw("page"),
         detail: await draw("detail"),
         narrow: await draw("narrow"),
-      }
+      } satisfies CompiledChart
       if (problems.length) failures.push({ id, problems })
       else charts.set(id, rendered)
     } catch (e) {
